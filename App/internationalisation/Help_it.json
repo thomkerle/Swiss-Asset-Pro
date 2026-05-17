@@ -1,0 +1,124 @@
+{
+  "title": "Manuale utente",
+  "sections": [
+    {
+      "id": "intro",
+      "title": "Benvenuto e Concetto UI",
+      "icon": "Info",
+      "content": [
+        { "type": "h4", "text": "Benvenuto in FinSPA" },
+        { "type": "p", "text": "FinSPA è una Single Page Application (SPA) moderna per la gestione olistica del tuo patrimonio e budget." },
+        { "type": "h5", "text": "Il layout a 3 colonne" },
+        { "type": "list", "items": [
+          "**Albero di struttura (Sinistra):** Qui gestisci le tue banche, broker, categorie e gli asset in esse contenuti.",
+          "**Editor e Dashboard (Centro):** Lo spazio di lavoro centrale per valutazioni, dashboard e registrazioni.",
+          "**Editor delle proprietà (Destra):** Modifica i dati anagrafici per l'elemento selezionato."
+        ]}
+      ]
+    },
+    {
+      "id": "uc1-3",
+      "title": "Banche e Categorie",
+      "icon": "Shield",
+      "content": [
+        { "type": "h4", "text": "Strutturazione del tuo patrimonio" },
+        { "type": "p", "text": "**Registrare banche:** Al livello più alto nell'albero di struttura (clicca sull'icona `+`)." },
+        { "type": "p", "text": "**Creare categorie:** Nidificate a piacere all'interno delle banche (clicca sull'icona della cartella con un più)." }
+      ]
+    },
+    {
+      "id": "uc4-5",
+      "title": "Conti e Registrazioni",
+      "icon": "List",
+      "content": [
+        { "type": "h4", "text": "Gestire Asset e Conti" },
+        { "type": "p", "text": "**Registrare asset:** L'elemento più profondo nell'albero è sempre un asset (es. conto, deposito)." },
+        { "type": "p", "text": "**Registrazioni:** Registra transazioni come versamenti o prelievi con sottocategorie dettagliate (stipendio, tasse, ecc.)." }
+      ]
+    },
+    {
+      "id": "uc6",
+      "title": "Titoli e Depositi",
+      "icon": "TrendingUp",
+      "content": [
+        { "type": "h4", "text": "Negoziazione di azioni e fondi" },
+        { "type": "p", "text": "Imposta la classe di asset su azione o fondo. Registra acquisti, vendite e dividendi." },
+        { "type": "p", "text": "La finestra di dialogo richiede automaticamente quantità, prezzo, commissioni, tasse e il tasso di cambio giornaliero." },
+        { "type": "infoBox", "text": "In caso di frazionamento azionario, archivia il vecchio asset e creane uno nuovo con i valori attuali." }
+      ]
+    },
+    {
+      "id": "uc7",
+      "title": "Pilastro 3a Previdenza",
+      "icon": "Lock",
+      "content": [
+        { "type": "h4", "text": "Previdenza vincolata (Svizzera)" },
+        { "type": "list", "items": [
+          "**Conto previdenza 3a:** Viene contrassegnato come *non liquido*.",
+          "**Deposito previdenza 3a:** Consente la negoziazione di fondi previdenziali, ma rimane illiquido."
+        ]}
+      ]
+    },
+    {
+      "id": "uc8",
+      "title": "Criptovalute",
+      "icon": "Coins",
+      "content": [
+        { "type": "h4", "text": "Asset crittografici" },
+        { "type": "p", "text": "Bitcoin, Ethereum, ecc. si comportano come le azioni, ma sono considerati altamente liquidi." }
+      ]
+    },
+    {
+      "id": "uc9",
+      "title": "Immobili e Ipoteche",
+      "icon": "Home",
+      "content": [
+        { "type": "h4", "text": "Gestione dei beni materiali" },
+        { "type": "list", "items": [
+          "**Immobile:** Valore positivo. Utilizza *Adeguamento del valore* per le variazioni del valore di mercato.",
+          "**Ipoteca:** Registrata come *saldo negativo alla data di riferimento*. Utilizza *Ammortamento* o *Pagamento interessi*."
+        ]}
+      ]
+    },
+    {
+      "id": "reports",
+      "title": "Report e Dashboard",
+      "icon": "PieChart",
+      "content": [
+        { "type": "h4", "text": "Analisi complete" },
+        { "type": "list", "items": [
+          "**Report di inventario:** Allocazione, rischio di liquidità e report fiscali.",
+          "**Report di movimento:** Flussi di cassa, analisi delle registrazioni e reddito passivo.",
+          "**Report futuri:** Simulazione del futuro incl. regressioni e scenari futuri personalizzati (obiettivi di risparmio FIRE)."
+        ]}
+      ]
+    },
+    {
+      "id": "settings",
+      "title": "Impostazioni e Dati",
+      "icon": "Settings",
+      "content": [
+        { "type": "h4", "text": "Configurazione" },
+        { "type": "p", "text": "**Impostazioni:** Configura la valuta di base e le tue categorie di registrazione personalizzate." },
+        { "type": "p", "text": "**Backup dei dati:** Utilizza JSON per backup sicuri." }
+      ]
+    }
+  ],
+  "translations": {
+    "menuFile": "File", "menuWealth": "Patrimonio", "menuBudget": "Budget", "menuViews": "Viste", "menuReports": "Report", "menuData": "Vista Dati",
+    "fileNew": "Nuovo (Progetto vuoto)", "fileOpen": "Apri (JSON)", "fileSave": "Salva (JSON)", "fileImport": "Importa (CSV)", "fileExport": "Esporta (CSV)", "filePrint": "Stampa", "fileSettings": "Impostazioni",
+    "menuHelp": "Aiuto", "helpManual": "Manuale utente",
+    "viewWealth": "Gestione patrimoniale", "viewBudget": "Gestione budget", "viewData": "Dati interni (JSON)",
+    "repStock": "Report di inventario", "repFlow": "Report di movimento", "repFuture": "Report futuri", "repBudget": "Report di budget",
+    "repAlloc": "Allocazione per banca", "repLiq": "Rischio di liquidità", "repHist": "Andamento storico", "repTax": "Report fiscale (31.12)",
+    "repCatFlow": "Flusso categorie", "repWaterfall": "Flusso a cascata", "repPassive": "Reddito passivo", "repTopFlow": "Top Flow Assets", "repBookAna": "Analisi registrazioni",
+    "repSimReg": "Simulazione e Regressione", "repScenFire": "Scenari e FIRE",
+    "tree": "Albero di struttura", "propEditor": "Editor delle proprietà", "statusReady": "Pronto", "version": "Versione", "dateSelect": "Periodo",
+    "btnApply": "Applica", "btnCancel": "Annulla", "btnSave": "Salva", "btnAdd": "Aggiungi", "btnDelete": "Elimina",
+    "assetClass": "Classe di asset", "currency": "Valuta", "exchangeRate": "Tasso di cambio", "isLiquid": "Asset liquido", "isArchived": "Archiviato",
+    "bookings": "Registrazioni", "date": "Data", "type": "Tipo", "category": "Categoria", "amount": "Importo", "income": "Versamento", "expense": "Prelievo",
+    "addBank": "Aggiungi banca", "addCategory": "Aggiungi categoria", "addAsset": "Aggiungi asset", "deleteConfirm": "Eliminare davvero?",
+    "acCash": "Conto", "acFund": "Fondo / ETF", "acStock": "Azione", "acCrypto": "Cripto", "acRealEstate": "Immobile", "acMortgage": "Ipoteca", "acPensionCash": "Conto previdenza 3a", "acPensionFund": "Deposito previdenza 3a",
+    "typeDeposit": "Versamento", "typeWithdrawal": "Prelievo", "typeBuy": "Acquisto", "typeSell": "Vendita", "typeAmortization": "Ammortamento", "typeReval": "Adeguamento del valore", "typeInterest": "Pagamento interessi", "typeDiv": "Dividendo", "typeDebtInc": "Aumento del debito", "typeFee": "Commissione"
+  }
+}
