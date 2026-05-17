@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinSPA Loader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class', theme: { extend: {} } }</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col items-center justify-center">
+
+    <div id="loader-ui" class="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-xl border dark:border-slate-700 max-w-md w-full">
+        <div class="mb-6"><i class="fa-solid fa-chart-pie text-blue-600 text-5xl"></i></div>
+        <h1 class="text-2xl font-black mb-2">FinSPA Loader</h1>
+        <p class="text-sm text-gray-500 mb-8">Laden Sie das App-Modulpaket (ZIP) hoch, um die Finanzverwaltung zu starten.</p>
+        
+        <label class="cursor-pointer flex flex-col items-center justify-center p-6 border-2 border-dashed border-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors">
+            <i class="fa-solid fa-file-zipper text-3xl text-blue-500 mb-2"></i>
+            <span class="font-bold text-blue-600">ZIP-Datei auswählen</span>
+            <input type="file" id="zip-input" accept=".zip" class="hidden">
+        </label>
+        
+        <div id="loading-spinner" class="hidden mt-6 flex flex-col items-center">
+            <div class="loader mb-2"></div><p class="text-sm text-gray-500" id="loading-text">Entpacke Module...</p>
+        </div>
+    </div>
+
+    <div id="error-overlay" class="hidden"></div>
+    <div id="app-root" class="w-full h-full hidden"></div>
+
+    <script>
+        window.__FinSPAModules = {};
+
+        function resolveRelativePath(callingFilePath, targetPath) {
+            if (!targetPath.startsWith('.')) return targetPath;
+            const dirParts = callingFilePath.split('/'); dirParts.pop();
+            const targetParts = targetPath.split('/');
+            for (const part of targetParts) {
+                if (part === '.' || part === '') continue;
+                else if (part === '..') dirParts.pop();
+                else dirParts.push(part);
+            }
+            return dirParts.filter(Boolean).join('/');
+        }
+
+        function showDiagnosticError(callingPath, requiredName, resolvedPath) {
+            document.getElementById('loading-spinner').classList.add('hidden');
+            const overlay = document.getElementById('error-overlay');
+            const availableFiles = Object.keys(window.__FinSPAModules);
+            const fileListHTML = availableFiles.map(f => `<li class="py-1 px-2 text-xs font-mono text-slate-700 dark:text-slate-300">${f}</li>`).join('');
+            overlay.innerHTML = `
+                <div class="fixed inset-0 bg-slate-900/90 flex items-center justify-center z-[9999] p-4">
+                    <div class="bg-white dark:bg-slate-900 rounded-xl max-w-lg w-full p-6 text-sm">
+                        <h3 class="text-red-600 font-bold mb-4">Ladefehler: Modul nicht gefunden!</h3>
+                        <p><strong>Von:</strong> ${callingPath}<br/><strong>Gesucht:</strong> ${requiredName}<br/><strong>Aufgelöst als:</strong> ${resolvedPath}</p>
+                        <h4 class="font-bold mt-4 mb-2">Verfügbare Dateien im ZIP:</h4>
+                        <ul class="h-40 overflow-auto bg-gray-100 dark:bg-slate-800 p-2">${fileListHTML}</ul>
+                        <button onclick="document.getElementById('error-overlay').classList.add('hidden')" class="mt-4 px-4 py-2 bg-gray-800 text-white rounded">Schliessen</button>
+                    </div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        }
+
+        function makeRequire(callingPath) {
+            return function(name) {
+                if (name === 'react') return React;
+                if (name === 'react-dom') return ReactDOM;
+
+                let resolvedPath = resolveRelativePath(callingPath, name);
+                
+                // Endung raten, falls keine angegeben
+                if (!resolvedPath.match(/\.(js|jsx|json)$/)) {
+                    if (window.__FinSPAModules[resolvedPath + '.jsx']) resolvedPath += '.jsx';
+                    else if (window.__FinSPAModules[resolvedPath + '.js']) resolvedPath += '.js';
+                    else if (window.__FinSPAModules[resolvedPath + '.json']) resolvedPath += '.json';
+                }
+
+                const mod = window.__FinSPAModules[resolvedPath];
+                if (!mod) { showDiagnosticError(callingPath, name, resolvedPath); return null; }
+
+                if (!mod.loaded) {
+                    mod.loaded = true;
+                    const localRequire = makeRequire(resolvedPath);
+                    mod.factory(localRequire, mod, mod.exports);
+                }
+                return mod.exports;
+            };
+        }
+
+        window.require = makeRequire('index.html');
+
+        document.getElementById('zip-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('loading-spinner').classList.remove('hidden');
+            const statusText = document.getElementById('loading-text');
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                window.__FinSPAModules = {};
+                
+                // Wir parsen jetzt JS, JSX UND JSON
+                const fileNames = Object.keys(zip.files).filter(name => !zip.files[name].dir && (name.endsWith('.js') || name.endsWith('.jsx') || name.endsWith('.json')));
+                
+                let commonPrefix = "";
+                if (fileNames.length > 0) {
+                    const firstPath = fileNames[0];
+                    const slashIdx = firstPath.indexOf('/');
+                    if (slashIdx !== -1) {
+                        const potentialPrefix = firstPath.substring(0, slashIdx + 1);
+                        if (fileNames.every(p => p.startsWith(potentialPrefix))) commonPrefix = potentialPrefix;
+                    }
+                }
+
+                for (const relativePath of fileNames) {
+                    statusText.innerText = `Lese ${relativePath}...`;
+                    let content = await zip.file(relativePath).async('string');
+                    let factory;
+                    
+                    // Behandlung für JSON vs JSX
+                    if (relativePath.endsWith('.json')) {
+                        factory = new Function('require', 'module', 'exports', `module.exports = ${content};`);
+                    } else {
+                        content = content.replace(/^\s*return\s+(module\.)?exports\s*;?\s*$/gm, '').replace(/return\s+(module\.)?exports\s*;?\s*$/, '');
+                        const transpiled = Babel.transform(content, { presets: ['react'] }).code;
+                        const wrappedCode = `"use strict";\n${transpiled}\nreturn module.exports;`;
+                        factory = new Function('require', 'module', 'exports', wrappedCode);
+                    }
+                    
+                    const cleanPath = relativePath.substring(commonPrefix.length).replace(/^\//, '');
+                    window.__FinSPAModules[cleanPath] = { exports: {}, factory: factory, loaded: false };
+                }
+
+                statusText.innerText = `Rendere App...`;
+                const entryPoint = ['main.jsx', 'App.jsx', 'index.jsx'].find(p => window.__FinSPAModules[p]);
+
+                if (entryPoint) {
+                    document.getElementById('loader-ui').classList.add('hidden');
+                    document.getElementById('app-root').classList.remove('hidden');
+                    const rootRequire = makeRequire('index.html');
+                    const entryExports = rootRequire(entryPoint);
+                    const AppComp = entryExports.default || entryExports; 
+                    ReactDOM.createRoot(document.getElementById('app-root')).render(React.createElement(AppComp));
+                } else {
+                    alert("Kein Einstiegspunkt in der ZIP gefunden!");
+                }
+            } catch (err) {
+                console.error(err); alert("Fehler beim Laden der ZIP: " + err.message);
+            } finally {
+                document.getElementById('loading-spinner').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
