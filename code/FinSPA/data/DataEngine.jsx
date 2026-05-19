@@ -14,7 +14,7 @@ const defaultBookingCategories = {
 };
 
 const initialData = {
-  version: "4.5", lastModified: new Date().toISOString(), 
+  version: "Alpha-2", lastModified: new Date().toISOString(), 
   settings: { 
       baseCurrency: 'CHF', 
       showTaxesForDividends: true, 
