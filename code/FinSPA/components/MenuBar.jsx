@@ -1,7 +1,12 @@
 const React = require('react');
 const Icon = require('./Icons.jsx');
 
-const MenuBar = ({ viewMode, setViewMode, setActiveReport, setSelectedNode, theme, setTheme, lang, setLang, setModalObj, t, handleNewProject, handleOpenProject, handleSaveProject, handleImportCSV, handleExportCSV, handlePrint }) => {
+const MenuBar = ({ 
+  viewMode, setViewMode, setActiveReport, setSelectedNode, 
+  theme, setTheme, lang, setLang, setModalObj, t, 
+  handleNewProject, handleOpenProject, handleSaveProject, 
+  handleImportCSV, handleImportParqetCSV, handleExportCSV, handlePrint 
+}) => {
   const MenuItem = ({ title, children }) => (
     <div className="relative group px-4 py-2 cursor-pointer hover:bg-slate-700 text-sm font-medium transition-colors">
       {title}
@@ -22,53 +27,71 @@ const MenuBar = ({ viewMode, setViewMode, setActiveReport, setSelectedNode, them
     <div className="print-hide flex bg-slate-900 text-slate-200 select-none items-center shadow-md relative z-50">
       <div className="px-4 py-2 bg-blue-700 font-bold tracking-wider mr-2 flex items-center gap-2"><Icon name="PieChart" size={16} className="text-white"/> FinSPA</div>
       
-      <MenuItem title={t('menuFile')}>
-        <MenuSubItem label={t('fileNew')} iconName="FilePlus" onClick={handleNewProject} />
+      <MenuItem title={t ? t('menuFile') : 'Datei'}>
+        <MenuSubItem label={t ? t('fileNew') : 'Neu (Leeres Projekt)'} iconName="FilePlus" onClick={handleNewProject} />
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="FolderOpen" size={14} className="text-gray-500 dark:text-gray-400 w-4 text-center"/> {t('fileOpen')}
+          <Icon name="FolderOpen" size={14} className="text-gray-500 dark:text-gray-400 w-4 text-center"/> {t ? t('fileOpen') : 'Öffnen (JSON)'}
           <input type="file" accept=".json" className="hidden" onChange={handleOpenProject} />
         </label>
-        <MenuSubItem label={t('fileSave')} iconName="Save" onClick={handleSaveProject} />
+        <MenuSubItem label={t ? t('fileSave') : 'Sichern (JSON)'} iconName="Save" onClick={handleSaveProject} />
+        
         <hr className="dark:border-slate-700 my-1"/>
+        
+        {/* Standard AssetPro CSV Import */}
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="Upload" size={14} className="text-gray-500 dark:text-gray-400 w-4 text-center"/> {t('fileImport')}
+          <Icon name="Upload" size={14} className="text-gray-500 dark:text-gray-400 w-4 text-center"/> {t ? t('fileImport') : 'Importieren (CSV)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
         </label>
-        <MenuSubItem label={t('fileExport')} iconName="Download" onClick={handleExportCSV} />
+
+        {/* NEU: parqet CSV Import */}
+        <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
+          <Icon name="TrendingUp" size={14} className="text-green-600 dark:text-green-400 w-4 text-center"/> {t ? t('fileImportParqet') : 'parqet-Import (.csv)'}
+          <input type="file" accept=".csv" className="hidden" onChange={handleImportParqetCSV} />
+        </label>
+        
+        <MenuSubItem label={t ? t('fileExport') : 'Exportieren (CSV)'} iconName="Download" onClick={handleExportCSV} />
+        
         <hr className="dark:border-slate-700 my-1"/>
-        <MenuSubItem label={t('filePrint')} iconName="Printer" onClick={handlePrint} rightText="Ctrl+P" />
+        <MenuSubItem label={t ? t('filePrint') : 'Drucken'} iconName="Printer" onClick={handlePrint} rightText="Ctrl+P" />
         <hr className="dark:border-slate-700 my-1"/>
-        <MenuSubItem label={t('fileSettings')} iconName="Settings" onClick={() => setModalObj({type: 'settings'})} />
+      
+        <MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handlePrint} />
+        
+        <hr className="dark:border-slate-700 my-1"/>
+        <MenuSubItem label={t ? t('fileSettings') : 'Einstellungen'} iconName="Settings" onClick={() => setModalObj({type: 'settings'})} />
       </MenuItem>
 
-      <MenuItem title={t('menuViews')}>
-        <MenuSubItem label={t('viewWealth')} iconName="Shield" onClick={() => { setViewMode('vermoegen'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'vermoegen' ? '✓' : ''} />
-        <MenuSubItem label={t('viewBudget')} iconName="DollarSign" onClick={() => { setViewMode('budget'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'budget' ? '✓' : ''} />
+      <MenuItem title={t ? t('menuViews') : 'Ansichten'}>
+        <MenuSubItem label={t ? t('viewWealth') : 'Vermögensverwaltung'} iconName="Shield" onClick={() => { setViewMode('vermoegen'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'vermoegen' ? '✓' : ''} />
+        <MenuSubItem label={t ? t('viewBudget') : 'Budgetverwaltung'} iconName="DollarSign" onClick={() => { setViewMode('budget'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'budget' ? '✓' : ''} />
         <hr className="dark:border-slate-700 my-1"/>
-        <MenuSubItem label={t('viewData')} iconName="Settings" onClick={() => { setViewMode('datensicht'); setActiveReport(null); }} rightText={viewMode === 'datensicht' ? '✓' : ''} />
+        <MenuSubItem label={t ? t('viewData') : 'Datensicht'} iconName="Settings" onClick={() => { setViewMode('datensicht'); setActiveReport(null); }} rightText={viewMode === 'datensicht' ? '✓' : ''} />
       </MenuItem>
 
-      <MenuItem title={t('menuReports')}>
-        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider">{t('repStock')}</div>
-        <MenuSubItem label={t('repAlloc')} iconName="PieChart" onClick={() => setActiveReport('allocation')} />
-        <MenuSubItem label={t('repLiq')} iconName="PieChart" onClick={() => setActiveReport('liquidity')} />
-        <MenuSubItem label={t('repHist')} iconName="TrendingUp" onClick={() => setActiveReport('history')} />
-        <MenuSubItem label={t('repTax')} iconName="List" onClick={() => setActiveReport('tax')} />
+      <MenuItem title={t ? t('menuReports') : 'Reports'}>
+        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider">{t ? t('repStock') : 'Bestandesreports'}</div>
+        <MenuSubItem label={t ? t('repOverview') : "Banken & Kategorien"} iconName="List" onClick={() => setActiveReport('overview')} />
+        <MenuSubItem label={t ? t('repAlloc') : 'Allokation nach Banken'} iconName="PieChart" onClick={() => setActiveReport('allocation')} />
+        <MenuSubItem label={t ? t('repLiq') : 'Liquiditätsrisiko'} iconName="PieChart" onClick={() => setActiveReport('liquidity')} />
+        <MenuSubItem label={t ? t('repHist') : 'Historischer Verlauf'} iconName="TrendingUp" onClick={() => setActiveReport('history')} />
+        <MenuSubItem label={t ? t('repTax') : 'Steuerreport (31.12)'} iconName="List" onClick={() => setActiveReport('tax')} />
         
-        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t('repFlow')}</div>
-        <MenuSubItem label={t('repCatFlow')} iconName="BarChart" onClick={() => setActiveReport('categoryFlow')} />
-        <MenuSubItem label={t('repWaterfall')} iconName="BarChart" onClick={() => setActiveReport('waterfall')} />
-        <MenuSubItem label={t('repPassive')} iconName="DollarSign" onClick={() => setActiveReport('passive')} />
-        <MenuSubItem label={t('repTopFlow')} iconName="BarChart" onClick={() => setActiveReport('topFlow')} />
-        <MenuSubItem label={t('repBookAna')} iconName="PieChart" onClick={() => setActiveReport('bookingAnalysis')} />
+        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t ? t('repFlow') : 'Bewegungsreports'}</div>
+        <MenuSubItem label={t ? t('repCatFlow') : 'Kategorienfluss'} iconName="BarChart" onClick={() => setActiveReport('categoryFlow')} />
+        <MenuSubItem label={t ? t('repWaterfall') : 'Wasserfallfluss'} iconName="BarChart" onClick={() => setActiveReport('waterfall')} />
+        <MenuSubItem label={t ? t('repPassive') : 'Passives Einkommen'} iconName="DollarSign" onClick={() => setActiveReport('passive')} />
+        <MenuSubItem label={t ? t('repTopFlow') : 'Top Flow Assets'} iconName="BarChart" onClick={() => setActiveReport('topFlow')} />
+        <MenuSubItem label={t ? t('repBookAna') : 'Buchungsanalyse'} iconName="PieChart" onClick={() => setActiveReport('bookingAnalysis')} />
         
-        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t('repFuture')}</div>
-        <MenuSubItem label={t('repSimReg')} iconName="TrendingUp" onClick={() => setActiveReport('future')} />
-        <MenuSubItem label={t('repScenFire')} iconName="Target" onClick={() => setActiveReport('scenarios')} />
+        <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t ? t('repFuture') : 'Zukunftsreports'}</div>
+        <MenuSubItem label={t ? t('repSimReg') : 'Simulation & Regression'} iconName="TrendingUp" onClick={() => setActiveReport('future')} />
+        <MenuSubItem label={t ? t('repScenFire') : 'Szenarien & FIRE'} iconName="Target" onClick={() => setActiveReport('scenarios')} />
       </MenuItem>
       
-      <MenuItem title={t('menuHelp')}>
-         <MenuSubItem label={t('helpManual')} iconName="Info" onClick={() => setModalObj({type: 'help'})} />
+      <MenuItem title={t ? t('menuHelp') : 'Hilfe'}>
+         <MenuSubItem label={t ? t('helpManual') : 'Benutzerhandbuch'} iconName="Info" onClick={() => setModalObj({type: 'help'})} />
+         <hr className="dark:border-slate-700 my-1"/>
+         <MenuSubItem label={t ? t('helpAbout') : 'Über FinSPA'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
       </MenuItem>
 
       {/* Rechter Bereich: Sprache und Dark-Mode */}
@@ -80,11 +103,12 @@ const MenuBar = ({ viewMode, setViewMode, setActiveReport, setSelectedNode, them
           <MenuSubItem label="Italiano" onClick={() => setLang('it')} rightText={lang === 'it' ? '✓' : ''} />
         </MenuItem>
 
-        <div className="px-4 py-2 cursor-pointer hover:bg-slate-700 border-l border-slate-700 transition-colors" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} title="Design umschalten">
+        <div className="px-4 py-2 cursor-pointer hover:bg-slate-700 border-l border-slate-700 transition-colors" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} title={t ? t('themeToggle') : 'Design umschalten'}>
           <Icon name={theme === 'light' ? "Moon" : "Sun"} size={16} />
         </div>
       </div>
     </div>
   );
 };
+
 module.exports = MenuBar;

@@ -2,6 +2,7 @@ const React = require('react');
 const Icon = require('./Icons.jsx');
 
 const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveReport, isTreeVisible, setIsTreeVisible, showArchived, setShowArchived, expandedNodes, toggleExpand, deleteNode, setModalObj, t }) => {
+  
   const renderNode = (node, depth = 0) => {
     if (node.isArchived && !showArchived) return null; 
     const isSelected = selectedNode?.id === node.id;
@@ -22,13 +23,13 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
     return (
       <div key={node.id} className="select-none text-sm">
         <div className={`flex items-center justify-between py-1.5 px-2 cursor-pointer rounded transition-colors group ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold' : 'hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300'} ${node.isArchived ? 'opacity-50' : ''}`} style={{ paddingLeft: `${depth * 16 + 12}px` }} onClick={() => { setSelectedNode(node); setActiveReport(null); }}>
-          <div className="flex items-center gap-2 truncate">
-            {hasChildren ? <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={12} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" onClick={(e) => toggleExpand(node.id, e)} /> : <span className="w-3"></span>}
-            <Icon name={iconName} className={iconColor} size={14}/><span className="truncate">{node.name}</span>
+          <div className="flex items-center gap-2 truncate min-w-0">
+            {hasChildren ? <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={12} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0" onClick={(e) => toggleExpand(node.id, e)} /> : <span className="w-3 shrink-0"></span>}
+            <Icon name={iconName} className={`${iconColor} shrink-0`} size={14}/><span className="truncate">{node.name}</span>
           </div>
-          <div className="hidden group-hover:flex gap-1.5 opacity-50 hover:opacity-100 items-center">
-             {node.type === 'bank' && <Icon name="FolderPlus" size={14} className="hover:text-blue-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addCategory', parentId: node.id}); }} title={t('addCategory') || 'Kategorie hinzufügen'} />}
-             {node.type === 'category' && (<><Icon name="FolderPlus" size={14} className="hover:text-blue-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addCategory', parentId: node.id}); }} title={t('addCategory') || 'Unterkategorie hinzufügen'} /><Icon name="Plus" size={14} className="hover:text-green-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addAsset', parentId: node.id}); }} title={t('addAsset') || 'Asset hinzufügen'} /></>)}
+          <div className="hidden group-hover:flex gap-1.5 opacity-50 hover:opacity-100 items-center shrink-0">
+             {node.type === 'bank' && <Icon name="FolderPlus" size={14} className="hover:text-blue-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addCategory', parentId: node.id}); }} title={t('addCategory')} />}
+             {node.type === 'category' && (<><Icon name="FolderPlus" size={14} className="hover:text-blue-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addCategory', parentId: node.id}); }} title={t('addCategory')} /><Icon name="Plus" size={14} className="hover:text-green-500" onClick={(e)=>{ e.stopPropagation(); setModalObj({type: 'addAsset', parentId: node.id}); }} title={t('addAsset')} /></>)}
              <Icon name="Trash" size={14} className="hover:text-red-500" onClick={(e)=>{ e.stopPropagation(); deleteNode(node); }} title={t('btnDelete')} />
           </div>
         </div>
@@ -39,13 +40,24 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
 
   const renderBudgetList = (items, typeIcon, groupName, budgetGroupKey) => (
     <div className="mb-4">
-      <div className="px-3 py-1 font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider flex justify-between items-center">{groupName}<Icon name="Plus" size={12} className="cursor-pointer hover:text-blue-500 transition-colors" onClick={() => setModalObj({type: 'addBudget', budgetGroup: budgetGroupKey})} title="Neuen Posten hinzufügen" /></div>
+      <div className="px-3 py-1 font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider flex justify-between items-center w-full">
+          <span className="truncate">{groupName}</span>
+          <div className="flex items-center justify-center shrink-0 w-8 h-8 cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors ml-2" 
+               onClick={() => setModalObj({type: 'addBudget', budgetGroup: budgetGroupKey})} 
+               title="Hinzufügen">
+               <Icon name="Plus" size={16} className="text-gray-500 hover:text-green-500" />
+          </div>
+      </div>
+
       {items.map(item => {
         const isSelected = selectedNode?.id === item.id;
         return (
-          <div key={item.id} className={`group flex items-center justify-between py-1.5 px-4 cursor-pointer rounded transition-colors ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold' : 'hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300'}`} onClick={() => { setSelectedNode({...item, budgetType: typeIcon}); setActiveReport(null); }}>
-            <div className="flex items-center gap-2 truncate"><span>{typeIcon}</span><span className="truncate">{item.name}</span></div>
-            <Icon name="Trash" size={14} className="hidden group-hover:block opacity-50 hover:opacity-100 hover:text-red-500" onClick={(e)=>{ e.stopPropagation(); deleteNode({...item, budgetType: typeIcon}); }} title={t('btnDelete')} />
+          <div key={item.id} className={`group flex items-center justify-between py-1.5 px-4 cursor-pointer rounded transition-colors ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold' : 'hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300'}`} onClick={() => { setSelectedNode({...item, budgetType: budgetGroupKey}); setActiveReport(null); }}>
+            <div className="flex items-center gap-2 truncate min-w-0">
+                <span className="shrink-0">{typeIcon}</span>
+                <span className="truncate">{item.name}</span>
+            </div>
+            <Icon name="Trash" size={14} className="hidden group-hover:block shrink-0 opacity-50 hover:opacity-100 hover:text-red-500" onClick={(e)=>{ e.stopPropagation(); deleteNode({...item, budgetType: budgetGroupKey}); }} title={t('btnDelete')} />
           </div>
         );
       })}
@@ -54,18 +66,24 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
 
   return (
     <div className={`print-hide ${isTreeVisible ? 'w-72 border-r' : 'w-0 overflow-hidden'} border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 flex flex-col h-full shrink-0 transition-all duration-300`}>
-      <div className="p-3 font-bold border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 flex justify-between items-center text-sm min-w-max">
-        <div className="flex items-center gap-2">
+      <div className="p-3 font-bold border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 flex justify-between items-center text-sm">
+        <div className="flex items-center gap-2 truncate min-w-0">
           {viewMode === 'vermoegen' ? t('menuWealth') : t('menuBudget')} - {t('tree')}
-          {viewMode === 'vermoegen' && (<><Icon name="Plus" size={14} className="cursor-pointer ml-2 text-blue-500 hover:text-blue-600 transition-colors" title={t('addBank')} onClick={() => setModalObj({type: 'addBank'})} /><Icon name={showArchived ? "Eye" : "EyeSlash"} size={14} className={`cursor-pointer ml-2 transition-colors ${showArchived ? 'text-blue-500 hover:text-blue-600' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`} title="Archivierte Elemente ein-/ausblenden" onClick={() => setShowArchived(!showArchived)} /></>)}
         </div>
-        <Icon name="ChevronLeft" size={14} className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={() => setIsTreeVisible(false)} title="Strukturbaum ausblenden" />
+        <Icon name="ChevronLeft" size={14} className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 shrink-0" onClick={() => setIsTreeVisible(false)} title="Strukturbaum ausblenden" />
       </div>
-      <div className="flex-1 overflow-y-auto py-2 min-w-max">
+      <div className="flex-1 overflow-y-auto py-2">
         {viewMode === 'vermoegen' && data.banks.map(b => renderNode(b))}
-        {viewMode === 'budget' && (<div>{renderBudgetList(data.budget.incomeSources, '📈', 'Einnahmequellen', 'incomeSources')}{renderBudgetList(data.budget.expenses, '📉', 'Ausgabepositionen', 'expenses')}{renderBudgetList(data.budget.subscriptions, '🔄', 'Abos & Verträge', 'subscriptions')}</div>)}
+        {viewMode === 'budget' && (
+           <div className="w-full">
+             {renderBudgetList(data.budget.incomeSources || [], '📈', t('incomeSources'), 'incomeSources')}
+             {renderBudgetList(data.budget.expenses || [], '📉', t('expensePositions'), 'expenses')}
+             {renderBudgetList(data.budget.subscriptions || [], '🔄', t('subscriptions'), 'subscriptions')}
+           </div>
+        )}
       </div>
     </div>
   );
 };
+
 module.exports = TreeView;
