@@ -29,7 +29,10 @@ const PropertyEditor = getModule('PropertyEditor.jsx', () => safeRequire('./comp
 const SettingsModal = getModule('SettingsModal.jsx', () => safeRequire('./components/SettingsModal.jsx'));
 const HelpViewer = getModule('HelpViewer.jsx', () => safeRequire('./components/HelpViewer.jsx'));
 const CsvEngine = getModule('CsvEngine.jsx', () => safeRequire('./components/CsvEngine.jsx'));
+const ParqetModule = getModule('ParqetCsvImport.jsx', () => safeRequire('./components/ParqetCsvImport.jsx')) || {};
 const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'));
+
+const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
 const App = () => {
   const [data, setData] = useState(initialData);
@@ -68,13 +71,13 @@ const App = () => {
   const handlePrint = () => window.print();
 
   const handleNewProject = () => {
-      if (window.confirm("Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues, leeres Projekt starten?")) {
+      if (window.confirm(t('msgNewProjectWarning'))) {
           setData({
-              version: "4.7", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Alpha-2", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
-          setSelectedNode(null); setActiveReport(null); showToast("Neues Projekt gestartet", "success");
+          setSelectedNode(null); setActiveReport(null); showToast(t('msgNewProjectSuccess'), "success");
       }
   };
 
@@ -85,9 +88,17 @@ const App = () => {
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target.result);
-        if (imported.version) { setData(imported); showToast("Projekt erfolgreich geöffnet!", "success"); } 
-        else throw new Error("Keine gültige Version.");
-      } catch (err) { showToast("Fehler beim Öffnen: Ungültiges JSON.", "error"); }
+        const safeBudget = {
+            incomeSources: imported.budget?.incomeSources || [],
+            expenses: imported.budget?.expenses || [],
+            subscriptions: imported.budget?.subscriptions || []
+        };
+        imported.budget = safeBudget;
+        setData(imported);
+
+        if (imported.version) { setData(imported); showToast(t('msgOpenSuccess'), "success"); } 
+        else throw new Error(t('msgInvalidVersion'));
+      } catch (err) { showToast(t('msgInvalidJson'), "error"); }
     };
     reader.readAsText(file); e.target.value = null; 
   };
@@ -97,7 +108,7 @@ const App = () => {
     const blob = new Blob([jsonStr], { type: "application/json" });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.json`;
-    a.click(); showToast("Projekt gesichert", "success");
+    a.click(); showToast(t('msgSaveSuccess'), "success");
   };
 
   const handleExportCSV = () => {
@@ -106,11 +117,71 @@ const App = () => {
           const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
           a.download = `FinSPA_Buchungen_${new Date().toISOString().split('T')[0]}.csv`;
-          a.click(); showToast("CSV Export erfolgreich", "success");
-      } catch (e) { showToast("Fehler beim CSV Export", "error"); }
+          a.click(); showToast(t('msgCsvSuccess'), "success");
+      } catch (e) { showToast(t('msgCsvError'), "error"); }
   };
 
-  const handleImportCSV = (e) => { e.target.value = null; alert("CSV Import wird im nächsten Release unterstützt."); };
+  const handleImportParqetCSV = (e) => {
+    const target = e.target;
+    const file = target.files[0];
+    if (!file) {
+      console.warn("[FinSPA Diagnose] Keine Datei ausgewählt.");
+      return;
+    }
+
+    console.log(`[FinSPA Diagnose] Starte Import für Datei: ${file.name} (${file.size} Bytes)`);
+
+    if (typeof importParqetCSV !== 'function') {
+      console.error("[FinSPA Diagnose] KRITISCHER FEHLER: 'importParqetCSV' ist keine ausführbare Funktion!");
+      showToast(t('msgImportModuleError'), "error");
+      target.value = null;
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const csvContent = event.target.result;
+        
+        if (!csvContent) {
+          console.error("[FinSPA Diagnose] Die eingelesene Datei ist komplett leer.");
+          showToast(t('msgFileEmpty'), "error");
+          target.value = null;
+          return;
+        }
+        
+        console.log("[FinSPA Diagnose] Rufe importParqetCSV auf...");
+        const importedBanks = importParqetCSV(csvContent);
+        console.log("[FinSPA Diagnose] Rückgabewert von importParqetCSV:", importedBanks);
+
+        if (importedBanks && importedBanks.length > 0) {
+          setData(prev => ({
+            ...prev,
+            lastModified: new Date().toISOString(),
+            banks: [...prev.banks, ...importedBanks]
+          }));
+          showToast(t('msgParqetSuccess'), "success");
+        } else {
+          console.warn("[FinSPA Diagnose] importParqetCSV lieferte ein leeres Array oder null/undefined zurück.");
+          showToast(t('msgNoValidAssets'), "error");
+        }
+      } catch (err) {
+        console.error("[FinSPA Diagnose] !!! ABSTURZ WÄHREND DES IMPORTS !!!", err);
+        showToast(`${t('msgProcessErrorPrefix')}${err.message}`, "error");
+      }
+      
+      target.value = null;
+    };
+
+    reader.onerror = (readerErr) => {
+      console.error("[FinSPA Diagnose] Fehler beim Lesen der Datei durch den FileReader:", readerErr);
+      showToast(t('msgFileReadError'), "error");
+    };
+
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleImportCSV = (e) => { e.target.value = null; alert(t('msgCsvNotSupported')); };
 
   const updateTreeData = (newData) => setData({ ...data, lastModified: new Date().toISOString(), ...newData });
 
@@ -148,10 +219,9 @@ const App = () => {
       if (n.children) return { ...n, children: recursiveUpdate(n.children) };
       return n;
     });
-    updateTreeData({ banks: recursiveUpdate(data.banks) }); showToast("Wechselkurse synchronisiert", "success");
+    updateTreeData({ banks: recursiveUpdate(data.banks) }); showToast(t('msgRatesSynced'), "success");
   };
 
-  // Diese neue Komponente kapselt die Formulare, damit sie sauber rendern (behebt den weißen Bildschirm)
   const FormModal = () => {
       const [form, setForm] = useState(modalObj.item || { date: new Date().toISOString().split('T')[0], type: modalObj.defaultType || 'Einzahlung', amount: '', subCategory: '', shares: '', price: '', fees: '', taxes: '', bookingExchangeRate: selectedNode?.exchangeRate || 1 });
 
@@ -160,9 +230,20 @@ const App = () => {
           if (modalObj.type === 'editGoal') { newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; } 
           else if (modalObj.type === 'addScenario') { newData.scenarios.push({ id: generateId(), name: form.name||'Neu', date: form.date, impact: Number(form.impact||0) }); } 
           else if (modalObj.type === 'addBank') { newData.banks.push({ id: generateId(), name: form.name || 'Neue Bank', type: 'bank', isArchived: false, children: [] }); } 
-          else if (modalObj.type === 'addBudget') {
+          else if (modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
               const group = modalObj.budgetGroup;
-              newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || 'Neuer Posten', amount: Number(form.amount || 0), frequency: 'monthly' }];
+              if (!newData.budget) newData.budget = { incomeSources: [], expenses: [], subscriptions: [] };
+              if (!newData.budget[group]) newData.budget[group] = [];
+              
+              if (modalObj.type === 'editBudget') {
+                  newData.budget[group] = newData.budget[group].map(item => 
+                      item.id === modalObj.item.id 
+                          ? { ...item, name: form.name, amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }
+                          : item
+                  );
+              } else {
+                  newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || 'Neuer Posten', amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
+              }
           } else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
               const updateRecursive = (nodes) => nodes.map(n => {
                   if (n.id === modalObj.assetId) {
@@ -204,7 +285,7 @@ const App = () => {
               });
               newData.banks = updateRecursive(newData.banks);
           }
-          updateTreeData(newData); showToast("Gespeichert!", "success"); setModalObj(null);
+          updateTreeData(newData); showToast(t('msgSaved'), "success"); setModalObj(null);
       };
 
       const handleItemDelete = () => {
@@ -222,14 +303,14 @@ const App = () => {
               }
               if (n.children) return { ...n, children: updateRecursive(n.children) };
               return n;
-          });
+              });
           newData.banks = updateRecursive(newData.banks);
           updateTreeData(newData);
           if (selectedNode && selectedNode.id === modalObj.assetId) {
               const getUpdatedNode = (nodes) => { for(let i=0; i<nodes.length; i++) { if(nodes[i].id === selectedNode.id) return nodes[i]; if(nodes[i].children) { let r = getUpdatedNode(nodes[i].children); if(r) return r; } } };
               setSelectedNode(getUpdatedNode(newData.banks));
           }
-          showToast("Gelöscht!", "success"); setModalObj(null);
+          showToast(t('msgDeleted'), "success"); setModalObj(null);
       };
 
       let availableBookingTypes = ['Einzahlung', 'Auszahlung'];
@@ -237,7 +318,7 @@ const App = () => {
           const ac = selectedNode.assetClass;
           if (ac === 'realestate') availableBookingTypes = ['Wertanpassung'];
           else if (ac === 'mortgage') availableBookingTypes = ['Abzahlung', 'Zinszahlung', 'Schulderhöhung'];
-          else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund') availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr'];
+          else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund') availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
           else if (ac === 'pension_cash') availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Zinszahlung', 'Gebühr'];
       }
 
@@ -249,87 +330,136 @@ const App = () => {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 shrink-0">
-              <h3 className="font-bold text-lg">{modalObj.type.includes('edit') ? 'Bearbeiten' : 'Neu erfassen'}</h3>
+              <h3 className="font-bold text-lg">{modalObj.type.includes('edit') ? t('modalEdit') : t('modalNew')}</h3>
               <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white"><Icon name="X" size={20}/></button>
             </div>
             <div className="p-6 space-y-4 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto">
+
                 {modalObj.type === 'editGoal' && (
                     <>
-                        <div><label className="block font-bold mb-1">Zielbetrag (FIRE)</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.target || ''} onChange={e=>setForm({...form, target: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">Zieljahr</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.year || ''} onChange={e=>setForm({...form, year: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1">{t('goalTarget')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.target || ''} onChange={e=>setForm({...form, target: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1">{t('goalYear')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.year || ''} onChange={e=>setForm({...form, year: e.target.value})}/></div>
                     </>
                 )}
                 {modalObj.type === 'addScenario' && (
                     <>
-                        <div><label className="block font-bold mb-1">Szenario Name</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">Datum (Eintritt)</label><input type="date" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.date || ''} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">Impact (positiv oder negativ)</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.impact || ''} onChange={e=>setForm({...form, impact: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1">{t('scenarioName')}</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1">{t('scenarioDate')}</label><input type="date" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.date || ''} onChange={e=>setForm({...form, date: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1">{t('scenarioImpact')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.impact || ''} onChange={e=>setForm({...form, impact: e.target.value})}/></div>
                     </>
                 )}
-                {(modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget') && (
+                {(modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                     <>
-                        <div><label className="block font-bold mb-1">Bezeichnung</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
-                        {modalObj.type === 'addBudget' && <div><label className="block font-bold mb-1 mt-3">Betrag</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.amount || ''} onChange={e=>setForm({...form, amount: e.target.value})}/></div>}
+                        <div><label className="block font-bold mb-1">{t('propName')}</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
+                        {(modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
+                            <>
+                                <div><label className="block font-bold mb-1 mt-3">{t('amount')}</label><input type="number" step="any" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.amount || ''} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
+                                <div>
+                                    <label className="block font-bold mb-1 mt-3">{t('budgetFreq')}</label>
+                                    <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.frequency || 'monthly'} onChange={e=>setForm({...form, frequency: e.target.value})}>
+                                        <option value="monthly">{t('freqMonthly')}</option>
+                                        <option value="yearly">{t('freqYearly')}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-1 mt-3">{t('budgetRuleCat')}</label>
+                                    <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.ruleCategory || 'needs'} onChange={e=>setForm({...form, ruleCategory: e.target.value})}>
+                                        <option value="needs">{t('ruleNeeds')}</option>
+                                        <option value="wants">{t('ruleWants')}</option>
+                                        <option value="savings">{t('ruleSavings')}</option>
+                                    </select>
+                                </div>
+                            </>
+                        )}
                         {modalObj.type === 'addAsset' && (
                             <div className="mt-3">
-                                <label className="block font-bold mb-1">Anlageklasse</label>
-                                <select className="w-full p-2 border rounded dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.assetClass || 'cash'} onChange={e=>setForm({...form, assetClass: e.target.value})}>
+                                <label className="block font-bold mb-1">{t('assetClass')}</label>
+                                <select className="w-full p-2 border rounded dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.assetClass || 'cash'} onChange={e => setForm({...form, assetClass: e.target.value})}>
                                     <option value="cash">{t('acCash')}</option><option value="fund">{t('acFund')}</option><option value="stock">{t('acStock')}</option><option value="crypto">{t('acCrypto')}</option><option value="realestate">{t('acRealEstate')}</option><option value="mortgage">{t('acMortgage')}</option><option value="pension_cash">{t('acPensionCash')}</option><option value="pension_fund">{t('acPensionFund')}</option>
                                 </select>
                             </div>
                         )}
                     </>
                 )}
-                {modalObj.type.includes('Booking') && (
-                    <>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">Datum</label><input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block font-bold mb-1 text-xs uppercase text-gray-500">Transaktionstyp</label>
-                                <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.type} onChange={e=>setForm({...form, type: e.target.value})}>
-                                    {availableBookingTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block font-bold mb-1 text-xs uppercase text-gray-500">Detail-Kategorie</label>
-                                <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.subCategory} onChange={e=>setForm({...form, subCategory: e.target.value})}>
-                                    <option value="">-- Wählen --</option>
-                                    {availableSubCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        
-                        {isSecurities && (
-                            <div className="bg-blue-50 dark:bg-slate-800/60 border border-blue-200 dark:border-slate-700 p-4 rounded-xl space-y-4">
-                                <div className="text-xs font-bold text-blue-800 dark:text-blue-400 uppercase tracking-wider flex items-center gap-2"><Icon name="List" size={12}/> Transaktionsdetails</div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Stückzahl</label><input type="number" step="0.0001" className="w-full p-2 border border-blue-200 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.shares} onChange={e=>setForm({...form, shares: e.target.value})}/></div>
-                                    <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Preis pro Stück</label><input type="number" step="0.01" className="w-full p-2 border border-blue-200 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.price} onChange={e=>setForm({...form, price: e.target.value})}/></div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Gebühren</label><input type="number" step="0.01" className="w-full p-2 border border-blue-200 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.fees} onChange={e=>setForm({...form, fees: e.target.value})}/></div>
-                                    <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Steuern</label><input type="number" step="0.01" className="w-full p-2 border border-blue-200 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.taxes} onChange={e=>setForm({...form, taxes: e.target.value})}/></div>
-                                </div>
-                                <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Wechselkurs (zum Transaktionszeitpunkt)</label><input type="number" step="0.0001" className="w-full p-2 border border-blue-200 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
-                            </div>
-                        )}
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">Totalbetrag (Gesamt in {selectedNode?.currency})</label><input type="number" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
-                    </>
-                )}
+
                 {modalObj.type.includes('Balance') && (
                     <>
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">Setzt den absoluten Stichtags-Saldo des gesamten Assets.</div>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">Stichtag</label><input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">Absoluter Saldo</label><input type="number" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">Wechselkurs (zum Stichtag - Optional)</label><input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">{t('balanceNotice')}</div>
+                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelBalanceDate')}</label><input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelAbsoluteBalance')}</label><input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate')}</label><input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
                     </>
                 )}
+
+                {modalObj.type.includes('Booking') && (
+                    <>
+                        <div>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('date') || 'Datum'}</label>
+                            <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('entryType') || 'Typ'}</label>
+                            <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.type} onChange={e=>setForm({...form, type: e.target.value, subCategory: ''})}>
+                                {availableBookingTypes.map(tOption => {
+                                    const typeMap = {
+                                        'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
+                                        'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
+                                        'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee'
+                                    };
+                                    const translationKey = typeMap[tOption] || tOption;
+                                    return (
+                                        <option key={tOption} value={tOption}>
+                                            {t(translationKey)}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('amount') || 'Betrag'}</label>
+                            <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
+                        </div>
+                        
+                        {availableSubCategories.length > 0 && (
+                            <div>
+                                <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('category') || 'Kategorie'}</label>
+                                <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.subCategory || ''} onChange={e=>setForm({...form, subCategory: e.target.value})}>
+                                    <option value="">-- Optional --</option>
+                                    {availableSubCategories.map(cat => (
+                                        <option key={cat} value={cat}>
+                                            {t(cat)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {isSecurities && ['Kauf', 'Verkauf', 'Dividende'].includes(form.type) && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('shares') || 'Stücke'}</label>
+                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.shares || ''} onChange={e=>setForm({...form, shares: e.target.value})}/>
+                                </div>
+                                <div>
+                                    <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('price') || 'Preis'}</label>
+                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.price || ''} onChange={e=>setForm({...form, price: e.target.value})}/>
+                                </div>
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate') || 'Wechselkurs'}</label>
+                            <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                        </div>
+                    </>
+                )}
+
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between gap-3 shrink-0">
-              {modalObj.item ? <button onClick={handleItemDelete} className="px-4 py-2 text-red-600 font-bold hover:bg-red-50 rounded-lg transition-colors">Löschen</button> : <div></div>}
+              {modalObj.item ? <button onClick={handleItemDelete} className="px-4 py-2 text-red-600 font-bold hover:bg-red-50 rounded-lg transition-colors">{t('btnDelete')}</button> : <div></div>}
               <div className="flex gap-2">
-                  <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">Abbrechen</button>
-                  <button onClick={handleSave} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">Speichern</button>
+                  <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">{t('btnCancel')}</button>
+                  <button onClick={handleSave} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">{t('btnSave')}</button>
               </div>
             </div>
           </div>
@@ -341,42 +471,108 @@ const App = () => {
       if (!modalObj) return null;
       if (modalObj.type === 'settings') return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
       if (modalObj.type === 'help') return <HelpViewer setModalObj={setModalObj} lang={lang} />;
-      
+
+      if (modalObj.type === 'about') return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all">
+                  <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                          <Icon name="Info" className="text-blue-500" />
+                          <h3 className="font-bold text-lg">{t('helpAbout')}</h3>
+                      </div>
+                      <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                          <Icon name="X" size={20}/>
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 text-center space-y-4">
+                      <div className="flex justify-center mb-2">
+                          <div className="bg-blue-700 text-white p-4 rounded-full shadow-lg">
+                              <Icon name="PieChart" size={40} />
+                          </div>
+                      </div>
+                      
+                      <div>
+                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Fin SPA Pro</h2>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Alpha-2</p>
+                      </div>
+                      
+                      <hr className="border-gray-200 dark:border-slate-700 my-4" />
+                      
+                      <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                          <p>{t('aboutDesc')}</p>
+                      </div>
+
+                      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">{t('aboutDev')}</p>
+                          <p>&copy; {new Date().getFullYear()} Thomas Kerle. {t('aboutRights')}</p>
+                      </div>
+                  </div>
+                  
+                  <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-center">
+                      <button onClick={() => setModalObj(null)} className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">
+                          {t('btnClose')}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      );		
+
       if (modalObj.type === 'deleteNode') {
           const node = modalObj.node;
           return (
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                   <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2"><Icon name="Trash" className="text-red-500" /><h3 className="font-bold text-lg">Element entfernen</h3></div>
+                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2"><Icon name="Trash" className="text-red-500" /><h3 className="font-bold text-lg">{t('deleteNodeTitle')}</h3></div>
                       <div className="p-6 text-sm text-gray-700 dark:text-gray-300">
-                          <p>Möchten Sie <strong>{node.name}</strong> wirklich löschen?</p>
-                          {!node.budgetType && <p className="mt-2 text-xs text-gray-500">Tipp: Durch das Archivieren bleibt das Element erhalten, wird aber ausgeblendet.</p>}
+                          <p>{t('deleteNodeConfirmPrefix')} <strong>{node.name}</strong> {t('deleteNodeConfirmSuffix')}</p>
+                          {!node.budgetType && <p className="mt-2 text-xs text-gray-500">{t('deleteNodeArchiveTip')}</p>}
                       </div>
                       <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col gap-2">
                           {!node.isArchived && !node.budgetType && (
-                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast("Element archiviert", "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">Nur Archivieren</button>
+                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived'), "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">{t('btnArchiveOnly')}</button>
                           )}
-                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast("Endgültig gelöscht", "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">Endgültig löschen</button>
-                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">Abbrechen</button>
+                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent'), "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">{t('btnDeletePermanent')}</button>
+                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">{t('btnCancel')}</button>
                       </div>
                   </div>
               </div>
           );
       }
 
-      // Alle Buchungs- und Asset-Formulare laufen jetzt über eine dedizierte Komponente!
       return <FormModal />;
   };
 
   return (
     <div id="app-container" className="h-screen w-screen flex flex-col font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-      <MenuBar viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handlePrint={handlePrint} />
+      
+      <style>{`
+        @media print {
+          .print-hide { display: none !important; }
+          #printable-editor { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; overflow: visible !important; background: white !important; z-index: 9999; }
+          body, html { background: white !important; color: black !important; margin: 0; padding: 0; }
+        }
+      `}</style>
+
+      <MenuBar viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} />
       <div className="flex-1 flex overflow-hidden relative">
         <TreeView data={data} viewMode={viewMode} selectedNode={selectedNode} setSelectedNode={setSelectedNode} setActiveReport={setActiveReport} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} setShowArchived={setShowArchived} expandedNodes={expandedNodes} toggleExpand={toggleExpand} deleteNode={requestDeleteNode} setModalObj={setModalObj} t={t} />
         <div className="flex-1 relative overflow-auto" id="printable-editor">
           <EditorArea data={data} viewMode={viewMode} activeReport={activeReport} selectedNode={selectedNode} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} dateRange={dateRange} setDateRange={setDateRange} setModalObj={setModalObj} fCur={fCur} t={t} />
         </div>
-        <PropertyEditor data={data} activeReport={activeReport} selectedNode={selectedNode} setSelectedNode={setSelectedNode} updateTreeData={updateTreeData} syncExchangeRates={syncExchangeRates} t={t} />
+
+        {!activeReport && selectedNode && (
+          <PropertyEditor 
+              data={data} 
+              activeReport={activeReport} 
+              selectedNode={selectedNode} 
+              setSelectedNode={setSelectedNode} 
+              updateTreeData={updateTreeData} 
+              syncExchangeRates={syncExchangeRates} 
+              t={t} 
+          />
+        )}
+
       </div>
       <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-xs text-gray-600 dark:text-gray-400 z-50">
           <div className="flex gap-6"><span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady')}</span><span>Modus: <strong className="uppercase">{viewMode}</strong></span></div>
