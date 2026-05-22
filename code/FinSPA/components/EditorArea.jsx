@@ -1,6 +1,5 @@
 const React = require('react');
 
-// Umgehung für den statischen Bundler, damit die Imports nicht fehlschlagen
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
@@ -22,8 +21,11 @@ const ScenariosReport = safeRequire('./reports/ScenariosReport.jsx') || (() => <
 const BudgetDashboard = safeRequire('./budget/BudgetDashboard.jsx') || (() => <div>BudgetDashboard</div>);
 const BudgetEditor = safeRequire('./budget/BudgetEditor.jsx') || (() => <div>BudgetEditor</div>);
 const AssetOverviewReport = safeRequire('./reports/AssetOverviewReport.jsx') || (() => <div>AssetOverviewReport</div>);
+const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport.jsx') || (() => <div>PensionPerformanceReport</div>);
+const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
+const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">AiDashboard.jsx fehlt</div>);
 
-const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, setModalObj, fCur, t }) => {
+const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, setModalObj, updateTreeData, fCur, t }) => {
   const allAssets = getAllAssets(data?.banks || []) || [];
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
 
@@ -36,6 +38,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
         </div>
       </div>
     );
+  }
+
+ if (viewMode === 'ai') {
+      const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">AiDashboard.jsx fehlt</div>);
+      return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
   }
 
   if (activeReport) {
@@ -53,6 +60,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
         case 'bookingAnalysis': return <BookingAnalysisReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'future': return <FutureReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
+	case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+	case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+
         default: return <div className="text-gray-500">{t ? t('reportLoading') : 'Report wird geladen...'}</div>;
       }
     };
@@ -81,9 +91,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
   if (selectedNode) {
     if (selectedNode.budgetType) return <BudgetEditor selectedNode={selectedNode} fCur={fCur} t={t} />;
   
-    // =========================================================================
-    // DASHBOARD FÜR BANKEN & BROKER ODER KATEGORIEN
-    // =========================================================================
     if (selectedNode.type === 'bank' || selectedNode.type === 'category') {
       const analyzeStructure = (node, currentCategory = (t ? t('mainPortfolio') : 'Hauptportfolio')) => {
         let items = [];
@@ -95,10 +102,23 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
         if (node.type === 'asset') {
           if (node.isArchived && !showArchived) return [];
 
-          // KORREKTUR: Einheitliche und korrekte Vermögensberechnung über die DataEngine
-          const baseVal = getAssetValueAtDate(node, new Date().toISOString().split('T')[0]) || 0;
-          const rate = parseFloat(node.exchangeRate) || 1;
-          const origVal = node.currency === 'CHF' ? baseVal : baseVal / rate;
+          const baseVal = getAssetValueAtDate(node, new Date().toISOString().split('T')[0], activeAssets) || 0;
+          
+          // ECHTE Berechnung des unkonvertierten Fremdwährungsbetrags für Wertpapiere/Depots
+          let sortedBalances = [...(node.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+          let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= new Date().toISOString().split('T')[0]);
+          let baseAmount = applicableBalance ? applicableBalance.amount : 0;
+          let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+          let netBookings = 0;
+          (node.bookings || []).forEach(bk => {
+               if (bk.date > baseDate && bk.date <= new Date().toISOString().split('T')[0]) {
+                   const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
+                   const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
+                   if (isPositive) netBookings += Number(bk.amount);
+                   else if (isNegative) netBookings -= Number(bk.amount);
+               }
+          });
+          const origVal = baseAmount + netBookings;
 
           const subCatKey = node.assetClass || 'cash';
           const subCategoryName = t ? (t(`ac${subCatKey.charAt(0).toUpperCase() + subCatKey.slice(1)}`) || subCatKey.toUpperCase()) : subCatKey.toUpperCase();
@@ -125,7 +145,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
       const allBankAssets = analyzeStructure(selectedNode, selectedNode.name);
       const totalBankValue = allBankAssets.reduce((sum, item) => sum + item.valueInBase, 0);
 
-      // Gruppierung für Kacheln und Diagramm
       const categoryMap = {};
       const subCategoryMap = {};
 
@@ -148,7 +167,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
       const Charts = safeRequire('./Charts.jsx') || {};
       const PieChartSVG = Charts.PieChartSVG || (() => <div className="text-gray-400">Diagramm-Modul nicht geladen</div>);
 
-      // Dynamische Header-Eigenschaften je nach Knotentyp
       const isBank = selectedNode.type === 'bank';
       const headerIcon = isBank ? "Shield" : "FolderOpen";
       const headerSubtitle = isBank 
@@ -157,7 +175,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
 
       return (
         <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-6 mb-6 gap-4">
             <div>
               <h2 className="text-3xl font-black flex items-center gap-3">
@@ -167,7 +184,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
               </h2>
               <p className="text-gray-500 text-sm mt-1">{headerSubtitle}</p>
             </div>
-            {/* KORREKTUR: Flex-Layout angepasst gegen Überlappung */}
             <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0 min-w-[180px]">
               <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">
                 {t ? t('totalValue') : 'Gesamtwert'}
@@ -176,11 +192,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                 {fCur ? fCur(totalBankValue, 'CHF') : totalBankValue}
               </span>
             </div>
-      
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-            {/* Linke Seite: Detaillierte Kategorien */}
             <div className="xl:col-span-2 space-y-6">
               {Object.keys(categoryMap).map(categoryName => {
                 const categoryItems = allBankAssets.filter(a => a.category === categoryName);
@@ -225,7 +239,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
               })}
             </div>
 
-            {/* Rechte Seite: Diagramme */}
             <div className="space-y-6">
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6 flex flex-col items-center">
                 <h3 className="font-bold text-sm text-gray-700 dark:text-gray-300 self-start mb-6 flex items-center gap-2">
@@ -257,9 +270,28 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
       );
     }
 
-    // ORIGINALER ASSET-BLOCK
     if (selectedNode.type === 'asset') {
-      const currentVal = getAssetValueAtDate(selectedNode, new Date().toISOString().split('T')[0]);
+      const baseCurrency = data?.settings?.baseCurrency || 'CHF';
+      const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
+      
+      const currentVal = getAssetValueAtDate(selectedNode, new Date().toISOString().split('T')[0], activeAssets);
+      
+      let rawSum = 0;
+      let sortedBalances = [...(selectedNode.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+      let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= new Date().toISOString().split('T')[0]);
+      let baseAmount = applicableBalance ? applicableBalance.amount : 0;
+      let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+      let netBookings = 0;
+      (selectedNode.bookings || []).forEach(bk => {
+           if (bk.date > baseDate && bk.date <= new Date().toISOString().split('T')[0]) {
+               const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
+               const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
+               if (isPositive) netBookings += Number(bk.amount);
+               else if (isNegative) netBookings -= Number(bk.amount);
+           }
+      });
+      rawSum = baseAmount + netBookings;
+
       let defaultType = 'Einzahlung'; 
       const ac = selectedNode.assetClass;
       
@@ -276,9 +308,17 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                  <Icon name="DollarSign" className="text-green-500"/>
                  {selectedNode.name} {selectedNode.isArchived && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">{t ? t('isArchived') : 'Archiviert'}</span>}
                </h2>
-               <div className="flex gap-6 mt-3 text-sm">
+               <div className="flex gap-6 mt-3 text-sm items-center">
                  <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full font-medium">{t ? t('assetClassLabel') : 'Klasse:'} <span className="uppercase">{selectedNode.assetClass}</span></span>
-                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 px-3 py-1 rounded-full font-bold">{t ? t('valueToday') : 'Wert (Heute):'} {fCur ? fCur(currentVal, selectedNode.currency) : currentVal}</span>
+                 
+                 <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 px-3 py-1 rounded-full font-bold flex items-center gap-2">
+                    {t ? t('valueToday') : 'Wert (Heute):'} {fCur ? fCur(currentVal, baseCurrency) : currentVal}
+                    {isForeignCurrency && (
+                        <span className="text-xs font-medium opacity-60">
+                            ({fCur ? fCur(rawSum, selectedNode.currency) : rawSum})
+                        </span>
+                    )}
+                 </span>
                </div>
              </div>
           </div>
@@ -310,11 +350,12 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                     
                     let typeLabel = item.type;
                     if (!item._isBal) {
-                      const typeMap = {
-                        'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
-                        'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
-                        'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee'
-                      };
+                     const typeMap = {
+  'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
+  'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
+  'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee',
+  'Umbuchung': 'typeTransfer' // NEU
+};
                       if (typeMap[item.type] && t) {
                         typeLabel = t(typeMap[item.type]);
                       }
@@ -327,12 +368,23 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                       details += ` [${t ? t('rateLabel') : 'Kurs:'} ${item.bookingExchangeRate}]`;
                     }
                     
+                    const usedRate = item.bookingExchangeRate || selectedNode.exchangeRate || 1;
+                    
                     return (
                     <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer" onClick={()=>setModalObj({type: item._isBal ? 'editBalance' : 'editBooking', assetId: selectedNode.id, item})}>
                       <td className="p-4 text-gray-600 dark:text-gray-400">{item.date}</td>
                       <td className="p-4">{item._isBal ? <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}><Icon name="Activity" size={10}/> {t ? t('balanceLabel') : 'SALDO'}</span> : <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}>{typeLabel}</span>}</td>
                       <td className="p-4 font-medium text-gray-600 dark:text-gray-400">{details}</td>
-                      <td className={`p-4 text-right font-black ${amountColor}`}>{prefix}{fCur ? fCur(item.amount, selectedNode.currency) : item.amount}</td>
+                      
+                      <td className={`p-4 text-right font-black flex flex-col items-end ${amountColor}`}>
+                        <span>{prefix}{fCur ? fCur(item.amount, selectedNode.currency) : item.amount}</span>
+                        {isForeignCurrency && (
+                            <span className="text-[10px] opacity-50 font-medium tracking-wide mt-0.5">
+                                ≈ {fCur ? fCur(item.amount * usedRate, baseCurrency) : (item.amount * usedRate)}
+                            </span>
+                        )}
+                      </td>
+                      
                       <td className="p-4 text-center print-hide text-gray-400 hover:text-blue-500"><Icon name="Edit" size={14}/></td>
                     </tr>
                   )})}

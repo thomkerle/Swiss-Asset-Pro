@@ -1,17 +1,23 @@
 const React = require('react');
 const ReportHeader = require('../ReportHeader.jsx');
+// Importiert den neuen Normalizer aus der DataEngine
+const { getNormalizedBookings } = require('./../../data/DataEngine.jsx'); 
 
 const PassiveIncomeReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
   let passiveSum = 0;
   
-  activeAssets.forEach(a => {
-      (a.bookings||[]).filter(bk => 
-          bk.date >= dateRange.from && 
-          bk.date <= dateRange.to && 
-          ['Dividende','Zinsen','Mieteinnahmen'].includes(bk.type) // Interne Datentypen bleiben unangetastet
-      ).forEach(bk => {
-          passiveSum += Number(bk.amount)*(a.exchangeRate||1);
-      });
+  // 1. Alle Buchungen der aktiven Assets normalisiert und flach hereinholen
+  const normBookings = getNormalizedBookings(activeAssets);
+
+  // 2. Filterung auf die konsistenten, normierten Felder anwenden
+  normBookings.filter(bk => 
+      bk.date >= dateRange.from && 
+      bk.date <= dateRange.to &&
+      bk.normType === 'Einzahlung' && // Jedes passive Einkommen ist ein Inflow
+      ['Dividenden', 'Zinsen', 'Mieteinnahmen'].includes(bk.normCategory) // Semantische Prüfung
+  ).forEach(bk => {
+      // Nutzt den direkt injizierten und währungsbereinigten CHF-Basiswert
+      passiveSum += bk._baseValue; 
   });
 
   // Fallbacks für Strings
@@ -24,7 +30,7 @@ const PassiveIncomeReport = ({ activeAssets, dateRange, isTreeVisible, setIsTree
       <div className="max-w-6xl px-4 md:px-8 pb-12">
       <ReportHeader 
         title={title} 
-        subtitle={`${subtitlePrefix} ${dateRange.from} ${wordAnd} ${dateRange.to}.`} 
+        subtitle={`${subtitlePrefix} ${dateRange.from} ${wordAnd} ${dateRange.to}.`}
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
@@ -37,4 +43,5 @@ const PassiveIncomeReport = ({ activeAssets, dateRange, isTreeVisible, setIsTree
     </div>
   );
 };
+
 module.exports = PassiveIncomeReport;

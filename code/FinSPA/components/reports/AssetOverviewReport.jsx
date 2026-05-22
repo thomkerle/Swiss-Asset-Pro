@@ -41,13 +41,20 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   });
 
   const getAcName = (ac) => {
-    // Fallbacks, falls t() für alte Keys nicht existiert
+    // 1. Spezifische Keys zuerst prüfen (z.B. acPension_cash)
+    const key = `ac${ac.charAt(0).toUpperCase() + ac.slice(1)}`;
+    if (t) {
+      const translated = t(key);
+      if (translated && translated !== key) return translated;
+    }
+    
+    // 2. Fallback Map für hartkodierte oder fehlende Übersetzungen
     const map = { 
       cash: 'Konten / Cash', fund: 'Fonds / ETFs', stock: 'Aktien', 
       crypto: 'Krypto', realestate: 'Immobilien', mortgage: 'Hypotheken', 
       pension_cash: 'Vorsorge (Konten)', pension_fund: 'Vorsorge (Depots)' 
     };
-    return t ? (t(`ac${ac.charAt(0).toUpperCase() + ac.slice(1)}`) || t(`ac_${ac}`) || map[ac] || ac) : (map[ac] || ac);
+    return map[ac] || ac;
   };
 
   const getAcIcon = (ac) => {
@@ -62,7 +69,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   const sortedClasses = Object.keys(overview).sort((a,b) => overview[b].total - overview[a].total);
 
   return (
-<div className="max-w-6xl px-4 md:px-8 pb-12">
+    <div className="max-w-6xl px-4 md:px-8 pb-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-gray-200 dark:border-slate-800 pb-6 gap-4">
         <div className="flex-1">
           <ReportHeader 

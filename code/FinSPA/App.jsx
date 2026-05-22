@@ -35,7 +35,26 @@ const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'))
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
 const App = () => {
-  const [data, setData] = useState(initialData);
+  const [fileHandle, setFileHandle] = useState(null);
+  
+  // 1. Initialisierung: Daten aus localStorage laden oder Fallback auf initialData nutzen
+  const [data, setData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const localData = localStorage.getItem('finspa_pro_autosave');
+        if (localData) {
+          const parsed = JSON.parse(localData);
+          if (parsed && parsed.version) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error("[FinSPA] Autosave konnte nicht geladen werden:", e);
+      }
+    }
+    return initialData;
+  });
+
   const [lang, setLang] = useState('de');
   const [theme, setTheme] = useState('light');
   const [viewMode, setViewMode] = useState('vermoegen');
@@ -62,6 +81,33 @@ const App = () => {
 
   useEffect(() => { setIsTreeVisible(!activeReport); }, [activeReport]);
 
+  // 2. Autosave-Logik: Sichert im localStorage UND direkt in der geöffneten Datei
+  useEffect(() => {
+    try {
+      localStorage.setItem('finspa_pro_autosave', JSON.stringify(data));
+    } catch (e) {
+      console.error("[FinSPA] Fehler beim localStorage-Autosave:", e);
+    }
+
+    const writeToDisk = async () => {
+      if (fileHandle) {
+        try {
+          const opts = { mode: 'readwrite' };
+          if ((await fileHandle.queryPermission(opts)) === 'granted' || (await fileHandle.requestPermission(opts)) === 'granted') {
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(data, null, 2));
+            await writable.close();
+          }
+        } catch (err) {
+          console.error("[FinSPA] Direktes Dateisichern fehlgeschlagen:", err);
+        }
+      }
+    };
+
+    const timer = setTimeout(writeToDisk, 500);
+    return () => clearTimeout(timer);
+  }, [data, fileHandle]);
+
   const showToast = (message, type = 'success') => {
       const id = Date.now();
       setToasts(prev => [...prev, {id, message, type}]);
@@ -72,6 +118,7 @@ const App = () => {
 
   const handleNewProject = () => {
       if (window.confirm(t('msgNewProjectWarning'))) {
+          setFileHandle(null);
           setData({
               version: "Alpha-2", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
@@ -81,26 +128,54 @@ const App = () => {
       }
   };
 
-  const handleOpenProject = (e) => {
-    const file = e.target.files[0];
+  const handleOpenProject = async (e) => {
+    if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'FinSPA Projektdatei', accept: { 'application/json': ['.json'] } }],
+          multiple: false
+        });
+        const file = await handle.getFile();
+        const content = await file.text();
+        const imported = JSON.parse(content);
+        
+        if (imported && imported.version) {
+          const safeBudget = {
+              incomeSources: imported.budget?.incomeSources || [],
+              expenses: imported.budget?.expenses || [],
+              subscriptions: imported.budget?.subscriptions || []
+          };
+          imported.budget = safeBudget;
+          setFileHandle(handle);
+          setData(imported);
+          showToast(t('msgOpenSuccess'), "success");
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') showToast(t('msgInvalidJson'), "error");
+      }
+      return;
+    }
+
+    const file = e?.target?.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target.result);
-        const safeBudget = {
-            incomeSources: imported.budget?.incomeSources || [],
-            expenses: imported.budget?.expenses || [],
-            subscriptions: imported.budget?.subscriptions || []
-        };
-        imported.budget = safeBudget;
-        setData(imported);
-
-        if (imported.version) { setData(imported); showToast(t('msgOpenSuccess'), "success"); } 
-        else throw new Error(t('msgInvalidVersion'));
+        if (imported.version) {
+          const safeBudget = {
+              incomeSources: imported.budget?.incomeSources || [],
+              expenses: imported.budget?.expenses || [],
+              subscriptions: imported.budget?.subscriptions || []
+          };
+          imported.budget = safeBudget;
+          setFileHandle(null);
+          setData(imported);
+          showToast(t('msgOpenSuccess'), "success");
+        } else throw new Error(t('msgInvalidVersion'));
       } catch (err) { showToast(t('msgInvalidJson'), "error"); }
     };
-    reader.readAsText(file); e.target.value = null; 
+    reader.readAsText(file); if (e?.target) e.target.value = null; 
   };
 
   const handleSaveProject = () => {
@@ -129,8 +204,6 @@ const App = () => {
       return;
     }
 
-    console.log(`[FinSPA Diagnose] Starte Import für Datei: ${file.name} (${file.size} Bytes)`);
-
     if (typeof importParqetCSV !== 'function') {
       console.error("[FinSPA Diagnose] KRITISCHER FEHLER: 'importParqetCSV' ist keine ausführbare Funktion!");
       showToast(t('msgImportModuleError'), "error");
@@ -142,18 +215,13 @@ const App = () => {
     reader.onload = (event) => {
       try {
         const csvContent = event.target.result;
-        
         if (!csvContent) {
-          console.error("[FinSPA Diagnose] Die eingelesene Datei ist komplett leer.");
           showToast(t('msgFileEmpty'), "error");
           target.value = null;
           return;
         }
         
-        console.log("[FinSPA Diagnose] Rufe importParqetCSV auf...");
         const importedBanks = importParqetCSV(csvContent);
-        console.log("[FinSPA Diagnose] Rückgabewert von importParqetCSV:", importedBanks);
-
         if (importedBanks && importedBanks.length > 0) {
           setData(prev => ({
             ...prev,
@@ -162,22 +230,14 @@ const App = () => {
           }));
           showToast(t('msgParqetSuccess'), "success");
         } else {
-          console.warn("[FinSPA Diagnose] importParqetCSV lieferte ein leeres Array oder null/undefined zurück.");
           showToast(t('msgNoValidAssets'), "error");
         }
       } catch (err) {
-        console.error("[FinSPA Diagnose] !!! ABSTURZ WÄHREND DES IMPORTS !!!", err);
         showToast(`${t('msgProcessErrorPrefix')}${err.message}`, "error");
       }
-      
       target.value = null;
     };
-
-    reader.onerror = (readerErr) => {
-      console.error("[FinSPA Diagnose] Fehler beim Lesen der Datei durch den FileReader:", readerErr);
-      showToast(t('msgFileReadError'), "error");
-    };
-
+    reader.onerror = () => showToast(t('msgFileReadError'), "error");
     reader.readAsText(file, 'UTF-8');
   };
 
@@ -223,7 +283,16 @@ const App = () => {
   };
 
   const FormModal = () => {
-      const [form, setForm] = useState(modalObj.item || { date: new Date().toISOString().split('T')[0], type: modalObj.defaultType || 'Einzahlung', amount: '', subCategory: '', shares: '', price: '', fees: '', taxes: '', bookingExchangeRate: selectedNode?.exchangeRate || 1 });
+      const baseCurrency = data.settings?.baseCurrency || 'CHF';
+      const isForeignCurrency = selectedNode?.currency && selectedNode.currency !== baseCurrency;
+
+      const [form, setForm] = useState(modalObj.item || { 
+          date: new Date().toISOString().split('T')[0], 
+          type: modalObj.defaultType || 'Einzahlung', 
+          amount: '', subCategory: '', shares: '', price: '', fees: '', taxes: '', 
+          bookingExchangeRate: isForeignCurrency ? (selectedNode?.exchangeRate || 1) : 1,
+          targetAssetId: ''
+      });
 
       const handleSave = () => {
           let newData = {...data};
@@ -246,21 +315,53 @@ const App = () => {
               }
           } else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
               const updateRecursive = (nodes) => nodes.map(n => {
+                  let copy = {...n};
+
+                  // Automatische Gegenbuchung (Gutschrift) auf dem gewählten Zielkonto erstellen
+                  if (form.targetAssetId && n.id === form.targetAssetId && modalObj.type === 'addBooking') {
+                      if (!copy.bookings) copy.bookings = [];
+                      copy.bookings.push({
+                          id: generateId(),
+                          date: form.date,
+                          type: 'Einzahlung',
+                          subCategory: form.type === 'Dividende' ? 'Dividenden' : 'Umbuchung Eingang',
+                          amount: Number(form.amount),
+                          bookingExchangeRate: 1
+                      });
+                  }
+
                   if (n.id === modalObj.assetId) {
-                      let copy = {...n};
                       if (modalObj.type.includes('Booking')) {
                           if (!copy.bookings) copy.bookings = [];
                           if (modalObj.item) copy.bookings = copy.bookings.filter(b=>b.id !== modalObj.item.id);
-                          copy.bookings.push({ id: modalObj.item?.id || generateId(), date: form.date, type: form.type, subCategory: form.subCategory, amount: Number(form.amount), shares: Number(form.shares||0), price: Number(form.price||0), fees: Number(form.fees||0), taxes: Number(form.taxes||0), bookingExchangeRate: Number(form.bookingExchangeRate||1) });
+                          
+                          let saveType = form.type;
+                          let saveCat = form.subCategory;
+                          if (form.type === 'Umbuchung') {
+                              saveType = 'Auszahlung';
+                              saveCat = 'Umbuchung Ausgang';
+                          }
+
+                          copy.bookings.push({ 
+                              id: modalObj.item?.id || generateId(), 
+                              date: form.date, 
+                              type: saveType, 
+                              subCategory: saveCat, 
+                              amount: Number(form.amount), 
+                              shares: Number(form.shares||0), 
+                              price: Number(form.price||0), 
+                              fees: Number(form.fees||0), 
+                              taxes: Number(form.taxes||0), 
+                              bookingExchangeRate: Number(form.bookingExchangeRate||1) 
+                          });
                       } else {
                           if (!copy.balances) copy.balances = [];
                           if (modalObj.item) copy.balances = copy.balances.filter(b=>b.id !== modalObj.item.id);
                           copy.balances.push({ id: modalObj.item?.id || generateId(), date: form.date, amount: Number(form.amount), bookingExchangeRate: Number(form.bookingExchangeRate||1) });
                       }
-                      return copy;
                   }
-                  if (n.children) return { ...n, children: updateRecursive(n.children) };
-                  return n;
+                  if (n.children) copy.children = updateRecursive(n.children);
+                  return copy;
               });
               newData.banks = updateRecursive(newData.banks);
               if (selectedNode && selectedNode.id === modalObj.assetId) {
@@ -287,8 +388,9 @@ const App = () => {
           }
           updateTreeData(newData); showToast(t('msgSaved'), "success"); setModalObj(null);
       };
+	
 
-      const handleItemDelete = () => {
+const handleItemDelete = () => {
           if (!modalObj.item || !modalObj.assetId) return;
           let newData = {...data};
           const updateRecursive = (nodes) => nodes.map(n => {
@@ -313,18 +415,19 @@ const App = () => {
           showToast(t('msgDeleted'), "success"); setModalObj(null);
       };
 
-      let availableBookingTypes = ['Einzahlung', 'Auszahlung'];
+
+      let availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung'];
+      const ac = selectedNode?.assetClass;
       if (modalObj.type?.includes('Booking') && selectedNode?.type === 'asset') {
-          const ac = selectedNode.assetClass;
           if (ac === 'realestate') availableBookingTypes = ['Wertanpassung'];
           else if (ac === 'mortgage') availableBookingTypes = ['Abzahlung', 'Zinszahlung', 'Schulderhöhung'];
           else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund') availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
-          else if (ac === 'pension_cash') availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Zinszahlung', 'Gebühr'];
+          else if (ac === 'pension_cash') availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
       }
 
       const activeBookingCategories = data.settings?.bookingCategories || defaultBookingCategories;
       const availableSubCategories = activeBookingCategories[form.type] || [];
-      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund'].includes(selectedNode?.assetClass);
+      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund'].includes(ac);
 
       return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -386,8 +489,10 @@ const App = () => {
                     <>
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">{t('balanceNotice')}</div>
                         <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelBalanceDate')}</label><input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelAbsoluteBalance')}</label><input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate')}</label><input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
+                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelAbsoluteBalance')} ({selectedNode?.currency || baseCurrency})</label><input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
+                        {isForeignCurrency && (
+                            <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate')} ({selectedNode?.currency} -> {baseCurrency})</label><input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
+                        )}
                     </>
                 )}
 
@@ -404,7 +509,8 @@ const App = () => {
                                     const typeMap = {
                                         'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
                                         'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
-                                        'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee'
+                                        'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee',
+                                        'Umbuchung': 'typeTransfer'
                                     };
                                     const translationKey = typeMap[tOption] || tOption;
                                     return (
@@ -416,9 +522,36 @@ const App = () => {
                             </select>
                         </div>
                         <div>
-                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('amount') || 'Betrag'}</label>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('amount') || 'Betrag'} ({selectedNode?.currency || baseCurrency})</label>
                             <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
                         </div>
+                        
+                        {['Dividende', 'Umbuchung'].includes(form.type) && !modalObj.item && (
+    <div>
+        <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{t('targetAccount') || 'Zielkonto für Gutschrift'}</label>
+        <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
+            <option value="">-- Optional: Zielkonto wählen --</option>
+            {data.banks.map(bank => {
+                // Wir suchen die passenden Konten nur innerhalb der aktuellen Bank
+                const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash'].includes(a.assetClass));
+                
+                // Hat diese Bank keine passenden Konten, wird sie gar nicht erst angezeigt
+                if (eligibleAssets.length === 0) return null;
+                
+                // Wir rendern die Bank als Überschrift (optgroup) und darunter ihre Konten
+                return (
+                    <optgroup key={bank.id} label={bank.name}>
+                        {eligibleAssets.map(a => (
+                            <option key={a.id} value={a.id}>
+                                {a.name} ({a.currency})
+                            </option>
+                        ))}
+                    </optgroup>
+                );
+            })}
+        </select>
+    </div>
+)}
                         
                         {availableSubCategories.length > 0 && (
                             <div>
@@ -438,19 +571,37 @@ const App = () => {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('shares') || 'Stücke'}</label>
-                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.shares || ''} onChange={e=>setForm({...form, shares: e.target.value})}/>
+                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.shares || ''} onChange={e => {
+                                        const sh = e.target.value;
+                                        const pr = form.price || 0;
+                                        setForm({
+                                            ...form, 
+                                            shares: sh, 
+                                            amount: sh && pr ? (Number(sh) * Number(pr)).toFixed(2) : form.amount
+                                        });
+                                    }}/>
                                 </div>
                                 <div>
                                     <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('price') || 'Preis'}</label>
-                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.price || ''} onChange={e=>setForm({...form, price: e.target.value})}/>
+                                    <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.price || ''} onChange={e => {
+                                        const pr = e.target.value;
+                                        const sh = form.shares || 0;
+                                        setForm({
+                                            ...form, 
+                                            price: pr, 
+                                            amount: sh && pr ? (Number(sh) * Number(pr)).toFixed(2) : form.amount
+                                        });
+                                    }}/>
                                 </div>
                             </div>
                         )}
 
-                        <div>
-                            <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate') || 'Wechselkurs'}</label>
-                            <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
-                        </div>
+                        {isForeignCurrency && (
+                            <div>
+                                <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate') || 'Wechselkurs'} ({selectedNode?.currency} -> {baseCurrency})</label>
+                                <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -557,6 +708,9 @@ const App = () => {
       <MenuBar viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} />
       <div className="flex-1 flex overflow-hidden relative">
         <TreeView data={data} viewMode={viewMode} selectedNode={selectedNode} setSelectedNode={setSelectedNode} setActiveReport={setActiveReport} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} setShowArchived={setShowArchived} expandedNodes={expandedNodes} toggleExpand={toggleExpand} deleteNode={requestDeleteNode} setModalObj={setModalObj} t={t} />
+
+	
+
         <div className="flex-1 relative overflow-auto" id="printable-editor">
           <EditorArea data={data} viewMode={viewMode} activeReport={activeReport} selectedNode={selectedNode} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} dateRange={dateRange} setDateRange={setDateRange} setModalObj={setModalObj} fCur={fCur} t={t} />
         </div>
@@ -574,6 +728,9 @@ const App = () => {
         )}
 
       </div>
+
+
+
       <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-xs text-gray-600 dark:text-gray-400 z-50">
           <div className="flex gap-6"><span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady')}</span><span>Modus: <strong className="uppercase">{viewMode}</strong></span></div>
           <div className="flex gap-6"><span>{t('version')}: {data.version}</span></div>

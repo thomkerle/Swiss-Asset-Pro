@@ -1,29 +1,30 @@
 const React = require('react');
 const ReportHeader = require('../ReportHeader.jsx');
 const { WaterfallChartSVG } = require('../Charts.jsx');
-const { getTotalWealthAtDate } = require('../../data/DataEngine.jsx');
+const { getTotalWealthAtDate, getNormalizedBookings } = require('../../../data/DataEngine.jsx');  // Normalizer importiert
 
-// WICHTIG: 't' zu den Props hinzugefügt
 const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
   const startVal = getTotalWealthAtDate(activeAssets, dateRange.from);
   const endVal = getTotalWealthAtDate(activeAssets, dateRange.to);
   
   let sumInc = 0, sumExp = 0;
-  activeAssets.forEach(a => {
-      (a.bookings||[]).filter(bk => bk.date >= dateRange.from && bk.date <= dateRange.to).forEach(bk => {
-          // Interne Logik bleibt auf Deutsch, da so in der JSON gespeichert
-          const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
-          const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
-          
-          if(isPositive) sumInc += Number(bk.amount) * (a.exchangeRate || 1); 
-          else if (isNegative) sumExp += Number(bk.amount) * (a.exchangeRate || 1);
-      });
+  
+  // 1. Alle Buchungen normalisiert holen
+  const normBookings = getNormalizedBookings(activeAssets);
+
+  // 2. Filter und Berechnung
+  normBookings.filter(bk => bk.date >= dateRange.from && bk.date <= dateRange.to).forEach(bk => {
+      // Dank Normalizer viel kürzer, da Alt-Typen umgewandelt wurden
+      const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Abzahlung'].includes(bk.normType);
+      const isNegative = ['Auszahlung', 'Verkauf', 'Schulderhöhung'].includes(bk.normType);
+      
+      if(isPositive) sumInc += bk._baseValue; 
+      else if (isNegative) sumExp += bk._baseValue;
   });
   
   const marketPerf = endVal - startVal - sumInc + sumExp; 
   const netCashflow = sumInc - sumExp;
   
-  // Farbcodes für eventuelle Nutzung in WaterfallChartSVG (dunkles Grün: #15803d)
   const wfData = [
       { label: t('labelWaterfallStart'), start: 0, end: startVal, valLabel: fCur(startVal), color: '#3b82f6' },
       { label: t('labelWaterfallInflows'), start: startVal, end: startVal + sumInc, valLabel: `+${fCur(sumInc)}`, color: '#15803d' },
@@ -41,7 +42,6 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
         setIsTreeVisible={setIsTreeVisible} 
       />
 
-      {/* Neue Summary Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
          <div className="p-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
              <div className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{t('labelWaterfallStart')}</div>

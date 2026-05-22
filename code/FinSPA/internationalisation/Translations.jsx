@@ -120,6 +120,8 @@ const i18n = {
     hideTree: 'Strukturbaum ausblenden', toggleArchived: 'Archivierte Elemente ein-/ausblenden',
     
     // Asset Klassen & Eigenschaften
+    acPension_cash: 'Vorsorge (Konten)', acPension_fund: 'Vorsorge (Depots)',
+
     assetClass: 'Anlageklasse', currency: 'Währung', exchangeRate: 'Wechselkurs', isLiquid: 'Liquides Mittel', isArchived: 'Archiviert', propName: 'Name', propInactive: 'inaktiv.',
     acCash: 'Konto', acFund: 'Fonds / ETF', acStock: 'Aktie', acCrypto: 'Krypto', acRealEstate: 'Immobilie', acMortgage: 'Hypothek', acPensionCash: 'Vorsorgekonto 3a', acPensionFund: 'Vorsorgedepot 3a',
     propTrackRateTitle: 'Genereller Tracking-Kurs', propCurrentRate: 'Aktueller Kurs', propSecurityStatus: 'Wertpapier Status', propCurrentShares: 'Aktuelle Stückzahl', propCurrentPrice: 'Aktueller Preis',
@@ -356,6 +358,7 @@ const i18n = {
     hideTree: 'Hide Structure Tree', toggleArchived: 'Toggle archived items',
     
     // Asset Classes & Properties
+    acPension_cash: 'Pension (Accounts)', acPension_fund: 'Pension (Portfolios)',
     assetClass: 'Asset Class', currency: 'Currency', exchangeRate: 'Exchange Rate', isLiquid: 'Liquid Asset', isArchived: 'Archived', propName: 'Name', propInactive: 'inactive.',
     acCash: 'Account', acFund: 'Fund / ETF', acStock: 'Stock', acCrypto: 'Crypto', acRealEstate: 'Real Estate', acMortgage: 'Mortgage', acPensionCash: 'Pension Account 3a', acPensionFund: 'Pension Portfolio 3a',
     propTrackRateTitle: 'General Tracking Rate', propCurrentRate: 'Current Rate', propSecurityStatus: 'Security Status', propCurrentShares: 'Current Shares', propCurrentPrice: 'Current Price',
@@ -592,6 +595,7 @@ const i18n = {
     hideTree: 'Masquer l\'arborescence', toggleArchived: 'Afficher/Masquer les éléments archivés',
     
     // Classes d'actifs & Propriétés
+    acPension_cash: 'Prévoyance (Comptes)', acPension_fund: 'Prévoyance (Dépôts)',
     assetClass: 'Classe d\'actifs', currency: 'Devise', exchangeRate: 'Taux de change', isLiquid: 'Actif liquide', isArchived: 'Archivé', propName: 'Nom', propInactive: 'inactif.',
     acCash: 'Compte', acFund: 'Fonds / ETF', acStock: 'Action', acCrypto: 'Crypto', acRealEstate: 'Immobilier', acMortgage: 'Hypothèque', acPensionCash: 'Compte de prévoyance 3a', acPensionFund: 'Dépôt de prévoyance 3a',
     propTrackRateTitle: 'Taux de suivi général', propCurrentRate: 'Taux actuel', propSecurityStatus: 'Statut du titre', propCurrentShares: 'Parts actuelles', propCurrentPrice: 'Prix actuel',
@@ -828,6 +832,7 @@ const i18n = {
     hideTree: 'Nascondi albero di struttura', toggleArchived: 'Mostra/Nascondi elementi archiviati',
     
     // Classi di Asset & Proprietà
+    acPension_cash: 'Previdenza (Conti)', acPension_fund: 'Previdenza (Depositi)',
     assetClass: 'Classe di asset', currency: 'Valuta', exchangeRate: 'Tasso di cambio', isLiquid: 'Asset liquido', isArchived: 'Archiviato', propName: 'Nome', propInactive: 'inattivo.',
     acCash: 'Conto', acFund: 'Fondo / ETF', acStock: 'Azione', acCrypto: 'Cripto', acRealEstate: 'Immobile', acMortgage: 'Ipoteca', acPensionCash: 'Conto previdenza 3a', acPensionFund: 'Deposito previdenza 3a',
     propTrackRateTitle: 'Tasso di tracciamento generale', propCurrentRate: 'Tasso attuale', propSecurityStatus: 'Stato del titolo', propCurrentShares: 'Quote attuali', propCurrentPrice: 'Prezzo attuale',

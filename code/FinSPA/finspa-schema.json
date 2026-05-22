@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FinSPA Projekt Schema",
+  "type": "object",
+  "required": ["version", "settings", "banks", "budget"],
+  "properties": {
+    "version": { "type": "string" },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "bookingCategories": { "type": "object" }
+      }
+    },
+    "banks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "enum": ["bank", "category", "asset"] },
+        "assetClass": { "type": "string" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+      }
+    }
+  }
+}
