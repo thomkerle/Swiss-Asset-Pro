@@ -49,13 +49,14 @@
     },
     {
       "id": "uc7",
-      "title": "Säule 3a Vorsorge",
+      "title": "Vorsorge (Säule 2 & 3a)",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Gebundene Vorsorge (Schweiz)" },
+        { "type": "h4", "text": "Berufliche & Gebundene Vorsorge (Schweiz)" },
         { "type": "list", "items": [
-          "**Vorsorgekonto 3a:** Wird als *nicht liquide* markiert.",
-          "**Vorsorgedepot 3a:** Erlaubt den Handel von Vorsorgefonds, bleibt aber illiquide."
+          "**Pensionskasse (2. Säule):** Das berufliche Pensionsguthaben. Wird als *nicht liquide* markiert.",
+          "**3a Vorsorgekonto:** Gebundenes Cash-Guthaben der privaten Vorsorge.",
+          "**3a Vorsorgefonds:** Erlaubt den Handel und die Verfolgung von Wertschriften der 3. Säule."
         ]}
       ]
     },
@@ -81,6 +82,21 @@
       ]
     },
     {
+      "id": "ai_copilot",
+      "title": "KI Copilot",
+      "icon": "Cpu",
+      "content": [
+        { "type": "h4", "text": "Lokale KI-Integration (Ollama)" },
+        { "type": "p", "text": "FinSPA bietet eine integrierte Schnittstelle zu lokalen Large Language Models (LLMs) via Ollama. Ihre Finanzdaten verlassen dabei niemals Ihr Gerät." },
+        { "type": "list", "items": [
+          "**Widgets generieren:** Beschreiben Sie in natürlicher Sprache, welche Diagramme oder Tabellen Sie sehen möchten.",
+          "**Dynamische Interaktion:** Die KI baut maßgeschneiderte Dashboards basierend auf Ihren Live-Daten.",
+          "**Aktivierung:** Der KI-Modus muss zunächst in den Einstellungen global aktiviert werden."
+        ]},
+        { "type": "infoBox", "text": "Voraussetzung: Sie müssen Ollama lokal installiert haben und ein kompatibles Modell (z.B. Qwen, Llama 3) über den Port 11434 bereitstellen." }
+      ]
+    },
+    {
       "id": "reports",
       "title": "Reports & Dashboards",
       "icon": "PieChart",
@@ -99,8 +115,9 @@
       "icon": "Settings",
       "content": [
         { "type": "h4", "text": "Konfiguration" },
-        { "type": "p", "text": "**Einstellungen:** Konfigurieren Sie Basiswährung und eigene Buchungskategorien." },
-        { "type": "p", "text": "**Datensicherung:** Nutzen Sie JSON für sichere Backups." }
+        { "type": "p", "text": "**Erweiterbarkeit:** Sie können Basiswährungen, eigene Buchungskategorien und sogar völlig neue Asset-Klassen definieren." },
+        { "type": "p", "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) hinzu." },
+        { "type": "p", "text": "**Datensicherung:** Nutzen Sie JSON für lokale, sichere Backups." }
       ]
     }
   ],
@@ -118,7 +135,7 @@
     "assetClass": "Anlageklasse", "currency": "Währung", "exchangeRate": "Wechselkurs", "isLiquid": "Liquides Mittel", "isArchived": "Archiviert",
     "bookings": "Buchungen", "date": "Datum", "type": "Typ", "category": "Kategorie", "amount": "Betrag", "income": "Einzahlung", "expense": "Auszahlung",
     "addBank": "Bank hinzufügen", "addCategory": "Kategorie hinzufügen", "addAsset": "Asset hinzufügen", "deleteConfirm": "Wirklich löschen?",
-    "acCash": "Konto", "acFund": "Fonds / ETF", "acStock": "Aktie", "acCrypto": "Krypto", "acRealEstate": "Immobilie", "acMortgage": "Hypothek", "acPensionCash": "Vorsorgekonto 3a", "acPensionFund": "Vorsorgedepot 3a",
+    "acCash": "Konto", "acFund": "Fonds / ETF", "acStock": "Aktie", "acCrypto": "Krypto", "acRealEstate": "Immobilie", "acMortgage": "Hypothek", "acPensionCash": "Pensionskasse", "acPension3aCash": "3a Vorsorgekonto", "acPension3aFund": "3a Vorsorgefonds",
     "typeDeposit": "Einzahlung", "typeWithdrawal": "Auszahlung", "typeBuy": "Kauf", "typeSell": "Verkauf", "typeAmortization": "Abzahlung", "typeReval": "Wertanpassung", "typeInterest": "Zinszahlung", "typeDiv": "Dividende", "typeDebtInc": "Schulderhöhung", "typeFee": "Gebühr"
   }
 }

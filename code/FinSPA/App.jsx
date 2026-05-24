@@ -243,8 +243,11 @@ const App = () => {
 
   const handleImportCSV = (e) => { e.target.value = null; alert(t('msgCsvNotSupported')); };
 
-  const updateTreeData = (newData) => setData({ ...data, lastModified: new Date().toISOString(), ...newData });
-
+const updateTreeData = (newData) => setData(prev => ({ 
+      ...prev, 
+      lastModified: new Date().toISOString(), 
+      ...newData 
+  }));
   const handlePropChangeTree = (id, key, val) => {
       const updateRecursive = (nodes) => nodes.map(n => {
           if (n.id === id) return { ...n, [key]: val };
@@ -705,7 +708,7 @@ const handleItemDelete = () => {
         }
       `}</style>
 
-      <MenuBar viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} />
+      <MenuBar data={data} viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} />
       <div className="flex-1 flex overflow-hidden relative">
         <TreeView data={data} viewMode={viewMode} selectedNode={selectedNode} setSelectedNode={setSelectedNode} setActiveReport={setActiveReport} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} setShowArchived={setShowArchived} expandedNodes={expandedNodes} toggleExpand={toggleExpand} deleteNode={requestDeleteNode} setModalObj={setModalObj} t={t} />
 

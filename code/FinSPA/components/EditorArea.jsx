@@ -297,7 +297,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
       
       if (ac === 'realestate') defaultType = 'Wertanpassung';
       else if (ac === 'mortgage') defaultType = 'Abzahlung';
-      else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund') defaultType = 'Kauf';
+      else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund' || ac === 'pension_3a_fund') defaultType = 'Kauf';
 
       return (
         <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">

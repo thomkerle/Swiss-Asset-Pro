@@ -49,13 +49,14 @@
     },
     {
       "id": "uc7",
-      "title": "Pillar 3a Pension",
+      "title": "Pension & Pillar 3a",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Tied Pension Provision (Switzerland)" },
+        { "type": "h4", "text": "Occupational & Tied Pension (Switzerland)" },
         { "type": "list", "items": [
-          "**Pension Account 3a:** Is marked as *illiquid*.",
-          "**Pension Portfolio 3a:** Allows the trading of pension funds, but remains illiquid."
+          "**Pension Fund (2nd Pillar):** Your occupational pension wealth. Marked as *illiquid*.",
+          "**3a Pension Account:** Tied cash assets of private provision.",
+          "**3a Pension Portfolio:** Allows the trading and tracking of 3rd pillar funds."
         ]}
       ]
     },
@@ -81,6 +82,21 @@
       ]
     },
     {
+      "id": "ai_copilot",
+      "title": "AI Copilot",
+      "icon": "Cpu",
+      "content": [
+        { "type": "h4", "text": "Local AI Integration (Ollama)" },
+        { "type": "p", "text": "FinSPA offers an integrated interface to local Large Language Models (LLMs) via Ollama. Your financial data never leaves your device." },
+        { "type": "list", "items": [
+          "**Generate Widgets:** Describe in natural language which charts or tables you want to see.",
+          "**Dynamic Interaction:** The AI builds custom dashboards based on your live data.",
+          "**Activation:** The AI mode must first be enabled globally in the settings."
+        ]},
+        { "type": "infoBox", "text": "Prerequisite: You must have Ollama installed locally and host a compatible model (e.g., Qwen, Llama 3) via port 11434." }
+      ]
+    },
+    {
       "id": "reports",
       "title": "Reports & Dashboards",
       "icon": "PieChart",
@@ -99,8 +115,9 @@
       "icon": "Settings",
       "content": [
         { "type": "h4", "text": "Configuration" },
-        { "type": "p", "text": "**Settings:** Configure base currency and custom transaction categories." },
-        { "type": "p", "text": "**Data Backup:** Use JSON for secure backups." }
+        { "type": "p", "text": "**Extensibility:** You can define base currencies, custom transaction categories, and even completely new asset classes." },
+        { "type": "p", "text": "**AI Models:** Add your own Ollama models (strings) in the respective tab." },
+        { "type": "p", "text": "**Data Backup:** Use JSON for secure, local backups." }
       ]
     }
   ],
@@ -118,7 +135,7 @@
     "assetClass": "Asset Class", "currency": "Currency", "exchangeRate": "Exchange Rate", "isLiquid": "Liquid Asset", "isArchived": "Archived",
     "bookings": "Transactions", "date": "Date", "type": "Type", "category": "Category", "amount": "Amount", "income": "Deposit", "expense": "Withdrawal",
     "addBank": "Add Bank", "addCategory": "Add Category", "addAsset": "Add Asset", "deleteConfirm": "Really delete?",
-    "acCash": "Account", "acFund": "Fund / ETF", "acStock": "Stock", "acCrypto": "Crypto", "acRealEstate": "Real Estate", "acMortgage": "Mortgage", "acPensionCash": "Pension Account 3a", "acPensionFund": "Pension Portfolio 3a",
+    "acCash": "Account", "acFund": "Fund / ETF", "acStock": "Stock", "acCrypto": "Crypto", "acRealEstate": "Real Estate", "acMortgage": "Mortgage", "acPensionCash": "Pension Fund", "acPension3aCash": "3a Pension Account", "acPension3aFund": "3a Pension Portfolio",
     "typeDeposit": "Deposit", "typeWithdrawal": "Withdrawal", "typeBuy": "Buy", "typeSell": "Sell", "typeAmortization": "Amortization", "typeReval": "Value Adjustment", "typeInterest": "Interest Payment", "typeDiv": "Dividend", "typeDebtInc": "Debt Increase", "typeFee": "Fee"
   }
 }

@@ -49,13 +49,14 @@
     },
     {
       "id": "uc7",
-      "title": "Pilier 3a Prévoyance",
+      "title": "Prévoyance (Pilier 2 & 3a)",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Prévoyance liée (Suisse)" },
+        { "type": "h4", "text": "Prévoyance professionnelle et liée (Suisse)" },
         { "type": "list", "items": [
-          "**Compte de prévoyance 3a :** Est marqué comme *non liquide*.",
-          "**Dépôt de prévoyance 3a :** Permet la négociation de fonds de prévoyance, mais reste non liquide."
+          "**Caisse de pension (2e pilier) :** Votre capital de prévoyance professionnelle. Est marqué comme *non liquide*.",
+          "**Compte de prévoyance 3a :** Avoirs en espèces liés de la prévoyance privée.",
+          "**Fonds de prévoyance 3a :** Permet la négociation et le suivi des fonds du 3e pilier."
         ]}
       ]
     },
@@ -81,6 +82,21 @@
       ]
     },
     {
+      "id": "ai_copilot",
+      "title": "Copilote IA",
+      "icon": "Cpu",
+      "content": [
+        { "type": "h4", "text": "Intégration d'IA locale (Ollama)" },
+        { "type": "p", "text": "FinSPA propose une interface intégrée avec des grands modèles linguistiques (LLM) locaux via Ollama. Vos données financières ne quittent jamais votre appareil." },
+        { "type": "list", "items": [
+          "**Générer des widgets :** Décrivez en langage naturel les graphiques ou tableaux que vous souhaitez voir.",
+          "**Interaction dynamique :** L'IA crée des tableaux de bord personnalisés basés sur vos données en direct.",
+          "**Activation :** Le mode IA doit d'abord être activé globalement dans les paramètres."
+        ]},
+        { "type": "infoBox", "text": "Condition préalable : Vous devez avoir installé Ollama localement et héberger un modèle compatible (ex. Qwen, Llama 3) via le port 11434." }
+      ]
+    },
+    {
       "id": "reports",
       "title": "Rapports & Tableaux de bord",
       "icon": "PieChart",
@@ -99,8 +115,9 @@
       "icon": "Settings",
       "content": [
         { "type": "h4", "text": "Configuration" },
-        { "type": "p", "text": "**Paramètres :** Configurez la devise de base et vos propres catégories d'écritures." },
-        { "type": "p", "text": "**Sauvegarde des données :** Utilisez JSON pour des sauvegardes sécurisées." }
+        { "type": "p", "text": "**Extensibilité :** Vous pouvez définir des devises de base, vos propres catégories de transactions et même de toutes nouvelles classes d'actifs." },
+        { "type": "p", "text": "**Modèles IA :** Ajoutez vos propres modèles Ollama (chaînes) dans l'onglet correspondant." },
+        { "type": "p", "text": "**Sauvegarde des données :** Utilisez JSON pour des sauvegardes locales sécurisées." }
       ]
     }
   ],
@@ -118,7 +135,7 @@
     "assetClass": "Classe d'actifs", "currency": "Devise", "exchangeRate": "Taux de change", "isLiquid": "Actif liquide", "isArchived": "Archivé",
     "bookings": "Écritures", "date": "Date", "type": "Type", "category": "Catégorie", "amount": "Montant", "income": "Dépôt", "expense": "Retrait",
     "addBank": "Ajouter une banque", "addCategory": "Ajouter une catégorie", "addAsset": "Ajouter un actif", "deleteConfirm": "Vraiment supprimer ?",
-    "acCash": "Compte", "acFund": "Fonds / ETF", "acStock": "Action", "acCrypto": "Crypto", "acRealEstate": "Immobilier", "acMortgage": "Hypothèque", "acPensionCash": "Compte de prévoyance 3a", "acPensionFund": "Dépôt de prévoyance 3a",
+    "acCash": "Compte", "acFund": "Fonds / ETF", "acStock": "Action", "acCrypto": "Crypto", "acRealEstate": "Immobilier", "acMortgage": "Hypothèque", "acPensionCash": "Caisse de pension", "acPension3aCash": "Compte de prévoyance 3a", "acPension3aFund": "Fonds de prévoyance 3a",
     "typeDeposit": "Dépôt", "typeWithdrawal": "Retrait", "typeBuy": "Achat", "typeSell": "Vente", "typeAmortization": "Amortissement", "typeReval": "Ajustement de valeur", "typeInterest": "Paiement des intérêts", "typeDiv": "Dividende", "typeDebtInc": "Augmentation de dette", "typeFee": "Frais"
   }
 }

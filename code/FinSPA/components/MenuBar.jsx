@@ -2,7 +2,7 @@ const React = require('react');
 const Icon = require('./Icons.jsx');
 
 const MenuBar = ({ 
-  viewMode, setViewMode, setActiveReport, setSelectedNode, 
+  data, viewMode, setViewMode, setActiveReport, setSelectedNode, 
   theme, setTheme, lang, setLang, setModalObj, t, 
   handleNewProject, handleOpenProject, handleSaveProject, 
   handleImportCSV, handleImportParqetCSV, handleExportCSV, handlePrint 
@@ -18,7 +18,6 @@ const MenuBar = ({
   
   const MenuSubItem = ({ label, onClick, iconName, rightText }) => (
     <div className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center justify-between cursor-pointer transition-colors" onClick={onClick}>
-      {/* HIER WURDE DIE GRAUE FARBE ENTFERNT, w-4 text-center bleibt fürs Layout */}
       <div className="flex items-center gap-3">{iconName && <Icon name={iconName} size={14} className="w-4 text-center" />} {label}</div>
       {rightText && <span className="text-xs text-gray-400 font-bold">{rightText}</span>}
     </div>
@@ -32,7 +31,6 @@ const MenuBar = ({
         <MenuSubItem label={t ? t('fileNew') : 'Neu (Leeres Projekt)'} iconName="FilePlus" onClick={handleNewProject} />
         
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          {/* Graue Farbe entfernt */}
           <Icon name="FolderOpen" size={14} className="w-4 text-center"/> {t ? t('fileOpen') : 'Öffnen (JSON)'}
           <input type="file" accept=".json" className="hidden" onChange={handleOpenProject} />
         </label>
@@ -41,16 +39,12 @@ const MenuBar = ({
         
         <hr className="dark:border-slate-700 my-1"/>
         
-        {/* Standard AssetPro CSV Import */}
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          {/* Graue Farbe entfernt */}
           <Icon name="Upload" size={14} className="w-4 text-center"/> {t ? t('fileImport') : 'Importieren (CSV)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
         </label>
 
-        {/* parqet CSV Import */}
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          {/* Feste grüne Farbe entfernt, da Icons.jsx TrendingUp bereits grün macht */}
           <Icon name="TrendingUp" size={14} className="w-4 text-center"/> {t ? t('fileImportParqet') : 'parqet-Import (.csv)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportParqetCSV} />
         </label>
@@ -73,8 +67,12 @@ const MenuBar = ({
         <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('viewData') : 'Datensicht'} iconName="Settings" onClick={() => { setViewMode('datensicht'); setActiveReport(null); }} rightText={viewMode === 'datensicht' ? '✓' : ''} />
 
-	<hr className="dark:border-slate-700 my-1"/>
-        <MenuSubItem label="KI-Assistent (Ollama)" iconName="Cpu" onClick={() => { setViewMode('ai'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'ai' ? '✓' : ''} />
+        {data?.settings?.aiEnabled !== false && (
+          <>
+            <hr className="dark:border-slate-700 my-1"/>
+            <MenuSubItem label="KI-Assistent (Ollama)" iconName="Cpu" onClick={() => { setViewMode('ai'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'ai' ? '✓' : ''} />
+          </>
+        )}
       </MenuItem>
 
       <MenuItem title={t ? t('menuReports') : 'Reports'}>
@@ -84,8 +82,8 @@ const MenuBar = ({
         <MenuSubItem label={t ? t('repLiq') : 'Liquiditätsrisiko'} iconName="PieChart" onClick={() => setActiveReport('liquidity')} />
         <MenuSubItem label={t ? t('repHist') : 'Historischer Verlauf'} iconName="TrendingUp" onClick={() => setActiveReport('history')} />
         <MenuSubItem label={t ? t('repTax') : 'Steuerreport (31.12)'} iconName="List" onClick={() => setActiveReport('tax')} />
-	<MenuSubItem label="Säule 3a Performance" iconName="Lock" onClick={() => setActiveReport('pension3a')} />
-	<MenuSubItem label="Aktien & Fonds Performance" iconName="TrendingUp" onClick={() => setActiveReport('securities')} />
+        <MenuSubItem label="Säule 3a Performance" iconName="Lock" onClick={() => setActiveReport('pension3a')} />
+        <MenuSubItem label="Aktien & Fonds Performance" iconName="TrendingUp" onClick={() => setActiveReport('securities')} />
         
         <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t ? t('repFlow') : 'Bewegungsreports'}</div>
         <MenuSubItem label={t ? t('repCatFlow') : 'Kategorienfluss'} iconName="BarChart" onClick={() => setActiveReport('categoryFlow')} />
@@ -105,7 +103,6 @@ const MenuBar = ({
          <MenuSubItem label={t ? t('helpAbout') : 'Über FinSPA'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
       </MenuItem>
 
-      {/* Rechter Bereich: Sprache und Dark-Mode */}
       <div className="ml-auto flex items-center">
         <MenuItem title={lang.toUpperCase()}>
           <MenuSubItem label="Deutsch" onClick={() => setLang('de')} rightText={lang === 'de' ? '✓' : ''} />

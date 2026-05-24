@@ -7,14 +7,42 @@
     "version": { "type": "string" },
     "settings": {
       "type": "object",
+      "required": ["bookingCategories"],
       "properties": {
+        "baseCurrency": { "type": "string" },
+        "aiEnabled": { "type": "boolean" },
+        "aiModels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "icon": { "type": "string" }
+            }
+          }
+        },
+        "assetClasses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
         "bookingCategories": { "type": "object" }
       }
     },
     "banks": {
       "type": "array",
       "items": { "$ref": "#/$defs/node" }
-    }
+    },
+    "budget": { "type": "object" }
   },
   "$defs": {
     "node": {
@@ -25,7 +53,12 @@
         "name": { "type": "string" },
         "type": { "enum": ["bank", "category", "asset"] },
         "assetClass": { "type": "string" },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } }
+        "isLiquid": { "type": "boolean" },
+        "currency": { "type": "string" },
+        "exchangeRate": { "type": ["string", "number"] },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "balances": { "type": "array" },
+        "bookings": { "type": "array" }
       }
     }
   }

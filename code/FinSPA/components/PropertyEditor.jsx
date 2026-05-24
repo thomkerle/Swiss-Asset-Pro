@@ -57,14 +57,18 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       );
   }
 
-  const handlePropChange = (key, val) => {
+  const handlePropChange = (keyOrObj, val) => {
+      // Akzeptiert entweder einen Key und einen Wert ODER ein ganzes Zustandsobjekt für atomare Updates
+      const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
+      
       const updateRecursive = (nodes) => nodes.map(n => {
-          if (n.id === selectedNode.id) return { ...n, [key]: val };
+          if (n.id === selectedNode.id) return { ...n, ...changes };
           if (n.children) return { ...n, children: updateRecursive(n.children) };
           return n;
       });
+      
       updateTreeData({ banks: updateRecursive(data.banks) });
-      setSelectedNode(prev => ({ ...prev, [key]: val }));
+      setSelectedNode(prev => ({ ...prev, ...changes }));
   };
 
   return (
@@ -76,7 +80,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={selectedNode.name || ''} onChange={e => handlePropChange('name', e.target.value)} />
         </div>
         
-        {/* Archiviert-Checkbox mit items-start, falls Text umbricht */}
         <label className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-sm hover:border-blue-500 transition-colors">
           <input type="checkbox" checked={selectedNode.isArchived || false} onChange={e => handlePropChange('isArchived', e.target.checked)} className="w-4 h-4 mt-0.5 text-blue-600 rounded focus:ring-blue-500" /> 
           <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200 flex items-center gap-2">
@@ -87,19 +90,42 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         {selectedNode.type === 'asset' && (
           <>
             <div><label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('assetClass') : 'Anlageklasse'}</label>
-              <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={selectedNode.assetClass || 'cash'} onChange={e => { const val = e.target.value; handlePropChange('assetClass', val); if (['pension_cash', 'pension_fund', 'realestate', 'mortgage'].includes(val)) { handlePropChange('isLiquid', false); } }}>
-                <option value="cash">{t ? t('acCash') : 'Konto'}</option>
-                <option value="fund">{t ? t('acFund') : 'Fonds / ETF'}</option>
-                <option value="stock">{t ? t('acStock') : 'Aktie'}</option>
-                <option value="crypto">{t ? t('acCrypto') : 'Krypto'}</option>
-                <option value="realestate">{t ? t('acRealEstate') : 'Immobilie'}</option>
-                <option value="mortgage">{t ? t('acMortgage') : 'Hypothek'}</option>
-                <option value="pension_cash">{t ? t('acPensionCash') : 'Vorsorgekonto 3a'}</option>
-                <option value="pension_fund">{t ? t('acPensionFund') : 'Vorsorgedepot 3a'}</option>
+              <select 
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" 
+                  value={selectedNode.assetClass || 'cash'} 
+                  onChange={e => { 
+                      const val = e.target.value; 
+                      const updates = { assetClass: val };
+                      
+                      // Automatisch auf nicht-liquide (false) setzen bei allen gebundenen Vorsorge- und Sachwertklassen
+                      if (['pension_cash', 'pension_3a_cash', 'pension_fund', 'pension_3a_fund', 'realestate', 'mortgage'].includes(val)) { 
+                          updates.isLiquid = false; 
+                      } 
+                      
+                      // Bündel-Update abschicken, um Race Conditions zu verhindern
+                      handlePropChange(updates);
+                  }}
+              >
+                {data?.settings?.assetClasses ? (
+                    data.settings.assetClasses.map(ac => (
+                        <option key={ac.id} value={ac.id}>{ac.name}</option>
+                    ))
+                ) : (
+                    <>
+                        <option value="cash">{t ? t('acCash') : 'Konto'}</option>
+                        <option value="fund">{t ? t('acFund') : 'Fonds / ETF'}</option>
+                        <option value="stock">{t ? t('acStock') : 'Aktie'}</option>
+                        <option value="crypto">{t ? t('acCrypto') : 'Krypto'}</option>
+                        <option value="realestate">{t ? t('acRealEstate') : 'Immobilie'}</option>
+                        <option value="mortgage">{t ? t('acMortgage') : 'Hypothek'}</option>
+                        <option value="pension_cash">{t ? t('acPensionCash') : 'Pensionskasse'}</option>
+                        <option value="pension_3a_cash">{t ? t('acPension3aCash') : '3a Vorsorgekonto'}</option>
+                        <option value="pension_3a_fund">{t ? t('acPension3aFund') : '3a Vorsorgefonds'}</option>
+                    </>
+                )}
               </select>
             </div>
             
-            {/* Grid mit flex-col und justify-end erzwingt Ausrichtung der Inputs unten */}
             <div className="grid grid-cols-2 gap-3 items-end">
               <div className="flex flex-col justify-end h-full">
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('currency') : 'Währung'}</label>
@@ -118,12 +144,11 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200">{t ? t('isLiquid') : 'Liquides Mittel'}</span>
             </label>
 
-            {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'crypto' || selectedNode.assetClass === 'pension_fund') && (
+            {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'crypto' || selectedNode.assetClass === 'pension_fund' || selectedNode.assetClass === 'pension_3a_fund') && (
               <div className="bg-yellow-50 dark:bg-slate-800/50 border border-yellow-200 dark:border-slate-600 p-4 rounded-xl space-y-4 mt-6 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>
                  <h4 className="font-bold text-xs text-yellow-800 dark:text-yellow-500 uppercase tracking-wider flex items-center gap-2"><Icon name="TrendingUp" size={14}/> {t ? t('propSecurityStatus') : 'Wertpapier Status'}</h4>
                  
-                 {/* Gleiches Prinzip hier: Ausrichtung am unteren Rand sichern */}
                  <div className="grid grid-cols-2 gap-3 items-end">
                    <div className="flex flex-col justify-end h-full">
                      <label className="text-xs text-yellow-800 dark:text-yellow-600/80 font-bold mb-1 block uppercase leading-tight">{t ? t('propCurrentShares') : 'Aktuelle Stückzahl'}</label>
@@ -145,4 +170,5 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
     </div>
   );
 };
+
 module.exports = PropertyEditor;

@@ -10,7 +10,13 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Activity: 'fa-heartbeat', DollarSign: 'fa-dollar-sign', Shield: 'fa-shield-alt', Target: 'fa-bullseye',
         Menu: 'fa-bars', ChevronRight: 'fa-chevron-right', ChevronLeft: 'fa-chevron-left', ChevronDown: 'fa-chevron-down',
         X: 'fa-times', Info: 'fa-info-circle', Eye: 'fa-eye', EyeSlash: 'fa-eye-slash', Archive: 'fa-archive',
-        Home: 'fa-house', Building: 'fa-building', Lock: 'fa-lock', Coins: 'fa-coins', FileText: 'fa-file-lines'
+        Home: 'fa-house', Building: 'fa-building', Lock: 'fa-lock', Coins: 'fa-coins', FileText: 'fa-file-lines',
+        
+        // KI-Assistent & Dashboard Icons
+        Cpu: 'fa-microchip', Zap: 'fa-bolt', Wind: 'fa-wind', Code: 'fa-code',
+        Sparkles: 'fa-wand-magic-sparkles', RefreshCw: 'fa-rotate-right', Trash2: 'fa-trash-can',
+        ArrowUp: 'fa-arrow-up', ChevronUp: 'fa-chevron-up', Copy: 'fa-copy',
+        PlusCircle: 'fa-circle-plus', BookOpen: 'fa-book-open', Box: 'fa-box'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -52,11 +58,25 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Building: 'text-red-500',
         Lock: 'text-slate-500',
         Coins: 'text-orange-500',
-        FileText: 'text-red-500'
+        FileText: 'text-red-500',
+        
+        // KI-Assistent & Dashboard Icons
+        Cpu: 'text-blue-500',
+        Zap: 'text-yellow-500',
+        Wind: 'text-sky-500',
+        Code: 'text-gray-500',
+        Sparkles: 'text-amber-400',
+        RefreshCw: 'text-blue-500 hover:text-blue-600',
+        Trash2: 'text-red-500',
+        ArrowUp: 'text-white',
+        ChevronUp: 'text-gray-400',
+        Copy: 'text-slate-300',
+        PlusCircle: 'text-green-500',
+        BookOpen: 'text-blue-500',
+        Box: 'text-gray-400'
     };
 
-    // FIX: RegEx prüft jetzt spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])
-    // text-center oder text-sm werden ignoriert.
+    // RegEx prüft jetzt spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);
     
     // Standardfarbe anwenden, wenn keine explizite Farbklasse existiert
@@ -64,7 +84,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
 
     return (
         <i 
-            className={`fa-solid ${map[name]} ${colorClass} ${className}`.trim()} 
+            className={`fa-solid ${map[name] || 'fa-question'} ${colorClass} ${className}`.trim()} 
             style={{ fontSize: size }} 
             onClick={onClick} 
             title={title}

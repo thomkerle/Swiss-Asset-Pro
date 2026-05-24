@@ -2,37 +2,29 @@
  * @file AiDashboard.jsx
  * @description FinSPA KI Copilot Dashboard. Bietet eine Chat-Schnittstelle zu lokalen LLMs (Ollama),
  * generiert dynamische HTML/Chart.js Widgets basierend auf den Finanzdaten des Nutzers.
- * @version 2.2.0 - Enterprise Edition (inkl. Quick-Clear & Start-Dashboard Reset)
+ * @version 2.3.0 - Internationalized & Dynamic Models
  */
 
 const React = require('react');
 const { useState, useEffect, useRef, useCallback } = React;
 
-// --- DYNAMIC IMPORTS & FALLBACKS ---
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 const Icon = safeRequire('../Icons.jsx') || (({name, className, size}) => <span className={className}>[{name}]</span>);
 const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
-
-// ============================================================================
-// HILFSFUNKTIONEN & UTILS
-// ============================================================================
+const finspaSchema = safeRequire('../../schema/finspa-schema.json');
 
 const extractCodeFromText = (inputText) => {
     if (!inputText) return null;
     try {
-        // Maskierte Backticks (\x60), damit der Markdown-Parser nicht abstürzt
         const regex = new RegExp("\\x60\\x60\\x60(?:html|xml)?\\s*([\\s\\S]*?)\\s*\\x60\\x60\\x60", "i");
         const match = inputText.match(regex);
-        
         let code = null;
         if (match && match[1]) {
             code = match[1].trim();
         } else {
-            // Fallback: KI hat Backticks komplett vergessen
             const doctypeIndex = inputText.toUpperCase().indexOf('<!DOCTYPE');
             const htmlIndex = inputText.toLowerCase().indexOf('<HTML');
-            
             let startIndex = -1;
             if (doctypeIndex !== -1) startIndex = doctypeIndex;
             else if (htmlIndex !== -1) startIndex = htmlIndex;
@@ -41,7 +33,6 @@ const extractCodeFromText = (inputText) => {
                 code = inputText.substring(startIndex).trim();
             }
         }
-
         if (code) {
             const endIndex = code.toLowerCase().lastIndexOf('</html>');
             if (endIndex !== -1) {
@@ -50,7 +41,6 @@ const extractCodeFromText = (inputText) => {
             code = code.replace(/^<modus_.*?>/i, '').replace(/<\/modus_.*?>$/i, '').trim();
             return code;
         }
-
         return null;
     } catch (e) {
         console.error("Fehler beim Extrahieren des Codes:", e);
@@ -63,73 +53,57 @@ const formatTokenCount = (num) => {
     return num.toString();
 };
 
-// ============================================================================
-// KONSTANTEN & PROMPT BIBLIOTHEK
-// ============================================================================
-
-const AVAILABLE_MODELS = [
-    { id: 'qwen2.5-coder:14b', name: 'Qwen 2.5 Coder (14B)', icon: 'Cpu', recommended: true },
-    { id: 'llama3:latest', name: 'Llama 3 (8B)', icon: 'Zap', recommended: false },
-    { id: 'mistral-nemo:latest', name: 'Mistral (7B)', icon: 'Wind', recommended: false },
-    { id: 'codellama:13b', name: 'CodeLlama (13B)', icon: 'Code', recommended: false },
-    { id: 'phi3:latest', name: 'Phi 3', icon: 'Code', recommended: false},
-    { id: 'hermes3:latest', name: 'Hermes 3', icon: 'Code', recommended: false}
-];
-
-const PROMPT_LIBRARY = [
-    {
-        category: 'Portfolio & Assets',
-        icon: 'PieChart',
-        prompts: [
-            { title: 'Privatkonten Tabelle', text: 'Zeichne eine schöne, moderne Tabelle aller meiner Privatkonten mit dem jeweiligen Saldo in CHF. Hebe Konten mit über 10.000 CHF grün hervor.' },
-            { title: 'Asset Allocation (Pie Chart)', text: 'Erstelle ein wunderschönes Chart.js Doughnut-Diagramm, das meine Asset Allocation zeigt (Cash vs. Aktien vs. Immobilien). Nutze sanfte Tailwind-Farben.' },
-            { title: 'Banken-Vergleich', text: 'Zeichne ein Balkendiagramm (Chart.js), das zeigt, wie viel Vermögen ich bei welcher Bank liegen habe.' }
-        ]
-    },
-    {
-        category: 'Budget & Cashflow',
-        icon: 'TrendingDown',
-        prompts: [
-            { title: 'Ausgaben nach Kategorie', text: 'Analysiere mein Budget und zeichne ein Balkendiagramm meiner monatlichen Ausgaben, sortiert von der grössten zur kleinsten Ausgabe.' },
-            { title: 'Einnahmen vs. Ausgaben', text: 'Erstelle ein Dashboard-Widget, das meine totalen monatlichen Einnahmen meinen totalen monatlichen Ausgaben gegenüberstellt. Berechne die Sparquote in %.' },
-            { title: 'Fixkosten-Tabelle', text: 'Generiere eine cleane HTML-Tabelle aller meiner Abonnements und Fixkosten aus dem Budget.' }
-        ]
-    },
-    {
-        category: 'FIRE & Zukunftsplanung',
-        icon: 'Target',
-        prompts: [
-            { title: 'FIRE Status Dashboard', text: 'Zeichne ein Tacho-Diagramm oder eine Fortschritts-Bar, die zeigt, wie weit ich von meinem Ziel von 1.000.000 CHF entfernt bin.' },
-            { title: 'Jahre bis zur Rente', text: 'Berechne anhand meines Gesamtvermögens und meiner jährlichen Ausgaben, wie viele Jahre ich theoretisch von meinem aktuellen Vermögen leben könnte. Stelle dies gross und visuell ansprechend dar.' }
-        ]
-    }
-];
-
-// ============================================================================
-// HAUPTKOMPONENTE
-// ============================================================================
-
 const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
     
-    // --- STATE MANAGEMENT ---
+    // --- DYNAMISCHE KONFIGURATIONEN LADE ---
+    const FALLBACK_MODELS = [
+        { id: 'qwen2.5-coder:14b', name: 'Qwen 2.5 Coder (14B)' },
+        { id: 'llama3:latest', name: 'Llama 3 (8B)' }
+    ];
+    const availableModels = data?.settings?.aiModels || FALLBACK_MODELS;
+
+    const PROMPT_LIBRARY = [
+        {
+            category: t('aiCatPortfolio') || 'Portfolio & Assets',
+            icon: 'PieChart',
+            prompts: [
+                { title: t('aiP1Title'), text: t('aiP1Text') },
+                { title: t('aiP2Title'), text: t('aiP2Text') },
+                { title: t('aiP3Title'), text: t('aiP3Text') }
+            ]
+        },
+        {
+            category: t('aiCatBudget') || 'Budget & Cashflow',
+            icon: 'TrendingDown',
+            prompts: [
+                { title: t('aiP4Title'), text: t('aiP4Text') },
+                { title: t('aiP5Title'), text: t('aiP5Text') },
+                { title: t('aiP6Title'), text: t('aiP6Text') }
+            ]
+        },
+        {
+            category: t('aiCatFire') || 'FIRE & Zukunftsplanung',
+            icon: 'Target',
+            prompts: [
+                { title: t('aiP7Title'), text: t('aiP7Text') },
+                { title: t('aiP8Title'), text: t('aiP8Text') }
+            ]
+        }
+    ];
+
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [chatHistory, setChatHistory] = useState(data.aiContext?.history || []);
-    const [selectedModel, setSelectedModel] = useState('qwen2.5-coder:14b');
+    const [selectedModel, setSelectedModel] = useState(availableModels[0]?.id || 'qwen2.5-coder:14b');
     
     const [showSidebar, setShowSidebar] = useState(false);
     const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-    
     const [aiTemperature, setAiTemperature] = useState(0.1);
     const [aiContextWindow, setAiContextWindow] = useState(16384);
     
     const chatContainerRef = useRef(null);
     const endOfMessagesRef = useRef(null);
     const textareaRef = useRef(null);
-
-    // ============================================================================
-    // EFFECTS & SCROLL LOGIC
-    // ============================================================================
 
     const scrollToBottom = useCallback(() => {
         if (endOfMessagesRef.current) {
@@ -150,15 +124,11 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         }
     }, [prompt]);
 
-    // ============================================================================
-    // ACTIONS & HANDLERS
-    // ============================================================================
-
     const handleClearChat = () => {
-        if (chatHistory.length === 0) return; // Nichts zu tun
-        if (window.confirm("Chatverlauf leeren und zum Start-Dashboard zurückkehren?")) {
+        if (chatHistory.length === 0) return;
+        if (window.confirm(t('aiClearChatConfirm') || "Chatverlauf leeren?")) {
             setChatHistory([]);
-            setPrompt(''); // Setzt auch das Eingabefeld zurück
+            setPrompt('');
             if (updateTreeData) updateTreeData({ aiContext: { history: [], apiMessages: [] } });
         }
     };
@@ -173,10 +143,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         navigator.clipboard.writeText(text).catch(err => console.error('Fehler beim Kopieren:', err));
     };
 
-    // ============================================================================
-    // CORE AI LOGIC (OLLAMA API CALL)
-    // ============================================================================
-
     const handleAskAI = async () => {
         if (!prompt.trim() || isLoading) return;
 
@@ -188,15 +154,29 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
         if (textareaRef.current) textareaRef.current.style.height = '56px';
 
-        const flatAssets = [];
+       const flatAssets = [];
+        // Wir importieren die DataEngine Funktionen, um korrekte Stichtagswerte zu erhalten
         const extractAssets = (nodes, currentBank = 'Unbekannt') => {
             (nodes || []).forEach(node => {
                 let bankName = currentBank;
                 if (node.type === 'bank') bankName = node.name;
+                
                 if (node.type === 'asset') {
-                    const val = (node.balances && node.balances.length > 0) ? node.balances[0].amount : 0;
-                    flatAssets.push({ id: node.id, name: node.name, bank: bankName, assetClass: node.assetClass || 'cash', value: val, currency: node.currency || 'CHF' });
+                    // Verwende die DataEngine-Logik für den aktuellen Wert (heutiges Datum)
+                    const today = new Date().toISOString().split('T')[0];
+                    const val = DataEngine.getAssetValueAtDate(node, today, data.banks) || 0;
+                    
+                    flatAssets.push({ 
+                        id: node.id, 
+                        name: node.name, 
+                        bank: bankName, 
+                        assetClass: node.assetClass || 'cash', 
+                        value: val, 
+                        currency: node.currency || 'CHF',
+                        isLiquid: !!node.isLiquid // Auch den Liquiditätsstatus für die KI mitgeben
+                    });
                 }
+                
                 if (node.children) extractAssets(node.children, bankName);
             });
         };
@@ -205,55 +185,429 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         const budgetString = JSON.stringify(data.budget || {});
         const assetsString = JSON.stringify(flatAssets);
 
+	const schemaInfo = JSON.stringify(finspaSchema, null, 2)
 
- const systemPrompt = `Du bist ein Frontend-Entwickler.
+
+	
+
+       const systemPrompt = `Du bist ein Frontend-Entwickler.
 Du generierst vollständig lauffähige, isolierte HTML/JS-Widgets für das FinSPA Dashboard.
+Hier ist die Struktur der Daten (Nodes), mit denen du arbeitest:
+
+<datenstruktur>
+- Die Daten sind in einem JSON-Objekt window.finspaData enthalten auf das Du direkt Zugriff hast
+- Das Schema des Datensatzes ist ${schemaInfo}
+- Als Hauptebene bezeichne ich die Childs direkt unter dem Hauptknoten.
+- In der Hauptebene sind folgende Childs definiert:
+a) settings
+-- Darin ist das Feld baseCurrency enthalten, dass die Währung aller Assets angibt (bei Fremdgeldkonten ist die Währung in einem andere Feld angegeben, dass ich Dir noch spezifizieren werde.
+-- Weitere Felder:
+bookingCategories:Ein sehr wichtiges Array-Feld, wo die Buchungskategorien definiert sind. Das Feld enthält in der obersten Ebene
+die Hauptkategorie und in einer Ebene darunter die Unterkategorie:
+
+dazu ein Beispiel:
+
+"bookingCategories": {
+      "Einzahlung": [
+        "Lohn",
+        "Dividenden",
+        "Zinsen",
+        "Verkauf",
+        "Mieteinnahmen",
+        "Sonstiges",
+        "Bonus"
+      ],
+	
+      … weitere Einträge
+}
+
+Wenn also nach einer Buchung gefragt wird, traversierst Du dieses Feld und notierst Dir die Hauptkategorie und die Unterkategorien.
+Im Beispiel :
+Hauptkategorie - Einzahlung
+Unterkategorien - Lohn, Dividenden, Zinsen, Verkauf, Mieteinnahme, Sonstiges, Bonus
+Mit diesen notierten Werten, kannst Du dann nach Buchungen suchen (wird weiter unten spezifiziert)
+
+assetClasses: Ein Array-Feld, das alle Assetsklassen die im Datensatz verwendet werden definiert. Hier ein Beispiel:
+
+"assetClasses": [
+      {
+        "id": "cash",
+        "name": "Bargeld / Konto",
+        "description": "Liquide Mittel und Girokonten"
+      },
+	
+      … weitere Einträge 	
+}
+
+Wenn also nach einer Buchung gefragt wirst, parst Du dieses Feld und suchst gezielt, nach der Assetklasse, die beim Prompt gefragt wird.
+b) Das Feld nach Settings heisst banks
+
+Diese Datenstruktur ist relativ komplex, daher ein Beispiel. Einträge mit <Einträge> sind Beispielwerte 
+
+"banks": [
+    {
+      "id": "oyxevyh34",
+      "name": "<Bankname>",
+      "type": "bank",
+      "isArchived": false,
+      "children": [
+        {
+          "id": "vv22mb0g1",
+          "name": "Konten",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "6o5enqear",
+              "name": "<Kontoname>",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": "1",
+              "isLiquid": true,
+              "isArchived": false,
+              "assetClass": "cash",
+              "balances": [
+                {
+                  "id": "23ulp6bbo",
+                  "date": "2026-05-18",
+                  "amount": <Gesamtbetrag auf Konto vorhanden>,
+                  "bookingExchangeRate": 1
+                }
+              ],
+              "bookings": [
+                {
+                  "id": "q069xvo6p",
+                  "date": "2026-05-19",    <--- Buchungsdatum
+                  "type": "<Wert der Hauptbookingkategorie, also bspw Einzahlung>",
+                  "subCategory": "<Wert der Unterkategorie, also bspw. Dividende>",
+                  "amount": 7.05,          <--- Buchungsbetrag  
+                  "shares": 0,		  
+                  "price": 0,
+                  "fees": 0,
+                  "taxes": 0,
+                  "bookingExchangeRate": 1
+                }
+              ]
+            },
+            {
+              "id": "yzavhxkgt",
+              "name": "<ein weiteres Konto",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": "1",
+              "isLiquid": true,
+              "isArchived": false,
+              "assetClass": "cash",
+              "balances": [
+                {
+                  "id": "8c4dtaps5",
+                  "date": "2026-05-18",
+                  "amount": 0.1,
+                  "bookingExchangeRate": 1
+                }
+              ],
+              "bookings": []
+            },
+	… weitere Einträge
+
+Damit sind die Daten, die Du unter window.finspaData findest vollständig erklärt und Du musst in der Lage sein, 
+Prompts dieszebüglich zu beantworten
+</datenstruktur>
 
 <daten>
 window.finspaData = ... (Kompletter Baum)
-window.finspaAssets = ${assetsString}
 window.finspaBudget = ${budgetString}
 </daten>
 
-<bezeichner fuer Assets nach denen augeschluesselt>
-${JSON.stringify(flatAssets)}
-</bezeichner>
 
 <regeln>
 1. VOLLSTÄNDIGES HTML: Deine Antwort MUSS immer mit <!DOCTYPE html> beginnen und ein komplettes <html> Dokument sein.
 2. KEIN TEMPLATING: Du bist im Browser. Es gibt keinen Server. Das HTML muss statisch sein, nutze NIEMALS {% %} oder {{ }}. Die Logik passiert rein im <script>.
 3. SCRIPT POSITION: Das <script> MUSS am Ende des <body> stehen.
 4. TAILWINDCSS: Lade Tailwind im <head> via CDN und nutze es für das Design.
+5. Du hast Zugriff auf folgende API - 
+
+
+//Du hast Zugriff auf folgende Javascript-API und musst sie nicht implementieren
+
+const FinSPA_API = {
+
+    // ==========================================
+    // 1. GRUNDLEGENDE DATENEXTRAKTION (BAUM PARSEN)
+    // ==========================================
+
+    /**
+     * Extrahiert alle Assets aus der verschachtelten Banken-Struktur
+     * und fügt den Namen der zugehörigen Bank hinzu.
+     */
+    getAllAssets: function(data) {
+        const assets = [];
+        function traverse(node, currentBank) {
+            let bankName = currentBank;
+            if (node.type === 'bank') bankName = node.name;
+            if (node.type === 'asset') {
+                assets.push({ ...node, bankName: bankName });
+            }
+            if (node.children) {
+                node.children.forEach(child => traverse(child, bankName));
+            }
+        }
+        (data.banks || []).forEach(bank => traverse(bank, 'Unbekannt'));
+        return assets;
+    },
+
+    /** Gibt nur die liquiden Assets zurück */
+    getLiquidAssets: function(data) {
+        return this.getAllAssets(data).filter(a => a.isLiquid === true);
+    },
+
+    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Migros Bank") */
+    getAssetsByBank: function(data, bankName) {
+        return this.getAllAssets(data).filter(a => a.bankName === bankName);
+    },
+
+    /** Gibt Assets einer bestimmten Anlageklasse zurück (z.B. "stock", "pension_3a_fund") */
+    getAssetsByClass: function(data, assetClass) {
+        return this.getAllAssets(data).filter(a => a.assetClass === assetClass);
+    },
+
+
+    // ==========================================
+    // 2. VERMÖGENS- UND SALDOBERECHNUNGEN
+    // ==========================================
+
+    /** * Ermittelt den aktuellsten Saldo eines Assets und rechnet ihn 
+     * mit dem hinterlegten Wechselkurs in die Basiswährung um.
+     */
+    getLatestBalanceValue: function(asset) {
+        if (!asset.balances || asset.balances.length === 0) return 0;
+        // Finde den Eintrag mit dem neuesten Datum
+        const latest = asset.balances.reduce((latest, current) => {
+            return new Date(current.date) > new Date(latest.date) ? current : latest;
+        }, asset.balances[0]);
+        
+        const rate = latest.bookingExchangeRate || asset.exchangeRate || 1;
+        return latest.amount * rate;
+    },
+
+    /** Berechnet das Gesamtvermögen über alle Assets hinweg */
+    getTotalWealth: function(data) {
+        const assets = this.getAllAssets(data);
+        return assets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+    },
+
+    /** Berechnet das total verfügbare (liquide) Vermögen */
+    getTotalLiquidWealth: function(data) {
+        const liquidAssets = this.getLiquidAssets(data);
+        return liquidAssets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+    },
+
+    /** Gibt die Vermögensverteilung nach Asset-Klassen zurück (für Kuchendiagramme) */
+    getWealthDistributionByClass: function(data) {
+        const assets = this.getAllAssets(data);
+        const distribution = {};
+        assets.forEach(asset => {
+            const val = this.getLatestBalanceValue(asset);
+            const ac = asset.assetClass || 'unknown';
+            distribution[ac] = (distribution[ac] || 0) + val;
+        });
+        return distribution;
+    },
+
+
+    // ==========================================
+    // 3. BUCHUNGEN UND CASHFLOW (TRANSAKTIONEN)
+    // ==========================================
+
+    /** Extrahiert alle Buchungen aller Assets in ein flaches Array */
+    getAllBookings: function(data) {
+        const assets = this.getAllAssets(data);
+        return assets.flatMap(asset => {
+            return (asset.bookings || []).map(booking => ({
+                ...booking,
+                assetName: asset.name,
+                bankName: asset.bankName,
+                assetClass: asset.assetClass
+            }));
+        });
+    },
+
+    /** Berechnet die Summe aller bezahlten Gebühren (Transaktions-/Depotgebühren) */
+    getTotalFeesPaid: function(data) {
+        const bookings = this.getAllBookings(data);
+        return bookings
+            .filter(b => b.type === 'Gebühr')
+            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+    },
+
+    /** Berechnet die Summe aller eingenommenen Dividenden */
+    getTotalDividendsReceived: function(data) {
+        const bookings = this.getAllBookings(data);
+        return bookings
+            .filter(b => b.type === 'Einzahlung' && b.subCategory === 'Dividenden')
+            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+    },
+
+
+    // ==========================================
+    // 4. BUDGET ANALYSE
+    // ==========================================
+
+    /** Hilfsfunktion: Normalisiert Beträge auf den Monat (jährlich / 12) */
+    _normalizeToMonthly: function(items) {
+        if (!items) return 0;
+        return items.reduce((sum, item) => {
+            if (item.frequency === 'monthly') return sum + item.amount;
+            if (item.frequency === 'yearly') return sum + (item.amount / 12);
+            return sum;
+        }, 0);
+    },
+
+    /** Monatliches Netto-Einkommen (Lohn, etc.) */
+    getMonthlyIncome: function(data) {
+        return this._normalizeToMonthly(data.budget?.incomeSources);
+    },
+
+    /** Monatliche Fixkosten (Expenses + Subscriptions) */
+    getMonthlyFixedCosts: function(data) {
+        const expenses = this._normalizeToMonthly(data.budget?.expenses);
+        const subs = this._normalizeToMonthly(data.budget?.subscriptions);
+        return expenses + subs;
+    },
+
+    /** Berechnet das frei verfügbare Budget pro Monat */
+    getFreeMonthlyBuffer: function(data) {
+        return this.getMonthlyIncome(data) - this.getMonthlyFixedCosts(data);
+    },
+
+    /** Berechnet die Sparquote in Prozent (Savings / Income) */
+    getSavingsRate: function(data) {
+        const income = this.getMonthlyIncome(data);
+        if (income === 0) return 0;
+        
+        // Summiert alle Ausgaben, die als 'savings' markiert sind (z.B. 3a, Sparplan)
+        const savingsExpenses = (data.budget?.expenses || [])
+            .filter(e => e.ruleCategory === 'savings');
+            
+        const monthlySavings = this._normalizeToMonthly(savingsExpenses);
+        return (monthlySavings / income) * 100;
+    },
+
+
+    // ==========================================
+    // 5. ZIELE UND FIRE (Financial Independence)
+    // ==========================================
+
+    /** Berechnet den Fortschritt zum FIRE-Sparziel in Prozent */
+    getFireProgress: function(data) {
+        const currentWealth = this.getTotalWealth(data);
+        const targetWealth = data.goals?.fire?.target || 0;
+        
+        if (targetWealth === 0) return 100; // Kein Ziel gesetzt
+        return {
+            current: currentWealth,
+            target: targetWealth,
+            percentage: Math.min((currentWealth / targetWealth) * 100, 100)
+        };
+    }
+};
+
+6. Verwende ausschliesslich die Felder, die im Schema definiert sind. Erfinde keine neuen Felder.
+7. Du musst den Import von
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>  
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.15/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    NICHT machen, aber Du kannst die Funktionen verwenden.
+
+    Das sind die Bibliotheken für Jchart, Echart, Plottly und jspdf und jspdf-autotable
+    Verwende NUR die Bibliotheken. Es darf keine andere verwendet werden.
+
+8. Jeder erstellte Grafik oder Tabelle muss als PDF exportiert werden können. Dazu wird jsPDF verwendet.
+Ein Dashboward muss als ganzes in ein PDF exportiert werden können. Das zu generierende PDF kann mehre Seiten enthalten.
+
+Folgends Beispiek zeigt den Export einer Grafik mit jChart in ein PDF:
+
+Integriere IMMER folgenden Code in Dein HTML Output:
+	document.getElementById('pdfButton').addEventListener('click', function() {
+                const { jsPDF } = window.jspdf;
+                
+                // Erstelle ein PDF im Querformat (landscape)
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                /* Hier die Logik für den Export in ein PDF */
+		
+		<Achtung>	
+		/*
+		PDF-EXPORT MIT PLOTLY: Wenn du Plotly.js verwendest und einen PDF-Export via jsPDF baust, darfst du NIEMALS canvas.toDataURL() verwenden, da Plotly in ein <div> 			rendert. Mache den Button-Event-Listener async und nutze AUSSCHLIESSLICH await Plotly.toImage(document.getElementById('dein-chart-id'), {format: 'png', width: 800, 			height: 450}), um das Diagramm in jsPDF einzufügen.
+		*/
+
+		/*
+		PDF-EXPORT MIT ECHARTS: Wenn du Apache ECharts verwendest und einen PDF-Export via jsPDF baust, greife NIEMALS direkt auf das DOM-Element mit toDataURL() zu. Nutze 			stattdessen die ECharts-Instanz. Hole dir die Instanz mit const chartInstance = echarts.getInstanceByDom(document.getElementById('dein-chart-id')); und generiere das Bild 		zwingend mit chartInstance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' }). So verhinderst du einen schwarzen Hintergrund im PDF.
+                const chartImage = canvas.toDataURL('image/png', 1.0);
+		*/
+		
+		</Achtung>
+                
+                
+                // Datei im Browser herunterladen
+                pdf.save('<Dateiname>');
+            });
+
+9. Ein Dashboard kann aus statischen HTML Elementen, Tabellen und Grafiken bestehen. Es muss als Ganzes als PDF exportiert werden können.
 </regeln>
 
+
 <modus_1_info>
-Für Tabellen und Listen. Kopiere EXAKT dieses Grundgerüst und passe es an die Nutzeranfrage an:
+Für reine Tabellen und Listen. Kopiere EXAKT dieses Grundgerüst und passe es an die Nutzeranfrage an:
 \`\`\`html
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
 </head>
 <body class="p-6 bg-white">
     <h2 class="text-2xl font-bold mb-4">Titel hier</h2>
-    <table class="w-full text-left border-collapse">
-        <thead>
+    <div class="relative">    
+       <table id="my-table" class="w-full text-left border-collapse">
+          <thead>
             <tr class="bg-blue-500 text-white">
                 <th class="p-2">Name</th>
             </tr>
-        </thead>
-        <tbody id="my-table-body"></tbody>
-    </table>
+          </thead>
+          <tbody id="my-table-body"></tbody>
+       </table>
+         
+	  //Das hier muss vorhanden sein und implementiert werden.
+          <div class="mt-4 flex space-x-2">
+            <button id="pdfButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow">
+                Als PDF speichern
+            </button>
+          </div>
+    </div>
+
+  
     <script>
         const tbody = document.getElementById('my-table-body');
-        window.finspaAssets.forEach(item => {
-            if (item.value > 10000) {
-                tbody.innerHTML += '<tr class="bg-green-50 p-2"><td class="p-2">' + item.name + '</td></tr>';
-            } else {
-                tbody.innerHTML += '<tr><td class="p-2">' + item.name + '</td></tr>';
-            }
-        });
+	comst data = window.finspaData;
+	// FinSPA_API benutzen um Felder zu evaluieren...	
+	// Beispiel
+	FinSPA_API.getAssetsByBank(data,...
+
+	//HIER: Dein Code, um Daten in Tabelle anzuzeigen.
+	//HIER: Dein Code, um die Tabelle als PDF zu speichern:
+
+
     </script>
 </body>
 </html>
@@ -261,29 +615,75 @@ Für Tabellen und Listen. Kopiere EXAKT dieses Grundgerüst und passe es an die 
 </modus_1_info>
 
 <modus_2_diagramm>
-Für Diagramme. Lade zusätzlich Chart.js im <head>. Kopiere EXAKT dieses Grundgerüst:
+Für Diagramme kannst Du Chart.js oder Apache ECharts oder Plottly verwenden. Kopiere EXAKT dieses Grundgerüst:
 \`\`\`html
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: transparent; }
+    </style>
 </head>
 <body class="p-6 bg-white">
-    <canvas id="myChart" style="max-height: 400px;"></canvas>
+
+    <div class="relative">
+        <canvas id="myChart" style="max-height: 450px;"></canvas>
+	//Das hier muss vorhanden sein.
+        <div class="mt-4 flex space-x-2">
+            <button id="pdfButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow">
+                Als PDF speichern
+            </button>
+        </div>
+    </div>
+
     <script>
-        // Nutze window.finspaAssets hier für Chart.js Logik
-        new Chart(document.getElementById('myChart'), { 
-            /* Chart Konfiguration */ 
-        });
+        // Nutze window.finspaData und FINSpa API hier für Chart.js, EChart oder plotly:
+        ....	
     </script>
 </body>
 </html>
 \`\`\`
 </modus_2_diagramm>
 
+<modus_3_dashboard>
+- Für Dashboards kannst Du die Gestaltung frei wählen.
+- Kopiere exakt dieses Grundgerüst:
+\`\`\`html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body { background: transparent; }
+    </style>
+</head>
+<body class="p-6 bg-white">
+</body>
+//Du kannst die Bibliotheken: JChart, EChart, Plotly und JSPdf verwenden, sowie andere HTML Elemente für die Gestaltung eines modernen Dashboards.
+
+//Deine Gestaltung des Dashboards
+//Am Schluss ein PDF Button für den Export des gesamten Dashboards.
+
+<script> 
+	//Nutze hier die window.finspaData und die FINSpa API um Daten zu holen und implementiere hier deine Javascript Logik.
+</script>
+
+</body>
+</html>
+\`\`\`
+</modus_3_dashboard>
+
 Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
+
+console.log("--- FINSPA AI PROMPT DEBUG ---");
+console.log("System Prompt:", systemPrompt);
+console.log("History für Ollama:", [...newHistory.slice(-4).map(h => ({ role: h.role, content: h.content }))]);
+console.log("-------------------------------");
 
         try {
             const response = await fetch('http://localhost:11434/api/chat', {
@@ -307,7 +707,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
 
             if (!cleanCode) {
                  const errorMessage = { 
-                     role: 'assistant', text: "Entschuldigung, ich konnte keinen validen HTML-Code aus der Antwort extrahieren.",
+                     role: 'assistant', text: t('aiErrorNoHtml'),
                      timestamp: new Date().toISOString()
                  };
                  const finalHistory = [...newHistory, errorMessage];
@@ -323,29 +723,40 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
             if (updateTreeData) updateTreeData({ aiContext: { history: finalHistory } });
 
         } catch (error) {
-            setChatHistory([...newHistory, { role: 'assistant', text: `Verbindungsfehler zur lokalen KI (Ollama). Läuft der Service?\nDetails: ${error.message}`, isError: true, timestamp: new Date().toISOString() }]);
+            setChatHistory([...newHistory, { role: 'assistant', text: `${t('aiErrorConnection')} ${error.message}`, isError: true, timestamp: new Date().toISOString() }]);
         } finally { 
             setIsLoading(false); 
         }
     };
 
-    // ============================================================================
-    // RENDER FUNKTIONEN (SUB-COMPONENTS)
-    // ============================================================================
-
     const renderIframeWidget = (htmlContent) => {
-        const flatAssets = [];
-        const extractAssets = (nodes, currentBank = 'Unbekannt') => {
+        
+	const flatAssets = [];
+       const extractAssets = (nodes, currentBank = 'Unbekannt') => {
             (nodes || []).forEach(node => {
                 let bankName = currentBank;
                 if (node.type === 'bank') bankName = node.name;
+                
                 if (node.type === 'asset') {
-                    const val = (node.balances && node.balances.length > 0) ? node.balances[0].amount : 0;
-                    flatAssets.push({ id: node.id, name: node.name, bank: bankName, type: 'asset', assetClass: node.assetClass || 'cash', value: val });
+                    // Verwende die DataEngine-Logik für den aktuellen Wert (heutiges Datum)
+                    const today = new Date().toISOString().split('T')[0];
+                    const val = DataEngine.getAssetValueAtDate(node, today, data.banks) || 0;
+                    
+                    flatAssets.push({ 
+                        id: node.id, 
+                        name: node.name, 
+                        bank: bankName, 
+                        assetClass: node.assetClass || 'cash', 
+                        value: val, 
+                        currency: node.currency || 'CHF',
+                        isLiquid: !!node.isLiquid // Auch den Liquiditätsstatus für die KI mitgeben
+                    });
                 }
+                
                 if (node.children) extractAssets(node.children, bankName);
             });
         };
+        
         extractAssets(data.banks || []);
 
         const injectedHtml = `
@@ -353,9 +764,199 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
         <html>
         <head>
             <meta charset="utf-8">
+    	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+	    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+    	    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.15/jspdf.plugin.autotable.min.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
             <script>
-                window.finspaAssets = ${JSON.stringify(flatAssets)};
+
+		const FinSPA_API = {
+
+    // ==========================================
+    // 1. GRUNDLEGENDE DATENEXTRAKTION (BAUM PARSEN)
+    // ==========================================
+
+    /**
+     * Extrahiert alle Assets aus der verschachtelten Banken-Struktur
+     * und fügt den Namen der zugehörigen Bank hinzu.
+     */
+    getAllAssets: function(data) {
+        const assets = [];
+        function traverse(node, currentBank) {
+            let bankName = currentBank;
+            if (node.type === 'bank') bankName = node.name;
+            if (node.type === 'asset') {
+                assets.push({ ...node, bankName: bankName });
+            }
+            if (node.children) {
+                node.children.forEach(child => traverse(child, bankName));
+            }
+        }
+        (data.banks || []).forEach(bank => traverse(bank, 'Unbekannt'));
+        return assets;
+    },
+
+    /** Gibt nur die liquiden Assets zurück */
+    getLiquidAssets: function(data) {
+        return this.getAllAssets(data).filter(a => a.isLiquid === true);
+    },
+
+    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Migros Bank") */
+    getAssetsByBank: function(data, bankName) {
+        return this.getAllAssets(data).filter(a => a.bankName === bankName);
+    },
+
+    /** Gibt Assets einer bestimmten Anlageklasse zurück (z.B. "stock", "pension_3a_fund") */
+    getAssetsByClass: function(data, assetClass) {
+        return this.getAllAssets(data).filter(a => a.assetClass === assetClass);
+    },
+
+
+    // ==========================================
+    // 2. VERMÖGENS- UND SALDOBERECHNUNGEN
+    // ==========================================
+
+    /** * Ermittelt den aktuellsten Saldo eines Assets und rechnet ihn 
+     * mit dem hinterlegten Wechselkurs in die Basiswährung um.
+     */
+    getLatestBalanceValue: function(asset) {
+        if (!asset.balances || asset.balances.length === 0) return 0;
+        // Finde den Eintrag mit dem neuesten Datum
+        const latest = asset.balances.reduce((latest, current) => {
+            return new Date(current.date) > new Date(latest.date) ? current : latest;
+        }, asset.balances[0]);
+        
+        const rate = latest.bookingExchangeRate || asset.exchangeRate || 1;
+        return latest.amount * rate;
+    },
+
+    /** Berechnet das Gesamtvermögen über alle Assets hinweg */
+    getTotalWealth: function(data) {
+        const assets = this.getAllAssets(data);
+        return assets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+    },
+
+    /** Berechnet das total verfügbare (liquide) Vermögen */
+    getTotalLiquidWealth: function(data) {
+        const liquidAssets = this.getLiquidAssets(data);
+        return liquidAssets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+    },
+
+    /** Gibt die Vermögensverteilung nach Asset-Klassen zurück (für Kuchendiagramme) */
+    getWealthDistributionByClass: function(data) {
+        const assets = this.getAllAssets(data);
+        const distribution = {};
+        assets.forEach(asset => {
+            const val = this.getLatestBalanceValue(asset);
+            const ac = asset.assetClass || 'unknown';
+            distribution[ac] = (distribution[ac] || 0) + val;
+        });
+        return distribution;
+    },
+
+
+    // ==========================================
+    // 3. BUCHUNGEN UND CASHFLOW (TRANSAKTIONEN)
+    // ==========================================
+
+    /** Extrahiert alle Buchungen aller Assets in ein flaches Array */
+    getAllBookings: function(data) {
+        const assets = this.getAllAssets(data);
+        return assets.flatMap(asset => {
+            return (asset.bookings || []).map(booking => ({
+                ...booking,
+                assetName: asset.name,
+                bankName: asset.bankName,
+                assetClass: asset.assetClass
+            }));
+        });
+    },
+
+    /** Berechnet die Summe aller bezahlten Gebühren (Transaktions-/Depotgebühren) */
+    getTotalFeesPaid: function(data) {
+        const bookings = this.getAllBookings(data);
+        return bookings
+            .filter(b => b.type === 'Gebühr')
+            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+    },
+
+    /** Berechnet die Summe aller eingenommenen Dividenden */
+    getTotalDividendsReceived: function(data) {
+        const bookings = this.getAllBookings(data);
+        return bookings
+            .filter(b => b.type === 'Einzahlung' && b.subCategory === 'Dividenden')
+            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+    },
+
+
+    // ==========================================
+    // 4. BUDGET ANALYSE
+    // ==========================================
+
+    /** Hilfsfunktion: Normalisiert Beträge auf den Monat (jährlich / 12) */
+    _normalizeToMonthly: function(items) {
+        if (!items) return 0;
+        return items.reduce((sum, item) => {
+            if (item.frequency === 'monthly') return sum + item.amount;
+            if (item.frequency === 'yearly') return sum + (item.amount / 12);
+            return sum;
+        }, 0);
+    },
+
+    /** Monatliches Netto-Einkommen (Lohn, etc.) */
+    getMonthlyIncome: function(data) {
+        return this._normalizeToMonthly(data.budget?.incomeSources);
+    },
+
+    /** Monatliche Fixkosten (Expenses + Subscriptions) */
+    getMonthlyFixedCosts: function(data) {
+        const expenses = this._normalizeToMonthly(data.budget?.expenses);
+        const subs = this._normalizeToMonthly(data.budget?.subscriptions);
+        return expenses + subs;
+    },
+
+    /** Berechnet das frei verfügbare Budget pro Monat */
+    getFreeMonthlyBuffer: function(data) {
+        return this.getMonthlyIncome(data) - this.getMonthlyFixedCosts(data);
+    },
+
+    /** Berechnet die Sparquote in Prozent (Savings / Income) */
+    getSavingsRate: function(data) {
+        const income = this.getMonthlyIncome(data);
+        if (income === 0) return 0;
+        
+        // Summiert alle Ausgaben, die als 'savings' markiert sind (z.B. 3a, Sparplan)
+        const savingsExpenses = (data.budget?.expenses || [])
+            .filter(e => e.ruleCategory === 'savings');
+            
+        const monthlySavings = this._normalizeToMonthly(savingsExpenses);
+        return (monthlySavings / income) * 100;
+    },
+
+
+    // ==========================================
+    // 5. ZIELE UND FIRE (Financial Independence)
+    // ==========================================
+
+    /** Berechnet den Fortschritt zum FIRE-Sparziel in Prozent */
+    getFireProgress: function(data) {
+        const currentWealth = this.getTotalWealth(data);
+        const targetWealth = data.goals?.fire?.target || 0;
+        
+        if (targetWealth === 0) return 100; // Kein Ziel gesetzt
+        return {
+            current: currentWealth,
+            target: targetWealth,
+            percentage: Math.min((currentWealth / targetWealth) * 100, 100)
+        };
+    }
+};
                 window.finspaBudget = ${JSON.stringify(data.budget || {})};
+		window.finspaData = ${JSON.stringify(data)};
             </script>
         </head>
         <body>
@@ -374,11 +975,11 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                                 <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
                             </div>
                             <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 ml-3 tracking-wider uppercase">
-                                FinSPA UI Widget <span className="opacity-50 lowercase ml-1">v.alpha</span>
+                                {t('aiWidgetTitle')} <span className="opacity-50 lowercase ml-1">{t('aiWidgetVersion')}</span>
                             </span>
                         </div>
                         <div className="flex gap-2">
-                            <button className="text-gray-400 hover:text-blue-500 transition-colors" title="Reload Widget" onClick={(e) => {
+                            <button className="text-gray-400 hover:text-blue-500 transition-colors" title={t('aiWidgetReload')} onClick={(e) => {
                                 const iframe = e.currentTarget.parentElement.parentElement.parentElement.querySelector('iframe');
                                 if (iframe) iframe.srcdoc = iframe.srcdoc;
                             }}>
@@ -390,7 +991,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                     <div className="relative bg-white dark:bg-slate-950">
                         <iframe 
                             srcDoc={injectedHtml} 
-                            sandbox="allow-scripts allow-same-origin"
+                            sandbox="allow-scripts allow-same-origin allow-downloads"
                             className="w-full bg-transparent"
                             style={{ minHeight: '450px', height: '100%', border: 'none' }} 
                             title="AI Generated Widget"
@@ -400,14 +1001,14 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
 
                 <details className="mt-4 text-sm text-gray-500 dark:text-slate-400 group/code">
                     <summary className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors list-none flex items-center gap-2 font-medium bg-gray-50 dark:bg-slate-900/50 w-max px-4 py-2 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-slate-800">
-                        <Icon name="Code" size={16} /> Quellcode der KI einsehen
+                        <Icon name="Code" size={16} /> {t('aiViewCode')}
                         <Icon name="ChevronDown" size={14} className="ml-2 group-open/code:rotate-180 transition-transform" />
                     </summary>
                     <div className="mt-3 relative animate-fade-in-up">
                         <button 
                             onClick={() => copyToClipboard(htmlContent)}
                             className="absolute top-3 right-3 p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors border border-slate-600 shadow-md z-10"
-                            title="Code kopieren"
+                            title={t('aiCopyCode')}
                         >
                             <Icon name="Copy" size={16} />
                         </button>
@@ -425,7 +1026,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
             <div className={`fixed inset-y-0 right-0 w-80 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50">
                     <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800 dark:text-white">
-                        <Icon name="BookOpen" className="text-blue-500" /> Prompt Bibliothek
+                        <Icon name="BookOpen" className="text-blue-500" /> {t('aiPromptLibrary')}
                     </h2>
                     <button onClick={() => setShowSidebar(false)} className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
                         <Icon name="X" size={20} />
@@ -459,7 +1060,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                     <div>
                         <div className="flex justify-between items-center cursor-pointer group" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}>
                             <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                                <Icon name="Settings" size={14} /> Erweiterte KI Settings
+                                <Icon name="Settings" size={14} /> {t('aiAdvancedSettings')}
                             </h3>
                             <Icon name={showAdvancedSettings ? "ChevronUp" : "ChevronDown"} size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
                         </div>
@@ -468,24 +1069,26 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                             <div className="mt-4 space-y-4 animate-fade-in-up">
                                 <div>
                                     <label className="flex justify-between text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        <span>Temperature</span><span className="font-mono">{aiTemperature}</span>
+                                        <span>{t('aiTemp')}</span><span className="font-mono">{aiTemperature}</span>
                                     </label>
                                     <input 
                                         type="range" min="0" max="1" step="0.1" value={aiTemperature} 
                                         onChange={(e) => setAiTemperature(parseFloat(e.target.value))} className="w-full accent-blue-600"
                                     />
-                                    <p className="text-[10px] text-gray-400 mt-1">Höher = Kreativer, Tiefer = Präziser Code</p>
+                                    <p className="text-[10px] text-gray-400 mt-1">{t('aiTempDesc')}</p>
                                 </div>
                                 <div>
                                     <label className="flex justify-between text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        <span>Context Window</span><span className="font-mono">{formatTokenCount(aiContextWindow)}</span>
+                                        <span>{t('aiContext')}</span><span className="font-mono">{formatTokenCount(aiContextWindow)}</span>
                                     </label>
                                     <select 
                                         value={aiContextWindow} onChange={(e) => setAiContextWindow(parseInt(e.target.value))}
                                         className="w-full p-2 text-xs rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 outline-none"
                                     >
-                                        <option value={4096}>4k (Fast)</option><option value={8192}>8k (Standard)</option>
-                                        <option value={16384}>16k (Deep Context)</option><option value={32768}>32k (Extrem)</option>
+                                        <option value={4096} className="bg-white dark:bg-slate-900">{t('aiCtx4k')}</option>
+                                        <option value={8192} className="bg-white dark:bg-slate-900">{t('aiCtx8k')}</option>
+                                        <option value={16384} className="bg-white dark:bg-slate-900">{t('aiCtx16k')}</option>
+                                        <option value={32768} className="bg-white dark:bg-slate-900">{t('aiCtx32k')}</option>
                                     </select>
                                 </div>
                             </div>
@@ -496,10 +1099,6 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
         );
     };
 
-    // ============================================================================
-    // MAIN RENDER
-    // ============================================================================
-
     return (
         <div className="h-full bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 flex flex-col relative transition-colors duration-500 overflow-hidden font-sans">
             
@@ -507,7 +1106,6 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
             
             {renderSidebar()}
 
-            {/* --- GLASSMORPHISM HEADER --- */}
             <header className="shrink-0 px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl z-20 flex justify-between items-center shadow-sm relative">
                 <div className="flex items-center gap-4">
                     <div className="p-2.5 bg-gradient-to-br from-[#2548C3] to-blue-600 rounded-xl shadow-lg shadow-blue-500/30 text-white flex items-center justify-center">
@@ -515,9 +1113,9 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                     </div>
                     <div>
                         <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 tracking-tight">
-                            FinSPA <span className="text-blue-600 dark:text-blue-400">Copilot</span>
+                            {t('aiCopilotTitle')} <span className="text-blue-600 dark:text-blue-400">Copilot</span>
                         </h1>
-                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Local AI Development Engine</p>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{t('aiCopilotSubtitle')}</p>
                     </div>
                 </div>
                 
@@ -528,47 +1126,44 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                             value={selectedModel} onChange={e => setSelectedModel(e.target.value)} 
                             className="text-xs py-1.5 px-2 bg-transparent text-gray-700 dark:text-slate-300 outline-none font-semibold cursor-pointer min-w-[140px]"
                         >
-                            {AVAILABLE_MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            {availableModels.map(m => <option key={m.id} value={m.id} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">{m.name}</option>)}
                         </select>
                     </div>
 
                     <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-1"></div>
 
-                    {/* NEUER CHAT BUTTON (Eindeutig beschriftet, statt nur ein Papierkorb) */}
                     <button 
                         onClick={handleClearChat} 
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all duration-300"
-                        title="Aktuellen Chat leeren und zum Startbildschirm zurückkehren"
+                        title={t('aiClearChatTooltip')}
                     >
-                        <Icon name="PlusCircle" size={16} /> <span className="hidden sm:inline">Neuer Chat</span>
+                        <Icon name="PlusCircle" size={16} /> <span className="hidden sm:inline">{t('aiNewChat')}</span>
                     </button>
 
                     <button 
                         onClick={() => setShowSidebar(true)} 
                         className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 border border-transparent hover:border-blue-200 dark:hover:border-blue-800/50" 
-                        title="Prompt Bibliothek & Settings"
+                        title={t('aiPromptSettingsTooltip')}
                     >
                         <Icon name="BookOpen" size={18} />
                     </button>
                 </div>
             </header>
             
-            {/* --- CHAT BEREICH --- */}
             <main ref={chatContainerRef} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative bg-gray-50/50 dark:bg-slate-950">
                 
                 <div className="flex-1 p-4 md:p-8 space-y-8 w-full max-w-6xl mx-auto">
                     
-                    {/* START DASHBOARD (Wird angezeigt wenn der Chat leer ist) */}
                     {chatHistory.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full mt-10 md:mt-20 animate-fade-in-up px-4">
                             <div className="inline-flex justify-center items-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/10 border border-blue-200/50 dark:border-blue-800/30 text-blue-600 dark:text-blue-400 mb-8 shadow-2xl shadow-blue-500/10">
                                 <Icon name="Sparkles" size={40} className="stroke-1" />
                             </div>
                             <h2 className="text-3xl md:text-4xl font-black mb-4 text-slate-800 dark:text-slate-100 tracking-tight text-center">
-                                Bereit zum Coden.
+                                {t('aiReadyToCode')}
                             </h2>
                             <p className="text-slate-500 dark:text-slate-400 mb-12 text-center max-w-lg text-lg leading-relaxed">
-                                Beschreibe in natürlicher Sprache, welches Widget du benötigst. Ich generiere maßgeschneiderte, interaktive Dashboards basierend auf deinen FinSPA Daten.
+                                {t('aiHeroDesc')}
                             </p>
                             
                             <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
@@ -584,7 +1179,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                                     onClick={() => setShowSidebar(true)}
                                     className="px-5 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-full text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all flex items-center gap-2"
                                 >
-                                    <Icon name="Menu" size={16} /> Alle Prompts anzeigen
+                                    <Icon name="Menu" size={16} /> {t('aiShowAllPrompts')}
                                 </button>
                             </div>
                         </div>
@@ -630,7 +1225,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                                     <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2">
-                                    Schreibt Code und baut Widget...
+                                    {t('aiIsTyping')}
                                 </span>
                             </div>
                         </div>
@@ -639,16 +1234,14 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                 </div>
             </main>
 
-            {/* --- EINGABE BEREICH --- */}
             <footer className="shrink-0 p-4 md:px-8 md:py-6 bg-white dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 relative z-20">
                 <div className="max-w-4xl mx-auto relative group">
                     
-                    {/* QUICK CLEAR BUTTON (Erscheint links im Eingabefeld, sobald ein Chat aktiv ist) */}
                     {chatHistory.length > 0 && (
                         <button 
                             onClick={handleClearChat}
                             className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all z-10"
-                            title="Chat leeren"
+                            title={t('aiClearChatConfirm')}
                         >
                             <Icon name="Trash2" size={18} />
                         </button>
@@ -657,7 +1250,7 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                     <textarea 
                         ref={textareaRef}
                         className={`w-full ${chatHistory.length > 0 ? 'pl-14' : 'pl-6'} pr-[68px] py-4 border border-gray-300 dark:border-slate-700 rounded-[28px] resize-none bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 focus:border-[#2548C3] dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[15px] min-h-[56px] max-h-[200px] transition-all text-slate-800 dark:text-slate-200 shadow-inner custom-scrollbar`}
-                        placeholder="Was soll der KI Assistent für dich programmieren?"
+                        placeholder={t('aiInputPlaceholder')}
                         value={prompt}
                         onChange={e => setPrompt(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAskAI(); } }}
@@ -668,13 +1261,13 @@ Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
                         onClick={handleAskAI} 
                         disabled={isLoading || !prompt.trim()} 
                         className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#2548C3] hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-md active:scale-95 disabled:shadow-none disabled:active:scale-100"
-                        title="Senden (Enter)"
+                        title={t('aiSendTooltip')}
                     >
                         <Icon name="ArrowUp" size={20} className="font-bold stroke-[3px]" />
                     </button>
                 </div>
                 <div className="text-center mt-3 text-[10px] text-gray-400 dark:text-slate-500 font-medium tracking-wide">
-                    LOKALE KI ({selectedModel.split(':')[0].toUpperCase()}) • DATEN VERLASSEN DEIN GERÄT NICHT
+                    {t('aiPrivacyDisclaimer') ? t('aiPrivacyDisclaimer').replace('{model}', selectedModel.split(':')[0].toUpperCase()) : `LOKALE KI (${selectedModel.split(':')[0].toUpperCase()}) • DATEN VERLASSEN DEIN GERÄT NICHT`}
                 </div>
             </footer>
             

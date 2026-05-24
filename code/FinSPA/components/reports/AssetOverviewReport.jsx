@@ -41,18 +41,31 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   });
 
   const getAcName = (ac) => {
-    // 1. Spezifische Keys zuerst prüfen (z.B. acPension_cash)
+    // 1. NEU: Dynamischen Namen aus den Settings laden (höchste Priorität)
+    if (data?.settings?.assetClasses) {
+        const foundClass = data.settings.assetClasses.find(a => a.id === ac);
+        if (foundClass && foundClass.name) return foundClass.name;
+    }
+
+    // 2. Spezifische Keys aus der Übersetzungsdatei prüfen
     const key = `ac${ac.charAt(0).toUpperCase() + ac.slice(1)}`;
     if (t) {
       const translated = t(key);
       if (translated && translated !== key) return translated;
     }
     
-    // 2. Fallback Map für hartkodierte oder fehlende Übersetzungen
+    // 3. Fallback Map, falls weder Settings noch Übersetzungen vorhanden sind
     const map = { 
-      cash: 'Konten / Cash', fund: 'Fonds / ETFs', stock: 'Aktien', 
-      crypto: 'Krypto', realestate: 'Immobilien', mortgage: 'Hypotheken', 
-      pension_cash: 'Vorsorge (Konten)', pension_fund: 'Vorsorge (Depots)' 
+      cash: 'Bargeld / Konto', 
+      fund: 'Fonds / ETFs', 
+      stock: 'Aktien', 
+      crypto: 'Krypto', 
+      realestate: 'Immobilien', 
+      mortgage: 'Hypotheken', 
+      pension_cash: 'Pensionskasse', 
+      pension_fund: 'Vorsorgefonds (alt)',
+      pension_3a_cash: '3a Vorsorgekonto', 
+      pension_3a_fund: '3a Vorsorgefonds'
     };
     return map[ac] || ac;
   };
@@ -60,7 +73,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   const getAcIcon = (ac) => {
     if (ac === 'realestate') return 'Home';
     if (ac === 'mortgage') return 'Building';
-    if (ac?.includes('pension')) return 'Lock';
+    if (ac?.includes('pension')) return 'Lock'; // Deckt alle Vorsorgeklassen ab
     if (ac === 'crypto') return 'Coins';
     if (ac === 'fund' || ac === 'stock') return 'TrendingUp';
     return 'PieChart';
@@ -73,8 +86,8 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-gray-200 dark:border-slate-800 pb-6 gap-4">
         <div className="flex-1">
           <ReportHeader 
-            title={t('repOverviewTitle')} 
-            subtitle={`${t('repOverviewSub')} ${targetDate}`} 
+            title={t ? t('repOverviewTitle') : 'Banken & Kategorien'} 
+            subtitle={`${t ? t('repOverviewSub') : 'Konsolidierte Übersicht der Assets per'} ${targetDate}`} 
             isTreeVisible={isTreeVisible} 
             setIsTreeVisible={setIsTreeVisible} 
           />
@@ -82,7 +95,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         
         <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-5 rounded-2xl shadow-lg shrink-0 min-w-[250px] border border-blue-500">
            <div className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
-             <Icon name="Shield" size={12}/> {t('totalWealth')}
+             <Icon name="Shield" size={12}/> {t ? t('totalWealth') : 'Gesamtvermögen'}
            </div>
            <div className="text-3xl font-black">{fCur(grandTotal)}</div>
         </div>
@@ -92,7 +105,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         {sortedClasses.length === 0 && (
           <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
             <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
-            {t('noActiveAssets')}
+            {t ? t('noActiveAssets') : 'Keine aktiven Anlagen gefunden'}
           </div>
         )}
         
@@ -107,7 +120,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
               </h3>
               <div className="flex flex-col items-end">
                 <span className="font-black text-2xl text-gray-900 dark:text-white">{fCur(overview[ac].total)}</span>
-                <span className="text-xs font-bold text-gray-400 uppercase">{((overview[ac].total / grandTotal) * 100).toFixed(1)}% {t('ofPortfolio')}</span>
+                <span className="text-xs font-bold text-gray-400 uppercase">{grandTotal > 0 ? ((overview[ac].total / grandTotal) * 100).toFixed(1) : 0}% {t ? t('ofPortfolio') : 'vom Portfolio'}</span>
               </div>
             </div>
             
