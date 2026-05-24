@@ -322,7 +322,9 @@ window.finspaBudget = ${budgetString}
 
 <regeln>
 1. VOLLSTÄNDIGES HTML: Deine Antwort MUSS immer mit <!DOCTYPE html> beginnen und ein komplettes <html> Dokument sein.
-2. KEIN TEMPLATING: Du bist im Browser. Es gibt keinen Server. Das HTML muss statisch sein, nutze NIEMALS {% %} oder {{ }}. Die Logik passiert rein im <script>.
+2.a. KEIN TEMPLATING: Du bist im Browser. Es gibt keinen Server. Das HTML muss statisch sein, nutze NIEMALS {% %} oder {{ }}. Die Logik passiert rein im <script>.
+2.b. STRIKTES VERBOT VON DUMMY-DATEN: Du darfst unter KEINEN UMSTÄNDEN Platzhalter, Dummy-Daten, erfundene Arrays oder statische Beispielzahlen (wie 50000, 30000, "Annuities" etc.) in das HTML, die Charts oder das PDF schreiben! 
+Du MUSST ausnahmslos die Variablen verwenden, die von den FinSPA_API-Funktionen zurückgegeben werden. Jeder Wert im UI oder PDF MUSS das Resultat eines FinSPA_API Aufrufs sein.
 3. SCRIPT POSITION: Das <script> MUSS am Ende des <body> stehen.
 4. TAILWINDCSS: Lade Tailwind im <head> via CDN und nutze es für das Design.
 5. Du hast Zugriff auf folgende API - 
@@ -330,357 +332,122 @@ window.finspaBudget = ${budgetString}
 
 //Du hast Zugriff auf folgende Javascript-API und musst sie nicht implementieren
 
+5. Du hast Zugriff auf folgende API - 
+
+//Du hast Zugriff auf folgende Javascript-API und musst sie nicht implementieren
+
 const FinSPA_API = {
+    // --- EXTRAKTION ---
+    getAllAssets: function(data) { /* Gibt Array aller Assets inkl. bankName zurück */ },
+    getLiquidAssets: function(data) { /* Gibt Array aller liquiden Assets zurück */ },
+    getAssetsByBank: function(data, bankName) { /* Gibt Assets einer bestimmten Bank zurück */ },
+    getAssetsByClass: function(data, assetClass) { /* Gibt Assets einer Klasse zurück */ },
 
-    // ==========================================
-    // 1. GRUNDLEGENDE DATENEXTRAKTION (BAUM PARSEN)
-    // ==========================================
+    // --- BERECHNUNGEN ---
+    getLatestBalanceValue: function(asset) { /* Gibt aktuellsten Saldo in Basiswährung zurück */ },
+    getTotalWealth: function(data) { /* Gibt Gesamtvermögen zurück */ },
+    getTotalLiquidWealth: function(data) { /* Gibt liquides Vermögen zurück */ },
+    getWealthDistributionByClass: function(data) { /* Gibt Objekt { assetClass: totalValue } zurück */ },
+    getWealthByBank: function(data) { /* Gibt Array [{bankName, totalValue}] zurück */ },
 
-    /**
-     * Extrahiert alle Assets aus der verschachtelten Banken-Struktur
-     * und fügt den Namen der zugehörigen Bank hinzu.
-     */
-    getAllAssets: function(data) {
-        const assets = [];
-        function traverse(node, currentBank) {
-            let bankName = currentBank;
-            if (node.type === 'bank') bankName = node.name;
-            if (node.type === 'asset') {
-                assets.push({ ...node, bankName: bankName });
-            }
-            if (node.children) {
-                node.children.forEach(child => traverse(child, bankName));
-            }
-        }
-        (data.banks || []).forEach(bank => traverse(bank, 'Unbekannt'));
-        return assets;
-    },
+    // --- BUCHUNGEN & CASHFLOW ---
+    getAllBookings: function(data) { /* Gibt flaches Array aller Transaktionen zurück */ },
+    getTotalFeesPaid: function(data) { /* Gibt Summe aller Gebühren zurück */ },
+    getTotalDividendsReceived: function(data) { /* Gibt Summe aller Dividenden zurück */ },
 
-    /** Gibt nur die liquiden Assets zurück */
-    getLiquidAssets: function(data) {
-        return this.getAllAssets(data).filter(a => a.isLiquid === true);
-    },
-
-    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Meine Bank") */
-    getAssetsByBank: function(data, bankName) {
-        return this.getAllAssets(data).filter(a => a.bankName === bankName);
-    },
-
-    /** Gibt Assets einer bestimmten Anlageklasse zurück (z.B. "stock", "pension_3a_fund") */
-    getAssetsByClass: function(data, assetClass) {
-        return this.getAllAssets(data).filter(a => a.assetClass === assetClass);
-    },
-
-
-    // ==========================================
-    // 2. VERMÖGENS- UND SALDOBERECHNUNGEN
-    // ==========================================
-
-    /** * Ermittelt den aktuellsten Saldo eines Assets und rechnet ihn 
-     * mit dem hinterlegten Wechselkurs in die Basiswährung um.
-     */
-    getLatestBalanceValue: function(asset) {
-        if (!asset.balances || asset.balances.length === 0) return 0;
-        // Finde den Eintrag mit dem neuesten Datum
-        const latest = asset.balances.reduce((latest, current) => {
-            return new Date(current.date) > new Date(latest.date) ? current : latest;
-        }, asset.balances[0]);
-        
-        const rate = latest.bookingExchangeRate || asset.exchangeRate || 1;
-        return latest.amount * rate;
-    },
-
-    /** Berechnet das Gesamtvermögen über alle Assets hinweg */
-    getTotalWealth: function(data) {
-        const assets = this.getAllAssets(data);
-        return assets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
-    },
-
-    /** Berechnet das total verfügbare (liquide) Vermögen */
-    getTotalLiquidWealth: function(data) {
-        const liquidAssets = this.getLiquidAssets(data);
-        return liquidAssets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
-    },
-
-    /** Gibt die Vermögensverteilung nach Asset-Klassen zurück (für Kuchendiagramme) */
-    getWealthDistributionByClass: function(data) {
-        const assets = this.getAllAssets(data);
-        const distribution = {};
-        assets.forEach(asset => {
-            const val = this.getLatestBalanceValue(asset);
-            const ac = asset.assetClass || 'unknown';
-            distribution[ac] = (distribution[ac] || 0) + val;
-        });
-        return distribution;
-    },
-
-
-    // ==========================================
-    // 3. BUCHUNGEN UND CASHFLOW (TRANSAKTIONEN)
-    // ==========================================
-
-    /** Extrahiert alle Buchungen aller Assets in ein flaches Array */
-    getAllBookings: function(data) {
-        const assets = this.getAllAssets(data);
-        return assets.flatMap(asset => {
-            return (asset.bookings || []).map(booking => ({
-                ...booking,
-                assetName: asset.name,
-                bankName: asset.bankName,
-                assetClass: asset.assetClass
-            }));
-        });
-    },
-
-    /** Berechnet die Summe aller bezahlten Gebühren (Transaktions-/Depotgebühren) */
-    getTotalFeesPaid: function(data) {
-        const bookings = this.getAllBookings(data);
-        return bookings
-            .filter(b => b.type === 'Gebühr')
-            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
-    },
-
-    /** Berechnet die Summe aller eingenommenen Dividenden */
-    getTotalDividendsReceived: function(data) {
-        const bookings = this.getAllBookings(data);
-        return bookings
-            .filter(b => b.type === 'Einzahlung' && b.subCategory === 'Dividenden')
-            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
-    },
-
-
-    // ==========================================
-    // 4. BUDGET ANALYSE
-    // ==========================================
-
-    /** Hilfsfunktion: Normalisiert Beträge auf den Monat (jährlich / 12) */
-    _normalizeToMonthly: function(items) {
-        if (!items) return 0;
-        return items.reduce((sum, item) => {
-            if (item.frequency === 'monthly') return sum + item.amount;
-            if (item.frequency === 'yearly') return sum + (item.amount / 12);
-            return sum;
-        }, 0);
-    },
-
-    /** Monatliches Netto-Einkommen (Lohn, etc.) */
-    getMonthlyIncome: function(data) {
-        return this._normalizeToMonthly(data.budget?.incomeSources);
-    },
-
-    /** Monatliche Fixkosten (Expenses + Subscriptions) */
-    getMonthlyFixedCosts: function(data) {
-        const expenses = this._normalizeToMonthly(data.budget?.expenses);
-        const subs = this._normalizeToMonthly(data.budget?.subscriptions);
-        return expenses + subs;
-    },
-
-    /** Berechnet das frei verfügbare Budget pro Monat */
-    getFreeMonthlyBuffer: function(data) {
-        return this.getMonthlyIncome(data) - this.getMonthlyFixedCosts(data);
-    },
-
-    /** Berechnet die Sparquote in Prozent (Savings / Income) */
-    getSavingsRate: function(data) {
-        const income = this.getMonthlyIncome(data);
-        if (income === 0) return 0;
-        
-        // Summiert alle Ausgaben, die als 'savings' markiert sind (z.B. 3a, Sparplan)
-        const savingsExpenses = (data.budget?.expenses || [])
-            .filter(e => e.ruleCategory === 'savings');
-            
-        const monthlySavings = this._normalizeToMonthly(savingsExpenses);
-        return (monthlySavings / income) * 100;
-    },
-
-
-    // ==========================================
-    // 5. ZIELE UND FIRE (Financial Independence)
-    // ==========================================
-
-    /** Berechnet den Fortschritt zum FIRE-Sparziel in Prozent */
-    getFireProgress: function(data) {
-        const currentWealth = this.getTotalWealth(data);
-        const targetWealth = data.goals?.fire?.target || 0;
-        
-        if (targetWealth === 0) return 100; // Kein Ziel gesetzt
-        return {
-            current: currentWealth,
-            target: targetWealth,
-            percentage: Math.min((currentWealth / targetWealth) * 100, 100)
-        };
-    }
-};
+    // --- BUDGET & FIRE ---
+    getFreeMonthlyBuffer: function(data) { /* Gibt frei verfügbares Monatsbudget zurück */ },
+    getSavingsRate: function(data) { /* Gibt Sparquote in Prozent zurück */ },
+    getFireProgress: function(data) { /* Gibt Objekt {current, target, percentage} zurück */ }
+};		
 
 6. Verwende ausschliesslich die Felder, die im Schema definiert sind. Erfinde keine neuen Felder.
-7. Du musst den Import von
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>  
-    <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.15/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    NICHT machen, aber Du kannst die Funktionen verwenden.
+7. VORINSTALLIERTE BIBLIOTHEKEN:
+Folgende Bibliotheken sind bereits geladen und als globale window-Objekte verfügbar: 
+- Chart.js (window.Chart)
+- ECharts (window.echarts)
+- Plotly (window.Plotly)
+- PDFMake
+Lade KEINE externen Scripte über <script src="...">. Greife direkt auf die globalen Objekte zu. 
+html2canvas oder jsPDF werden NICHT verwendet.
 
-    Das sind die Bibliotheken für Jchart, Echart, Plottly und jspdf und jspdf-autotable
-    Verwende NUR die Bibliotheken. Es darf keine andere verwendet werden.
+8. Jeder erstellte Report oder jedes Dashboard muss als PDF exportiert werden können. 
+   Nutze AUSSCHLIESSLICH die integrierte API. 
+   WICHTIG: Erfinde NIEMALS hartcodierte Fantasiewerte für den PDF-Export! Alle Daten im PDF (Metrics und Tabellen) müssen zwingend aus den berechneten Javascript-Variablen stammen.
 
-8. Jeder erstellte Grafik oder Tabelle muss als PDF exportiert werden können. Dazu wird jsPDF verwendet.
-Ein Dashboward muss als ganzes in ein PDF exportiert werden können. Das zu generierende PDF kann mehre Seiten enthalten.
+Binde folgenden Code in den Event-Listener deines Export-Buttons ein:
 
-Folgends Beispiek zeigt den Export einer Grafik mit jChart in ein PDF:
-
-Integriere IMMER folgenden Code in Dein HTML Output:
-	document.getElementById('pdfButton').addEventListener('click', function() {
-                const { jsPDF } = window.jspdf;
-                
-                // Erstelle ein PDF im Querformat (landscape)
-                const pdf = new jsPDF({
-                    orientation: 'landscape',
-                    unit: 'mm',
-                    format: 'a4'
-                });
-                
-                /* Hier die Logik für den Export in ein PDF */
-		
-		<Achtung>	
-		/*
-		PDF-EXPORT MIT PLOTLY: Wenn du Plotly.js verwendest und einen PDF-Export via jsPDF baust, darfst du NIEMALS canvas.toDataURL() verwenden, da Plotly in ein <div> 			rendert. Mache den Button-Event-Listener async und nutze AUSSCHLIESSLICH await Plotly.toImage(document.getElementById('dein-chart-id'), {format: 'png', width: 800, 			height: 450}), um das Diagramm in jsPDF einzufügen.
-		*/
-
-		/*
-		PDF-EXPORT MIT ECHARTS: Wenn du Apache ECharts verwendest und einen PDF-Export via jsPDF baust, greife NIEMALS direkt auf das DOM-Element mit toDataURL() zu. Nutze 			stattdessen die ECharts-Instanz. Hole dir die Instanz mit const chartInstance = echarts.getInstanceByDom(document.getElementById('dein-chart-id')); und generiere das Bild 		zwingend mit chartInstance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' }). So verhinderst du einen schwarzen Hintergrund im PDF.
-                const chartImage = canvas.toDataURL('image/png', 1.0);
-		*/
-		
-		</Achtung>
-                
-                
-                // Datei im Browser herunterladen
-                pdf.save('<Dateiname>');
-            });
-
+document.getElementById('pdfButton').addEventListener('click', async function() {
+    await FinSPA_API.PDF.exportDashboard({
+        title: 'Dein Report Titel',
+        orientation: 'landscape',
+        // NEU: Übergebe hier alle wichtigen Kennzahlen (KPIs), die auch im UI-Dashboard stehen!
+        metrics: [
+            { label: 'Gesamtvermögen', value: totalWealthVariable + ' CHF' },
+            { label: 'Liquides Vermögen', value: liquidWealthVariable + ' CHF' }
+            // Füge hier alle weiteren KPIs aus deiner Übersicht hinzu...
+        ],
+        chartIds: ['myChart'], // HTML-IDs der generierten Charts
+        tables: [
+            {
+                title: 'Beispieltabelle',
+                headers: ['Bezeichnung', 'Wert'], 
+                // Mappe hier immer deine berechneten Daten-Arrays!
+                rows: calculatedDataArray.map(item => [item.name, item.value + ' CHF'])
+            }
+        ]
+    });
+});
 9. Ein Dashboard kann aus statischen HTML Elementen, Tabellen und Grafiken bestehen. Es muss als Ganzes als PDF exportiert werden können.
 10. Das resultierende HTML Dokument wird in einem iFrame gerendert. Bitte Methoden so anpassen, dass das möglich ist.
 
+11. Verwende NUR Mater-Template
+
+<master_template>
+Du MUSST exakt diese HTML-Struktur für JEDE Antwort verwenden:
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>body { background: transparent; }</style>
+</head>
+<body class="p-6 bg-white">
+    
+    <div class="mt-8 flex space-x-2">
+        <button id="pdfButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
+            Als PDF speichern
+        </button>
+    </div>
+    //MUSS Ganz unten stehen. Sämtliche Scriptelemente sind HIER einzutragen
+    <script>
+        const data = window.finspaData;
+        
+        // 1. Nutze FinSPA_API um Daten zu evaluieren
+        // 2. Baue dein UI (Chart.js / DOM-Manipulation für Tabellen)
+        
+        // 3. Füge den Event-Listener für den pdfButton ein
+        document.getElementById('pdfButton').addEventListener('click', async function() {
+            await FinSPA_API.PDF.exportDashboard({
+                title: 'FinSPA Auswertung',
+                orientation: 'landscape',
+                chartIds: [], // IDs der Container eintragen, falls Diagramme existieren
+                tables: [] // Array-Daten eintragen, falls Tabellen existieren
+            });
+        });
+    </script>
+</body>
+</html>
+</master_template>
+
+12. SPRACHE: Generiere alle Texte, Titel und Labels innerhalb des HTML-Dokuments in genau der Sprache, in der die Nutzer-Anfrage (Prompt) gestellt wurde.
+13. CHART.JS GRÖSSE: Wenn du ein Diagramm mit Chart.js erstellst, MUSST du das <canvas> Element zwingend in ein Wrapper-<div> mit einer festen Höhe packen (nutze dafür Tailwind-Klassen wie class="relative w-full h-72" oder "h-80"). In den Javascript-Optionen des Charts MUSST du außerdem zwingend "maintainAspectRatio: false" setzen, da das Diagramm sonst das Layout sprengt.
+
 </regeln>
 
-
-<modus_1_info>
-Für reine Tabellen und Listen. Kopiere EXAKT dieses Grundgerüst und passe es an die Nutzeranfrage an:
-\`\`\`html
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-
-</head>
-<body class="p-6 bg-white">
-    <h2 class="text-2xl font-bold mb-4">Titel hier</h2>
-    <div class="relative">    
-       <table id="my-table" class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-blue-500 text-white">
-                <th class="p-2">Name</th>
-            </tr>
-          </thead>
-          <tbody id="my-table-body"></tbody>
-       </table>
-         
-	  //Das hier muss vorhanden sein und implementiert werden.
-          <div class="mt-4 flex space-x-2">
-            <button id="pdfButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow">
-                Als PDF speichern
-            </button>
-          </div>
-    </div>
-
-  
-    <script>
-        const tbody = document.getElementById('my-table-body');
-	comst data = window.finspaData;
-	// FinSPA_API benutzen um Felder zu evaluieren...	
-	// Beispiel
-	FinSPA_API.getAssetsByBank(data,...
-
-	//HIER: Dein Code, um Daten in Tabelle anzuzeigen.
-	//HIER: Dein Code, um die Tabelle als PDF zu speichern:
-
-
-    </script>
-</body>
-</html>
-\`\`\`
-</modus_1_info>
-
-<modus_2_diagramm>
-Für Diagramme kannst Du Chart.js oder Apache ECharts oder Plottly verwenden. Kopiere EXAKT dieses Grundgerüst:
-\`\`\`html
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        body { background: transparent; }
-    </style>
-</head>
-<body class="p-6 bg-white">
-
-    <div class="relative">
-        <canvas id="myChart" style="max-height: 450px;"></canvas>
-	//Das hier muss vorhanden sein.
-        <div class="mt-4 flex space-x-2">
-            <button id="pdfButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow">
-                Als PDF speichern
-            </button>
-        </div>
-    </div>
-
-    <script>
-        // Nutze window.finspaData und FINSpa API hier für Chart.js, EChart oder plotly:
-        ....	
-    </script>
-</body>
-</html>
-\`\`\`
-</modus_2_diagramm>
-
-<modus_3_dashboard>
-- Für Dashboards kannst Du die Gestaltung frei wählen.
-- Kopiere exakt dieses Grundgerüst:
-\`\`\`html
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        body { background: transparent; }
-    </style>
-</head>
-<body class="p-6 bg-white">
-</body>
-//Du kannst die Bibliotheken: JChart, EChart, Plotly und JSPdf verwenden, sowie andere HTML Elemente für die Gestaltung eines modernen Dashboards.
-
-//Deine Gestaltung des Dashboards
-//Am Schluss ein PDF Button für den Export des gesamten Dashboards.
-
-<script> 
-	//Nutze hier die window.finspaData und die FINSpa API um Daten zu holen und implementiere hier deine Javascript Logik.
-</script>
-
-</body>
-</html>
-\`\`\`
-</modus_3_dashboard>
-
 Antworte NUR mit dem finalen \`\`\`html Block. Erkläre nichts.`;
+
 
 console.log("--- FINSPA AI PROMPT DEBUG ---");
 console.log("System Prompt:", systemPrompt);
@@ -761,31 +528,22 @@ console.log("-------------------------------");
         
         extractAssets(data.banks || []);
 
-        const injectedHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-    	    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
-	    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-	    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
-    	    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-	    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.15/jspdf.plugin.autotable.min.js"></script>
-	    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-            <script>
-
-		const FinSPA_API = {
+	const injectedScripts = `
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts-gl/dist/echarts-gl.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+        <script>
+            // --- Hier fügst du dein komplettes FinSPA_API Objekt ein ---
+const FinSPA_API = {
 
     // ==========================================
-    // 1. GRUNDLEGENDE DATENEXTRAKTION (BAUM PARSEN)
+    // 1. GRUNDLEGENDE DATENEXTRAKTION
     // ==========================================
 
-    /**
-     * Extrahiert alle Assets aus der verschachtelten Banken-Struktur
-     * und fügt den Namen der zugehörigen Bank hinzu.
-     */
     getAllAssets: function(data) {
         const assets = [];
         function traverse(node, currentBank) {
@@ -802,70 +560,83 @@ console.log("-------------------------------");
         return assets;
     },
 
-    /** Gibt nur die liquiden Assets zurück */
     getLiquidAssets: function(data) {
         return this.getAllAssets(data).filter(a => a.isLiquid === true);
     },
 
-    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Meine Bank") */
     getAssetsByBank: function(data, bankName) {
         return this.getAllAssets(data).filter(a => a.bankName === bankName);
     },
 
-    /** Gibt Assets einer bestimmten Anlageklasse zurück (z.B. "stock", "pension_3a_fund") */
     getAssetsByClass: function(data, assetClass) {
         return this.getAllAssets(data).filter(a => a.assetClass === assetClass);
     },
-
 
     // ==========================================
     // 2. VERMÖGENS- UND SALDOBERECHNUNGEN
     // ==========================================
 
-    /** * Ermittelt den aktuellsten Saldo eines Assets und rechnet ihn 
-     * mit dem hinterlegten Wechselkurs in die Basiswährung um.
-     */
     getLatestBalanceValue: function(asset) {
         if (!asset.balances || asset.balances.length === 0) return 0;
-        // Finde den Eintrag mit dem neuesten Datum
         const latest = asset.balances.reduce((latest, current) => {
             return new Date(current.date) > new Date(latest.date) ? current : latest;
         }, asset.balances[0]);
-        
         const rate = latest.bookingExchangeRate || asset.exchangeRate || 1;
         return latest.amount * rate;
     },
 
-    /** Berechnet das Gesamtvermögen über alle Assets hinweg */
     getTotalWealth: function(data) {
         const assets = this.getAllAssets(data);
         return assets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
     },
 
-    /** Berechnet das total verfügbare (liquide) Vermögen */
     getTotalLiquidWealth: function(data) {
         const liquidAssets = this.getLiquidAssets(data);
         return liquidAssets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
     },
 
-    /** Gibt die Vermögensverteilung nach Asset-Klassen zurück (für Kuchendiagramme) */
     getWealthDistributionByClass: function(data) {
         const assets = this.getAllAssets(data);
         const distribution = {};
+        
+        // NEU: Mapping der Asset-IDs zu den sprechenden Namen aus den Settings
+        const classMap = {};
+        if (data.settings && data.settings.assetClasses) {
+            data.settings.assetClasses.forEach(ac => {
+                classMap[ac.id] = ac.name;
+            });
+        }
+
         assets.forEach(asset => {
             const val = this.getLatestBalanceValue(asset);
-            const ac = asset.assetClass || 'unknown';
-            distribution[ac] = (distribution[ac] || 0) + val;
+            const acId = asset.assetClass || 'unknown';
+            // Verwende den Namen, falls vorhanden, sonst Fallback auf ID
+            const acName = classMap[acId] || acId; 
+            
+            distribution[acName] = (distribution[acName] || 0) + val;
         });
         return distribution;
     },
 
+    // NEU: Damit die KI aggregierte Bankdaten (Total pro Bank) korrekt abrufen kann
+    getWealthByBank: function(data) {
+        const assets = this.getAllAssets(data);
+        const bankTotals = {};
+        assets.forEach(asset => {
+            const bName = asset.bankName || 'Unbekannt';
+            const val = this.getLatestBalanceValue(asset);
+            bankTotals[bName] = (bankTotals[bName] || 0) + val;
+        });
+        return Object.keys(bankTotals).map(name => ({
+            bankName: name,
+            totalValue: bankTotals[name]
+        }));
+    },
 
     // ==========================================
-    // 3. BUCHUNGEN UND CASHFLOW (TRANSAKTIONEN)
+    // 3. BUCHUNGEN UND CASHFLOW
     // ==========================================
 
-    /** Extrahiert alle Buchungen aller Assets in ein flaches Array */
     getAllBookings: function(data) {
         const assets = this.getAllAssets(data);
         return assets.flatMap(asset => {
@@ -878,7 +649,6 @@ console.log("-------------------------------");
         });
     },
 
-    /** Berechnet die Summe aller bezahlten Gebühren (Transaktions-/Depotgebühren) */
     getTotalFeesPaid: function(data) {
         const bookings = this.getAllBookings(data);
         return bookings
@@ -886,7 +656,6 @@ console.log("-------------------------------");
             .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
     },
 
-    /** Berechnet die Summe aller eingenommenen Dividenden */
     getTotalDividendsReceived: function(data) {
         const bookings = this.getAllBookings(data);
         return bookings
@@ -894,12 +663,10 @@ console.log("-------------------------------");
             .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
     },
 
-
     // ==========================================
-    // 4. BUDGET ANALYSE
+    // 4. BUDGET & FIRE
     // ==========================================
 
-    /** Hilfsfunktion: Normalisiert Beträge auf den Monat (jährlich / 12) */
     _normalizeToMonthly: function(items) {
         if (!items) return 0;
         return items.reduce((sum, item) => {
@@ -909,62 +676,201 @@ console.log("-------------------------------");
         }, 0);
     },
 
-    /** Monatliches Netto-Einkommen (Lohn, etc.) */
     getMonthlyIncome: function(data) {
         return this._normalizeToMonthly(data.budget?.incomeSources);
     },
 
-    /** Monatliche Fixkosten (Expenses + Subscriptions) */
     getMonthlyFixedCosts: function(data) {
         const expenses = this._normalizeToMonthly(data.budget?.expenses);
         const subs = this._normalizeToMonthly(data.budget?.subscriptions);
         return expenses + subs;
     },
 
-    /** Berechnet das frei verfügbare Budget pro Monat */
     getFreeMonthlyBuffer: function(data) {
         return this.getMonthlyIncome(data) - this.getMonthlyFixedCosts(data);
     },
 
-    /** Berechnet die Sparquote in Prozent (Savings / Income) */
     getSavingsRate: function(data) {
         const income = this.getMonthlyIncome(data);
         if (income === 0) return 0;
-        
-        // Summiert alle Ausgaben, die als 'savings' markiert sind (z.B. 3a, Sparplan)
-        const savingsExpenses = (data.budget?.expenses || [])
-            .filter(e => e.ruleCategory === 'savings');
-            
+        const savingsExpenses = (data.budget?.expenses || []).filter(e => e.ruleCategory === 'savings');
         const monthlySavings = this._normalizeToMonthly(savingsExpenses);
         return (monthlySavings / income) * 100;
     },
 
-
-    // ==========================================
-    // 5. ZIELE UND FIRE (Financial Independence)
-    // ==========================================
-
-    /** Berechnet den Fortschritt zum FIRE-Sparziel in Prozent */
     getFireProgress: function(data) {
         const currentWealth = this.getTotalWealth(data);
         const targetWealth = data.goals?.fire?.target || 0;
-        
-        if (targetWealth === 0) return 100; // Kein Ziel gesetzt
+        if (targetWealth === 0) return 100;
         return {
             current: currentWealth,
             target: targetWealth,
             percentage: Math.min((currentWealth / targetWealth) * 100, 100)
         };
+    },
+
+    // ==========================================
+    // 5. PRETTY PDF EXPORT API
+    // ==========================================
+    PDF: {
+        exportDashboard: async function(config) {
+            if (!window.pdfMake || !window.pdfMake.vfs) {
+                console.error("pdfmake oder die Fonts (vfs) sind nicht geladen.");
+                return;
+            }
+
+            const docContent = [
+                { 
+                    text: config.title || 'FinSPA Dashboard Report', 
+                    fontSize: 26, 
+                    bold: true, 
+                    color: '#1e293b', 
+                    margin: [0, 0, 0, 25] 
+                }
+            ];
+
+
+            if (config.metrics && config.metrics.length > 0) {
+                // Wir formatieren die Metriken als ansprechende Spalten
+                const metricColumns = config.metrics.map(m => ({
+                    stack: [
+                        { text: m.label.toUpperCase(), fontSize: 9, color: '#64748b', bold: true },
+                        { text: m.value, fontSize: 16, color: '#2548C3', bold: true, margin: [0, 4, 0, 0] }
+                    ]
+                }));
+
+                // Jeweils max 4 Metriken pro Zeile nebeneinander darstellen
+                for (let i = 0; i < metricColumns.length; i += 4) {
+                    docContent.push({
+                        columns: metricColumns.slice(i, i + 4),
+                        columnGap: 20,
+                        margin: [0, 0, 0, 25], // Abstand nach unten
+                        pageBreak: 'avoid'
+                    });
+                }
+            }
+
+            // 1. Charts verarbeiten
+            if (config.chartIds && config.chartIds.length > 0) {
+                for (const chartId of config.chartIds) {
+                    const domElement = document.getElementById(chartId);
+                    if (!domElement) continue;
+
+                    if (domElement.tagName.toLowerCase() === 'canvas') {
+                        const ctx = domElement.getContext('2d');
+                        const originalComposite = ctx.globalCompositeOperation;
+                        ctx.globalCompositeOperation = 'destination-over';
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, domElement.width, domElement.height);
+                        
+                        const imgData = domElement.toDataURL("image/png", 1.0);
+                        ctx.globalCompositeOperation = originalComposite;
+
+                        docContent.push({ image: imgData, width: 750, margin: [0, 10, 0, 30], pageBreak: 'avoid' });
+                        continue;
+                    }
+
+                    if (window.echarts) {
+                        const eInstance = window.echarts.getInstanceByDom(domElement);
+                        if (eInstance) {
+                            const img = eInstance.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: '#ffffff' });
+                            docContent.push({ image: img, width: 750, margin: [0, 10, 0, 30], pageBreak: 'avoid' });
+                            continue;
+                        }
+                    }
+                    
+                    if (window.Plotly && domElement.className.includes('js-plotly')) {
+                        const img = await window.Plotly.toImage(domElement, {format: 'png', width: 1200, height: 600});
+                        docContent.push({ image: img, width: 750, margin: [0, 10, 0, 30], pageBreak: 'avoid' });
+                    }
+                }
+            }
+
+            // 2. Tabellen verarbeiten
+            if (config.tables && config.tables.length > 0) {
+                config.tables.forEach(table => {
+                    if (!table.headers || !table.rows) return;
+                    
+                    if (table.title) {
+                        docContent.push({ text: table.title, fontSize: 16, bold: true, color: '#334155', margin: [0, 15, 0, 10], pageBreak: 'avoid' });
+                    }
+
+                    docContent.push({
+                        table: {
+                            headerRows: 1,
+                            widths: table.widths || table.headers.map(() => '*'), 
+                            body: [
+                                table.headers.map(h => ({ 
+                                    text: h, 
+                                    fillColor: '#2548C3',
+                                    color: '#ffffff',
+                                    bold: true,
+                                    margin: [8, 8, 8, 8]
+                                })),
+                                ...table.rows.map(row => row.map(cell => ({ 
+                                    text: cell, 
+                                    margin: [8, 6, 8, 6] 
+                                })))
+                            ]
+                        },
+                        layout: {
+                            fillColor: function (rowIndex) {
+                                return (rowIndex % 2 === 0 && rowIndex !== 0) ? '#f8fafc' : null; 
+                            },
+                            hLineWidth: function (i, node) { 
+                                return (i === 0 || i === node.table.body.length) ? 1.5 : 0.5; 
+                            },
+                            vLineWidth: function () { return 0; }, 
+                            hLineColor: function (i, node) { 
+                                return (i === 0 || i === node.table.body.length) ? '#1e293b' : '#cbd5e1'; 
+                            }
+                        },
+                        margin: [0, 10, 0, 30],
+                        pageBreak: 'avoid'
+                    });
+                });
+            }
+
+            // Generieren und Download
+            window.pdfMake.createPdf({
+                pageSize: 'A4',
+                pageOrientation: config.orientation || 'landscape',
+                pageMargins: [40, 60, 40, 60],
+                content: docContent,
+                defaultStyle: { font: 'Roboto', fontSize: 11, color: '#334155' },
+                header: function() {
+                    return {
+                        columns: [
+                            { text: 'FinSPA Pro - KI Copilot', alignment: 'left', color: '#94a3b8', margin: [40, 20, 0, 0], fontSize: 9 },
+                            { text: new Date().toLocaleDateString('de-CH'), alignment: 'right', color: '#94a3b8', margin: [0, 20, 40, 0], fontSize: 9 }
+                        ]
+                    };
+                },
+                footer: function(currentPage, pageCount) {
+                    return {
+                        columns: [
+                            { text: 'Vertrauliche Finanzdaten', alignment: 'left', color: '#94a3b8', fontSize: 9, margin: [40, 15, 0, 0] },
+                            { text: 'Seite ' + currentPage.toString() + ' von ' + pageCount, alignment: 'right', color: '#94a3b8', fontSize: 9, margin: [0, 15, 40, 0] }
+                        ]
+                    };
+                }
+            }).download((config.title || 'Export').replace(/\s+/g, '_') + '.pdf');
+        }
     }
-};
-                window.finspaBudget = ${JSON.stringify(data.budget || {})};
-		window.finspaData = ${JSON.stringify(data)};
-            </script>
-        </head>
-        <body>
-            ${htmlContent}
-        </body>
-        </html>`;
+};            // Globale Daten bereitstellen
+            window.finspaBudget = ${JSON.stringify(data.budget || {})};
+            window.finspaData = ${JSON.stringify(data)};
+        </script>
+    `;
+
+let finalHtml = htmlContent;
+    if (finalHtml.includes('</head>')) {
+        // Füge die Scripts kurz vor dem schließenden </head> Tag ein
+        finalHtml = finalHtml.replace('</head>', injectedScripts + '\n</head>');
+    } else {
+        // Fallback, falls das Modell mal das <head> Tag vergisst
+        finalHtml = injectedScripts + finalHtml;
+    }
 
         return (
             <div className="flex flex-col mt-3 w-full animate-fade-in-up">
@@ -991,14 +897,14 @@ console.log("-------------------------------");
                     </div>
                     
                     <div className="relative bg-white dark:bg-slate-950">
-                        <iframe 
-                            srcDoc={injectedHtml} 
-                            sandbox="allow-scripts allow-same-origin allow-downloads"
-                            className="w-full bg-transparent"
-                            style={{ minHeight: '450px', height: '100%', border: 'none' }} 
-                            title="AI Generated Widget"
-                        />
-                    </div>
+                <iframe 
+                    srcDoc={finalHtml} // <-- Nutze hier das modifizierte finalHtml
+                    sandbox="allow-scripts allow-same-origin allow-downloads"
+                    className="w-full bg-transparent"
+                    style={{ minHeight: '450px', height: '100%', border: 'none' }} 
+                    title="AI Generated Widget"
+                />
+            </div>
                 </div>
 
                 <details className="mt-4 text-sm text-gray-500 dark:text-slate-400 group/code">
