@@ -361,7 +361,7 @@ const FinSPA_API = {
         return this.getAllAssets(data).filter(a => a.isLiquid === true);
     },
 
-    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Migros Bank") */
+    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Meine Bank") */
     getAssetsByBank: function(data, bankName) {
         return this.getAllAssets(data).filter(a => a.bankName === bankName);
     },
@@ -563,6 +563,8 @@ Integriere IMMER folgenden Code in Dein HTML Output:
             });
 
 9. Ein Dashboard kann aus statischen HTML Elementen, Tabellen und Grafiken bestehen. Es muss als Ganzes als PDF exportiert werden können.
+10. Das resultierende HTML Dokument wird in einem iFrame gerendert. Bitte Methoden so anpassen, dass das möglich ist.
+
 </regeln>
 
 
@@ -805,7 +807,7 @@ console.log("-------------------------------");
         return this.getAllAssets(data).filter(a => a.isLiquid === true);
     },
 
-    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Migros Bank") */
+    /** Gibt Assets einer bestimmten Bank zurück (z.B. "Meine Bank") */
     getAssetsByBank: function(data, bankName) {
         return this.getAllAssets(data).filter(a => a.bankName === bankName);
     },
