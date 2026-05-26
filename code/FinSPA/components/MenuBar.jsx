@@ -5,7 +5,7 @@ const MenuBar = ({
   data, viewMode, setViewMode, setActiveReport, setSelectedNode, 
   theme, setTheme, lang, setLang, setModalObj, t, 
   handleNewProject, handleOpenProject, handleSaveProject, 
-  handleImportCSV, handleImportParqetCSV, handleExportCSV, handlePrint 
+  handleImportCSV, handleImportParqetCSV, handleExportCSV, handlePrint, handleExportPDF
 }) => {
   const MenuItem = ({ title, children }) => (
     <div className="relative group px-4 py-2 cursor-pointer hover:bg-slate-700 text-sm font-medium transition-colors">
@@ -54,8 +54,10 @@ const MenuBar = ({
         <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('filePrint') : 'Drucken'} iconName="Printer" onClick={handlePrint} rightText="Ctrl+P" />
         <hr className="dark:border-slate-700 my-1"/>
+
+<MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handleExportPDF} />
       
-        <MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handlePrint} />
+       
         
         <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('fileSettings') : 'Einstellungen'} iconName="Settings" onClick={() => setModalObj({type: 'settings'})} />

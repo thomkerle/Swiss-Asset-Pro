@@ -32,6 +32,9 @@ const CsvEngine = getModule('CsvEngine.jsx', () => safeRequire('./components/Csv
 const ParqetModule = getModule('ParqetCsvImport.jsx', () => safeRequire('./components/ParqetCsvImport.jsx')) || {};
 const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'));
 
+const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
+window.PdfExportEngine = PdfExportEngine; // ◄ Damit ist sie für das iFrame sichtbar
+
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
 const App = () => {
@@ -79,6 +82,77 @@ const App = () => {
     else document.documentElement.classList.remove('dark');
   }, [theme]);
 
+
+// --- NEU: Globales Laden der CDNs für ECharts und pdfmake ---
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const loadScript = (url) => {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${url}"]`);
+        if (existing) { resolve(); return; }
+        
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Fehler: ${url}`));
+        document.head.appendChild(script);
+      });
+    };
+
+     const initializeCdns = async () => {
+      try {
+        // 1. Apache ECharts laden mit temporärer Sandbox
+        if (!window.echarts) {
+          const tempModule = window.module;
+          const tempExports = window.exports;
+          const tempDefine = window.define;
+          window.module = undefined; window.exports = undefined; window.define = undefined;
+          
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js');
+          
+          window.module = tempModule; window.exports = tempExports; window.define = tempDefine;
+          console.log("[FinSPA Core] Apache ECharts erfolgreich geladen.");
+        }
+        
+        // 2. pdfmake Kernbibliothek und Schriften laden mit Sandbox
+        if (!window.pdfMake || typeof window.pdfMake.createPdf !== 'function') {
+          if (window.pdfMake) window.pdfMake = undefined;
+
+          const tempModule = window.module;
+          const tempExports = window.exports;
+          const tempDefine = window.define;
+          window.module = undefined; window.exports = undefined; window.define = undefined;
+
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js');
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js');
+          
+          window.module = tempModule; window.exports = tempExports; window.define = tempDefine;
+        }
+
+        // Font-Mapping für pdfmake konfigurieren
+        if (window.pdfMake && window.pdfMake.vfs) {
+          window.pdfMake.fonts = {
+            Roboto: {
+              normal: 'Roboto-Regular.ttf',
+              bold: 'Roboto-Medium.ttf', // Korrigiert von Bold auf Medium
+              italics: 'Roboto-Italic.ttf',
+              bolditalics: 'Roboto-MediumItalic.ttf' // Korrigiert
+            }
+          };
+          console.log("[FinSPA Core] pdfmake & Fonts erfolgreich initialisiert.");
+        }
+      } catch (err) {
+        console.error("[FinSPA Core] Fehler beim Laden der externen Kernbibliotheken:", err);
+      }
+    };
+
+    initializeCdns();
+  }, []);
+  // --- ENDE NEU ---
+
+
   useEffect(() => { setIsTreeVisible(!activeReport); }, [activeReport]);
 
   // 2. Autosave-Logik: Sichert im localStorage UND direkt in der geöffneten Datei
@@ -115,6 +189,20 @@ const App = () => {
   };
 
   const handlePrint = () => window.print();
+
+const handleExportPDF = () => {
+      // Wenn kein Report offen ist, brechen wir ab
+      if (!activeReport) {
+          showToast(t('msgNoActiveReport') || "Bitte öffnen Sie einen Report für den PDF-Export.", "error");
+          return;
+      }
+      
+      showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
+      
+      // Feuert das globale Signal ab, auf das der aktuell sichtbare Report wartet
+      window.dispatchEvent(new CustomEvent('triggerPdfExport'));
+  };
+
 
   const handleNewProject = () => {
       if (window.confirm(t('msgNewProjectWarning'))) {
@@ -248,6 +336,7 @@ const updateTreeData = (newData) => setData(prev => ({
       lastModified: new Date().toISOString(), 
       ...newData 
   }));
+
   const handlePropChangeTree = (id, key, val) => {
       const updateRecursive = (nodes) => nodes.map(n => {
           if (n.id === id) return { ...n, [key]: val };
@@ -424,13 +513,13 @@ const handleItemDelete = () => {
       if (modalObj.type?.includes('Booking') && selectedNode?.type === 'asset') {
           if (ac === 'realestate') availableBookingTypes = ['Wertanpassung'];
           else if (ac === 'mortgage') availableBookingTypes = ['Abzahlung', 'Zinszahlung', 'Schulderhöhung'];
-          else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund') availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
-          else if (ac === 'pension_cash') availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
+          else if (['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac)) availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
+          else if (['pension_cash', 'pension_3a_cash'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
       }
 
       const activeBookingCategories = data.settings?.bookingCategories || defaultBookingCategories;
       const availableSubCategories = activeBookingCategories[form.type] || [];
-      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund'].includes(ac);
+      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
 
       return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -536,8 +625,7 @@ const handleItemDelete = () => {
             <option value="">-- Optional: Zielkonto wählen --</option>
             {data.banks.map(bank => {
                 // Wir suchen die passenden Konten nur innerhalb der aktuellen Bank
-                const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash'].includes(a.assetClass));
-                
+		const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash'].includes(a.assetClass));                
                 // Hat diese Bank keine passenden Konten, wird sie gar nicht erst angezeigt
                 if (eligibleAssets.length === 0) return null;
                 
@@ -708,14 +796,29 @@ const handleItemDelete = () => {
         }
       `}</style>
 
-      <MenuBar data={data} viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} />
+      <MenuBar data={data} viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} handleExportPDF={handleExportPDF} />
       <div className="flex-1 flex overflow-hidden relative">
         <TreeView data={data} viewMode={viewMode} selectedNode={selectedNode} setSelectedNode={setSelectedNode} setActiveReport={setActiveReport} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} setShowArchived={setShowArchived} expandedNodes={expandedNodes} toggleExpand={toggleExpand} deleteNode={requestDeleteNode} setModalObj={setModalObj} t={t} />
 
 	
 
         <div className="flex-1 relative overflow-auto" id="printable-editor">
-          <EditorArea data={data} viewMode={viewMode} activeReport={activeReport} selectedNode={selectedNode} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} dateRange={dateRange} setDateRange={setDateRange} setModalObj={setModalObj} fCur={fCur} t={t} />
+          <EditorArea 
+            data={data} 
+            viewMode={viewMode} 
+            activeReport={activeReport} 
+            selectedNode={selectedNode} 
+            setSelectedNode={setSelectedNode} 
+            isTreeVisible={isTreeVisible} 
+            setIsTreeVisible={setIsTreeVisible} 
+            showArchived={showArchived} 
+            dateRange={dateRange} 
+            setDateRange={setDateRange} 
+            setModalObj={setModalObj} 
+            updateTreeData={updateTreeData} 
+            fCur={fCur} 
+            t={t} 
+          />
         </div>
 
         {!activeReport && selectedNode && (

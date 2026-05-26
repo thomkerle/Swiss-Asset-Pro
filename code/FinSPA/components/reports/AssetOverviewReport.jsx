@@ -1,14 +1,20 @@
 const React = require('react');
+const { useEffect, useRef } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
 const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
-const DataEngine = safeRequire('../../data/DataEngine.jsx') || {};
+const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 const { getAssetValueAtDate = () => 0 } = DataEngine;
-const ReportHeader = safeRequire('../ReportHeader.jsx') || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
+const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
+const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
 
 const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
+  const chartRef = useRef(null);
+  
+  const activeChartEngine = data?.settings?.chartEngine || 'echarts';
   const targetDate = dateRange?.to || new Date().toISOString().split('T')[0];
   const overview = {};
   let grandTotal = 0;
@@ -41,20 +47,15 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   });
 
   const getAcName = (ac) => {
-    // 1. NEU: Dynamischen Namen aus den Settings laden (höchste Priorität)
     if (data?.settings?.assetClasses) {
         const foundClass = data.settings.assetClasses.find(a => a.id === ac);
         if (foundClass && foundClass.name) return foundClass.name;
     }
-
-    // 2. Spezifische Keys aus der Übersetzungsdatei prüfen
     const key = `ac${ac.charAt(0).toUpperCase() + ac.slice(1)}`;
     if (t) {
       const translated = t(key);
       if (translated && translated !== key) return translated;
     }
-    
-    // 3. Fallback Map, falls weder Settings noch Übersetzungen vorhanden sind
     const map = { 
       cash: 'Bargeld / Konto', 
       fund: 'Fonds / ETFs', 
@@ -73,7 +74,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   const getAcIcon = (ac) => {
     if (ac === 'realestate') return 'Home';
     if (ac === 'mortgage') return 'Building';
-    if (ac?.includes('pension')) return 'Lock'; // Deckt alle Vorsorgeklassen ab
+    if (ac?.includes('pension')) return 'Lock'; 
     if (ac === 'crypto') return 'Coins';
     if (ac === 'fund' || ac === 'stock') return 'TrendingUp';
     return 'PieChart';
@@ -81,8 +82,81 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
 
   const sortedClasses = Object.keys(overview).sort((a,b) => overview[b].total - overview[a].total);
 
+  useEffect(() => {
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) {
+            console.error("[FinSPA Diagnose] PdfExportEngine nicht verfügbar.");
+            return;
+        }
+
+        let chartBase64 = null;
+        if (chartRef.current) {
+            const plotlyNode = chartRef.current.querySelector('.js-plotly-plot');
+            if (plotlyNode && window.Plotly) {
+                try {
+                    chartBase64 = await window.Plotly.toImage(plotlyNode, { 
+                        format: 'png', 
+                        width: 800, 
+                        height: 400 
+                    });
+                } catch (e) {
+                    console.error("[FinSPA Diagnose] Plotly Bild-Export fehlgeschlagen:", e);
+                }
+            } else {
+                const canvas = chartRef.current.querySelector('canvas');
+                if (canvas) {
+                    chartBase64 = canvas.toDataURL('image/png', 1.0);
+                }
+            }
+        }
+
+        // Hilfsfunktion zur Erzwingung korrekter Grossbuchstaben am Wortanfang
+        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+        const tableHeaders = [
+          t ? t('assetClass') || 'Anlageklasse' : 'Anlageklasse',
+          t ? t('bank') || 'Bank / Institut' : 'Bank / Institut',
+          t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset',
+          t ? t('amount') || 'Wert' : 'Wert'
+        ].map(h => capitalize(h));
+
+        const tableBody = [];
+        sortedClasses.forEach(ac => {
+          Object.keys(overview[ac].banks)
+            .sort((a,b) => overview[ac].banks[b].total - overview[ac].banks[a].total)
+            .forEach(bankName => {
+              overview[ac].banks[bankName].assets
+                .sort((a,b) => b.val - a.val)
+                .forEach(asset => {
+                  tableBody.push([
+                    getAcName(ac),
+                    bankName,
+                    asset.name,
+                    fCur(asset.val)
+                  ]);
+                });
+            });
+        });
+
+        await PdfExportEngine.exportReport({
+          title: t ? t('repOverviewTitle') || 'Banken & Kategorien' : 'Banken & Kategorien',
+          subtitle: `${t ? t('repOverviewSub') || 'Konsolidierte Übersicht der Assets per' : 'Konsolidierte Übersicht der Assets per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`,
+          tableHeaders,
+          tableBody,
+          chartBase64
+        });
+      } catch (err) {
+        console.error("[FinSPA] PDF Export Error im AssetOverviewReport:", err);
+      }
+    };
+
+    window.addEventListener('triggerPdfExport', handlePdfExport);
+    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+  }, [sortedClasses, overview, targetDate, grandTotal, fCur, t]);
+
   return (
-    <div className="max-w-6xl px-4 md:px-8 pb-12">
+    <div className="max-w-6xl px-4 md:px-8 pb-12 relative">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-gray-200 dark:border-slate-800 pb-6 gap-4">
         <div className="flex-1">
           <ReportHeader 
@@ -93,7 +167,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
           />
         </div>
         
-        <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-5 rounded-2xl shadow-lg shrink-0 min-w-[250px] border border-blue-500">
+        <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-5 rounded-2xl shadow-lg shrink-0 min-w-[250px] border border-blue-500 z-10 mb-2">
            <div className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
              <Icon name="Shield" size={12}/> {t ? t('totalWealth') : 'Gesamtvermögen'}
            </div>
@@ -101,6 +175,24 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         </div>
       </div>
       
+      {sortedClasses.length > 0 && (
+        <div className="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm mb-10 inner-chart-container">
+          <div ref={chartRef} style={{ width: '100%', minHeight: '320px' }}>
+            <UniversalChart
+              engine={activeChartEngine}
+              type="doughnut"
+              height="320px"
+              labels={sortedClasses.map(ac => getAcName(ac))}
+              datasets={[{
+                label: t ? t('repOverviewTitle') : 'Anlageklassen',
+                data: sortedClasses.map(ac => overview[ac].total),
+                backgroundColor: sortedClasses.map((_, i) => `hsl(${i * 60 + 200}, 70%, 55%)`) 
+              }]}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="space-y-10">
         {sortedClasses.length === 0 && (
           <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
@@ -111,7 +203,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         
         {sortedClasses.map(ac => (
           <div key={ac} className="bg-gray-50/50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-            <div className="bg-white dark:bg-slate-800 px-6 py-5 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center sticky top-0 z-10">
+            <div className="bg-white dark:bg-slate-800 px-6 py-5 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
               <h3 className="font-extrabold text-xl text-gray-800 dark:text-gray-100 flex items-center gap-3">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg">
                   <Icon name={getAcIcon(ac)} size={20} />

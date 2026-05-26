@@ -57,8 +57,156 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       );
   }
 
+  // --- HIER BEGINNT DIE UNTERSTÜTZUNG FÜR BUCHUNGEN (INKL. FREMDWÄHRUNGEN) ---
+  if (selectedNode.selectedBooking) {
+    const booking = selectedNode.selectedBooking;
+    const isBal = booking._isBal;
+    
+    // Globale Basiswährung auslesen und Fremdwährungs-Check durchführen
+    const baseCurrency = data?.settings?.baseCurrency || 'CHF';
+    const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
+
+    const handleBookingPropChange = (keyOrObj, val) => {
+      // Unterstützt atomare Key-Value Updates ODER ganze Zustandsobjekte (verhindert Race Conditions)
+      const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
+      const updatedBooking = { ...booking, ...changes };
+      
+      // Lokalen State aktualisieren für sofortiges UI-Feedback
+      setSelectedNode(prev => ({ ...prev, selectedBooking: updatedBooking }));
+      
+      // Globales TreeData-Update (für Berechnungen in Echtzeit)
+      const updateRecursive = (nodes) => nodes.map(n => {
+        if (n.id === selectedNode.id) {
+          if (isBal) {
+            const newBalances = (n.balances || []).map(b => b.id === booking.id ? updatedBooking : b);
+            return { ...n, balances: newBalances };
+          } else {
+            const newBookings = (n.bookings || []).map(b => b.id === booking.id ? updatedBooking : b);
+            return { ...n, bookings: newBookings };
+          }
+        }
+        if (n.children) return { ...n, children: updateRecursive(n.children) };
+        return n;
+      });
+      
+      updateTreeData({ banks: updateRecursive(data.banks) });
+    };
+
+    return (
+      <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex flex-col gap-6 overflow-y-auto shrink-0 shadow-inner">
+        <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-3">
+          <div className="flex items-center gap-2">
+            <Icon name="Edit" className="text-gray-500" />
+            <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm">
+              {isBal ? (t ? t('editBalance') : 'Saldo') : (t ? t('editBooking') : 'Buchung')}
+            </h3>
+          </div>
+          <Icon 
+            name="X" 
+            size={18}
+            className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors" 
+            onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} 
+            title="Zurück zum Asset"
+          />
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('date') : 'Datum'}</label>
+            <input type="date" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
+          </div>
+          
+          <div>
+            <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('amount') : 'Betrag'} ({selectedNode.currency || baseCurrency})</label>
+            <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
+          </div>
+
+          {/* DYNAMISCHES FREMDWÄHRUNGS-FELD FÜR WECHSELKURS */}
+          {isForeignCurrency && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">
+                {t ? t('labelExchangeRateDate') : 'Wechselkurs'} ({selectedNode.currency} → {baseCurrency})
+              </label>
+              <input 
+                type="number" 
+                step="0.0001" 
+                className="w-full p-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm" 
+                value={booking.bookingExchangeRate ?? ''} 
+                onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} 
+              />
+            </div>
+          )}
+
+          {!isBal && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryType') : 'Typ'}</label>
+              <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
+                <option value="Einzahlung">Einzahlung</option>
+                <option value="Auszahlung">Auszahlung</option>
+                <option value="Kauf">Kauf</option>
+                <option value="Verkauf">Verkauf</option>
+                <option value="Dividende">Dividende</option>
+                <option value="Zinszahlung">Zinszahlung</option>
+                <option value="Gebühr">Gebühr</option>
+                <option value="Wertanpassung">Wertanpassung</option>
+                <option value="Abzahlung">Abzahlung</option>
+                <option value="Schulderhöhung">Schulderhöhung</option>
+              </select>
+            </div>
+          )}
+
+          {!isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(booking.type) && (
+            <div className="grid grid-cols-2 gap-3 bg-yellow-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-gray-200 dark:border-slate-800">
+              <div>
+                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('shares') : 'Stücke'}</label>
+                <input 
+                  type="number" 
+                  step="any" 
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                  value={booking.shares || ''} 
+                  onChange={e => {
+                    const sh = Number(e.target.value);
+                    const pr = booking.price || 0;
+                    handleBookingPropChange({
+                      shares: sh,
+                      amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount
+                    });
+                  }} 
+                />
+              </div>
+              <div>
+                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('price') : 'Preis'}</label>
+                <input 
+                  type="number" 
+                  step="any" 
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                  value={booking.price || ''} 
+                  onChange={e => {
+                    const pr = Number(e.target.value);
+                    const sh = booking.shares || 0;
+                    handleBookingPropChange({
+                      price: pr,
+                      amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount
+                    });
+                  }} 
+                />
+              </div>
+            </div>
+          )}
+
+          {!isBal && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryDetail') : 'Detail / Notiz'}</label>
+              <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  // --- ENDE DES BUCHUNGS-EDITORS ---
+
   const handlePropChange = (keyOrObj, val) => {
-      // Akzeptiert entweder einen Key und einen Wert ODER ein ganzes Zustandsobjekt für atomare Updates
       const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
       
       const updateRecursive = (nodes) => nodes.map(n => {
@@ -97,12 +245,10 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       const val = e.target.value; 
                       const updates = { assetClass: val };
                       
-                      // Automatisch auf nicht-liquide (false) setzen bei allen gebundenen Vorsorge- und Sachwertklassen
                       if (['pension_cash', 'pension_3a_cash', 'pension_fund', 'pension_3a_fund', 'realestate', 'mortgage'].includes(val)) { 
                           updates.isLiquid = false; 
                       } 
                       
-                      // Bündel-Update abschicken, um Race Conditions zu verhindern
                       handlePropChange(updates);
                   }}
               >

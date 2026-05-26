@@ -32,40 +32,53 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
       (asset.bookings || []).forEach(b => { if (b.date < earliestDate) earliestDate = b.date; });
   });
 
-  const startYear = new Date(earliestDate).getFullYear();
   const currentYear = new Date().getFullYear();
+  let startYear = new Date(earliestDate).getFullYear();
+
+  // FIX: Damit das Liniendiagramm immer gezeichnet wird (braucht mind. 2 Punkte), 
+  // zwingen wir den Startpunkt mindestens auf das Vorjahr.
+  if (startYear === currentYear) {
+      startYear -= 1;
+  }
+
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // 2. Messpunkte generieren (Jedes Jahresende + Heute)
+  // 2. KORRIGIERTE Hilfsfunktion: Messpunkte generieren
   const dataPoints = [];
   
   const calculateInvestedAndDividends = (asset, targetDate) => {
       let invested = 0;
       let dividends = 0;
-      let baseDate = '1970-01-01';
-      let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
-      let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
       
-      if (applicableBalance) {
-          invested = applicableBalance.amount;
-          baseDate = applicableBalance.date;
+      // Das älteste Balance-Datum als initialen Startwert (Einstandskapital) nehmen
+      let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+      let firstBalance = sortedBalances.length > 0 ? sortedBalances[0] : null;
+      let baseDate = '1970-01-01';
+
+      if (firstBalance && firstBalance.date <= targetDate) {
+          invested = firstBalance.amount;
+          baseDate = firstBalance.date;
       }
 
       (asset.bookings || []).forEach(bk => {
           if (bk.date <= targetDate) {
-              // Dividenden kumulieren (unabhängig vom Balance-Reset, um die Total Return zu sehen)
+              // Dividenden immer kumulieren (Erträge)
               if (bk.type === 'Dividende') dividends += Number(bk.amount);
           }
 
           if (bk.date > baseDate && bk.date <= targetDate) {
-              // Kapitalflüsse (Käufe erhöhen das investierte Kapital, Verkäufe senken es)
+              // Reale Zahlungsflüsse NACH dem Basis-Saldo verändern das investierte Kapital
+              if (['Kauf', 'Einzahlung'].includes(bk.type)) invested += Number(bk.amount);
+              if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
+          } else if (!firstBalance && bk.date <= targetDate) {
+              // Fallback falls es keine Salden gibt
               if (['Kauf', 'Einzahlung'].includes(bk.type)) invested += Number(bk.amount);
               if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
           }
       });
       
       // Globaler Fallback für Währung
-      let applicableRate = applicableBalance?.bookingExchangeRate || asset.exchangeRate || 1;
+      let applicableRate = firstBalance?.bookingExchangeRate || asset.exchangeRate || 1;
       
       // Rückwärts-Suchlauf für den Kurs analog zur DataEngine
       if (applicableRate === 1 && asset.currency && asset.currency !== 'CHF') {
@@ -94,27 +107,24 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
           totalActual += getAssetValueAtDate(asset, targetDate, activeAssets);
       });
 
-      if (totalInvested > 0 || totalActual > 0) {
-          // Reiner Kursgewinn (Price Return)
-          const priceProfit = totalActual - totalInvested;
-          const priceRoi = totalInvested > 0 ? (priceProfit / totalInvested) * 100 : 0;
-          
-          // Gesamtrendite (Total Return = Kursgewinn + Dividenden)
-          const totalProfit = priceProfit + totalDividends;
-          const totalRoi = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+      // Punkte immer aufzeichnen
+      const priceProfit = totalActual - totalInvested;
+      const priceRoi = totalInvested > 0 ? (priceProfit / totalInvested) * 100 : 0;
+      
+      const totalProfit = priceProfit + totalDividends;
+      const totalRoi = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
 
-          dataPoints.push({
-              year: y,
-              dateStr: targetDate,
-              invested: totalInvested,
-              actual: totalActual,
-              dividends: totalDividends,
-              priceProfit: priceProfit,
-              priceRoi: priceRoi,
-              profit: totalProfit,
-              roi: totalRoi
-          });
-      }
+      dataPoints.push({
+          year: y,
+          dateStr: targetDate,
+          invested: totalInvested,
+          actual: totalActual,
+          dividends: totalDividends,
+          priceProfit: priceProfit,
+          priceRoi: priceRoi,
+          profit: totalProfit,
+          roi: totalRoi
+      });
   }
 
   const latestData = dataPoints.length > 0 ? dataPoints[dataPoints.length - 1] : { invested: 0, actual: 0, profit: 0, roi: 0, dividends: 0, priceProfit: 0, priceRoi: 0 };
@@ -123,9 +133,8 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
   const chartHeight = 320;
   const padding = 20;
   const minVal = Math.min(0, ...dataPoints.map(d => Math.min(d.invested, d.actual)));
-  // Max-Wert berücksichtigt nun auch die neue Total Return Linie (Marktwert + Dividenden)
-  const maxVal = Math.max(...dataPoints.map(d => Math.max(d.invested, d.actual, d.actual + d.dividends))) * 1.1; 
-  const range = maxVal - minVal || 1;
+  const maxVal = Math.max(...dataPoints.map(d => Math.max(d.invested, d.actual, d.actual + d.dividends)), 1) * 1.1; 
+  const range = maxVal - minVal;
 
   const getY = (val) => chartHeight - padding - ((val - minVal) / range) * (chartHeight - padding * 2);
   const getX = (index) => padding + (index * ((1000 - padding * 2) / Math.max(1, dataPoints.length - 1)));

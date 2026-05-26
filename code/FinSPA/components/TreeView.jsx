@@ -82,27 +82,49 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
   );
 
   return (
-    <div className={`print-hide ${isTreeVisible ? 'w-72 border-r' : 'w-0 overflow-hidden'} border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 flex flex-col h-full shrink-0 transition-all duration-300`}>
-      <div className="p-3 font-bold border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 flex justify-between items-center text-sm">
-        <div className="flex items-center gap-2 truncate min-w-0">
-          {/* NEU: Titel passt sich auch für den KI Modus an */}
-          {viewMode === 'budget' ? t('menuBudget') : (viewMode === 'ai' ? 'KI Copilot' : t('menuWealth'))} - {t('tree')}
-        </div>
-        <Icon name="ChevronLeft" size={14} className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 shrink-0" onClick={() => setIsTreeVisible(false)} title="Strukturbaum ausblenden" />
-      </div>
-      <div className="flex-1 overflow-y-auto py-2">
-        {/* NEU: Der Vermögensbaum wird bei 'vermoegen' UND 'ai' gerendert */}
-        {(viewMode === 'vermoegen' || viewMode === 'ai') && data.banks.map(b => renderNode(b))}
-        
-        {viewMode === 'budget' && (
-           <div className="w-full">
-             {renderBudgetList(data.budget.incomeSources || [], '📈', t('incomeSources'), 'incomeSources')}
-             {renderBudgetList(data.budget.expenses || [], '📉', t('expensePositions'), 'expenses')}
-             {renderBudgetList(data.budget.subscriptions || [], '🔄', t('subscriptions'), 'subscriptions')}
-           </div>
-        )}
-      </div>
+<div className={`print-hide ${isTreeVisible ? 'w-72 border-r' : 'w-0 overflow-hidden'} border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 flex flex-col h-full shrink-0 transition-all duration-300`}>
+  
+  {/* HEADER MIT NEUEM BUTTON */}
+  <div className="p-3 font-bold border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 flex justify-between items-center text-sm">
+    <div className="flex items-center gap-2 truncate min-w-0">
+      {viewMode === 'budget' ? t('menuBudget') : (viewMode === 'ai' ? 'KI Copilot' : t('menuWealth'))} - {t('tree')}
     </div>
+    
+    <div className="flex items-center gap-2">
+      {/* Button zum Hinzufügen einer Bank (erscheint nur im Vermögen- oder KI-Modus) */}
+      {(viewMode === 'vermoegen' || viewMode === 'ai') && (
+        <div 
+          className="cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-700 p-1.5 rounded transition-colors"
+          onClick={() => setModalObj({ type: 'addBank' })}
+          title="Neue Bank hinzufügen"
+        >
+          <Icon name="Plus" size={16} className="text-blue-600 dark:text-blue-400" />
+        </div>
+      )}
+      
+      <Icon 
+        name="ChevronLeft" 
+        size={14} 
+        className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 shrink-0" 
+        onClick={() => setIsTreeVisible(false)} 
+        title="Strukturbaum ausblenden" 
+      />
+    </div>
+  </div>
+
+  {/* BAUM-RENDER-LOGIK */}
+  <div className="flex-1 overflow-y-auto py-2">
+    {(viewMode === 'vermoegen' || viewMode === 'ai') && data.banks.map(b => renderNode(b))}
+    
+    {viewMode === 'budget' && (
+      <div className="w-full">
+        {renderBudgetList(data.budget.incomeSources || [], '📈', t('incomeSources'), 'incomeSources')}
+        {renderBudgetList(data.budget.expenses || [], '📉', t('expensePositions'), 'expenses')}
+        {renderBudgetList(data.budget.subscriptions || [], '🔄', t('subscriptions'), 'subscriptions')}
+      </div>
+    )}
+  </div>
+</div>
   );
 };
 

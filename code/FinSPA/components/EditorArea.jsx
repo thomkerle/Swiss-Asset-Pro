@@ -5,7 +5,7 @@ const safeRequire = getRequire();
 
 const Icon = safeRequire('./Icons.jsx') || (({name}) => <span>[{name}]</span>);
 const DataEngine = safeRequire('../data/DataEngine.jsx') || {};
-const { getAllAssets = (banks) => [], getAssetValueAtDate = () => 0 } = DataEngine;
+const { getAllAssets = (banks) => [], getAssetValueAtDate = () => 0, getAssetRawValueAtDate = () => 0 } = DataEngine;
 
 const AllocationReport = safeRequire('./reports/AllocationReport.jsx') || (() => <div>AllocationReport</div>);
 const LiquidityReport = safeRequire('./reports/LiquidityReport.jsx') || (() => <div>LiquidityReport</div>);
@@ -24,10 +24,15 @@ const AssetOverviewReport = safeRequire('./reports/AssetOverviewReport.jsx') || 
 const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport.jsx') || (() => <div>PensionPerformanceReport</div>);
 const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
 const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">AiDashboard.jsx fehlt</div>);
+const UniversalChart = require('../../api/UniversalChart.jsx');
 
-const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, setModalObj, updateTreeData, fCur, t }) => {
+
+const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, setModalObj, updateTreeData, fCur, t }) => {
   const allAssets = getAllAssets(data?.banks || []) || [];
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
+
+  // Aktive Chart-Engine aus den Einstellungen auslesen (Fallback auf 'echarts')
+  const activeChartEngine = data?.settings?.chartEngine || 'echarts';
 
   if (viewMode === 'datensicht') {
     return (
@@ -59,9 +64,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
         case 'topFlow': return <TopFlowReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'bookingAnalysis': return <BookingAnalysisReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'future': return <FutureReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
-	case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-	case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setModalObj} fCur={fCur} t={t} />;
+        case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+        case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
 
         default: return <div className="text-gray-500">{t ? t('reportLoading') : 'Report wird geladen...'}</div>;
       }
@@ -104,21 +109,8 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
 
           const baseVal = getAssetValueAtDate(node, new Date().toISOString().split('T')[0], activeAssets) || 0;
           
-          // ECHTE Berechnung des unkonvertierten Fremdwährungsbetrags für Wertpapiere/Depots
-          let sortedBalances = [...(node.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
-          let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= new Date().toISOString().split('T')[0]);
-          let baseAmount = applicableBalance ? applicableBalance.amount : 0;
-          let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
-          let netBookings = 0;
-          (node.bookings || []).forEach(bk => {
-               if (bk.date > baseDate && bk.date <= new Date().toISOString().split('T')[0]) {
-                   const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
-                   const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
-                   if (isPositive) netBookings += Number(bk.amount);
-                   else if (isNegative) netBookings -= Number(bk.amount);
-               }
-          });
-          const origVal = baseAmount + netBookings;
+          // NEU: Stark vereinfachter Aufruf der DataEngine
+          const origVal = getAssetRawValueAtDate(node, new Date().toISOString().split('T')[0]);
 
           const subCatKey = node.assetClass || 'cash';
           const subCategoryName = t ? (t(`ac${subCatKey.charAt(0).toUpperCase() + subCatKey.slice(1)}`) || subCatKey.toUpperCase()) : subCatKey.toUpperCase();
@@ -163,9 +155,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
         value: categoryMap[key],
         color: colors[idx % colors.length]
       })).filter(d => d.value > 0);
-
-      const Charts = safeRequire('./Charts.jsx') || {};
-      const PieChartSVG = Charts.PieChartSVG || (() => <div className="text-gray-400">Diagramm-Modul nicht geladen</div>);
 
       const isBank = selectedNode.type === 'bank';
       const headerIcon = isBank ? "Shield" : "FolderOpen";
@@ -245,7 +234,16 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                   <Icon name="PieChart" /> {t ? t('allocByCat') : 'Aufteilung nach Kategorien'}
                 </h3>
                 {chartDataCategories.length > 0 ? (
-                  <PieChartSVG data={chartDataCategories} fCur={(val) => fCur ? fCur(val, 'CHF') : val} />
+                  <UniversalChart 
+                    engine={activeChartEngine}
+                    type="doughnut" 
+                    height="280px"
+                    labels={chartDataCategories.map(d => d.label)}
+                    datasets={[{
+                      label: t ? t('totalValue') : 'Gesamtwert',
+                      data: chartDataCategories.map(d => d.value)
+                    }]}
+                  />
                 ) : (
                   <div className="text-gray-400 py-12 text-center text-sm">{t ? t('noValuedAssets') : 'Keine bewerteten Assets vorhanden.'}</div>
                 )}
@@ -276,21 +274,8 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
       
       const currentVal = getAssetValueAtDate(selectedNode, new Date().toISOString().split('T')[0], activeAssets);
       
-      let rawSum = 0;
-      let sortedBalances = [...(selectedNode.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
-      let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= new Date().toISOString().split('T')[0]);
-      let baseAmount = applicableBalance ? applicableBalance.amount : 0;
-      let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
-      let netBookings = 0;
-      (selectedNode.bookings || []).forEach(bk => {
-           if (bk.date > baseDate && bk.date <= new Date().toISOString().split('T')[0]) {
-               const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
-               const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
-               if (isPositive) netBookings += Number(bk.amount);
-               else if (isNegative) netBookings -= Number(bk.amount);
-           }
-      });
-      rawSum = baseAmount + netBookings;
+      // NEU: Stark vereinfachter Aufruf der DataEngine
+      const rawSum = getAssetRawValueAtDate(selectedNode, new Date().toISOString().split('T')[0]);
 
       let defaultType = 'Einzahlung'; 
       const ac = selectedNode.assetClass;
@@ -351,11 +336,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                     let typeLabel = item.type;
                     if (!item._isBal) {
                      const typeMap = {
-  'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
-  'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
-  'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee',
-  'Umbuchung': 'typeTransfer' // NEU
-};
+                      'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 
+                      'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 
+                      'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee',
+                      'Umbuchung': 'typeTransfer'
+                    };
                       if (typeMap[item.type] && t) {
                         typeLabel = t(typeMap[item.type]);
                       }
@@ -371,7 +356,15 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, isTreeVisible,
                     const usedRate = item.bookingExchangeRate || selectedNode.exchangeRate || 1;
                     
                     return (
-                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 cursor-pointer" onClick={()=>setModalObj({type: item._isBal ? 'editBalance' : 'editBooking', assetId: selectedNode.id, item})}>
+                    <tr 
+                      key={item.id} 
+                      className={`cursor-pointer ${selectedNode?.selectedBooking?.id === item.id ? 'bg-blue-100 dark:bg-blue-900/40' : 'hover:bg-gray-50 dark:hover:bg-slate-800/50'}`} 
+                      onClick={() => {
+                        if (setSelectedNode) {
+                          setSelectedNode({ ...selectedNode, selectedBooking: item });
+                        }
+                      }}
+                    >
                       <td className="p-4 text-gray-600 dark:text-gray-400">{item.date}</td>
                       <td className="p-4">{item._isBal ? <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}><Icon name="Activity" size={10}/> {t ? t('balanceLabel') : 'SALDO'}</span> : <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}>{typeLabel}</span>}</td>
                       <td className="p-4 font-medium text-gray-600 dark:text-gray-400">{details}</td>

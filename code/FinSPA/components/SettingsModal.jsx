@@ -322,6 +322,22 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     <option className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">EUR</option>
                                 </select>
                             </div>
+                            <div className="flex flex-col gap-2 mt-4">
+                                <label className="text-sm font-bold text-gray-700 dark:text-slate-300">
+                                    {t('settingsChartEngine') || 'Standard Chart-Engine'}
+                                </label>
+                                <select
+                                    value={localSettings.chartEngine || 'echarts'}
+                                    onChange={(e) => setLocalSettings({...localSettings, chartEngine: e.target.value})}
+                                    className="p-2.5 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none">
+                                    <option value="chartjs">Chart.js (JChart)</option>
+                                    <option value="echarts">Apache ECharts</option>
+                                    <option value="plotly">Plotly.js</option>
+                                </select>
+                                <p className="text-xs text-gray-400">
+                                    {t('settingsChartEngineDesc') || 'Bestimmt, welche Engine standardmäßig zur Visualisierung der Finanzdaten genutzt wird.'}
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>

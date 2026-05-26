@@ -25,7 +25,6 @@ const initialData = {
   budget: { incomeSources: [], expenses: [], subscriptions: [] },
   goals: { fire: { target: 500000, year: 2035 } }, scenarios: [],
   
-  // NEU: Das KI-Gedächtnis wird Teil der JSON Struktur
   aiContext: { history: [], apiMessages: [] } 
 };
 
@@ -35,41 +34,51 @@ const getAllAssets = (nodes) => {
   return assets;
 };
 
-const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
-    if (!asset.balances || asset.balances.length === 0) return 0;
-    let sortedBalances = [...asset.balances].sort((a,b) => new Date(a.date) - new Date(b.date));
+// --- KORRIGIERT: Kein vorzeitiger Abbruch, wenn balances leer sind ---
+const getAssetRawValueAtDate = (asset, targetDate) => {
+    let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
     let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
     let baseAmount = applicableBalance ? applicableBalance.amount : 0;
     let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
     let netBookings = 0;
-    
-    let applicableRate = applicableBalance && applicableBalance.bookingExchangeRate ? applicableBalance.bookingExchangeRate : asset.exchangeRate;
 
     if (asset.bookings) {
         asset.bookings.forEach(bk => {
             if (bk.date > baseDate && bk.date <= targetDate) {
-                const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Abzahlung'].includes(bk.type);
-		const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
+                const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
+                const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
                 if (isPositive) netBookings += Number(bk.amount);
                 else if (isNegative) netBookings -= Number(bk.amount);
-                
-                if (bk.bookingExchangeRate) {
-                    applicableRate = bk.bookingExchangeRate;
-                }
+            }
+        });
+    }
+    return baseAmount + netBookings;
+};
+
+// --- KORRIGIERT: Kein vorzeitiger Abbruch, wenn balances leer sind ---
+const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
+    let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+    let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+    
+    // Basiswert (Fremdwährung) berechnen
+    const rawValue = getAssetRawValueAtDate(asset, targetDate);
+    
+    let applicableRate = applicableBalance && applicableBalance.bookingExchangeRate ? applicableBalance.bookingExchangeRate : asset.exchangeRate;
+    let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+
+    if (asset.bookings) {
+        asset.bookings.forEach(bk => {
+            if (bk.date > baseDate && bk.date <= targetDate) {
+                if (bk.bookingExchangeRate) applicableRate = bk.bookingExchangeRate;
             }
         });
     }
 
-    // NEU: Globaler Kontenübergreifender Fallback für Fremdwährungen
     if ((!applicableRate || applicableRate === 1) && asset.currency && asset.currency !== 'CHF') {
         let latestDate = '1970-01-01';
         allAssets.forEach(otherAsset => {
             if (otherAsset.currency === asset.currency) {
-                // Letzten global hinterlegten Asset-Kurs als ersten Anker nutzen
-                if (otherAsset.exchangeRate && otherAsset.exchangeRate !== 1) {
-                    applicableRate = otherAsset.exchangeRate;
-                }
-                // Historische Buchungen nach einem neueren Wechselkurs absuchen
+                if (otherAsset.exchangeRate && otherAsset.exchangeRate !== 1) applicableRate = otherAsset.exchangeRate;
                 if (otherAsset.bookings) {
                     otherAsset.bookings.forEach(b => {
                         if (b.bookingExchangeRate && b.date <= targetDate && b.date > latestDate) {
@@ -78,7 +87,6 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
                         }
                     });
                 }
-                // Historische Saldenprüfungen einbeziehen
                 if (otherAsset.balances) {
                     otherAsset.balances.forEach(b => {
                         if (b.bookingExchangeRate && b.date <= targetDate && b.date > latestDate) {
@@ -91,7 +99,7 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
         });
     }
 
-    return (baseAmount + netBookings) * (applicableRate || 1);
+    return rawValue * (applicableRate || 1);
 };
 
 const getTotalWealthAtDate = (assets, date) => assets.reduce((sum, a) => sum + getAssetValueAtDate(a, date, assets), 0);
@@ -161,6 +169,7 @@ module.exports = {
     initialData, 
     defaultBookingCategories, 
     getAllAssets, 
+    getAssetRawValueAtDate, 
     getAssetValueAtDate, 
     getTotalWealthAtDate, 
     generateMonthEnds, 
