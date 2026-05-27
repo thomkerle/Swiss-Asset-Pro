@@ -65,7 +65,7 @@ This is a complex data structure. Entries with <Values> are examples:
 
 <data>
 window.finspaData = ... (Complete Tree)
-window.finspaBudget = ${budgetString}
+
 </data>
 
 <rules>
@@ -74,30 +74,64 @@ window.finspaBudget = ${budgetString}
 2.b. STRICT BAN ON DUMMY DATA: Under NO CIRCUMSTANCES are you allowed to use placeholders, dummy data, fake arrays, or static example numbers (like 50000, "Annuities", etc.) in the HTML, charts, or PDF! You MUST exclusively use the variables returned by the FinSPA_API functions. Every value MUST be the result of a FinSPA_API call.
 3. SCRIPT POSITION: The <script> MUST be at the very end of the <body>.
 4. TAILWINDCSS: Load Tailwind in the <head> via CDN and use it for styling.
-5. API ACCESS: You have access to the following synchronous Javascript API (do not implement it, just call it directly, e.g., FinSPA_API.getTotalWealth()):
-   - getAllAssets()
-   - getLiquidAssets()
-   - getAssetsByBank(bankName)
-   - getAssetsByClass(assetClass)
-   - getLatestBalanceValue(assetObject)
-   - getTotalWealth()
-   - getTotalLiquidWealth()
-   - getWealthDistributionByClass()
-   - getWealthByBank()
-   - getAllBookings()
-   - getTotalFeesPaid()
-   - getTotalDividendsReceived()
-   - getMonthlyCashflowHistory()
-   - getFreeMonthlyBuffer()
-   - getSavingsRate()
-   - getFireProgress()
+5.API ACCESS: You MUST exclusively use the globally available 'FinSPA_API' object. Do not implement these functions, just call them. Here are the exact methods and their strict return structures:
+
+- NUMBERS (Return a single Number):
+  FinSPA_API.getTotalWealth()
+  FinSPA_API.getTotalLiquidWealth()
+  FinSPA_API.getTotalFeesPaid()
+  FinSPA_API.getTotalDividendsReceived()
+  FinSPA_API.getMonthlyIncome()
+  FinSPA_API.getMonthlyFixedCosts()
+  FinSPA_API.getFreeMonthlyBuffer()
+  FinSPA_API.getSavingsRate() // Returns percentage (e.g., 25.5)
+  FinSPA_API.getExpensesByCategory(categoryType) // MUST provide categoryType as string: 'needs', 'wants', or 'savings'.
+
+- OBJECTS (Return a structured JSON Object):
+  FinSPA_API.getWealthDistributionByClass() 
+  // -> Returns: { "Cash": 10000, "Stocks": 50000 }. Convert to array if mapping is needed.
+  FinSPA_API.getBudgetOverview() 
+  // -> Returns: { income: Number, costs: Number, disposable: Number, savingsRate: Number }
+  FinSPA_API.getFireProgress() 
+  // -> Returns: { current: Number, target: Number, percentage: Number }
+
+- ARRAYS (Return an Array of Objects, safe to use .map() or .filter()):
+  FinSPA_API.getAllAssets() 
+  // -> Returns: [{ id, name, currency, isLiquid, assetClass, bankName, balances: Array, bookings: Array }]
+  FinSPA_API.getLiquidAssets() 
+  // -> Returns same structure as getAllAssets(), but only liquid assets.
+  FinSPA_API.getAssetsByBank(bankName) 
+  // -> MUST provide bankName as string. Returns asset array.
+  FinSPA_API.getAssetsByClass(assetClass) 
+  // -> MUST provide assetClass ID (e.g., 'cash'). Returns asset array.
+  FinSPA_API.getWealthByBank() 
+  // -> Returns: [{ bankName: String, totalValue: Number }]
+  FinSPA_API.getAllBookings() 
+  // -> Returns: [{ date: "YYYY-MM-DD", type: String, subCategory: String, amount: Number, bookingExchangeRate: Number, assetName: String, bankName: String, assetClass: String }]
+  FinSPA_API.getMonthlyCashflowHistory() 
+  // -> Returns: [{ month: "YYYY-MM", income: Number, expenses: Number, net: Number }]
+
+- UTILITIES:
+  FinSPA_API.getLatestBalanceValue(assetObject) 
+  // -> MUST pass a full asset object from getAllAssets(). Returns the latest value as Number.
+
+USAGE EXAMPLE:
+const assets = FinSPA_API.getAllAssets();
+const latestValue = FinSPA_API.getLatestBalanceValue(assets[0]);
 
 6. Only use fields defined in the schema. Do not invent new fields.
 7. PRE-INSTALLED LIBRARIES:
    The following libraries are globally available: Chart.js (window.Chart), ECharts (window.echarts), Plotly (window.Plotly), PDFMake.
    DO NOT load external scripts via <script src="...">. Access the global objects directly. Do NOT use html2canvas or jsPDF.
-8. PDF EXPORT: Use EXCLUSIVELY this built-in API on a button click:
-   window.FinSPA_API.PDF.exportDashboard({ title: 'My Title', tables: [...] });
+8. PDF EXPORT: Use EXCLUSIVELY this built-in API on a button click. Provide structured table data. If there is a chart, the API will automatically capture it.
+   window.FinSPA_API.PDF.exportDashboard({ 
+       title: 'My Dashboard Title', 
+       subtitle: 'Optional timeframe or subtitle',
+       tables: [{ 
+           headers: ['Asset', 'Value', 'Performance'], 
+           rows: [['Apple', '150.00 CHF', '+5%'], ['Cash', '5000.00 CHF', '0%']] 
+       }] 
+   });
 9. Dashboards must be exportable as a whole.
 10. The resulting HTML will be rendered in an iframe.
 11. MASTER TEMPLATE: You MUST use exactly this structure:
@@ -127,8 +161,10 @@ window.finspaBudget = ${budgetString}
 12. LANGUAGE: Generate all text, titles, and labels inside the HTML document in the exact language the user prompt was written in.
 13. CHART.JS SIZING: If using Chart.js, you MUST wrap the <canvas> in a <div> with a fixed height (e.g., class="relative w-full h-72") AND set "maintainAspectRatio: false" in the chart options.
 14. WIDGET BUILDER: If asked for a general overview, combine KPI cards (Grid), Pie/Doughnut charts for diversification, Bar charts for cashflow, and a transaction table (latest 10 entries). ONLY use FinSPA_API for data.
-</rules>
 
-Answer ONLY with the final \`\`\`html block. Do not explain anything.`;
+15. Answer ONLY with the final \`\`\`html block. Do not explain anything-
+15. NO WATERMARKS: You must ABSOLUTELY NOT add any model names, timestamps, "Generated by AI" labels, signatures, or metadata anywhere inside the HTML output (no headers, no footers, no text). Keep the UI strictly focused on the financial data.
+</rules>
+`;
 
 module.exports = { getSystemPrompt };

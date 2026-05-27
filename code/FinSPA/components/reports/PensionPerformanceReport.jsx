@@ -1,4 +1,5 @@
 const React = require('react');
+const { useEffect, useRef } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -7,18 +8,23 @@ const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
 const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
 const { getAssetValueAtDate = () => 0 } = DataEngine;
 const ReportHeader = safeRequire('../ReportHeader.jsx') || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
+const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
+const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
 
 const PensionPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsTreeVisible, fCur, t }) => {
+  const chartRef = useRef(null);
+  const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
+
   const pensionClasses = ['pension_cash', 'pension_3a_cash', 'pension_3a_fund'];
   const pensionAssets = (activeAssets || []).filter(a => pensionClasses.includes(a.assetClass));
 
   if (pensionAssets.length === 0) {
     return (
       <div className="max-w-6xl px-4 md:px-8 pb-12">
-        <ReportHeader title="Vorsorge & Pensionskasse" subtitle="Performance der 2. und 3. Säule" isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
+        <ReportHeader title={t ? t('repPensionTitle') || "Vorsorge & Pensionskasse" : "Vorsorge & Pensionskasse"} subtitle={t ? t('repPensionSub') || "Performance der 2. und 3. Säule" : "Performance der 2. und 3. Säule"} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.</p>
+          <p>{t ? t('noPensionData') || 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.' : 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.'}</p>
         </div>
       </div>
     );
@@ -57,13 +63,11 @@ const PensionPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsTree
 
       (asset.bookings || []).forEach(bk => {
           if (bk.date <= targetDate) {
-              // Erträge (Dividenden & Zinsen) werden in der Total Return kumuliert
               if (bk.type === 'Dividende') yields += Number(bk.amount);
               if (bk.type === 'Einzahlung' && bk.subCategory === 'Zinsen') yields += Number(bk.amount);
               if (bk.type === 'Zinszahlung' && Number(bk.amount) > 0) yields += Number(bk.amount);
           }
 
-          // Kapitalflüsse (Kauf, normale Einzahlungen) ab dem Startwert
           if (applicableBalance) {
               if (bk.date > baseDate && bk.date <= targetDate) {
                   if (['Kauf'].includes(bk.type)) invested += Number(bk.amount);
@@ -137,24 +141,50 @@ const PensionPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsTree
       }
   });
 
-  // 4. SVG Chart-Berechnung
-  const chartHeight = 320;
-  const padding = 20;
-  const minVal = Math.min(0, ...dataPoints.map(d => Math.min(d.invested, d.actual)));
-  const maxVal = Math.max(...dataPoints.map(d => Math.max(d.invested, d.actual, d.actual + d.yields)), 1) * 1.1; 
-  const range = maxVal - minVal;
+  const repTitle = t ? t('repPensionTitle') || "Vorsorge & Pensionskasse" : "Vorsorge & Pensionskasse";
+  const repSub = t ? t('repPensionSub') || "Rendite-Analyse der 2. und 3. Säule" : "Rendite-Analyse der 2. und 3. Säule";
 
-  const getY = (val) => chartHeight - padding - ((val - minVal) / range) * (chartHeight - padding * 2);
-  const getX = (index) => padding + (index * ((1000 - padding * 2) / Math.max(1, dataPoints.length - 1)));
+  // Event-Listener für den PDF-Export
+  useEffect(() => {
+    const handlePdfExport = async () => {
+      try {
+        let chartBase64 = null;
+        if (chartRef.current) {
+            const canvas = chartRef.current.querySelector('canvas');
+            if (canvas) chartBase64 = canvas.toDataURL('image/png', 1.0);
+        }
 
-  const investedPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.invested)}`).join(' ');
-  const actualPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.actual)}`).join(' ');
-  const totalReturnPath = dataPoints.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.actual + d.yields)}`).join(' ');
+        const tableHeaders = ['Jahr', 'Investiert', 'Marktwert', 'Kursgewinn', 'Erträge', 'Total Return'];
+        const tableBody = dataPoints.map(d => [
+          d.year === currentYear ? `${d.year} (Heute)` : `${d.year}`,
+          fCur(d.invested),
+          fCur(d.actual),
+          `${d.priceProfit > 0 ? '+' : ''}${fCur(d.priceProfit)}`,
+          `+${fCur(d.yields)}`,
+          `${d.roi > 0 ? '+' : ''}${d.roi.toFixed(2)} %`
+        ]);
+
+        await PdfExportEngine.exportReport({
+          title: repTitle,
+          subtitle: repSub,
+          tableHeaders,
+          tableBody,
+          chartBase64
+        });
+      } catch (err) {
+        console.error("[FinSPA] PDF Export Error im PensionPerformanceReport:", err);
+      }
+    };
+
+    window.addEventListener('triggerPdfExport', handlePdfExport);
+    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+  }, [dataPoints, fCur, t, repTitle, repSub, currentYear]);
+
 
   return (
     <div className="max-w-6xl px-4 md:px-8 pb-12">
       <div className="mb-8 border-b border-gray-200 dark:border-slate-800 pb-6">
-         <ReportHeader title="Vorsorge & Pensionskasse" subtitle="Rendite-Analyse der 2. und 3. Säule" isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
+         <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -221,35 +251,40 @@ const PensionPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsTree
         })}
       </div>
 
+      {/* NEUE CHART SEKTION - Sauber migriert auf UniversalChart */}
       {dataPoints.length > 1 && (
          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-8">
-            <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><Icon name="TrendingUp" className="text-blue-500" /> Wertentwicklung (Kurve)</h3>
-            <div className="w-full overflow-x-auto">
-               <svg viewBox={`0 0 1000 ${chartHeight}`} className="w-full min-w-[600px] h-auto drop-shadow-sm">
-                  {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                      <line key={pct} x1={padding} y1={padding + pct * (chartHeight - padding*2)} x2={1000 - padding} y2={padding + pct * (chartHeight - padding*2)} stroke="currentColor" strokeDasharray="4 4" className="text-gray-200 dark:text-slate-700" strokeWidth="1" />
-                  ))}
-                  
-                  <path d={investedPath} fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="6 6" />
-                  {dataPoints.map((d, i) => <circle key={`inv-${i}`} cx={getX(i)} cy={getY(d.invested)} r="4" fill="#94a3b8" />)}
-
-                  <path d={totalReturnPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="4 4" />
-                  {dataPoints.map((d, i) => <circle key={`tot-${i}`} cx={getX(i)} cy={getY(d.actual + d.yields)} r="3" fill="#6366f1" />)}
-
-                  <path d={actualPath} fill="none" stroke={latestData.priceProfit >= 0 ? "#10b981" : "#3b82f6"} strokeWidth="4" />
-                  {dataPoints.map((d, i) => <circle key={`act-${i}`} cx={getX(i)} cy={getY(d.actual)} r="5" fill={latestData.priceProfit >= 0 ? "#10b981" : "#3b82f6"} className="drop-shadow-md" />)}
-                  
-                  {dataPoints.map((d, i) => (
-                      <text key={`lbl-${i}`} x={getX(i)} y={chartHeight - 2} fontSize="12" fill="currentColor" textAnchor="middle" className="text-gray-500 dark:text-gray-400 font-medium">
-                          {d.year}
-                      </text>
-                  ))}
-               </svg>
-            </div>
-            <div className="flex justify-center gap-6 mt-4 text-sm font-medium">
-                <div className="flex items-center gap-2"><div className="w-4 h-1 border-t-2 border-dashed border-slate-400"></div> <span className="text-slate-600 dark:text-slate-400">Netto Investiert</span></div>
-                <div className="flex items-center gap-2"><div className={`w-4 h-1 border-t-2 ${latestData.priceProfit >= 0 ? 'border-emerald-500' : 'border-blue-500'}`}></div> <span className="text-slate-600 dark:text-slate-400">Marktwert</span></div>
-                <div className="flex items-center gap-2"><div className="w-4 h-1 border-t-2 border-dashed border-indigo-500"></div> <span className="text-slate-600 dark:text-slate-400">Total Value (inkl. Erträge)</span></div>
+            <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                <Icon name="TrendingUp" className="text-blue-500" /> Wertentwicklung (Kurve)
+            </h3>
+            
+            <div ref={chartRef} style={{ width: '100%', height: '350px' }}>
+                <UniversalChart 
+                    engine={activeChartEngine}
+                    type="line"
+                    labels={dataPoints.map(d => String(d.year))}
+                    datasets={[
+                        {
+                            label: 'Netto Investiert',
+                            data: dataPoints.map(d => d.invested),
+                            backgroundColor: '#94a3b8', // Dezentes Grau für die Basisinvestition
+                            valueFormatter: fCur
+                        },
+                        {
+                            label: 'Marktwert',
+                            data: dataPoints.map(d => d.actual),
+                            backgroundColor: latestData.priceProfit >= 0 ? '#10b981' : '#3b82f6', // Grün bei Kursgewinn
+                            valueFormatter: fCur
+                        },
+                        {
+                            label: 'Total Value (inkl. Erträge)',
+                            data: dataPoints.map(d => d.actual + d.yields),
+                            backgroundColor: '#6366f1', // Indigo für den Total Return
+                            valueFormatter: fCur
+                        }
+                    ]} 
+                    height="100%"
+                />
             </div>
          </div>
       )}

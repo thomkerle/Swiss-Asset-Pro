@@ -92,6 +92,24 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       updateTreeData({ banks: updateRecursive(data.banks) });
     };
 
+    const handleDeleteBooking = () => {
+      if (window.confirm(t ? t('msgConfirmDelete') || 'Eintrag wirklich löschen?' : 'Eintrag wirklich löschen?')) {
+        const updateRecursive = (nodes) => nodes.map(n => {
+          if (n.id === selectedNode.id) {
+            if (isBal) {
+              return { ...n, balances: (n.balances || []).filter(b => b.id !== booking.id) };
+            } else {
+              return { ...n, bookings: (n.bookings || []).filter(b => b.id !== booking.id) };
+            }
+          }
+          if (n.children) return { ...n, children: updateRecursive(n.children) };
+          return n;
+        });
+        updateTreeData({ banks: updateRecursive(data.banks) });
+        setSelectedNode(prev => ({ ...prev, selectedBooking: null }));
+      }
+    };
+
     return (
       <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex flex-col gap-6 overflow-y-auto shrink-0 shadow-inner">
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-3">
@@ -101,13 +119,22 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               {isBal ? (t ? t('editBalance') : 'Saldo') : (t ? t('editBooking') : 'Buchung')}
             </h3>
           </div>
-          <Icon 
-            name="X" 
-            size={18}
-            className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors" 
-            onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} 
-            title="Zurück zum Asset"
-          />
+          <div className="flex items-center gap-4">
+            <Icon 
+              name="Trash" 
+              size={16}
+              className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors" 
+              onClick={handleDeleteBooking} 
+              title={t ? t('btnDelete') || 'Löschen' : 'Löschen'}
+            />
+            <Icon 
+              name="X" 
+              size={18}
+              className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" 
+              onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} 
+              title="Zurück zum Asset"
+            />
+          </div>
         </div>
         
         <div className="space-y-4">
@@ -121,7 +148,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
           </div>
 
-          {/* DYNAMISCHES FREMDWÄHRUNGS-FELD FÜR WECHSELKURS */}
           {isForeignCurrency && (
             <div>
               <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">

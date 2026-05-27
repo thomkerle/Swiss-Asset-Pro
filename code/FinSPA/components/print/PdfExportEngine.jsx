@@ -15,6 +15,100 @@ const loadScript = (url) => {
   });
 };
 
+// Hilfsfunktion zur Formatierung der Tabellen-Zellen (verhindert doppelten Code)
+const buildTableContent = (headers, body) => {
+  const safeHeaders = Array.isArray(headers) ? headers : [];
+  const safeBody = Array.isArray(body) ? body : [];
+
+  const tableContent = [
+    safeHeaders.map(h => ({ text: h, style: 'tableHeader' }))
+  ];
+  
+  const formattedBody = safeBody.map((row) => {
+    if (!row) return [];
+    
+    const firstCellStr = String(row[0] || '').toLowerCase();
+    const isTotalRow = firstCellStr.includes('total') || 
+                       firstCellStr.includes('gesamt') || 
+                       firstCellStr.includes('summe') ||
+                       firstCellStr.includes('volumen');
+
+    return row.map((cell) => {
+      const cellStr = String(cell || '');
+      const isNumeric = cellStr.includes('CHF') || cellStr.includes('€') || cellStr.includes('$') || cellStr.includes('%') || !isNaN(cellStr.replace(/[^0-9.-]/g, ''));
+      
+      let textColor = '#334155';
+      if (cellStr.includes('-') || cellStr.includes('−')) {
+        textColor = '#ef4444';
+      } else if (cellStr.includes('+') || cellStr.toLowerCase().includes('gewinn')) {
+        textColor = '#10b981';
+      }
+
+      return {
+        text: cellStr,
+        style: isNumeric ? 'tableCellRight' : 'tableCell',
+        bold: isTotalRow,
+        color: textColor
+      };
+    });
+  });
+
+  tableContent.push(...formattedBody);
+  return tableContent;
+};
+
+// Layout-Konfiguration für Tabellen (wird in beiden Export-Funktionen genutzt)
+const tableLayoutConfig = {
+  fillColor: function (rowIndex, node) {
+    if (rowIndex === 0) return '#0f172a';
+    if (rowIndex === node.table.body.length - 1) {
+      const firstCell = node.table.body[rowIndex][0];
+      const firstCellText = String(firstCell && firstCell.text ? firstCell.text : '').toLowerCase();
+      const isTotal = firstCellText.includes('total') || firstCellText.includes('gesamt') || firstCellText.includes('summe') || firstCellText.includes('volumen');
+      if (isTotal) return '#f8fafc';
+    }
+    return (rowIndex % 2 === 0) ? '#f1f5f9' : null;
+  },
+  hLineWidth: function (i, node) {
+    if (i === 0 || i === 1) return 1;
+    if (i === node.table.body.length) return 1;
+    if (i === node.table.body.length - 1) {
+      const lastCell = node.table.body[node.table.body.length - 1][0];
+      const lastCellText = String(lastCell && lastCell.text ? lastCell.text : '').toLowerCase();
+      const isTotal = lastCellText.includes('total') || lastCellText.includes('gesamt') || lastCellText.includes('summe') || lastCellText.includes('volumen');
+      if (isTotal) return 1.5;
+    }
+    return 0.5;
+  },
+  vLineWidth: () => 0.5,
+  hLineColor: function (i, node) {
+    if (i === node.table.body.length - 1) {
+      const lastCell = node.table.body[node.table.body.length - 1][0];
+      const lastCellText = String(lastCell && lastCell.text ? lastCell.text : '').toLowerCase();
+      if (lastCellText.includes('total') || lastCellText.includes('gesamt') || lastCellText.includes('summe')) return '#475569';
+    }
+    return '#e2e8f0';
+  },
+  vLineColor: () => '#f1f5f9'
+};
+
+const pdfStyles = {
+  coverAppTitle: { fontSize: 26, font: 'Roboto', bold: true, color: '#0f172a', letterSpacing: 3 },
+  coverAppSubtitle: { fontSize: 9, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1.5 },
+  coverReportTitle: { fontSize: 24, font: 'Roboto', bold: true, color: '#1e3a8a', letterSpacing: 1 },
+  coverReportSubtitle: { fontSize: 12, font: 'Roboto', color: '#475569' },
+  coverMetaLabel: { fontSize: 8, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1 },
+  coverMetaValue: { fontSize: 10, font: 'Roboto', color: '#334155', bold: true },
+  kpiLabel: { fontSize: 8, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1 },
+  kpiValue: { fontSize: 12, font: 'Roboto', bold: true, color: '#0f172a', margin: [0, 2, 0, 0] },
+  reportSectionTitle: { fontSize: 18, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 10, 0, 5] },
+  reportSectionSubtitle: { fontSize: 10, font: 'Roboto', color: '#64748b', margin: [0, 0, 0, 15] },
+  tableHeader: { bold: true, fontSize: 10, color: '#ffffff', margin: [10, 6, 10, 6] },
+  tableCell: { fontSize: 9, color: '#334155', margin: [10, 6, 10, 6] },
+  tableCellRight: { fontSize: 9, color: '#334155', alignment: 'right', font: 'Roboto', margin: [10, 6, 10, 6] },
+  tableStyle: { margin: [0, 5, 0, 15] }
+};
+
 const PdfExportEngine = {
   initLibraries: async () => {
     try {
@@ -41,25 +135,20 @@ const PdfExportEngine = {
     }
   },
 
-  exportReport: async ({ title, subtitle, tableHeaders, tableBody, chartBase64 }) => {
+  // 1. Export für einen einzelnen Report (Abwärtskompatibel für Single- & Multi-Charts)
+  exportReport: async ({ title, subtitle, tableHeaders, tableBody, chartBase64, chartsBase64 }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
-      if (!initialized || !window.pdfMake || typeof window.pdfMake.createPdf !== 'function') {
-        throw new Error("PDF-Bibliotheken konnten nicht vollständig initialisiert werden.");
-      }
+      if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
 
-      const pdfMake = window.pdfMake;
       const now = new Date();
       const timestampStr = `${now.toLocaleDateString('de-CH')} um ${now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`;
 
       const safeSubtitle = String(subtitle || '');
-      const safeTableHeaders = Array.isArray(tableHeaders) ? tableHeaders : [];
-      const safeTableBody = Array.isArray(tableBody) ? tableBody : [];
-
       const parts = safeSubtitle.split('|');
       const subtitleMain = parts[0] ? parts[0].trim() : '';
+      const hasFocusMetric = safeSubtitle.includes('|');
 
-      // SEITE 1: DECKBLATT
       const docContent = [
         { text: 'FINSPA PRO', style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
         { text: 'ENTERPRISE ASSET MANAGEMENT & REPORTING', style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
@@ -76,168 +165,142 @@ const PdfExportEngine = {
         { text: '', pageBreak: 'after' }
       ];
 
-      // SEITE 2: KPI-GRID
-      const hasFocusMetric = safeSubtitle.includes('|');
       docContent.push({
         columns: [
-          {
-            stack: [
-              { text: 'BERICHTSART', style: 'kpiLabel' },
-              { text: title, style: 'kpiValue' }
-            ],
-            width: '*'
-          },
-          {
-            stack: [
-              { text: 'ANALYSE-ZEITRAUM', style: 'kpiLabel' },
-              { text: safeSubtitle.split('|')[0].replace(/Stichtag:|per/gi, '').trim(), style: 'kpiValue' }
-            ],
-            width: '*'
-          },
-          hasFocusMetric ? {
-            stack: [
-              { text: 'KONSOLIDIERTES TOTAL', style: 'kpiLabel' },
-              { text: safeSubtitle.split('|')[1].replace(/Gesamtvolumen:|Anzahl Buchungen:/gi, '').trim(), style: 'kpiValue', color: '#1e40af' }
-            ],
-            width: 'auto'
-          } : { text: '', width: 'auto' }
+          { stack: [{ text: 'BERICHTSART', style: 'kpiLabel' }, { text: title, style: 'kpiValue' }], width: '*' },
+          { stack: [{ text: 'ANALYSE-ZEITRAUM', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[0].replace(/Stichtag:|per/gi, '').trim(), style: 'kpiValue' }], width: '*' },
+          hasFocusMetric ? { stack: [{ text: 'KONSOLIDIERTES TOTAL', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[1].replace(/Gesamtvolumen:|Anzahl Buchungen:/gi, '').trim(), style: 'kpiValue', color: '#1e40af' }], width: 'auto' } : { text: '', width: 'auto' }
         ],
         margin: [0, 10, 0, 15]
       });
 
       docContent.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 760, y2: 0, lineWidth: 0.5, lineColor: '#cbd5e1' }], margin: [0, 0, 0, 20] });
 
-      // GRAFIK SEITE (Proportional skaliert über die gesamte Seite ohne Ellipsen-Effekt)
-      if (chartBase64) {
-        docContent.push({
-          image: chartBase64,
-          fit: [740, 440],
-          alignment: 'center',
-          margin: [0, 10, 0, 0],
-          pageBreak: 'after'
+      // Abwärtskompatible Normalisierung zu einem einheitlichen Array
+      let allCharts = [];
+      if (chartsBase64 && Array.isArray(chartsBase64)) {
+          allCharts = chartsBase64;
+      } else if (chartBase64) {
+          allCharts = [chartBase64];
+      }
+
+      // Alle Charts sequenziell in das PDF-Dokument einfügen
+      if (allCharts.length > 0) {
+        allCharts.forEach((chartImg, index) => {
+          docContent.push({
+            image: chartImg,
+            fit: [740, 440],
+            alignment: 'center',
+            margin: [0, 10, 0, index === allCharts.length - 1 ? 0 : 20],
+            // Seitenumbruch nach jedem Chart, außer nach dem letzten, sofern keine Tabelle folgt
+            pageBreak: (index < allCharts.length - 1 || (tableBody && tableBody.length > 0)) ? 'after' : undefined
+          });
         });
       }
 
-      // TABELLEN AUFBEREITUNG
-      const tableContent = [
-        safeTableHeaders.map(h => ({ text: h, style: 'tableHeader' }))
-      ];
-      
-      const formattedBody = safeTableBody.map((row) => {
-        if (!row) return [];
-        
-        const firstCellStr = String(row[0] || '').toLowerCase();
-        const isTotalRow = firstCellStr.includes('total') || 
-                           firstCellStr.includes('gesamt') || 
-                           firstCellStr.includes('summe') ||
-                           firstCellStr.includes('volumen');
-
-        return row.map((cell) => {
-          const cellStr = String(cell || '');
-          const isNumeric = cellStr.includes('CHF') || cellStr.includes('€') || cellStr.includes('$') || cellStr.includes('%') || !isNaN(cellStr.replace(/[^0-9.-]/g, ''));
-          
-          let textColor = '#334155';
-          if (cellStr.includes('-') || cellStr.includes('−')) {
-            textColor = '#ef4444';
-          } else if (cellStr.includes('+') || cellStr.toLowerCase().includes('gewinn')) {
-            textColor = '#10b981';
-          }
-
-          return {
-            text: cellStr,
-            style: isNumeric ? 'tableCellRight' : 'tableCell',
-            bold: isTotalRow,
-            color: textColor
-          };
+      // Tabelle rendern, falls Daten vorhanden sind
+      if (tableHeaders && tableBody && tableBody.length > 0) {
+        const tableContent = buildTableContent(tableHeaders, tableBody);
+        docContent.push({
+          style: 'tableStyle',
+          table: { headerRows: 1, dontBreakRows: true, widths: Array.isArray(tableHeaders) ? tableHeaders.map((_, idx) => idx === 0 ? '*' : 'auto') : [], body: tableContent },
+          layout: tableLayoutConfig
         });
-      });
+      }
 
-      tableContent.push(...formattedBody);
-
-      docContent.push({
-        style: 'tableStyle',
-        table: {
-          headerRows: 1,
-          dontBreakRows: true,
-          widths: safeTableHeaders.map((_, idx) => idx === 0 ? '*' : 'auto'),
-          body: tableContent
-        },
-        layout: {
-          fillColor: function (rowIndex, node) {
-            if (rowIndex === 0) return '#0f172a';
-            
-            // Dynamische Prüfung auf Total in der letzten Zeile
-            if (rowIndex === node.table.body.length - 1) {
-              const firstCell = node.table.body[rowIndex][0];
-              const firstCellText = String(firstCell && firstCell.text ? firstCell.text : '').toLowerCase();
-              const isTotal = firstCellText.includes('total') || firstCellText.includes('gesamt') || firstCellText.includes('summe') || firstCellText.includes('volumen');
-              if (isTotal) return '#f8fafc';
-            }
-            
-            // Optimiertes, sichtbares Grau für ungerade Zeilen
-            return (rowIndex % 2 === 0) ? '#f1f5f9' : null;
-          },
-          hLineWidth: function (i, node) {
-            if (i === 0 || i === 1) return 1;
-            if (i === node.table.body.length) return 1;
-            
-            // Trennlinie nur fetten, wenn die Folgewezeile wirklich ein Total ist
-            if (i === node.table.body.length - 1) {
-              const lastCell = node.table.body[node.table.body.length - 1][0];
-              const lastCellText = String(lastCell && lastCell.text ? lastCell.text : '').toLowerCase();
-              const isTotal = lastCellText.includes('total') || lastCellText.includes('gesamt') || lastCellText.includes('summe') || lastCellText.includes('volumen');
-              if (isTotal) return 1.5;
-            }
-            return 0.5;
-          },
-          vLineWidth: () => 0.5,
-          hLineColor: function (i, node) {
-            if (i === node.table.body.length - 1) {
-              const lastCell = node.table.body[node.table.body.length - 1][0];
-              const lastCellText = String(lastCell && lastCell.text ? lastCell.text : '').toLowerCase();
-              if (lastCellText.includes('total') || lastCellText.includes('gesamt') || lastCellText.includes('summe')) return '#475569';
-            }
-            return '#e2e8f0';
-          },
-          vLineColor: () => '#f1f5f9'
-        }
-      });
-
-      const docDefinition = {
-        pageSize: 'A4',
-        pageOrientation: 'landscape',
-        pageMargins: [40, 40, 40, 40],
-        content: docContent,
-        styles: {
-          coverAppTitle: { fontSize: 26, font: 'Roboto', bold: true, color: '#0f172a', letterSpacing: 3 },
-          coverAppSubtitle: { fontSize: 9, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1.5 },
-          coverReportTitle: { fontSize: 24, font: 'Roboto', bold: true, color: '#1e3a8a', letterSpacing: 1 },
-          coverReportSubtitle: { fontSize: 12, font: 'Roboto', color: '#475569' },
-          coverMetaLabel: { fontSize: 8, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1 },
-          coverMetaValue: { fontSize: 10, font: 'Roboto', color: '#334155', bold: true },
-          kpiLabel: { fontSize: 8, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1 },
-          kpiValue: { fontSize: 12, font: 'Roboto', bold: true, color: '#0f172a', margin: [0, 2, 0, 0] },
-          tableHeader: { bold: true, fontSize: 10, color: '#ffffff', margin: [10, 6, 10, 6] },
-          tableCell: { fontSize: 9, color: '#334155', margin: [10, 6, 10, 6] },
-          tableCellRight: { fontSize: 9, color: '#334155', alignment: 'right', font: 'Roboto', margin: [10, 6, 10, 6] },
-          tableStyle: { margin: [0, 5, 0, 15] }
-        },
-        footer: function(currentPage, pageCount) {
-          if (currentPage === 1) return null;
-          return {
-            text: `Seite ${currentPage} von ${pageCount}`,
-            alignment: 'right',
-            fontSize: 8,
-            color: '#94a3b8',
-            margin: [0, 0, 40, 0]
-          };
-        }
-      };
+      const docDefinition = { pageSize: 'A4', pageOrientation: 'landscape', pageMargins: [40, 40, 40, 40], content: docContent, styles: pdfStyles, footer: function(currentPage, pageCount) { if (currentPage === 1) return null; return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 8, color: '#94a3b8', margin: [0, 0, 40, 0] }; } };
 
       window.pdfMake.createPdf(docDefinition).download(`${title.replace(/\s+/g, '_')}_Report.pdf`);
     } catch (pdfError) {
-      console.error("[FinSPA PDF Engine] Fehler bei PDF-Generierung:", pdfError);
+      console.error("[FinSPA PDF Engine] Fehler:", pdfError);
       alert("PDF-Erzeugung abgebrochen: " + pdfError.message);
+    }
+  },
+
+  // 2. Globaler Export für alle zusammengestellten Reports
+  exportAllReports: async ({ mainTitle = "Gesamtauswertung", reports = [] }) => {
+    try {
+      const initialized = await PdfExportEngine.initLibraries();
+      if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
+
+      if (!reports || reports.length === 0) {
+        alert("Es wurden keine Reports für den Gesamtexport übergeben.");
+        return;
+      }
+
+      const now = new Date();
+      const timestampStr = `${now.toLocaleDateString('de-CH')} um ${now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+
+      // Master Deckblatt
+      const docContent = [
+        { text: 'FINSPA PRO', style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
+        { text: 'ENTERPRISE ASSET MANAGEMENT & REPORTING', style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
+        { canvas: [{ type: 'line', x1: 220, y1: 0, x2: 520, y2: 0, lineWidth: 1.5, lineColor: '#3b82f6' }], alignment: 'center' },
+        
+        { text: mainTitle.toUpperCase(), style: 'coverReportTitle', alignment: 'center', margin: [0, 60, 0, 10] },
+        { text: `Umfassendes Portfolio-Dossier mit ${reports.length} Auswertungen`, style: 'coverReportSubtitle', alignment: 'center', margin: [0, 0, 0, 120] },
+        
+        { text: 'ERSTELLT FÜR', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
+        { text: 'Thomas Kerle', style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: 'ZEITPUNKT DER GENERIERUNG', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
+        { text: timestampStr, style: 'coverMetaValue', alignment: 'center' },
+        
+        { text: '', pageBreak: 'after' }
+      ];
+
+      // Alle Reports iterativ anfügen
+      reports.forEach((rep, index) => {
+        docContent.push({ text: rep.title.toUpperCase(), style: 'reportSectionTitle' });
+        if (rep.subtitle) {
+          docContent.push({ text: rep.subtitle, style: 'reportSectionSubtitle' });
+        }
+        
+        docContent.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 760, y2: 0, lineWidth: 0.5, lineColor: '#cbd5e1' }], margin: [0, 0, 0, 20] });
+
+        if (rep.chartBase64) {
+          docContent.push({
+            image: rep.chartBase64,
+            fit: [740, 380],
+            alignment: 'center',
+            margin: [0, 10, 0, 20]
+          });
+        }
+
+        if (rep.tableHeaders && rep.tableBody && rep.tableBody.length > 0) {
+          const tableContent = buildTableContent(rep.tableHeaders, rep.tableBody);
+          docContent.push({
+            style: 'tableStyle',
+            table: { 
+              headerRows: 1, 
+              dontBreakRows: true, 
+              widths: Array.isArray(rep.tableHeaders) ? rep.tableHeaders.map((_, idx) => idx === 0 ? '*' : 'auto') : [], 
+              body: tableContent 
+            },
+            layout: tableLayoutConfig
+          });
+        }
+
+        if (index < reports.length - 1) {
+          docContent.push({ text: '', pageBreak: 'after' });
+        }
+      });
+
+      const docDefinition = { 
+        pageSize: 'A4', 
+        pageOrientation: 'landscape', 
+        pageMargins: [40, 40, 40, 40], 
+        content: docContent, 
+        styles: pdfStyles, 
+        footer: function(currentPage, pageCount) { 
+          if (currentPage === 1) return null; 
+          return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 8, color: '#94a3b8', margin: [0, 0, 40, 0] }; 
+        } 
+      };
+
+      window.pdfMake.createPdf(docDefinition).download(`FinSPA_Gesamtreport_${now.toISOString().split('T')[0]}.pdf`);
+    } catch (pdfError) {
+      console.error("[FinSPA PDF Engine] Fehler beim Gesamtexport:", pdfError);
+      alert("Generierung des Gesamtreports fehlgeschlagen: " + pdfError.message);
     }
   }
 };

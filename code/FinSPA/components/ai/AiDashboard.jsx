@@ -224,9 +224,8 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         ${getFinSpaApiScript()}
 
         <script>
-            window.finspaBudget = ${JSON.stringify(data.budget || {})};
-            window.finspaData = ${JSON.stringify(data)};
-        </script>
+		window.finspaData = ${JSON.stringify(data).replace(/</g, '\\u003c')};        
+	</script>
         `;
 
         let finalHtml = htmlContent;

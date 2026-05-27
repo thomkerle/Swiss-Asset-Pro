@@ -31,6 +31,7 @@ const HelpViewer = getModule('HelpViewer.jsx', () => safeRequire('./components/H
 const CsvEngine = getModule('CsvEngine.jsx', () => safeRequire('./components/CsvEngine.jsx'));
 const ParqetModule = getModule('ParqetCsvImport.jsx', () => safeRequire('./components/ParqetCsvImport.jsx')) || {};
 const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'));
+const PdfScanner = getModule('PdfScanner.jsx', () => safeRequire('./components/pdf/PdfScanner.jsx'));
 
 const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
 window.PdfExportEngine = PdfExportEngine; // ◄ Damit ist sie für das iFrame sichtbar
@@ -710,8 +711,22 @@ const handleItemDelete = () => {
   };
 
   const ModalHandler = () => {
-      if (!modalObj) return null;
-      if (modalObj.type === 'settings') return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
+      if (!modalObj || typeof modalObj !== 'object' || !modalObj.type) return null;
+
+  if (modalObj.type === 'pdfImport') {
+          // KORREKTUR: updateTreeData, selectedNode und setSelectedNode hinzugefügt
+          return <PdfScanner 
+              setModalObj={setModalObj} 
+              data={data} 
+              updateTreeData={updateTreeData} 
+              selectedNode={selectedNode}
+              setSelectedNode={setSelectedNode}
+              fCur={fCur} 
+              t={t} 
+          />;
+      }
+
+     if (modalObj.type === 'settings') return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
       if (modalObj.type === 'help') return <HelpViewer setModalObj={setModalObj} lang={lang} />;
 
       if (modalObj.type === 'about') return (

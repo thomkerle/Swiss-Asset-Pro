@@ -1,51 +1,153 @@
 const React = require('react');
-const ReportHeader = require('../ReportHeader.jsx');
-const { PieChartSVG } = require('../Charts.jsx');
-const { getAssetValueAtDate } = require('../../data/DataEngine.jsx');
+const { useEffect, useRef } = React;
 
-// WICHTIG: 't' zu den Props hinzugefügt
-const LiquidityReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
-  const liquid = activeAssets.filter(a => a.isLiquid).reduce((sum, a) => sum + getAssetValueAtDate(a, dateRange.to), 0);
-  const illiquid = activeAssets.filter(a => !a.isLiquid).reduce((sum, a) => sum + getAssetValueAtDate(a, dateRange.to), 0);
+const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
+const safeRequire = getRequire();
+
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
+const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
+const { getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
+const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
+
+// KORREKTUR: activeAssets in die Props aufgenommen
+const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
+  const chartRef = useRef(null);
+  const activeChartEngine = data?.settings?.chartEngine || 'echarts';
+  const targetDate = dateRange.to;
+
+  let liquidTotal = 0;
+  let illiquidTotal = 0;
+
+  // KORREKTUR: Wir greifen direkt auf das übergebene activeAssets Array zu!
+  const assets = activeAssets || [];
+  const liquidAssets = [];
+  const illiquidAssets = [];
+
+  assets.forEach(a => {
+    const val = getAssetValueAtDate(a, targetDate);
+    if (val === 0) return; // Leere Positionen ignorieren
+
+    // Prüfung auf Liquidität: Entweder explizites Flag aus dem Stammdaten-Editor 
+    // oder Fallback anhand der Anlageklasse
+    const isIlliquidClass = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'realestate'].includes(a.assetClass);
+    const isLiquid = a.isLiquid !== undefined ? a.isLiquid : !isIlliquidClass;
+    
+    if (isLiquid) {
+      liquidTotal += val;
+      liquidAssets.push({ name: a.name, val });
+    } else {
+      illiquidTotal += val;
+      illiquidAssets.push({ name: a.name, val });
+    }
+  });
+
+  const grandTotal = liquidTotal + illiquidTotal;
+  const liquidPercent = grandTotal > 0 ? (liquidTotal / grandTotal) * 100 : 0;
+  const illiquidPercent = grandTotal > 0 ? (illiquidTotal / grandTotal) * 100 : 0;
+
+  // Chart Labels & Daten
+  const labelLiquid = t ? t('labelLiquid') || 'Verfügbar (Liquid)' : 'Verfügbar (Liquid)';
+  const labelIlliquid = t ? t('labelIlliquid') || 'Gebunden (Illiquid)' : 'Gebunden (Illiquid)';
   
-  // Neue Zusatzinfo: Berechnung der Liquiditätsquote
-  const total = liquid + illiquid;
-  const ratio = total > 0 ? ((liquid / total) * 100).toFixed(1) : 0;
+  const chartLabels = [labelLiquid, labelIlliquid];
+  const chartValues = [liquidTotal, illiquidTotal];
 
-  const chartData = [
-      { label: t('labelLiquid'), value: Math.max(0, liquid), color: '#3b82f6' }, 
-      { label: t('labelIlliquid'), value: Math.max(0, illiquid), color: '#f59e0b' }
-  ];
+  // Event-Listener für den PDF-Export
+  useEffect(() => {
+    const handlePdfExport = async () => {
+      try {
+        let chartBase64 = null;
+        if (chartRef.current) {
+            const canvas = chartRef.current.querySelector('canvas');
+            if (canvas) chartBase64 = canvas.toDataURL('image/png', 1.0);
+        }
+
+        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+        const tableHeaders = [
+          capitalize(t ? t('type') || 'Liquiditäts-Typ' : 'Liquiditäts-Typ'), 
+          capitalize(t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset'),
+          capitalize(t ? t('amount') || 'Wert' : 'Wert')
+        ];
+        
+        const tableBody = [];
+        
+        liquidAssets.sort((a,b) => b.val - a.val).forEach(a => {
+            tableBody.push([labelLiquid, a.name, fCur(a.val)]);
+        });
+        
+        illiquidAssets.sort((a,b) => b.val - a.val).forEach(a => {
+            tableBody.push([labelIlliquid, a.name, fCur(a.val)]);
+        });
+
+        const subtitleText = `${t ? t('repLiquiditySub') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`;
+
+        await PdfExportEngine.exportReport({
+          title: t ? t('repLiquidityTitle') || 'Liquiditätsrisiko' : 'Liquiditätsrisiko',
+          subtitle: subtitleText,
+          tableHeaders,
+          tableBody,
+          chartBase64
+        });
+      } catch (err) {
+        console.error("[FinSPA] PDF Export Error im LiquidityReport:", err);
+      }
+    };
+
+    window.addEventListener('triggerPdfExport', handlePdfExport);
+    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+  }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, chartLabels, targetDate]);
 
   return (
-   <div className="max-w-6xl px-4 md:px-8 pb-12">
+    <div className="max-w-6xl px-4 md:px-8 pb-12">
       <ReportHeader 
-        title={t('repLiqTitle')} 
-        subtitle={`${t('repLiqSub')} (${t('labelTargetDate')} ${dateRange.to})`} 
+        title={t ? t('repLiquidityTitle') : 'Liquiditätsrisiko'} 
+        subtitle={`${t ? t('repLiquiditySub') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`}
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
-      
-      {/* Grid wurde auf 3 Spalten erweitert (md:grid-cols-3) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl shadow-sm">
-             <div className="text-sm text-blue-800 dark:text-blue-400 font-bold uppercase mb-1">{t('labelAvailable')}</div>
-             <div className="text-2xl font-black text-blue-600 dark:text-blue-500">{fCur(liquid)}</div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 mt-4">
+         <div className="p-6 bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 rounded-xl shadow-sm">
+             <div className="text-sm text-blue-600 dark:text-blue-400 font-bold uppercase mb-1 flex justify-between">
+                 <span>{labelLiquid}</span>
+                 <span>{liquidPercent.toFixed(1)}%</span>
+             </div>
+             <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{fCur(liquidTotal)}</div>
+             <div className="text-xs text-gray-500 mt-2">Jederzeit kündbares oder handelbares Vermögen (Bargeld, freie Aktien).</div>
          </div>
-         <div className="p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 rounded-xl shadow-sm">
-             <div className="text-sm text-yellow-800 dark:text-yellow-400 font-bold uppercase mb-1">{t('labelTiedUp')}</div>
-             <div className="text-2xl font-black text-yellow-600 dark:text-yellow-500">{fCur(illiquid)}</div>
-         </div>
-         {/* Neue Infokarte für die Liquiditätsquote */}
-         <div className="p-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl shadow-sm">
-             <div className="text-sm text-green-800 dark:text-green-400 font-bold uppercase mb-1">{t('labelRatio')}</div>
-             <div className="text-2xl font-black text-green-600 dark:text-green-500">{ratio}%</div>
+         
+         <div className="p-6 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-xl shadow-sm">
+             <div className="text-sm text-amber-600 dark:text-amber-500 font-bold uppercase mb-1 flex justify-between">
+                 <span>{labelIlliquid}</span>
+                 <span>{illiquidPercent.toFixed(1)}%</span>
+             </div>
+             <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{fCur(illiquidTotal)}</div>
+             <div className="text-xs text-gray-500 mt-2">Gebundenes Kapital (z.B. Säule 3a, Pensionskasse, Immobilienwerte).</div>
          </div>
       </div>
-      
-      <div className="p-8 flex justify-center bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
-          <PieChartSVG data={chartData} fCur={fCur} />
-      </div>
+
+      {grandTotal > 0 ? (
+          <div className="p-8 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <div ref={chartRef} style={{ width: '100%', minHeight: '400px' }}>
+              <UniversalChart
+                engine={activeChartEngine}
+                type="doughnut"
+                height="400px"
+                labels={chartLabels}
+                datasets={[{
+                  label: t ? t('repLiquidityTitle') : 'Liquidität',
+                  data: chartValues,
+                  backgroundColor: ['#3b82f6', '#f59e0b']
+                }]}
+              />
+            </div>
+          </div>
+      ) : (
+          <div className="bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500 mt-6">
+             {t ? t('noDataAvailable') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.' : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}
+          </div>
+      )}
     </div>
   );
 };

@@ -48,8 +48,9 @@ const MenuBar = ({
           <Icon name="TrendingUp" size={14} className="w-4 text-center"/> {t ? t('fileImportParqet') : 'parqet-Import (.csv)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportParqetCSV} />
         </label>
-        
+          <MenuSubItem label={t ? t('fileImportPdf') : 'PDF Rechnung scannen (KI)'} iconName="FileText" onClick={() => setModalObj({type: 'pdfImport'})} />
         <MenuSubItem label={t ? t('fileExport') : 'Exportieren (CSV)'} iconName="Download" onClick={handleExportCSV} />
+
         
         <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('filePrint') : 'Drucken'} iconName="Printer" onClick={handlePrint} rightText="Ctrl+P" />

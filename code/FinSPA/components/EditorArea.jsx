@@ -64,7 +64,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         case 'topFlow': return <TopFlowReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'bookingAnalysis': return <BookingAnalysisReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'future': return <FutureReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setModalObj} fCur={fCur} t={t} />;
+        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
         case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
 
@@ -108,8 +108,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
           if (node.isArchived && !showArchived) return [];
 
           const baseVal = getAssetValueAtDate(node, new Date().toISOString().split('T')[0], activeAssets) || 0;
-          
-          // NEU: Stark vereinfachter Aufruf der DataEngine
           const origVal = getAssetRawValueAtDate(node, new Date().toISOString().split('T')[0]);
 
           const subCatKey = node.assetClass || 'cash';
@@ -273,8 +271,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
       
       const currentVal = getAssetValueAtDate(selectedNode, new Date().toISOString().split('T')[0], activeAssets);
-      
-      // NEU: Stark vereinfachter Aufruf der DataEngine
       const rawSum = getAssetRawValueAtDate(selectedNode, new Date().toISOString().split('T')[0]);
 
       let defaultType = 'Einzahlung'; 
@@ -283,6 +279,43 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       if (ac === 'realestate') defaultType = 'Wertanpassung';
       else if (ac === 'mortgage') defaultType = 'Abzahlung';
       else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund' || ac === 'pension_3a_fund') defaultType = 'Kauf';
+
+      // NEU: Schnelles Löschen ohne Nachfrage direkt aus der Tabelle
+      const handleDeleteEntry = (itemToDelete, e) => {
+          e.stopPropagation(); // Verhindert, dass die Zeile angewählt wird und der PropertyEditor öffnet
+
+          const isBal = itemToDelete._isBal;
+          
+          // 1. Globalen State aktualisieren
+          const updateRecursive = (nodes) => nodes.map(n => {
+              if (n.id === selectedNode.id) {
+                  if (isBal) {
+                      return { ...n, balances: (n.balances || []).filter(b => b.id !== itemToDelete.id) };
+                  } else {
+                      return { ...n, bookings: (n.bookings || []).filter(b => b.id !== itemToDelete.id) };
+                  }
+              }
+              if (n.children) return { ...n, children: updateRecursive(n.children) };
+              return n;
+          });
+          
+          updateTreeData({ banks: updateRecursive(data.banks) });
+
+          // 2. Lokalen selectedNode State sofort aktualisieren für direktes UI-Feedback
+          const updatedNode = { ...selectedNode };
+          if (isBal) {
+              updatedNode.balances = (updatedNode.balances || []).filter(b => b.id !== itemToDelete.id);
+          } else {
+              updatedNode.bookings = (updatedNode.bookings || []).filter(b => b.id !== itemToDelete.id);
+          }
+          
+          // Falls die gelöschte Buchung gerade offen war, schließen wir sie im Editor
+          if (updatedNode.selectedBooking?.id === itemToDelete.id) {
+              updatedNode.selectedBooking = null;
+          }
+          
+          setSelectedNode(updatedNode);
+      };
 
       return (
         <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">
@@ -378,7 +411,13 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                         )}
                       </td>
                       
-                      <td className="p-4 text-center print-hide text-gray-400 hover:text-blue-500"><Icon name="Edit" size={14}/></td>
+                      <td 
+                        className="p-4 text-center print-hide text-gray-400 hover:text-red-500 transition-colors" 
+                        onClick={(e) => handleDeleteEntry(item, e)}
+                        title={t ? t('btnDelete') : 'Löschen'}
+                      >
+                        <Icon name="Trash" size={14}/>
+                      </td>
                     </tr>
                   )})}
                 </tbody>

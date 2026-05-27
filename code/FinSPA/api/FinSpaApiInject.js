@@ -1,15 +1,17 @@
 /**
  * @file FinSpaApiInject.js
- * @description Exportiert die FinSPA_API als String für die Injektion in iFrames.
+ * @description Vollständige FinSPA_API inkl. Budget-Methoden.
  */
 
 const getFinSpaApiScript = () => `
 <script>
-const FinSPA_API = {
+// Global an window binden für das iFrame
+window.FinSPA_API = {
     _getData: function() { 
         return window.finspaData || { banks: [], budget: {}, settings: {} }; 
     },
 
+    // --- Assets & Navigation ---
     getAllAssets: function() {
         const data = this._getData();
         const assets = [];
@@ -48,32 +50,26 @@ const FinSPA_API = {
         return latest.amount * rate;
     },
 
+    // --- Wealth Calculations ---
     getTotalWealth: function() {
-        const assets = this.getAllAssets();
-        return assets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+        return this.getAllAssets().reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
     },
 
     getTotalLiquidWealth: function() {
-        const liquidAssets = this.getLiquidAssets();
-        return liquidAssets.reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+        return this.getLiquidAssets().reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
     },
 
     getWealthDistributionByClass: function() {
         const data = this._getData();
         const assets = this.getAllAssets();
         const distribution = {};
-        
         const classMap = {};
         if (data.settings && data.settings.assetClasses) {
-            data.settings.assetClasses.forEach(ac => {
-                classMap[ac.id] = ac.name;
-            });
+            data.settings.assetClasses.forEach(ac => classMap[ac.id] = ac.name);
         }
-
         assets.forEach(asset => {
             const val = this.getLatestBalanceValue(asset);
-            const acId = asset.assetClass || 'unknown';
-            const acName = classMap[acId] || acId; 
+            const acName = classMap[asset.assetClass] || asset.assetClass || 'unknown';
             distribution[acName] = (distribution[acName] || 0) + val;
         });
         return distribution;
@@ -93,91 +89,80 @@ const FinSPA_API = {
         }));
     },
 
+    // --- Bookings & Transaction Logic ---
     getAllBookings: function() {
-        const assets = this.getAllAssets();
-        return assets.flatMap(asset => {
-            return (asset.bookings || []).map(booking => ({
+        return this.getAllAssets().flatMap(asset => 
+            (asset.bookings || []).map(booking => ({
                 ...booking,
                 assetName: asset.name,
                 bankName: asset.bankName,
                 assetClass: asset.assetClass
-            }));
-        });
+            }))
+        );
     },
 
     getTotalFeesPaid: function() {
-        const bookings = this.getAllBookings();
-        return bookings
+        return this.getAllBookings()
             .filter(b => b.type === 'Gebühr')
             .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
     },
 
     getTotalDividendsReceived: function() {
-        const bookings = this.getAllBookings();
-        return bookings
+        return this.getAllBookings()
             .filter(b => b.type === 'Einzahlung' && b.subCategory === 'Dividenden')
             .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
-    },
-
-    _normalizeToMonthly: function(items) {
-        if (!items) return 0;
-        return items.reduce((sum, item) => {
-            if (item.frequency === 'monthly') return sum + item.amount;
-            if (item.frequency === 'yearly') return sum + (item.amount / 12);
-            return sum;
-        }, 0);
-    },
-
-    getMonthlyIncome: function() {
-        const data = this._getData();
-        return this._normalizeToMonthly(data.budget?.incomeSources);
-    },
-
-    getMonthlyFixedCosts: function() {
-        const data = this._getData();
-        const expenses = this._normalizeToMonthly(data.budget?.expenses);
-        const subs = this._normalizeToMonthly(data.budget?.subscriptions);
-        return expenses + subs;
     },
 
     getMonthlyCashflowHistory: function() {
         const bookings = this.getAllBookings();
         const cashflowMap = {};
-
         bookings.forEach(b => {
             if (!b.date) return;
             const month = b.date.substring(0, 7); 
-            if (!cashflowMap[month]) {
-                cashflowMap[month] = { month: month, income: 0, expenses: 0, net: 0 };
-            }
-            
+            if (!cashflowMap[month]) cashflowMap[month] = { month: month, income: 0, expenses: 0, net: 0 };
             const amount = b.amount * (b.bookingExchangeRate || 1);
-            
-            if (['Einzahlung', 'Dividende', 'Verkauf'].includes(b.type)) {
-                cashflowMap[month].income += amount;
-            } else if (['Auszahlung', 'Gebühr', 'Kauf', 'Zinszahlung', 'Abzahlung'].includes(b.type)) {
-                cashflowMap[month].expenses += amount;
-            }
+            if (['Einzahlung', 'Dividende', 'Verkauf'].includes(b.type)) cashflowMap[month].income += amount;
+            else if (['Auszahlung', 'Gebühr', 'Kauf', 'Zinszahlung', 'Abzahlung'].includes(b.type)) cashflowMap[month].expenses += amount;
         });
-
-        const sortedMonths = Object.keys(cashflowMap).sort();
-        
-        if (sortedMonths.length === 0) {
-            const currentMonth = new Date().toISOString().substring(0, 7);
-            const structuralIncome = this.getMonthlyIncome();
-            const structuralExpenses = this.getMonthlyFixedCosts();
-            return [{
-                month: currentMonth,
-                income: structuralIncome,
-                expenses: structuralExpenses,
-                net: structuralIncome - structuralExpenses
-            }];
-        }
-
-        return sortedMonths.map(m => {
+        return Object.keys(cashflowMap).sort().map(m => {
             cashflowMap[m].net = cashflowMap[m].income - cashflowMap[m].expenses;
             return cashflowMap[m];
         });
+    },
+
+    // --- Budget API ---
+    _normalizeToMonthly: function(items) {
+        if (!items || !Array.isArray(items)) return 0;
+        return items.reduce((sum, item) => {
+            const amount = parseFloat(item.amount) || 0;
+            return item.frequency === 'yearly' ? sum + (amount / 12) : sum + amount;
+        }, 0);
+    },
+
+    getMonthlyIncome: function() {
+        return this._normalizeToMonthly(this._getData().budget?.incomeSources);
+    },
+
+    getMonthlyFixedCosts: function() {
+        const data = this._getData();
+        return this._normalizeToMonthly(data.budget?.expenses) + this._normalizeToMonthly(data.budget?.subscriptions);
+    },
+
+    getBudgetOverview: function() {
+        const income = this.getMonthlyIncome();
+        const costs = this.getMonthlyFixedCosts();
+        return {
+            income: income,
+            costs: costs,
+            disposable: income - costs,
+            savingsRate: income > 0 ? ((income - costs) / income) * 100 : 0
+        };
+    },
+
+    getExpensesByCategory: function(categoryType) {
+        const data = this._getData();
+        const allItems = [...(data.budget?.expenses || []), ...(data.budget?.subscriptions || [])];
+        return this._normalizeToMonthly(allItems.filter(i => i.ruleCategory === categoryType));
     },
 
     getFreeMonthlyBuffer: function() {
@@ -185,42 +170,56 @@ const FinSPA_API = {
     },
 
     getSavingsRate: function() {
-        const data = this._getData();
-        const income = this.getMonthlyIncome();
-        if (income === 0) return 0;
-        const savingsExpenses = (data.budget?.expenses || []).filter(e => e.ruleCategory === 'savings');
-        const monthlySavings = this._normalizeToMonthly(savingsExpenses);
-        return (monthlySavings / income) * 100;
+        return this.getBudgetOverview().savingsRate;
     },
 
     getFireProgress: function() {
         const data = this._getData();
         const currentWealth = this.getTotalWealth();
         const targetWealth = data.goals?.fire?.target || 0;
-        if (targetWealth === 0) return 100;
         return {
             current: currentWealth,
             target: targetWealth,
-            percentage: Math.min((currentWealth / targetWealth) * 100, 100)
+            percentage: targetWealth > 0 ? Math.min((currentWealth / targetWealth) * 100, 100) : 0
         };
     },
 
+    // --- PDF Export ---
     PDF: {
-        exportDashboard: async function(config) {
-            if (!window.PdfExportEngine) return;
+      exportDashboard: async function(config) {
+            if (!window.PdfExportEngine) {
+                alert("PDF-Engine ist noch nicht geladen oder nicht verfügbar.");
+                return;
+            }
+
+            // Automatisches Extrahieren ALLER Charts auf dem Dashboard
+            let chartsBase64 = [];
+            const canvases = document.querySelectorAll('canvas');
             
-            const tableData = (config.tables && config.tables.length > 0) ? config.tables[0] : { headers: [], rows: [] };
-            
+            canvases.forEach(canvas => {
+                // Weißen Hintergrund erzwingen, da transparente PNGs in PDFs schwarz werden können
+                const tempCtx = canvas.getContext('2d');
+                const origComposite = tempCtx.globalCompositeOperation;
+                tempCtx.globalCompositeOperation = 'destination-over';
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+                chartsBase64.push(canvas.toDataURL('image/png', 1.0));
+                tempCtx.globalCompositeOperation = origComposite; // Reset
+            });
+
             await window.PdfExportEngine.exportReport({
-                title: config.title || 'Export',
+                title: config.title || 'Dashboard Export',
                 subtitle: config.subtitle || '',
-                tableHeaders: tableData.headers || [],
-                tableBody: tableData.rows || [],
-                chartBase64: null
+                tableHeaders: config.tables?.[0]?.headers || [],
+                tableBody: config.tables?.[0]?.rows || [],
+                chartsBase64: chartsBase64 // <-- NEU: Array mit allen Charts
             });
         }
-    }
-};            
+    } // <-- Ende des PDF-Objekts (nur Klammer, KEIN Semikolon)
+}; // <-- Ende des FinSPA_API-Objekts (mit Semikolon)
+
+// Fallback, damit die KI die Methoden auch ohne 'window.' aufrufen kann
+const FinSPA_API = window.FinSPA_API;
 </script>
 `;
 

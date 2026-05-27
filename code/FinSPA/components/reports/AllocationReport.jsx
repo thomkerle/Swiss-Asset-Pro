@@ -1,11 +1,11 @@
 const React = require('react');
 const { useEffect, useRef } = React;
 
-// Sicheres Require-Setup für FinSPA Pro Module
+// Sicheres Require-Setup für Module
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
-// Modul-Imports mit Fallbacks für höchste Stabilität
+// Modul-Imports
 const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const { getAllAssets, getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
@@ -13,17 +13,15 @@ const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.Uni
 
 const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
   const chartRef = useRef(null);
-
-  // Aktive Chart-Engine dynamisch aus den Settings auslesen (Fallback auf 'echarts')
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
 
-  // Datenaufbereitung für das Chart
-  const allocData = data.banks.map((b, i) => {
-    const val = getAllAssets([b]).filter(a => !a.isArchived).reduce((s, a) => s + getAssetValueAtDate(a, dateRange.to), 0);
-    return { label: b.name, value: val, color: `hsl(${i * 80 + 200}, 70%, 55%)` };
+  // Datenaufbereitung für das Chart (Verschlankt, da UniversalChart die Farben steuert)
+  const allocData = data.banks.map(b => {
+    const val = getAllAssets([b]).filter(a => !a?.isArchived).reduce((s, a) => s + getAssetValueAtDate(a, dateRange.to), 0);
+    return { label: b.name, value: val };
   }).filter(d => d.value > 0);
 
-  // Event-Listener für den PDF-Export (unterstützt Plotly, Chart.js und ECharts)
+  // Event-Listener für den PDF-Export
   useEffect(() => {
     const handlePdfExport = async () => {
       try {
@@ -34,20 +32,12 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
 
         let chartBase64 = null;
         if (chartRef.current) {
-            // 1. Prüfen, ob ein Plotly-Chart gerendert wurde (Plotly nutzt SVGs)
+            // 1. Prüfen, ob ein Plotly-Chart gerendert wurde
             const plotlyNode = chartRef.current.querySelector('.js-plotly-plot');
-            
             if (plotlyNode && window.Plotly) {
-                // Plotly-eigener Export
                 try {
-                    chartBase64 = await window.Plotly.toImage(plotlyNode, { 
-                        format: 'png', 
-                        width: 800, 
-                        height: 400 
-                    });
-                } catch (e) {
-                    console.error("[FinSPA Diagnose] Plotly Bild-Export fehlgeschlagen:", e);
-                }
+                    chartBase64 = await window.Plotly.toImage(plotlyNode, { format: 'png', width: 800, height: 400 });
+                } catch (e) { console.error("[FinSPA Diagnose] Plotly Bild-Export fehlgeschlagen:", e); }
             } else {
                 // 2. Fallback auf Canvas-Export (für ECharts und Chart.js)
                 const canvas = chartRef.current.querySelector('canvas');
@@ -57,7 +47,14 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
             }
         }
 
-        const tableHeaders = [t ? t('bank') || 'Bank / Institut' : 'Bank / Institut', t ? t('amount') || 'Betrag' : 'Betrag'];
+        // Hilfsfunktion zur Erzwingung korrekter Grossbuchstaben am Wortanfang
+        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+        const tableHeaders = [
+          capitalize(t ? t('bank') || 'Bank / Institut' : 'Bank / Institut'), 
+          capitalize(t ? t('amount') || 'Betrag' : 'Betrag')
+        ];
+        
         const tableBody = [...allocData].sort((a, b) => b.value - a.value).map(d => [d.label, fCur(d.value)]);
 
         // PDF-Generierung anstossen
@@ -87,7 +84,6 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
       />
       
       <div className="p-8 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm mt-6">
-        {/* Der Wrapper liefert das Ref für den generischen Bild-Export */}
         <div ref={chartRef} style={{ width: '100%', minHeight: '400px' }}>
           <UniversalChart
             engine={activeChartEngine}
@@ -96,8 +92,8 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
             labels={allocData.map(d => d.label)}
             datasets={[{
               label: t ? t('repAlloc') : 'Allokation',
-              data: allocData.map(d => d.value),
-              backgroundColor: allocData.map(d => d.color)
+              data: allocData.map(d => d.value)
+              // backgroundColor wird nicht mehr übergeben
             }]}
           />
         </div>

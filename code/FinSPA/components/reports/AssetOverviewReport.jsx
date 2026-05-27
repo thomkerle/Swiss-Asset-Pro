@@ -82,6 +82,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
 
   const sortedClasses = Object.keys(overview).sort((a,b) => overview[b].total - overview[a].total);
 
+  // Event-Listener für den PDF-Export
   useEffect(() => {
     const handlePdfExport = async () => {
       try {
@@ -95,14 +96,8 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
             const plotlyNode = chartRef.current.querySelector('.js-plotly-plot');
             if (plotlyNode && window.Plotly) {
                 try {
-                    chartBase64 = await window.Plotly.toImage(plotlyNode, { 
-                        format: 'png', 
-                        width: 800, 
-                        height: 400 
-                    });
-                } catch (e) {
-                    console.error("[FinSPA Diagnose] Plotly Bild-Export fehlgeschlagen:", e);
-                }
+                    chartBase64 = await window.Plotly.toImage(plotlyNode, { format: 'png', width: 800, height: 400 });
+                } catch (e) { console.error("[FinSPA Diagnose] Plotly Bild-Export fehlgeschlagen:", e); }
             } else {
                 const canvas = chartRef.current.querySelector('canvas');
                 if (canvas) {
@@ -111,15 +106,14 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
             }
         }
 
-        // Hilfsfunktion zur Erzwingung korrekter Grossbuchstaben am Wortanfang
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
         const tableHeaders = [
-          t ? t('assetClass') || 'Anlageklasse' : 'Anlageklasse',
-          t ? t('bank') || 'Bank / Institut' : 'Bank / Institut',
-          t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset',
-          t ? t('amount') || 'Wert' : 'Wert'
-        ].map(h => capitalize(h));
+          capitalize(t ? t('assetClass') || 'Anlageklasse' : 'Anlageklasse'),
+          capitalize(t ? t('bank') || 'Bank / Institut' : 'Bank / Institut'),
+          capitalize(t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset'),
+          capitalize(t ? t('amount') || 'Wert' : 'Wert')
+        ];
 
         const tableBody = [];
         sortedClasses.forEach(ac => {
@@ -185,8 +179,8 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
               labels={sortedClasses.map(ac => getAcName(ac))}
               datasets={[{
                 label: t ? t('repOverviewTitle') : 'Anlageklassen',
-                data: sortedClasses.map(ac => overview[ac].total),
-                backgroundColor: sortedClasses.map((_, i) => `hsl(${i * 60 + 200}, 70%, 55%)`) 
+                data: sortedClasses.map(ac => overview[ac].total)
+                // backgroundColor entfernt, wird von UniversalChart verwaltet
               }]}
             />
           </div>
