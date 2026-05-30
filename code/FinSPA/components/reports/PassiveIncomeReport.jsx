@@ -85,7 +85,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
     .sort((a, b) => b.val - a.val);
 
   // --- TEXT-FALLBACKS ---
-  const titleText = t ? (t('repPassive') || "Passives Einkommen") : "Passives Einkommen";
+  const titleText = t ? (t('repPassiveTitle') || "Passives Einkommen") : "Passives Einkommen";
   const subtitlePrefix = t ? (t('repPassiveSub') || "Dividenden, Zinsen & Mieten von") : "Dividenden, Zinsen & Mieten von";
   const wordTo = t ? (t('wordTo') || "bis") : "bis";
 
@@ -103,7 +103,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
         const tableHeaders = [
             capitalize(t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset'),
             capitalize(t ? t('category') || 'Kategorie' : 'Kategorie'),
-            capitalize(t ? t('amount') || 'Ertrag' : 'Ertrag')
+            capitalize(t ? t('labelYield') || 'Ertrag' : 'Ertrag')
         ];
 
         const tableBody = topAssets.map(a => [a.name, a.cat, fCur(a.val)]);
@@ -179,7 +179,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                   datasets={[{
                     label: titleText,
                     data: monthValues,
-                    backgroundColor: '#22c55e', // Konstantes Grün für passives Einkommen
+                    backgroundColor: '#22c55e', 
                     valueFormatter: fCur
                   }]} 
                   height="100%"
@@ -198,7 +198,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                             <tr>
                                 <th className="p-3 font-bold rounded-tl-lg">{t ? t('name') || 'Asset' : 'Asset'}</th>
                                 <th className="p-3 font-bold">{t ? t('category') || 'Kategorie' : 'Kategorie'}</th>
-                                <th className="p-3 font-bold text-right rounded-tr-lg">{t ? t('amount') || 'Ertrag' : 'Ertrag'}</th>
+                                <th className="p-3 font-bold text-right rounded-tr-lg">{t ? t('labelYield') || 'Ertrag' : 'Ertrag'}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-800/50">

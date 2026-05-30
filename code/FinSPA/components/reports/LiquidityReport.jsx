@@ -65,7 +65,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
         const tableHeaders = [
-          capitalize(t ? t('type') || 'Liquiditäts-Typ' : 'Liquiditäts-Typ'), 
+          capitalize(t ? t('labelLiqType') || 'Liquiditäts-Typ' : 'Liquiditäts-Typ'), 
           capitalize(t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset'),
           capitalize(t ? t('amount') || 'Wert' : 'Wert')
         ];
@@ -80,10 +80,10 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
             tableBody.push([labelIlliquid, a.name, fCur(a.val)]);
         });
 
-        const subtitleText = `${t ? t('repLiquiditySub') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`;
+        const subtitleText = `${t ? t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`;
 
         await PdfExportEngine.exportReport({
-          title: t ? t('repLiquidityTitle') || 'Liquiditätsrisiko' : 'Liquiditätsrisiko',
+          title: t ? t('repLiqTitle') || 'Liquiditätsrisiko' : 'Liquiditätsrisiko',
           subtitle: subtitleText,
           tableHeaders,
           tableBody,
@@ -101,8 +101,8 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   return (
     <div className="max-w-6xl px-4 md:px-8 pb-12">
       <ReportHeader 
-        title={t ? t('repLiquidityTitle') : 'Liquiditätsrisiko'} 
-        subtitle={`${t ? t('repLiquiditySub') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`}
+        title={t ? t('repLiqTitle') || 'Liquiditätsrisiko' : 'Liquiditätsrisiko'} 
+        subtitle={`${t ? t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per' : 'Verfügbare vs. gebundene Mittel per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`}
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
@@ -114,7 +114,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                  <span>{liquidPercent.toFixed(1)}%</span>
              </div>
              <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{fCur(liquidTotal)}</div>
-             <div className="text-xs text-gray-500 mt-2">Jederzeit kündbares oder handelbares Vermögen (Bargeld, freie Aktien).</div>
+             <div className="text-xs text-gray-500 mt-2">{t ? t('descLiquid') || 'Jederzeit kündbares oder handelbares Vermögen (Bargeld, freie Aktien).' : 'Jederzeit kündbares oder handelbares Vermögen (Bargeld, freie Aktien).'}</div>
          </div>
          
          <div className="p-6 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-xl shadow-sm">
@@ -123,7 +123,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                  <span>{illiquidPercent.toFixed(1)}%</span>
              </div>
              <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{fCur(illiquidTotal)}</div>
-             <div className="text-xs text-gray-500 mt-2">Gebundenes Kapital (z.B. Säule 3a, Pensionskasse, Immobilienwerte).</div>
+             <div className="text-xs text-gray-500 mt-2">{t ? t('descIlliquid') || 'Gebundenes Kapital (z.B. Säule 3a, Pensionskasse, Immobilienwerte).' : 'Gebundenes Kapital (z.B. Säule 3a, Pensionskasse, Immobilienwerte).'}</div>
          </div>
       </div>
 
@@ -136,7 +136,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 height="400px"
                 labels={chartLabels}
                 datasets={[{
-                  label: t ? t('repLiquidityTitle') : 'Liquidität',
+                  label: t ? t('repLiqTitle') || 'Liquiditätsrisiko' : 'Liquiditätsrisiko',
                   data: chartValues,
                   backgroundColor: ['#3b82f6', '#f59e0b']
                 }]}
@@ -145,7 +145,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           </div>
       ) : (
           <div className="bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500 mt-6">
-             {t ? t('noDataAvailable') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.' : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}
+             {t ? t('noAssetsFoundDate') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.' : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}
           </div>
       )}
     </div>

@@ -127,7 +127,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       </button>
                   </h3>
                   {scenarios.length === 0 ? (
-                      <div className="text-sm text-gray-500 dark:text-gray-400 italic py-4 text-center">Keine Szenarien erfasst.</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 italic py-4 text-center">{t ? t('noScenariosFound') || 'Keine Szenarien erfasst.' : 'Keine Szenarien erfasst.'}</div>
                   ) : (
                       <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
                           {scenarios.map(sc => (
@@ -165,10 +165,10 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       </div>
                       <div className="text-xs mt-2 flex justify-between">
                           <div className="text-gray-500 dark:text-gray-400">
-                              Status Quo: {fireProg.toFixed(1)}%
+                              {t ? t('labelStatusQuo') || 'Status Quo:' : 'Status Quo:'} {fireProg.toFixed(1)}%
                           </div>
                           <div className={`font-bold ${isProjectedPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              Projektion: {projectedProg.toFixed(1)}%
+                              {t ? t('labelProjection') || 'Projektion:' : 'Projektion:'} {projectedProg.toFixed(1)}%
                           </div>
                       </div>
                   </div>
@@ -178,7 +178,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           {/* NEU: Horizontales Balkendiagramm für PDF und visuelle Übersicht */}
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mt-8">
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                 <Icon name="Activity" className="text-blue-500" /> Visueller Abgleich
+                 <Icon name="Activity" className="text-blue-500" /> {t ? t('labelVisualComparison') || 'Visueller Abgleich' : 'Visueller Abgleich'}
               </h3>
               <div ref={chartRef} style={{ width: '100%', height: '220px' }}>
                   <UniversalChart 

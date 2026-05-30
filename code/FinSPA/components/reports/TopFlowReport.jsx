@@ -91,7 +91,7 @@ const TopFlowReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
          ) : (
              <>
                  <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                     <Icon name="BarChart2" className="text-blue-500" /> Wasserfall-Bewegungen
+                     <Icon name="BarChart2" className="text-blue-500" /> {t ? t('labelWaterfallMovements') || 'Wasserfall-Bewegungen' : 'Wasserfall-Bewegungen'}
                  </h3>
                  
                  {/* Dynamische Höhe basierend auf der Anzahl der Assets für perfekte Darstellung */}

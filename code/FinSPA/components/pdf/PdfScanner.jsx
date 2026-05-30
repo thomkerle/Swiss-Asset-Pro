@@ -43,7 +43,10 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (file.type !== 'application/pdf') { setError('Bitte lade eine gültige PDF-Datei hoch.'); return; }
+        if (file.type !== 'application/pdf') { 
+            setError(t ? t('pdfInvalid') : 'Bitte lade eine gültige PDF-Datei hoch.'); 
+            return; 
+        }
 
         setIsLoading(true); 
         setError(''); 
@@ -176,7 +179,7 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
 
         } catch (err) {
             console.error("PDF Parse Fehler:", err);
-            setError('Fehler beim Auslesen des PDFs. Ist es evtl. ein reines Bild ohne Textebene?');
+            setError(t ? t('pdfParseError') : 'Fehler beim Auslesen des PDFs. Ist es evtl. ein reines Bild ohne Textebene?');
         } finally {
             setIsLoading(false);
         }
@@ -272,7 +275,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                     if (start !== -1 && end !== -1) {
                         jsonStr = rawContent.substring(start, end + 1);
                     } else {
-                        throw new Error("Kein valides JSON in der Antwort der KI gefunden.");
+                        throw new Error(t ? t('pdfNoJson') : "Kein valides JSON in der Antwort der KI gefunden.");
                     }
                 }
                 
@@ -302,7 +305,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
 
     const saveBookingsToAsset = (txsToSave) => {
         if (!selectedAssetId) {
-            alert('Bitte wähle zuerst oben das Zielkonto aus.');
+            alert(t ? t('pdfAlertSelectTarget') : 'Bitte wähle zuerst oben das Zielkonto aus.');
             return false;
         }
 
@@ -381,7 +384,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
     const applySingleTransaction = (index) => {
         const tx = transactions[index];
         if (tx.category === 'Dividenden' && !tx.sourceAssetId) {
-            alert('Bitte wähle für die Dividende das Ursprungskonto (Depot) aus.');
+            alert(t ? t('pdfAlertSelectSource') : 'Bitte wähle für die Dividende das Ursprungskonto (Depot) aus.');
             return;
         }
 
@@ -394,7 +397,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
     const applyAllTransactions = () => {
         const missingSource = transactions.some(tx => tx.category === 'Dividenden' && !tx.sourceAssetId);
         if (missingSource) {
-            alert('Bitte wähle für alle Dividenden das Ursprungskonto aus, bevor du fortfährst.');
+            alert(t ? t('pdfAlertSelectSourceAll') : 'Bitte wähle für alle Dividenden das Ursprungskonto aus, bevor du fortfährst.');
             return;
         }
 
@@ -451,8 +454,8 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                 <div className="w-20 h-20 mb-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/30 transition-all duration-500 ease-out">
                                     <Icon name="UploadCloud" size={36} className="text-indigo-600 dark:text-indigo-400 animate-bounce" />
                                 </div>
-                                <span className="font-extrabold text-slate-700 dark:text-slate-200 text-2xl mb-2 text-center">PDF hier ablegen</span>
-                                <span className="text-slate-500 dark:text-slate-400 text-sm font-medium text-center">Klicken, um Rechnungen oder Auszüge auszuwählen</span>
+                                <span className="font-extrabold text-slate-700 dark:text-slate-200 text-2xl mb-2 text-center">{t ? t('pdfUploadBox') : 'PDF hier ablegen'}</span>
+                                <span className="text-slate-500 dark:text-slate-400 text-sm font-medium text-center">{t ? t('pdfUploadSub') : 'Klicken, um Rechnungen oder Auszüge auszuwählen'}</span>
                                 <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
                             </label>
                         </div>
@@ -473,10 +476,10 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                             </div>
                             <div className="text-center space-y-2">
                                 <h4 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                                    {isLoading ? 'Lese PDF-Strukturen...' : 'KI analysiert Buchungen...'}
+                                    {isLoading ? (t ? t('pdfLoading') : 'Lese PDF-Strukturen...') : (t ? t('pdfAiAnalyzing') : 'KI analysiert Buchungen...')}
                                 </h4>
                                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 animate-pulse">
-                                    {processingStatus || 'Dies kann je nach Modell einen Moment dauern.'}
+                                    {processingStatus || (t ? t('pdfWaitMsg') : 'Dies kann je nach Modell einen Moment dauern.')}
                                 </p>
                             </div>
                             
@@ -492,7 +495,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                         <div className="mb-6 p-5 bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500 rounded-r-xl shadow-sm flex items-start gap-3">
                             <Icon name="AlertCircle" className="text-red-500 mt-0.5" />
                             <div>
-                                <h4 className="font-bold text-red-800 dark:text-red-400">Verarbeitungsfehler</h4>
+                                <h4 className="font-bold text-red-800 dark:text-red-400">{t ? t('pdfErrorTitle') : 'Verarbeitungsfehler'}</h4>
                                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
                             </div>
                         </div>
@@ -505,7 +508,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                             {/* Linke Seite: Rohtext (Terminal Style) */}
                             <div className="lg:col-span-1 flex flex-col h-[65vh]">
                                 <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <Icon name="Terminal" size={14} /> PDF Rohtext
+                                    <Icon name="Terminal" size={14} /> {t ? t('pdfRawText') : 'PDF Rohtext'}
                                 </h4>
                                 <div className="flex-1 flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none bg-slate-900">
                                     {/* Terminal Header */}
@@ -535,14 +538,14 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                         </div>
                                         <div className="flex flex-col">
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                                                Ziel-Konto auswählen
+                                                {t ? t('pdfTargetAccount') : 'Ziel-Konto auswählen'}
                                             </label>
                                             <select 
                                                 className="text-sm py-1.5 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 transition-shadow min-w-[250px]"
                                                 value={selectedAssetId}
                                                 onChange={e => setSelectedAssetId(e.target.value)}
                                             >
-                                                <option value="">-- Bitte wählen --</option>
+                                                <option value="">{t ? t('pdfSelectPrompt') : '-- Bitte wählen --'}</option>
                                                 {(data?.banks || []).map(bank => {
                                                     const bankAssets = getBankAssets(bank);
                                                     if (bankAssets.length === 0) return null;
@@ -564,7 +567,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                             className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-teal-500/20 transition-all hover:-translate-y-0.5 flex items-center gap-2"
                                         >
                                             <Icon name="Save" size={16} className="group-hover:scale-110 transition-transform" /> 
-                                            Alle {transactions.length} übernehmen
+                                            {t ? t('pdfTakeoverAll') : 'Alle übernehmen'} ({transactions.length})
                                         </button>
                                     )}
                                 </div>
@@ -575,10 +578,10 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                         <div className="w-20 h-20 mb-4 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center">
                                             <Icon name="CheckCircle" size={40} className="text-indigo-400"/>
                                         </div>
-                                        <h4 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2">Alles erledigt!</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6">Es gibt keine offenen Buchungen mehr auf diesen Seiten. Du kannst ein neues PDF hochladen oder die KI neu starten.</p>
+                                        <h4 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2">{t ? t('pdfAllDone') : 'Alles erledigt!'}</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6">{t ? t('pdfNoMoreBookings') : 'Es gibt keine offenen Buchungen mehr auf diesen Seiten. Du kannst ein neues PDF hochladen oder die KI neu starten.'}</p>
                                         <button onClick={analyzeWithLLM} className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-6 py-2.5 rounded-xl font-bold shadow-sm transition-all flex items-center gap-2">
-                                            <Icon name="RefreshCw" size={16}/> Analyse wiederholen
+                                            <Icon name="RefreshCw" size={16}/> {t ? t('pdfRepeatAnalysis') : 'Analyse wiederholen'}
                                         </button>
                                     </div>
                                 ) : (
@@ -587,11 +590,11 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                             <table className="w-full text-left text-sm border-collapse">
                                                 <thead className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                     <tr>
-                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">Datum</th>
-                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">Beschreibung</th>
-                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">Typ & Kategorie</th>
-                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider text-right">Betrag</th>
-                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider text-center w-24">Aktion</th>
+                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">{t ? t('pdfColDate') : 'Datum'}</th>
+                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">{t ? t('pdfColDesc') : 'Beschreibung'}</th>
+                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider">{t ? t('pdfColTypeCat') : 'Typ & Kategorie'}</th>
+                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider text-right">{t ? t('pdfColAmount') : 'Betrag'}</th>
+                                                        <th className="px-5 py-4 font-bold text-xs text-slate-400 uppercase tracking-wider text-center w-24">{t ? t('pdfColAction') : 'Aktion'}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -615,7 +618,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                         className="bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-3 py-1.5 w-full text-xs font-bold text-slate-800 dark:text-slate-200 outline-none transition-all placeholder:font-normal"
                                                                         value={tx.vendor || ''}
                                                                         onChange={(e) => handleTransactionChange(idx, 'vendor', e.target.value)}
-                                                                        placeholder="Händler / Beschreibung"
+                                                                        placeholder={t ? t('pdfPlaceholderDesc') : 'Händler / Beschreibung'}
                                                                     />
                                                                 </td>
                                                                 <td className="px-5 py-4 align-top">
@@ -634,7 +637,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                                 value={tx.category || ''}
                                                                                 onChange={(e) => handleTransactionChange(idx, 'category', e.target.value)}
                                                                             >
-                                                                                <option value="">Kategorie wählen</option>
+                                                                                <option value="">{t ? t('pdfSelectCat') : 'Kategorie wählen'}</option>
                                                                                 {availableSubCats.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                                                             </select>
                                                                         </div>
@@ -649,7 +652,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                                     value={tx.sourceAssetId || ''}
                                                                                     onChange={(e) => handleTransactionChange(idx, 'sourceAssetId', e.target.value)}
                                                                                 >
-                                                                                    <option value="">-- Ursprungs-Depot wählen --</option>
+                                                                                    <option value="">{t ? t('pdfSelectSource') : '-- Ursprungs-Depot wählen --'}</option>
                                                                                     {(data?.banks || []).map(bank => {
                                                                                         const bankAssets = getBankAssets(bank).filter(a => a.id !== selectedAssetId);
                                                                                         if (bankAssets.length === 0) return null;
@@ -681,7 +684,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                     <button 
                                                                         onClick={() => applySingleTransaction(idx)}
                                                                         className={`w-full flex justify-center items-center py-2 rounded-lg font-bold shadow-sm transition-all ${selectedAssetId ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500 dark:hover:text-white border border-indigo-200 dark:border-indigo-800' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 cursor-not-allowed border'}`}
-                                                                        title={!selectedAssetId ? 'Konto wählen' : 'Einzeln übernehmen'}
+                                                                        title={!selectedAssetId ? (t ? t('pdfBtnSelectAccount') : 'Konto wählen') : (t ? t('pdfBtnTakeoverSingle') : 'Einzeln übernehmen')}
                                                                     >
                                                                         <Icon name="Plus" size={16} />
                                                                     </button>
@@ -705,7 +708,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                         onClick={() => setModalObj(null)} 
                         className="px-6 py-2 rounded-xl text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
                     >
-                        Fertig / Schliessen
+                        {t ? t('pdfBtnDone') : 'Fertig / Schliessen'}
                     </button>
                 </div>
             </div>

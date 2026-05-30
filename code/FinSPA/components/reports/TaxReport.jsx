@@ -134,11 +134,11 @@ const TaxReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }
          </div>
       </div>
 
-      {/* NEU: Visuelle Aufbereitung der Vermögensverteilung für das PDF und UI */}
+      {/* Visuelle Aufbereitung der Vermögensverteilung für das PDF und UI */}
       {chartData.length > 0 && (
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm mb-8">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                 <Icon name="PieChart" className="text-blue-500" /> Vermögensverteilung (Brutto)
+                 <Icon name="PieChart" className="text-blue-500" /> {t ? t('labelGrossWealthDistribution') || 'Vermögensverteilung (Brutto)' : 'Vermögensverteilung (Brutto)'}
               </h3>
               <div ref={chartRef} style={{ width: '100%', height: '300px' }}>
                   <UniversalChart 

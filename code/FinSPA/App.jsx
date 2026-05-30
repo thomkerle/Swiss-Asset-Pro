@@ -210,7 +210,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning'))) {
           setFileHandle(null);
           setData({
-              version: "Alpha-2", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.1", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
@@ -875,7 +875,7 @@ const App = () => {
                       
                       <div>
                           <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Fin SPA Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Alpha-2</p>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.1</p>
                       </div>
                       
                       <hr className="border-gray-200 dark:border-slate-700 my-4" />
@@ -1024,7 +1024,7 @@ const App = () => {
               <span>Modus: <strong className="uppercase">{viewMode}</strong></span>
           </div>
           <div className="flex gap-6">
-              <span>{t('version')}: {data.version}</span>
+              <span>{t('version')}: Beta - 0.9.1</span>
           </div>
       </div>
       

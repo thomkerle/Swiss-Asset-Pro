@@ -13,7 +13,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   const histData = histDates.map(d => ({y: getTotalWealthAtDate(activeAssets, d)}));
   
   if(histData.length < 2) {
-      return <div className="p-10 text-center text-gray-500 font-medium">{t ? t('msgNotEnoughHistory') : 'Nicht genügend Historie vorhanden'}</div>;
+      return <div className="p-10 text-center text-gray-500 font-medium">{t ? t('msgNotEnoughHistory') || 'Nicht genügend Historie vorhanden' : 'Nicht genügend Historie vorhanden'}</div>;
   }
   
   // Lineare Regression für den reinen Trend (historischer Durchschnitt)
@@ -26,11 +26,11 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   const futureMonths = [0, 3, 12, 36, 60]; 
   const startX = histData.length - 1; 
   const futureLabels = [
-      t ? t('labelToday') : 'Heute', 
-      t ? t('label3Months') : 'In 3 Monaten', 
-      t ? t('label1Year') : 'In 1 Jahr', 
-      t ? t('label3Years') : 'In 3 Jahren', 
-      t ? t('label5Years') : 'In 5 Jahren'
+      t ? t('labelToday') || 'Heute' : 'Heute', 
+      t ? t('label3Months') || 'In 3 Monaten' : 'In 3 Monaten', 
+      t ? t('label1Year') || 'In 1 Jahr' : 'In 1 Jahr', 
+      t ? t('label3Years') || 'In 3 Jahren' : 'In 3 Jahren', 
+      t ? t('label5Years') || 'In 5 Jahren' : 'In 5 Jahren'
   ];
   
   // 1. Modell: Stumpf Linear (Ohne Rendite, nur Sparquote)
@@ -95,7 +95,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
         // Dynamische Tabellen-Header erstellen
         const tableHeaders = [
           capitalize(t ? t('labelDate') || 'Zeitpunkt' : 'Zeitpunkt'),
-          capitalize(t ? t('labelLinear') || 'Linear (0%)' : 'Linear (0%)'),
+          capitalize(t ? t('labelLinearZero') || 'Linear (0%)' : 'Linear (0%)'),
           ...marketCurves.map(c => c.label)
         ];
 
@@ -110,7 +110,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
 
         await PdfExportEngine.exportReport({
           title: t ? t('repSimRegTitle') || 'Zukunftssimulation' : 'Zukunftssimulation',
-          subtitle: t ? t('repSimRegSub') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung',
+          subtitle: t ? t('repSimRegSubProj') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung',
           tableHeaders,
           tableBody,
           chartBase64
@@ -127,8 +127,8 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   return (
     <div className="max-w-6xl px-4 md:px-8 pb-12">
       <ReportHeader 
-        title={t ? t('repSimRegTitle') : 'Zukunftssimulation'} 
-        subtitle={t ? t('repSimRegSub') : 'Projektion der Vermögensentwicklung'} 
+        title={t ? t('repSimRegTitle') || 'Zukunftssimulation' : 'Zukunftssimulation'} 
+        subtitle={t ? t('repSimRegSubProj') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung'} 
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
@@ -136,34 +136,34 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
          <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
              <div className="text-sm text-slate-500 font-bold uppercase mb-1 flex justify-between">
-                 <span>Linear (0%)</span>
-                 <span>(5 Jahre)</span>
+                 <span>{t ? t('labelLinearZero') || 'Linear (0%)' : 'Linear (0%)'}</span>
+                 <span>{t ? t('card5Years') || '(5 Jahre)' : '(5 Jahre)'}</span>
              </div>
              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{fCur(finalLinear)}</div>
              <div className="text-xs text-gray-500 mt-2">
-                 Nur Einzahlungen ({fCur(monthlyCashflow)}/Mt.), ohne Rendite.
+                 {t ? t('descLinear1') || 'Nur Einzahlungen (' : 'Nur Einzahlungen ('}{fCur(monthlyCashflow)}{t ? t('descLinear2') || '/Mt.), ohne Rendite.' : '/Mt.), ohne Rendite.'}
              </div>
          </div>
          
          <div className="p-6 bg-white dark:bg-slate-900 border border-yellow-200 dark:border-yellow-900/50 rounded-xl shadow-sm">
              <div className="text-sm text-yellow-600 dark:text-yellow-500 font-bold uppercase mb-1 flex justify-between">
-                 <span>Konservativ (3%)</span>
-                 <span>(5 Jahre)</span>
+                 <span>{t ? t('cardModerate') || 'Konservativ (3%)' : 'Konservativ (3%)'}</span>
+                 <span>{t ? t('card5Years') || '(5 Jahre)' : '(5 Jahre)'}</span>
              </div>
              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{fCur(finalModerate)}</div>
              <div className="text-xs text-gray-500 mt-2">
-                 Moderates Marktwachstum inkl. Zinseszins.
+                 {t ? t('descModerate') || 'Moderates Marktwachstum inkl. Zinseszins.' : 'Moderates Marktwachstum inkl. Zinseszins.'}
              </div>
          </div>
 
          <div className="p-6 bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/50 rounded-xl shadow-sm">
              <div className="text-sm text-red-600 dark:text-red-500 font-bold uppercase mb-1 flex justify-between">
-                 <span>Optimistisch (7%)</span>
-                 <span>(5 Jahre)</span>
+                 <span>{t ? t('cardOptimistic') || 'Optimistisch (7%)' : 'Optimistisch (7%)'}</span>
+                 <span>{t ? t('card5Years') || '(5 Jahre)' : '(5 Jahre)'}</span>
              </div>
              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{fCur(finalOptimistic)}</div>
              <div className="text-xs text-gray-500 mt-2">
-                 Starke Marktentwicklung (historischer ETF-Durchschnitt).
+                 {t ? t('descOptimistic') || 'Starke Marktentwicklung (historischer ETF-Durchschnitt).' : 'Starke Marktentwicklung (historischer ETF-Durchschnitt).'}
              </div>
          </div>
       </div>
@@ -176,9 +176,9 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             labels={futureLabels}
             datasets={[
               { 
-                label: t ? t('labelLinear') || 'Linear (0%)' : 'Linear (0%)', 
+                label: t ? t('labelLinearZero') || 'Linear (0%)' : 'Linear (0%)', 
                 data: linD,
-                backgroundColor: '#94a3b8', // Dezentes Grau für die Basislinie
+                backgroundColor: '#94a3b8', 
                 valueFormatter: fCur
               }, 
               ...marketCurves.map(curve => ({

@@ -94,8 +94,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
         </div>
       ) : (
         <div className="bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500 mt-6">
-           Keine Bewegungen in den Kategorien im gewählten Zeitraum gefunden.
-        </div>
+{t ? t('catNoMovements') : 'Keine Bewegungen in den Kategorien im gewählten Zeitraum gefunden.'}        </div>
       )}
     </div>
   );

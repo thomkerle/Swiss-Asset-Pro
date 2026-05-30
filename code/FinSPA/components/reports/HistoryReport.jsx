@@ -70,7 +70,7 @@ const HistoryReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
 
         await PdfExportEngine.exportReport({
           title: t ? t('repHistTitle') || 'Historischer Verlauf' : 'Historischer Verlauf',
-          subtitle: `${t ? t('repHistSub') || 'Vermögensentwicklung' : 'Vermögensentwicklung'} (${finalDates[0] || dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to}).`,
+          subtitle: `${t ? t('repHistSubDev') || 'Vermögensentwicklung' : 'Vermögensentwicklung'} (${finalDates[0] || dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to}).`,
           tableHeaders,
           tableBody,
           chartBase64
@@ -87,8 +87,8 @@ const HistoryReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
   return (
     <div className="max-w-6xl px-4 md:px-8 pb-12">
       <ReportHeader 
-        title={t ? t('repHistTitle') : 'Historie'} 
-        subtitle={`${t ? t('repHistSub') : 'Verlauf'} (${finalDates[0] || dateRange.from} ${t ? t('wordTo') : 'bis'} ${dateRange.to}).`} 
+        title={t ? t('repHistTitle') || 'Historischer Verlauf' : 'Historischer Verlauf'} 
+        subtitle={`${t ? t('repHistSubDev') || 'Vermögensentwicklung' : 'Vermögensentwicklung'} (${finalDates[0] || dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to}).`} 
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
@@ -96,18 +96,18 @@ const HistoryReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
       {/* Sektion: Startvermögen, Endvermögen & Performance anhand realer Startwerte */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
          <div className="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
-             <div className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{t ? t('labelStartWealth') : 'Startvermögen'}</div>
+             <div className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{t ? t('labelStartWealth') || 'Startvermögen' : 'Startvermögen'}</div>
              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{fCur(startValue)}</div>
          </div>
          
          <div className="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
-             <div className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{t ? t('labelEndWealth') : 'Endvermögen'}</div>
+             <div className="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{t ? t('labelEndWealth') || 'Endvermögen' : 'Endvermögen'}</div>
              <div className="text-2xl font-black text-slate-800 dark:text-slate-100">{fCur(endValue)}</div>
          </div>
          
          <div className={`p-6 border rounded-xl shadow-sm ${isPositive ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}`}>
              <div className={`text-sm font-bold uppercase mb-1 ${isPositive ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}`}>
-                 {t ? t('labelAbsoluteChange') : 'Absolute Veränderung'}
+                 {t ? t('labelAbsoluteChange') || 'Absolute Veränderung' : 'Absolute Veränderung'}
              </div>
              <div className="flex items-end gap-2">
                 <div className={`text-2xl font-black ${isPositive ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
@@ -127,7 +127,7 @@ const HistoryReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
             type="line"
             labels={finalDates}
             datasets={[{
-              label: t ? t('labelTotalWealth') : 'Gesamtvermögen',
+              label: t ? t('labelTotalWealth') || 'Gesamtvermögen' : 'Gesamtvermögen',
               data: finalVals,
               backgroundColor: '#3b82f6',
               valueFormatter: fCur
