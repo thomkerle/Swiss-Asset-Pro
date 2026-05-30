@@ -38,7 +38,7 @@ const renderContent = (item, idx) => {
     }
 };
 
-const HelpViewer = ({ setModalObj, lang = 'de' }) => {
+const HelpViewer = ({ setModalObj, lang = 'de', t }) => {
     const { useState, useMemo } = React;
 
     const helpData = useMemo(() => {
@@ -53,7 +53,9 @@ const HelpViewer = ({ setModalObj, lang = 'de' }) => {
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200]">
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
                     <div className="animate-spin mb-4"><Icon name="RefreshCw" size={32} /></div>
-                    <p className="dark:text-white">Lade Hilfedatei ({lang})...</p>
+                    <p className="dark:text-white">
+                        {t ? `${t('helpLoading')} (${lang})...` : `Lade Hilfedatei (${lang})...`}
+                    </p>
                 </div>
             </div>
         );

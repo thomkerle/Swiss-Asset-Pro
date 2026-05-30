@@ -34,14 +34,30 @@ const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'))
 const PdfScanner = getModule('PdfScanner.jsx', () => safeRequire('./components/pdf/PdfScanner.jsx'));
 
 const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
-window.PdfExportEngine = PdfExportEngine; // ◄ Damit ist sie für das iFrame sichtbar
+window.PdfExportEngine = PdfExportEngine; 
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
+
+// --- NEU: Hilfsfunktion zum Laden der Sicherheits-Bibliotheken ---
+const loadSecurityLibs = async () => {
+    const loadScript = (url) => {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${url}"]`)) return resolve();
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+    if (!window.CryptoJS) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js');
+    if (!window.JSZip) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+};
 
 const App = () => {
   const [fileHandle, setFileHandle] = useState(null);
   
-  // 1. Initialisierung: Daten aus localStorage laden oder Fallback auf initialData nutzen
   const [data, setData] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -83,8 +99,6 @@ const App = () => {
     else document.documentElement.classList.remove('dark');
   }, [theme]);
 
-
-// --- NEU: Globales Laden der CDNs für ECharts und pdfmake ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -104,7 +118,6 @@ const App = () => {
 
      const initializeCdns = async () => {
       try {
-        // 1. Apache ECharts laden mit temporärer Sandbox
         if (!window.echarts) {
           const tempModule = window.module;
           const tempExports = window.exports;
@@ -114,10 +127,8 @@ const App = () => {
           await loadScript('https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js');
           
           window.module = tempModule; window.exports = tempExports; window.define = tempDefine;
-          console.log("[FinSPA Core] Apache ECharts erfolgreich geladen.");
         }
         
-        // 2. pdfmake Kernbibliothek und Schriften laden mit Sandbox
         if (!window.pdfMake || typeof window.pdfMake.createPdf !== 'function') {
           if (window.pdfMake) window.pdfMake = undefined;
 
@@ -132,17 +143,15 @@ const App = () => {
           window.module = tempModule; window.exports = tempExports; window.define = tempDefine;
         }
 
-        // Font-Mapping für pdfmake konfigurieren
         if (window.pdfMake && window.pdfMake.vfs) {
           window.pdfMake.fonts = {
             Roboto: {
               normal: 'Roboto-Regular.ttf',
-              bold: 'Roboto-Medium.ttf', // Korrigiert von Bold auf Medium
+              bold: 'Roboto-Medium.ttf',
               italics: 'Roboto-Italic.ttf',
-              bolditalics: 'Roboto-MediumItalic.ttf' // Korrigiert
+              bolditalics: 'Roboto-MediumItalic.ttf' 
             }
           };
-          console.log("[FinSPA Core] pdfmake & Fonts erfolgreich initialisiert.");
         }
       } catch (err) {
         console.error("[FinSPA Core] Fehler beim Laden der externen Kernbibliotheken:", err);
@@ -151,12 +160,9 @@ const App = () => {
 
     initializeCdns();
   }, []);
-  // --- ENDE NEU ---
-
 
   useEffect(() => { setIsTreeVisible(!activeReport); }, [activeReport]);
 
-  // 2. Autosave-Logik: Sichert im localStorage UND direkt in der geöffneten Datei
   useEffect(() => {
     try {
       localStorage.setItem('finspa_pro_autosave', JSON.stringify(data));
@@ -165,7 +171,7 @@ const App = () => {
     }
 
     const writeToDisk = async () => {
-      if (fileHandle) {
+      if (fileHandle && fileHandle.name && fileHandle.name.endsWith('.json')) {
         try {
           const opts = { mode: 'readwrite' };
           if ((await fileHandle.queryPermission(opts)) === 'granted' || (await fileHandle.requestPermission(opts)) === 'granted') {
@@ -191,19 +197,14 @@ const App = () => {
 
   const handlePrint = () => window.print();
 
-const handleExportPDF = () => {
-      // Wenn kein Report offen ist, brechen wir ab
+  const handleExportPDF = () => {
       if (!activeReport) {
           showToast(t('msgNoActiveReport') || "Bitte öffnen Sie einen Report für den PDF-Export.", "error");
           return;
       }
-      
       showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
-      
-      // Feuert das globale Signal ab, auf das der aktuell sichtbare Report wartet
       window.dispatchEvent(new CustomEvent('triggerPdfExport'));
   };
-
 
   const handleNewProject = () => {
       if (window.confirm(t('msgNewProjectWarning'))) {
@@ -221,11 +222,29 @@ const handleExportPDF = () => {
     if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
       try {
         const [handle] = await window.showOpenFilePicker({
-          types: [{ description: 'FinSPA Projektdatei', accept: { 'application/json': ['.json'] } }],
+          types: [{ description: 'FinSPA Projekt', accept: { 'application/json': ['.json'], 'application/zip': ['.zip'] } }],
           multiple: false
         });
         const file = await handle.getFile();
-        const content = await file.text();
+        const isZip = file.name.endsWith('.zip');
+        let content;
+
+        if (isZip) {
+            const buffer = await file.arrayBuffer();
+            const pin = window.prompt("Diese Datei ist verschlüsselt. Bitte PIN eingeben:");
+            if (!pin) return;
+            
+            await loadSecurityLibs();
+            const zip = await window.JSZip.loadAsync(buffer);
+            const encryptedData = await zip.file("project.data.enc").async("string");
+            const bytes = window.CryptoJS.AES.decrypt(encryptedData, pin);
+            content = bytes.toString(window.CryptoJS.enc.Utf8);
+            
+            if (!content) throw new Error("Falscher PIN oder beschädigte Datei.");
+        } else {
+            content = await file.text();
+        }
+
         const imported = JSON.parse(content);
         
         if (imported && imported.version) {
@@ -235,22 +254,43 @@ const handleExportPDF = () => {
               subscriptions: imported.budget?.subscriptions || []
           };
           imported.budget = safeBudget;
-          setFileHandle(handle);
+          setFileHandle(isZip ? null : handle);
           setData(imported);
           showToast(t('msgOpenSuccess'), "success");
         }
       } catch (err) {
-        if (err.name !== 'AbortError') showToast(t('msgInvalidJson'), "error");
+        if (err.name !== 'AbortError') showToast("Fehler beim Öffnen: " + err.message, "error");
       }
       return;
     }
 
     const file = e?.target?.files?.[0];
     if (!file) return;
+    
+    const isZip = file.name.endsWith('.zip');
     const reader = new FileReader();
-    reader.onload = (event) => {
+    
+    reader.onload = async (event) => {
       try {
-        const imported = JSON.parse(event.target.result);
+        let content;
+        
+        if (isZip) {
+            const pin = window.prompt("Diese Datei ist verschlüsselt. Bitte PIN eingeben:");
+            if (!pin) return;
+            
+            await loadSecurityLibs();
+            const zip = await window.JSZip.loadAsync(event.target.result);
+            const encryptedData = await zip.file("project.data.enc").async("string");
+            const bytes = window.CryptoJS.AES.decrypt(encryptedData, pin);
+            content = bytes.toString(window.CryptoJS.enc.Utf8);
+            
+            if (!content) throw new Error("Falscher PIN oder beschädigte Datei.");
+        } else {
+            content = event.target.result;
+        }
+
+        const imported = JSON.parse(content);
+        
         if (imported.version) {
           const safeBudget = {
               incomeSources: imported.budget?.incomeSources || [],
@@ -261,18 +301,56 @@ const handleExportPDF = () => {
           setFileHandle(null);
           setData(imported);
           showToast(t('msgOpenSuccess'), "success");
-        } else throw new Error(t('msgInvalidVersion'));
-      } catch (err) { showToast(t('msgInvalidJson'), "error"); }
+        } else {
+            throw new Error(t('msgInvalidVersion'));
+        }
+      } catch (err) { 
+        showToast("Fehler: " + err.message, "error"); 
+      }
     };
-    reader.readAsText(file); if (e?.target) e.target.value = null; 
+    
+    if (isZip) {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsText(file); 
+    }
+    
+    if (e?.target) e.target.value = null; 
   };
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
+    const saveMethod = data.settings?.saveMethod || 'plaintext';
     const jsonStr = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonStr], { type: "application/json" });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.json`;
-    a.click(); showToast(t('msgSaveSuccess'), "success");
+    let blob;
+    let extension = 'json';
+
+    if (saveMethod === 'zip') {
+        const pin = window.prompt("Bitte einen PIN vergeben, um das Projekt zu verschlüsseln:");
+        if (!pin) return;
+        
+        showToast("Verschlüsselung wird durchgeführt...", "success");
+        await loadSecurityLibs();
+        
+        try {
+            const encrypted = window.CryptoJS.AES.encrypt(jsonStr, pin).toString();
+            const zip = new window.JSZip();
+            zip.file("project.data.enc", encrypted);
+            const zipContent = await zip.generateAsync({type: "blob"});
+            blob = zipContent;
+            extension = 'zip';
+        } catch(err) {
+            showToast("Fehler bei der Verschlüsselung: " + err.message, "error");
+            return;
+        }
+    } else {
+        blob = new Blob([jsonStr], { type: "application/json" });
+    }
+
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(blob);
+    a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.${extension}`;
+    a.click(); 
+    showToast("Projekt erfolgreich exportiert", "success");
   };
 
   const handleExportCSV = () => {
@@ -332,7 +410,7 @@ const handleExportPDF = () => {
 
   const handleImportCSV = (e) => { e.target.value = null; alert(t('msgCsvNotSupported')); };
 
-const updateTreeData = (newData) => setData(prev => ({ 
+  const updateTreeData = (newData) => setData(prev => ({ 
       ...prev, 
       lastModified: new Date().toISOString(), 
       ...newData 
@@ -389,9 +467,15 @@ const updateTreeData = (newData) => setData(prev => ({
 
       const handleSave = () => {
           let newData = {...data};
-          if (modalObj.type === 'editGoal') { newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; } 
-          else if (modalObj.type === 'addScenario') { newData.scenarios.push({ id: generateId(), name: form.name||'Neu', date: form.date, impact: Number(form.impact||0) }); } 
-          else if (modalObj.type === 'addBank') { newData.banks.push({ id: generateId(), name: form.name || 'Neue Bank', type: 'bank', isArchived: false, children: [] }); } 
+          if (modalObj.type === 'editGoal') { 
+              newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; 
+          } 
+          else if (modalObj.type === 'addScenario') { 
+              newData.scenarios.push({ id: generateId(), name: form.name||'Neu', date: form.date, impact: Number(form.impact||0) }); 
+          } 
+          else if (modalObj.type === 'addBank') { 
+              newData.banks.push({ id: generateId(), name: form.name || 'Neue Bank', type: 'bank', isArchived: false, children: [] }); 
+          } 
           else if (modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
               const group = modalObj.budgetGroup;
               if (!newData.budget) newData.budget = { incomeSources: [], expenses: [], subscriptions: [] };
@@ -406,11 +490,11 @@ const updateTreeData = (newData) => setData(prev => ({
               } else {
                   newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || 'Neuer Posten', amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
               }
-          } else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
+          } 
+          else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
               const updateRecursive = (nodes) => nodes.map(n => {
                   let copy = {...n};
 
-                  // Automatische Gegenbuchung (Gutschrift) auf dem gewählten Zielkonto erstellen
                   if (form.targetAssetId && n.id === form.targetAssetId && modalObj.type === 'addBooking') {
                       if (!copy.bookings) copy.bookings = [];
                       copy.bookings.push({
@@ -461,13 +545,15 @@ const updateTreeData = (newData) => setData(prev => ({
                   const getUpdatedNode = (nodes) => { for(let i=0; i<nodes.length; i++) { if(nodes[i].id === selectedNode.id) return nodes[i]; if(nodes[i].children) { let r = getUpdatedNode(nodes[i].children); if(r) return r; } } };
                   setSelectedNode(getUpdatedNode(newData.banks));
               }
-          } else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset') {
+          } 
+          else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset') {
               const updateRecursive = (nodes) => nodes.map(n => {
                   if (n.id === modalObj.parentId) {
                       let copy = {...n};
                       if (!copy.children) copy.children = [];
-                      if (modalObj.type === 'addCategory') copy.children.push({ id: generateId(), name: form.name || 'Neue Kategorie', type: 'category', isArchived: false, children: [] });
-                      else {
+                      if (modalObj.type === 'addCategory') {
+                          copy.children.push({ id: generateId(), name: form.name || 'Neue Kategorie', type: 'category', isArchived: false, children: [] });
+                      } else {
                           const ac = form.assetClass || 'cash';
                           const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage'].includes(ac);
                           copy.children.push({ id: generateId(), name: form.name || 'Neues Asset', type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [] });
@@ -482,8 +568,7 @@ const updateTreeData = (newData) => setData(prev => ({
           updateTreeData(newData); showToast(t('msgSaved'), "success"); setModalObj(null);
       };
 	
-
-const handleItemDelete = () => {
+      const handleItemDelete = () => {
           if (!modalObj.item || !modalObj.assetId) return;
           let newData = {...data};
           const updateRecursive = (nodes) => nodes.map(n => {
@@ -507,7 +592,6 @@ const handleItemDelete = () => {
           }
           showToast(t('msgDeleted'), "success"); setModalObj(null);
       };
-
 
       let availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung'];
       const ac = selectedNode?.assetClass;
@@ -533,23 +617,46 @@ const handleItemDelete = () => {
 
                 {modalObj.type === 'editGoal' && (
                     <>
-                        <div><label className="block font-bold mb-1">{t('goalTarget')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.target || ''} onChange={e=>setForm({...form, target: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">{t('goalYear')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.year || ''} onChange={e=>setForm({...form, year: e.target.value})}/></div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('goalTarget')}</label>
+                            <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.target || ''} onChange={e=>setForm({...form, target: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('goalYear')}</label>
+                            <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.year || ''} onChange={e=>setForm({...form, year: e.target.value})}/>
+                        </div>
                     </>
                 )}
+
                 {modalObj.type === 'addScenario' && (
                     <>
-                        <div><label className="block font-bold mb-1">{t('scenarioName')}</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">{t('scenarioDate')}</label><input type="date" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.date || ''} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1">{t('scenarioImpact')}</label><input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.impact || ''} onChange={e=>setForm({...form, impact: e.target.value})}/></div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('scenarioName')}</label>
+                            <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('scenarioDate')}</label>
+                            <input type="date" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.date || ''} onChange={e=>setForm({...form, date: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('scenarioImpact')}</label>
+                            <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.impact || ''} onChange={e=>setForm({...form, impact: e.target.value})}/>
+                        </div>
                     </>
                 )}
+
                 {(modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                     <>
-                        <div><label className="block font-bold mb-1">{t('propName')}</label><input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/></div>
+                        <div>
+                            <label className="block font-bold mb-1">{t('propName')}</label>
+                            <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/>
+                        </div>
                         {(modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                             <>
-                                <div><label className="block font-bold mb-1 mt-3">{t('amount')}</label><input type="number" step="any" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.amount || ''} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
+                                <div>
+                                    <label className="block font-bold mb-1 mt-3">{t('amount')}</label>
+                                    <input type="number" step="any" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.amount || ''} onChange={e=>setForm({...form, amount: e.target.value})}/>
+                                </div>
                                 <div>
                                     <label className="block font-bold mb-1 mt-3">{t('budgetFreq')}</label>
                                     <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.frequency || 'monthly'} onChange={e=>setForm({...form, frequency: e.target.value})}>
@@ -571,7 +678,14 @@ const handleItemDelete = () => {
                             <div className="mt-3">
                                 <label className="block font-bold mb-1">{t('assetClass')}</label>
                                 <select className="w-full p-2 border rounded dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.assetClass || 'cash'} onChange={e => setForm({...form, assetClass: e.target.value})}>
-                                    <option value="cash">{t('acCash')}</option><option value="fund">{t('acFund')}</option><option value="stock">{t('acStock')}</option><option value="crypto">{t('acCrypto')}</option><option value="realestate">{t('acRealEstate')}</option><option value="mortgage">{t('acMortgage')}</option><option value="pension_cash">{t('acPensionCash')}</option><option value="pension_fund">{t('acPensionFund')}</option>
+                                    <option value="cash">{t('acCash')}</option>
+                                    <option value="fund">{t('acFund')}</option>
+                                    <option value="stock">{t('acStock')}</option>
+                                    <option value="crypto">{t('acCrypto')}</option>
+                                    <option value="realestate">{t('acRealEstate')}</option>
+                                    <option value="mortgage">{t('acMortgage')}</option>
+                                    <option value="pension_cash">{t('acPensionCash')}</option>
+                                    <option value="pension_fund">{t('acPensionFund')}</option>
                                 </select>
                             </div>
                         )}
@@ -581,10 +695,19 @@ const handleItemDelete = () => {
                 {modalObj.type.includes('Balance') && (
                     <>
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">{t('balanceNotice')}</div>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelBalanceDate')}</label><input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/></div>
-                        <div><label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelAbsoluteBalance')} ({selectedNode?.currency || baseCurrency})</label><input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/></div>
+                        <div>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelBalanceDate')}</label>
+                            <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
+                        </div>
+                        <div>
+                            <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t('labelAbsoluteBalance')} ({selectedNode?.currency || baseCurrency})</label>
+                            <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
+                        </div>
                         {isForeignCurrency && (
-                            <div><label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate')} ({selectedNode?.currency} -> {baseCurrency})</label><input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/></div>
+                            <div>
+                                <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t('labelExchangeRateDate')} ({selectedNode?.currency} -> {baseCurrency})</label>
+                                <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                            </div>
                         )}
                     </>
                 )}
@@ -620,30 +743,27 @@ const handleItemDelete = () => {
                         </div>
                         
                         {['Dividende', 'Umbuchung'].includes(form.type) && !modalObj.item && (
-    <div>
-        <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{t('targetAccount') || 'Zielkonto für Gutschrift'}</label>
-        <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
-            <option value="">-- Optional: Zielkonto wählen --</option>
-            {data.banks.map(bank => {
-                // Wir suchen die passenden Konten nur innerhalb der aktuellen Bank
-		const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash'].includes(a.assetClass));                
-                // Hat diese Bank keine passenden Konten, wird sie gar nicht erst angezeigt
-                if (eligibleAssets.length === 0) return null;
-                
-                // Wir rendern die Bank als Überschrift (optgroup) und darunter ihre Konten
-                return (
-                    <optgroup key={bank.id} label={bank.name}>
-                        {eligibleAssets.map(a => (
-                            <option key={a.id} value={a.id}>
-                                {a.name} ({a.currency})
-                            </option>
-                        ))}
-                    </optgroup>
-                );
-            })}
-        </select>
-    </div>
-)}
+                            <div>
+                                <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{t('targetAccount') || 'Zielkonto für Gutschrift'}</label>
+                                <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
+                                    <option value="">-- Optional: Zielkonto wählen --</option>
+                                    {data.banks.map(bank => {
+                                        const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash'].includes(a.assetClass));                
+                                        if (eligibleAssets.length === 0) return null;
+                                        
+                                        return (
+                                            <optgroup key={bank.id} label={bank.name}>
+                                                {eligibleAssets.map(a => (
+                                                    <option key={a.id} value={a.id}>
+                                                        {a.name} ({a.currency})
+                                                    </option>
+                                                ))}
+                                            </optgroup>
+                                        );
+                                    })}
+                                </select>
+                            </div>
+                        )}
                         
                         {availableSubCategories.length > 0 && (
                             <div>
@@ -699,10 +819,18 @@ const handleItemDelete = () => {
 
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between gap-3 shrink-0">
-              {modalObj.item ? <button onClick={handleItemDelete} className="px-4 py-2 text-red-600 font-bold hover:bg-red-50 rounded-lg transition-colors">{t('btnDelete')}</button> : <div></div>}
+              {modalObj.item ? (
+                  <button onClick={handleItemDelete} className="px-4 py-2 text-red-600 font-bold hover:bg-red-50 rounded-lg transition-colors">
+                      {t('btnDelete')}
+                  </button>
+              ) : <div></div>}
               <div className="flex gap-2">
-                  <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">{t('btnCancel')}</button>
-                  <button onClick={handleSave} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">{t('btnSave')}</button>
+                  <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">
+                      {t('btnCancel')}
+                  </button>
+                  <button onClick={handleSave} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">
+                      {t('btnSave')}
+                  </button>
               </div>
             </div>
           </div>
@@ -713,21 +841,17 @@ const handleItemDelete = () => {
   const ModalHandler = () => {
       if (!modalObj || typeof modalObj !== 'object' || !modalObj.type) return null;
 
-  if (modalObj.type === 'pdfImport') {
-          // KORREKTUR: updateTreeData, selectedNode und setSelectedNode hinzugefügt
-          return <PdfScanner 
-              setModalObj={setModalObj} 
-              data={data} 
-              updateTreeData={updateTreeData} 
-              selectedNode={selectedNode}
-              setSelectedNode={setSelectedNode}
-              fCur={fCur} 
-              t={t} 
-          />;
+      if (modalObj.type === 'pdfImport') {
+          return <PdfScanner setModalObj={setModalObj} data={data} updateTreeData={updateTreeData} selectedNode={selectedNode} setSelectedNode={setSelectedNode} fCur={fCur} t={t} />;
       }
 
-     if (modalObj.type === 'settings') return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
-      if (modalObj.type === 'help') return <HelpViewer setModalObj={setModalObj} lang={lang} />;
+      if (modalObj.type === 'settings') {
+          return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
+      }
+      
+      if (modalObj.type === 'help') {
+          return <HelpViewer setModalObj={setModalObj} lang={lang} />;
+      }
 
       if (modalObj.type === 'about') return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -780,17 +904,26 @@ const handleItemDelete = () => {
           return (
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                   <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2"><Icon name="Trash" className="text-red-500" /><h3 className="font-bold text-lg">{t('deleteNodeTitle')}</h3></div>
+                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                          <Icon name="Trash" className="text-red-500" />
+                          <h3 className="font-bold text-lg">{t('deleteNodeTitle')}</h3>
+                      </div>
                       <div className="p-6 text-sm text-gray-700 dark:text-gray-300">
                           <p>{t('deleteNodeConfirmPrefix')} <strong>{node.name}</strong> {t('deleteNodeConfirmSuffix')}</p>
                           {!node.budgetType && <p className="mt-2 text-xs text-gray-500">{t('deleteNodeArchiveTip')}</p>}
                       </div>
                       <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col gap-2">
                           {!node.isArchived && !node.budgetType && (
-                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived'), "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">{t('btnArchiveOnly')}</button>
+                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived'), "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">
+                                  {t('btnArchiveOnly')}
+                              </button>
                           )}
-                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent'), "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">{t('btnDeletePermanent')}</button>
-                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">{t('btnCancel')}</button>
+                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent'), "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
+                              {t('btnDeletePermanent')}
+                          </button>
+                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">
+                              {t('btnCancel')}
+                          </button>
                       </div>
                   </div>
               </div>
@@ -811,11 +944,45 @@ const handleItemDelete = () => {
         }
       `}</style>
 
-      <MenuBar data={data} viewMode={viewMode} setViewMode={setViewMode} setActiveReport={setActiveReport} setSelectedNode={setSelectedNode} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} setModalObj={setModalObj} t={t} handleNewProject={handleNewProject} handleOpenProject={handleOpenProject} handleSaveProject={handleSaveProject} handleExportCSV={handleExportCSV} handleImportCSV={handleImportCSV} handleImportParqetCSV={handleImportParqetCSV} handlePrint={handlePrint} handleExportPDF={handleExportPDF} />
+      <MenuBar 
+        data={data} 
+        viewMode={viewMode} 
+        setViewMode={setViewMode} 
+        setActiveReport={setActiveReport} 
+        setSelectedNode={setSelectedNode} 
+        theme={theme} 
+        setTheme={setTheme} 
+        lang={lang} 
+        setLang={setLang} 
+        setModalObj={setModalObj} 
+        t={t} 
+        handleNewProject={handleNewProject} 
+        handleOpenProject={handleOpenProject} 
+        handleSaveProject={handleSaveProject} 
+        handleExportCSV={handleExportCSV} 
+        handleImportCSV={handleImportCSV} 
+        handleImportParqetCSV={handleImportParqetCSV} 
+        handlePrint={handlePrint} 
+        handleExportPDF={handleExportPDF} 
+      />
+      
       <div className="flex-1 flex overflow-hidden relative">
-        <TreeView data={data} viewMode={viewMode} selectedNode={selectedNode} setSelectedNode={setSelectedNode} setActiveReport={setActiveReport} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} showArchived={showArchived} setShowArchived={setShowArchived} expandedNodes={expandedNodes} toggleExpand={toggleExpand} deleteNode={requestDeleteNode} setModalObj={setModalObj} t={t} />
-
-	
+        <TreeView 
+            data={data} 
+            viewMode={viewMode} 
+            selectedNode={selectedNode} 
+            setSelectedNode={setSelectedNode} 
+            setActiveReport={setActiveReport} 
+            isTreeVisible={isTreeVisible} 
+            setIsTreeVisible={setIsTreeVisible} 
+            showArchived={showArchived} 
+            setShowArchived={setShowArchived} 
+            expandedNodes={expandedNodes} 
+            toggleExpand={toggleExpand} 
+            deleteNode={requestDeleteNode} 
+            setModalObj={setModalObj} 
+            t={t} 
+        />
 
         <div className="flex-1 relative overflow-auto" id="printable-editor">
           <EditorArea 
@@ -847,20 +1014,31 @@ const handleItemDelete = () => {
               t={t} 
           />
         )}
-
       </div>
-
-
 
       <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-xs text-gray-600 dark:text-gray-400 z-50">
-          <div className="flex gap-6"><span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady')}</span><span>Modus: <strong className="uppercase">{viewMode}</strong></span></div>
-          <div className="flex gap-6"><span>{t('version')}: {data.version}</span></div>
+          <div className="flex gap-6">
+              <span className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady')}
+              </span>
+              <span>Modus: <strong className="uppercase">{viewMode}</strong></span>
+          </div>
+          <div className="flex gap-6">
+              <span>{t('version')}: {data.version}</span>
+          </div>
       </div>
+      
       <ModalHandler />
+      
       <div className="fixed bottom-4 right-4 z-[200] space-y-2 pointer-events-none">
-          {toasts.map(toast => (<div key={toast.id} className="px-4 py-3 rounded-lg shadow-xl border bg-slate-800 text-white border-slate-700">{toast.message}</div>))}
+          {toasts.map(toast => (
+              <div key={toast.id} className="px-4 py-3 rounded-lg shadow-xl border bg-slate-800 text-white border-slate-700">
+                  {toast.message}
+              </div>
+          ))}
       </div>
     </div>
   );
 };
+
 module.exports = App;

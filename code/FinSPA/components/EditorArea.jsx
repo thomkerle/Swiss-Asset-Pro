@@ -23,9 +23,7 @@ const BudgetEditor = safeRequire('./budget/BudgetEditor.jsx') || (() => <div>Bud
 const AssetOverviewReport = safeRequire('./reports/AssetOverviewReport.jsx') || (() => <div>AssetOverviewReport</div>);
 const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport.jsx') || (() => <div>PensionPerformanceReport</div>);
 const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
-const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">AiDashboard.jsx fehlt</div>);
 const UniversalChart = require('../../api/UniversalChart.jsx');
-
 
 const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, setModalObj, updateTreeData, fCur, t }) => {
   const allAssets = getAllAssets(data?.banks || []) || [];
@@ -37,7 +35,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
   if (viewMode === 'datensicht') {
     return (
       <div className="p-6 h-full flex flex-col bg-white dark:bg-slate-950">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Icon name="Settings" className="text-gray-400"/> {t ? t('viewData') : 'Datensicht'}</h2>
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+            <Icon name="Settings" className="text-gray-400"/> {t ? t('viewData') : 'Datensicht'}
+        </h2>
         <div className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 rounded-lg border dark:border-slate-800 p-4 font-mono text-xs text-gray-800 dark:text-gray-300 shadow-inner">
           <pre>{JSON.stringify(data, null, 2)}</pre>
         </div>
@@ -46,7 +46,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
   }
 
  if (viewMode === 'ai') {
-      const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">AiDashboard.jsx fehlt</div>);
+      const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">{t ? t('errAiDashboardMissing') : 'AiDashboard.jsx fehlt'}</div>);
       return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
   }
 
@@ -71,15 +71,26 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         default: return <div className="text-gray-500">{t ? t('reportLoading') : 'Report wird geladen...'}</div>;
       }
     };
+    
     return (
       <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto">
         <div className="print-hide flex justify-end mb-4">
            <div className="flex items-center gap-3 bg-gray-50 border px-4 py-2 rounded-lg text-sm shadow-sm dark:bg-slate-900 dark:border-slate-800">
              <Icon name="Calendar" className="text-gray-400"/>
              <span className="text-gray-500 font-medium">{t ? t('dateRangeTitle') : 'Zeitraum:'}</span>
-             <input type="date" value={dateRange?.from || ''} onChange={e=>setDateRange({...dateRange, from: e.target.value})} className="bg-transparent border-b outline-none text-gray-700 dark:text-gray-300"/>
+             <input 
+                type="date" 
+                value={dateRange?.from || ''} 
+                onChange={e=>setDateRange({...dateRange, from: e.target.value})} 
+                className="bg-transparent border-b outline-none text-gray-700 dark:text-gray-300"
+             />
              <span>-</span>
-             <input type="date" value={dateRange?.to || ''} onChange={e=>setDateRange({...dateRange, to: e.target.value})} className="bg-transparent border-b outline-none text-gray-700 dark:text-gray-300"/>
+             <input 
+                type="date" 
+                value={dateRange?.to || ''} 
+                onChange={e=>setDateRange({...dateRange, to: e.target.value})} 
+                className="bg-transparent border-b outline-none text-gray-700 dark:text-gray-300"
+             />
            </div>
         </div>
         {viewContent()}
@@ -158,7 +169,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       const headerIcon = isBank ? "Shield" : "FolderOpen";
       const headerSubtitle = isBank 
         ? (t ? t('consWealthOverview') : 'Konsolidierte Vermögensübersicht (Währungsbereinigt)')
-        : (t ? t('allocByCat') || 'Kategorie-Übersicht und enthaltene Assets' : 'Kategorie-Übersicht und enthaltene Assets');
+        : (t ? t('allocByCatSub') : 'Kategorie-Übersicht und enthaltene Assets');
 
       return (
         <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">
@@ -211,7 +222,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-black font-mono text-slate-900 dark:text-white">{fCur ? fCur(asset.valueInBase, 'CHF') : asset.valueInBase}</div>
+                            <div className="font-black font-mono text-slate-900 dark:text-white">
+                                {fCur ? fCur(asset.valueInBase, 'CHF') : asset.valueInBase}
+                            </div>
                             {asset.currency !== 'CHF' && (
                               <div className="text-xs text-gray-400 font-mono">
                                 {fCur ? fCur(asset.originalValue, asset.currency) : `${asset.originalValue} ${asset.currency}`}
@@ -255,7 +268,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                   {Object.keys(subCategoryMap).sort((a,b) => subCategoryMap[b] - subCategoryMap[a]).map(subKey => (
                     <div key={subKey} className="flex justify-between items-center pt-2 first:pt-0">
                       <span className="text-gray-600 dark:text-gray-400 font-medium">{subKey}</span>
-                      <span className="font-mono font-bold text-slate-900 dark:text-white">{fCur ? fCur(subCategoryMap[subKey], 'CHF') : subCategoryMap[subKey]}</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          {fCur ? fCur(subCategoryMap[subKey], 'CHF') : subCategoryMap[subKey]}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -280,13 +295,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       else if (ac === 'mortgage') defaultType = 'Abzahlung';
       else if (ac === 'stock' || ac === 'fund' || ac === 'crypto' || ac === 'pension_fund' || ac === 'pension_3a_fund') defaultType = 'Kauf';
 
-      // NEU: Schnelles Löschen ohne Nachfrage direkt aus der Tabelle
       const handleDeleteEntry = (itemToDelete, e) => {
-          e.stopPropagation(); // Verhindert, dass die Zeile angewählt wird und der PropertyEditor öffnet
+          e.stopPropagation(); 
 
           const isBal = itemToDelete._isBal;
           
-          // 1. Globalen State aktualisieren
           const updateRecursive = (nodes) => nodes.map(n => {
               if (n.id === selectedNode.id) {
                   if (isBal) {
@@ -301,7 +314,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
           
           updateTreeData({ banks: updateRecursive(data.banks) });
 
-          // 2. Lokalen selectedNode State sofort aktualisieren für direktes UI-Feedback
           const updatedNode = { ...selectedNode };
           if (isBal) {
               updatedNode.balances = (updatedNode.balances || []).filter(b => b.id !== itemToDelete.id);
@@ -309,7 +321,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               updatedNode.bookings = (updatedNode.bookings || []).filter(b => b.id !== itemToDelete.id);
           }
           
-          // Falls die gelöschte Buchung gerade offen war, schließen wir sie im Editor
           if (updatedNode.selectedBooking?.id === itemToDelete.id) {
               updatedNode.selectedBooking = null;
           }
@@ -327,7 +338,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                  {selectedNode.name} {selectedNode.isArchived && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">{t ? t('isArchived') : 'Archiviert'}</span>}
                </h2>
                <div className="flex gap-6 mt-3 text-sm items-center">
-                 <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full font-medium">{t ? t('assetClassLabel') : 'Klasse:'} <span className="uppercase">{selectedNode.assetClass}</span></span>
+                 <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full font-medium">
+                     {t ? t('assetClassLabel') : 'Klasse:'} <span className="uppercase">{selectedNode.assetClass}</span>
+                 </span>
                  
                  <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 px-3 py-1 rounded-full font-bold flex items-center gap-2">
                     {t ? t('valueToday') : 'Wert (Heute):'} {fCur ? fCur(currentVal, baseCurrency) : currentVal}
@@ -342,8 +355,12 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
           </div>
           <div className="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden min-h-[300px]">
             <div className="print-hide bg-gray-50 dark:bg-slate-800 p-4 border-b flex gap-3">
-              <button onClick={()=>setModalObj({type:'addBooking', assetId: selectedNode.id, defaultType})} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm"><Icon name="Plus"/> {t ? t('addBookingBtn') : 'Buchung erfassen'}</button>
-              <button onClick={()=>setModalObj({type:'addBalance', assetId: selectedNode.id})} className="flex items-center gap-2 bg-white border hover:bg-gray-50 px-4 py-2 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600"><Icon name="Calendar"/> {t ? t('addBalanceBtn') : 'Stichtags-Saldo setzen'}</button>
+              <button onClick={()=>setModalObj({type:'addBooking', assetId: selectedNode.id, defaultType})} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm">
+                  <Icon name="Plus"/> {t ? t('addBookingBtn') : 'Buchung erfassen'}
+              </button>
+              <button onClick={()=>setModalObj({type:'addBalance', assetId: selectedNode.id})} className="flex items-center gap-2 bg-white border hover:bg-gray-50 px-4 py-2 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600">
+                  <Icon name="Calendar"/> {t ? t('addBalanceBtn') : 'Stichtags-Saldo setzen'}
+              </button>
             </div>
             <div className="overflow-auto flex-1">
               <table className="w-full text-left text-sm border-collapse">
@@ -399,7 +416,17 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       }}
                     >
                       <td className="p-4 text-gray-600 dark:text-gray-400">{item.date}</td>
-                      <td className="p-4">{item._isBal ? <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}><Icon name="Activity" size={10}/> {t ? t('balanceLabel') : 'SALDO'}</span> : <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}>{typeLabel}</span>}</td>
+                      <td className="p-4">
+                          {item._isBal ? (
+                              <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}>
+                                  <Icon name="Activity" size={10}/> {t ? t('balanceLabel') : 'SALDO'}
+                              </span>
+                          ) : (
+                              <span className={`px-2 py-1 text-xs font-bold rounded-md ${badgeColor}`}>
+                                  {typeLabel}
+                              </span>
+                          )}
+                      </td>
                       <td className="p-4 font-medium text-gray-600 dark:text-gray-400">{details}</td>
                       
                       <td className={`p-4 text-right font-black flex flex-col items-end ${amountColor}`}>
@@ -431,6 +458,181 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       <div className="p-8 h-full flex flex-col items-center justify-center bg-white dark:bg-slate-950 text-center">
         <h2 className="text-2xl font-bold mb-2">{t ? t('viewTitle') : 'Ansicht:'} {selectedNode?.name}</h2>
         <p className="text-gray-500 max-w-md">{t ? t('selectAssetPrompt') : 'Wähle auf der linken Seite ein Asset aus, um die detaillierten Buchungen zu sehen.'}</p>
+      </div>
+    );
+  }
+
+  // --- HIER BEGINNT DIE UNTERSTÜTZUNG FÜR BUCHUNGEN (INKL. FREMDWÄHRUNGEN) ---
+  if (selectedNode?.selectedBooking) {
+    const booking = selectedNode.selectedBooking;
+    const isBal = booking._isBal;
+    
+    // Globale Basiswährung auslesen und Fremdwährungs-Check durchführen
+    const baseCurrency = data?.settings?.baseCurrency || 'CHF';
+    const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
+
+    const handleBookingPropChange = (keyOrObj, val) => {
+      // Unterstützt atomare Key-Value Updates ODER ganze Zustandsobjekte (verhindert Race Conditions)
+      const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
+      const updatedBooking = { ...booking, ...changes };
+      
+      // Lokalen State aktualisieren für sofortiges UI-Feedback
+      setSelectedNode(prev => ({ ...prev, selectedBooking: updatedBooking }));
+      
+      // Globales TreeData-Update (für Berechnungen in Echtzeit)
+      const updateRecursive = (nodes) => nodes.map(n => {
+        if (n.id === selectedNode.id) {
+          if (isBal) {
+            const newBalances = (n.balances || []).map(b => b.id === booking.id ? updatedBooking : b);
+            return { ...n, balances: newBalances };
+          } else {
+            const newBookings = (n.bookings || []).map(b => b.id === booking.id ? updatedBooking : b);
+            return { ...n, bookings: newBookings };
+          }
+        }
+        if (n.children) return { ...n, children: updateRecursive(n.children) };
+        return n;
+      });
+      
+      updateTreeData({ banks: updateRecursive(data.banks) });
+    };
+
+    const handleDeleteBooking = () => {
+      if (window.confirm(t ? t('msgConfirmDelete') : 'Eintrag wirklich löschen?')) {
+        const updateRecursive = (nodes) => nodes.map(n => {
+          if (n.id === selectedNode.id) {
+            if (isBal) {
+              return { ...n, balances: (n.balances || []).filter(b => b.id !== booking.id) };
+            } else {
+              return { ...n, bookings: (n.bookings || []).filter(b => b.id !== booking.id) };
+            }
+          }
+          if (n.children) return { ...n, children: updateRecursive(n.children) };
+          return n;
+        });
+        updateTreeData({ banks: updateRecursive(data.banks) });
+        setSelectedNode(prev => ({ ...prev, selectedBooking: null }));
+      }
+    };
+
+    return (
+      <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex flex-col gap-6 overflow-y-auto shrink-0 shadow-inner">
+        <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-700 pb-3">
+          <div className="flex items-center gap-2">
+            <Icon name="Edit" className="text-gray-500" />
+            <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm">
+              {isBal ? (t ? t('editBalance') : 'Saldo') : (t ? t('editBooking') : 'Buchung')}
+            </h3>
+          </div>
+          <div className="flex items-center gap-4">
+            <Icon 
+              name="Trash" 
+              size={16}
+              className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors" 
+              onClick={handleDeleteBooking} 
+              title={t ? t('btnDelete') || 'Löschen' : 'Löschen'}
+            />
+            <Icon 
+              name="X" 
+              size={18}
+              className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" 
+              onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} 
+              title={t ? t('btnBackToAsset') : "Zurück zum Asset"}
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('date') : 'Datum'}</label>
+            <input type="date" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
+          </div>
+          
+          <div>
+            <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('amount') : 'Betrag'} ({selectedNode.currency || baseCurrency})</label>
+            <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
+          </div>
+
+          {isForeignCurrency && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">
+                {t ? t('labelExchangeRateDate') : 'Wechselkurs'} ({selectedNode.currency} → {baseCurrency})
+              </label>
+              <input 
+                type="number" 
+                step="0.0001" 
+                className="w-full p-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm" 
+                value={booking.bookingExchangeRate ?? ''} 
+                onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} 
+              />
+            </div>
+          )}
+
+          {!isBal && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryType') : 'Typ'}</label>
+              <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
+                <option value="Einzahlung">{t ? t('typeDeposit') : 'Einzahlung'}</option>
+                <option value="Auszahlung">{t ? t('typeWithdrawal') : 'Auszahlung'}</option>
+                <option value="Kauf">{t ? t('typeBuy') : 'Kauf'}</option>
+                <option value="Verkauf">{t ? t('typeSell') : 'Verkauf'}</option>
+                <option value="Dividende">{t ? t('typeDiv') : 'Dividende'}</option>
+                <option value="Zinszahlung">{t ? t('typeInterest') : 'Zinszahlung'}</option>
+                <option value="Gebühr">{t ? t('typeFee') : 'Gebühr'}</option>
+                <option value="Wertanpassung">{t ? t('typeReval') : 'Wertanpassung'}</option>
+                <option value="Abzahlung">{t ? t('typeAmortization') : 'Abzahlung'}</option>
+                <option value="Schulderhöhung">{t ? t('typeDebtInc') : 'Schulderhöhung'}</option>
+                <option value="Umbuchung">{t ? t('typeTransfer') : 'Umbuchung'}</option>
+              </select>
+            </div>
+          )}
+
+          {!isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(booking.type) && (
+            <div className="grid grid-cols-2 gap-3 bg-yellow-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-gray-200 dark:border-slate-800">
+              <div>
+                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('shares') : 'Stücke'}</label>
+                <input 
+                  type="number" 
+                  step="any" 
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                  value={booking.shares || ''} 
+                  onChange={e => {
+                    const sh = Number(e.target.value);
+                    const pr = booking.price || 0;
+                    handleBookingPropChange({
+                      shares: sh,
+                      amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount
+                    });
+                  }} 
+                />
+              </div>
+              <div>
+                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('price') : 'Preis'}</label>
+                <input 
+                  type="number" 
+                  step="any" 
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                  value={booking.price || ''} 
+                  onChange={e => {
+                    const pr = Number(e.target.value);
+                    const sh = booking.shares || 0;
+                    handleBookingPropChange({
+                      price: pr,
+                      amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount
+                    });
+                  }} 
+                />
+              </div>
+            </div>
+          )}
+
+          {!isBal && (
+            <div>
+              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryDetail') : 'Detail / Notiz'}</label>
+              <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
+            </div>
+          )}
+        </div>
       </div>
     );
   }

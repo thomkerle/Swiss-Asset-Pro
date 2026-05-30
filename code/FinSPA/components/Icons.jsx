@@ -4,7 +4,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
     // Mapping der Icon-Namen zu FontAwesome Klassen
     const map = {
         Printer: 'fa-print', Save: 'fa-save', FilePlus: 'fa-file-circle-plus', FolderOpen: 'fa-folder-open', Folder: 'fa-folder', FolderPlus: 'fa-folder-plus',
-        Download: 'fa-download', Upload: 'fa-upload', Plus: 'fa-plus', Trash: 'fa-trash', Edit: 'fa-edit',
+        Download: 'fa-download', Upload: 'fa-upload', Plus: 'fa-plus', Trash: 'fa-trash', Edit: 'fa-edit', Star: 'fa-star',
         Settings: 'fa-cog', PieChart: 'fa-chart-pie', TrendingUp: 'fa-chart-line', BarChart: 'fa-chart-bar',
         List: 'fa-list', Moon: 'fa-moon', Sun: 'fa-sun', Check: 'fa-check', Calendar: 'fa-calendar-alt',
         Activity: 'fa-heartbeat', DollarSign: 'fa-dollar-sign', Shield: 'fa-shield-alt', Target: 'fa-bullseye',
@@ -16,7 +16,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Cpu: 'fa-microchip', Zap: 'fa-bolt', Wind: 'fa-wind', Code: 'fa-code',
         Sparkles: 'fa-wand-magic-sparkles', RefreshCw: 'fa-rotate-right', Trash2: 'fa-trash-can',
         ArrowUp: 'fa-arrow-up', ChevronUp: 'fa-chevron-up', Copy: 'fa-copy',
-        PlusCircle: 'fa-circle-plus', BookOpen: 'fa-book-open', Box: 'fa-box'
+        PlusCircle: 'fa-circle-plus', BookOpen: 'fa-book-open', Box: 'fa-box',
+        
+        // PDF Scanner Icons (Neu)
+        Scan: 'fa-expand', UploadCloud: 'fa-cloud-arrow-up', AlertCircle: 'fa-circle-exclamation',
+        Terminal: 'fa-terminal', CheckCircle: 'fa-circle-check', CornerDownRight: 'fa-arrow-turn-down'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -32,6 +36,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Plus: 'text-green-500',
         Trash: 'text-red-500',
         Edit: 'text-amber-500',
+        Star: 'text-yellow-500',
         Settings: 'text-slate-500 dark:text-slate-400',
         PieChart: 'text-indigo-500',
         TrendingUp: 'text-emerald-500',
@@ -73,7 +78,15 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Copy: 'text-slate-300',
         PlusCircle: 'text-green-500',
         BookOpen: 'text-blue-500',
-        Box: 'text-gray-400'
+        Box: 'text-gray-400',
+        
+        // PDF Scanner Icons (Neu)
+        Scan: 'text-indigo-500',
+        UploadCloud: 'text-indigo-500',
+        AlertCircle: 'text-red-500',
+        Terminal: 'text-slate-400',
+        CheckCircle: 'text-indigo-500',
+        CornerDownRight: 'text-indigo-400'
     };
 
     // RegEx prüft jetzt spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])

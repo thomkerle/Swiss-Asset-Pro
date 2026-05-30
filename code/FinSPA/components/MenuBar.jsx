@@ -23,6 +23,19 @@ const MenuBar = ({
     </div>
   );
 
+  const MenuNestedItem = ({ label, iconName, children }) => (
+    <div className="relative group/nested px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center justify-between cursor-pointer transition-colors">
+      <div className="flex items-center gap-3">
+        {iconName && <Icon name={iconName} size={14} className="w-4 text-center" />} 
+        {label}
+      </div>
+      <Icon name="ChevronRight" size={12} className="text-gray-400" />
+      <div className="absolute left-full top-0 hidden group-hover/nested:block bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-xl border dark:border-slate-700 min-w-[240px] rounded-md z-50">
+        {children}
+      </div>
+    </div>
+  );
+
   return (
     <div className="print-hide flex bg-slate-900 text-slate-200 select-none items-center shadow-md relative z-50">
       <div className="px-4 py-2 bg-blue-700 font-bold tracking-wider mr-2 flex items-center gap-2"><Icon name="PieChart" size={16} className="text-white"/> FinSPA</div>
@@ -31,36 +44,37 @@ const MenuBar = ({
         <MenuSubItem label={t ? t('fileNew') : 'Neu (Leeres Projekt)'} iconName="FilePlus" onClick={handleNewProject} />
         
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="FolderOpen" size={14} className="w-4 text-center"/> {t ? t('fileOpen') : 'Öffnen (JSON)'}
-          <input type="file" accept=".json" className="hidden" onChange={handleOpenProject} />
+          <Icon name="FolderOpen" size={14} className="w-4 text-center"/> {t ? t('fileOpenZip') : 'Öffnen (JSON/ZIP)'}
+          <input type="file" accept=".json,.zip" className="hidden" onChange={handleOpenProject} />
         </label>
         
-        <MenuSubItem label={t ? t('fileSave') : 'Sichern (JSON)'} iconName="Save" onClick={handleSaveProject} />
+        <MenuSubItem label={t ? t('fileSaveZip') : 'Sichern (JSON/ZIP)'} iconName="Save" onClick={handleSaveProject} />
         
         <hr className="dark:border-slate-700 my-1"/>
         
+      <MenuNestedItem label={t ? t('fileImport') : 'Importieren'} iconName="Download">
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="Upload" size={14} className="w-4 text-center"/> {t ? t('fileImport') : 'Importieren (CSV)'}
+          <Icon name="List" size={14} className="w-4 text-center"/> {t ? t('fileImportStandard') : 'Standard Import (CSV)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
         </label>
-
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
           <Icon name="TrendingUp" size={14} className="w-4 text-center"/> {t ? t('fileImportParqet') : 'parqet-Import (.csv)'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportParqetCSV} />
         </label>
-          <MenuSubItem label={t ? t('fileImportPdf') : 'PDF Rechnung scannen (KI)'} iconName="FileText" onClick={() => setModalObj({type: 'pdfImport'})} />
-        <MenuSubItem label={t ? t('fileExport') : 'Exportieren (CSV)'} iconName="Download" onClick={handleExportCSV} />
+        {data?.settings?.aiEnabled !== false && (
+            <MenuSubItem label={t ? t('fileImportPdfKI') : 'PDF Rechnung scannen (KI)'} iconName="FileText" onClick={() => setModalObj({type: 'pdfImport'})} />
+        )}
+      </MenuNestedItem>
 
+        <MenuNestedItem label={t ? t('fileExport') : 'Exportieren'} iconName="Upload">
+            <MenuSubItem label={t ? t('fileExport') : 'Als CSV exportieren'} iconName="List" onClick={handleExportCSV} />
+            <MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handleExportPDF} />
+        </MenuNestedItem>
         
         <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('filePrint') : 'Drucken'} iconName="Printer" onClick={handlePrint} rightText="Ctrl+P" />
         <hr className="dark:border-slate-700 my-1"/>
-
-<MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handleExportPDF} />
-      
        
-        
-        <hr className="dark:border-slate-700 my-1"/>
         <MenuSubItem label={t ? t('fileSettings') : 'Einstellungen'} iconName="Settings" onClick={() => setModalObj({type: 'settings'})} />
       </MenuItem>
 
@@ -73,7 +87,7 @@ const MenuBar = ({
         {data?.settings?.aiEnabled !== false && (
           <>
             <hr className="dark:border-slate-700 my-1"/>
-            <MenuSubItem label="KI-Assistent (Ollama)" iconName="Cpu" onClick={() => { setViewMode('ai'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'ai' ? '✓' : ''} />
+            <MenuSubItem label={t ? t('menuAiAssistant') : 'KI-Assistent (Ollama)'} iconName="Cpu" onClick={() => { setViewMode('ai'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'ai' ? '✓' : ''} />
           </>
         )}
       </MenuItem>
@@ -85,8 +99,8 @@ const MenuBar = ({
         <MenuSubItem label={t ? t('repLiq') : 'Liquiditätsrisiko'} iconName="PieChart" onClick={() => setActiveReport('liquidity')} />
         <MenuSubItem label={t ? t('repHist') : 'Historischer Verlauf'} iconName="TrendingUp" onClick={() => setActiveReport('history')} />
         <MenuSubItem label={t ? t('repTax') : 'Steuerreport (31.12)'} iconName="List" onClick={() => setActiveReport('tax')} />
-        <MenuSubItem label="Säule 3a Performance" iconName="Lock" onClick={() => setActiveReport('pension3a')} />
-        <MenuSubItem label="Aktien & Fonds Performance" iconName="TrendingUp" onClick={() => setActiveReport('securities')} />
+        <MenuSubItem label={t ? t('repPension3a') : 'Säule 3a Performance'} iconName="Lock" onClick={() => setActiveReport('pension3a')} />
+        <MenuSubItem label={t ? t('repSecurities') : 'Aktien & Fonds Performance'} iconName="TrendingUp" onClick={() => setActiveReport('securities')} />
         
         <div className="px-3 py-1.5 bg-gray-100 dark:bg-slate-900 text-[10px] font-black text-gray-500 uppercase tracking-wider mt-1">{t ? t('repFlow') : 'Bewegungsreports'}</div>
         <MenuSubItem label={t ? t('repCatFlow') : 'Kategorienfluss'} iconName="BarChart" onClick={() => setActiveReport('categoryFlow')} />

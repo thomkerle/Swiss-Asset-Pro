@@ -23,9 +23,10 @@ const parseParqetDate = (dateStr) => {
 /**
  * Importiert den CSV-String aus einem parqet-Export und transformiert ihn in die AssetPro-Struktur
  * @param {string} csvContent - Der rohe Textinhalt der parqet CSV-Datei
+ * @param {function} t - Die Übersetzungsfunktion
  * @returns {Array} Banken-Struktur für das Datenmodell
  */
-const importParqetCSV = (csvContent) => {
+const importParqetCSV = (csvContent, t) => {
   if (!csvContent) return [];
 
   const lines = csvContent.split('\n');
@@ -64,7 +65,7 @@ const importParqetCSV = (csvContent) => {
     if (!assetId) continue;
 
     // Bereinigter Anzeigename für deine App
-    const resolvedName = holdingName || holdingNickname || 'Unbekanntes Asset';
+    const resolvedName = holdingName || holdingNickname || (t ? t('parqetUnknownAsset') : 'Unbekanntes Asset');
 
     // Falls das Asset in diesem Import-Durchlauf noch nicht existiert, initialisieren
     if (!assetsMap[assetId]) {
@@ -174,7 +175,7 @@ const importParqetCSV = (csvContent) => {
   if (cashAssets.length > 0) {
     categories.push({
       id: 'cat_parqet_cash',
-      name: 'parqet Konten & Liquidität',
+      name: t ? t('parqetCatCash') : 'parqet Konten & Liquidität',
       type: 'category',
       isArchived: false,
       children: cashAssets
@@ -183,7 +184,7 @@ const importParqetCSV = (csvContent) => {
   if (securityAssets.length > 0) {
     categories.push({
       id: 'cat_parqet_securities',
-      name: 'parqet Depot & Wertpapiere',
+      name: t ? t('parqetCatSecurities') : 'parqet Depot & Wertpapiere',
       type: 'category',
       isArchived: false,
       children: securityAssets
@@ -194,7 +195,7 @@ const importParqetCSV = (csvContent) => {
   return [
     {
       id: 'bank_parqet_import',
-      name: 'parqet Import-Depot',
+      name: t ? t('parqetBankName') : 'parqet Import-Depot',
       type: 'bank',
       isArchived: false,
       children: categories
@@ -202,9 +203,6 @@ const importParqetCSV = (csvContent) => {
   ];
 };
 
-// Am Ende von ParqetCsvImport.jsx ersetzen:
 module.exports = { 
   importParqetCSV: importParqetCSV 
 };
-// Falls dein Loader ein flaches Objekt erwartet, fügen wir es zusätzlich direkt an:
-module.exports.importParqetCSV = importParqetCSV;

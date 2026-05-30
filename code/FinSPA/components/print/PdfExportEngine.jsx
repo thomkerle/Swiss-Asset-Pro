@@ -15,6 +15,13 @@ const loadScript = (url) => {
   });
 };
 
+// Hilfsfunktion, um den Benutzernamen aus den Einstellungen zu lesen
+const getOwnerName = (data) => {
+    return data?.settings?.userName && data.settings.userName.trim() !== '' 
+        ? data.settings.userName 
+        : 'FinSPA Inhaber'; // Standardtext, falls das Feld leer ist
+};
+
 // Hilfsfunktion zur Formatierung der Tabellen-Zellen (verhindert doppelten Code)
 const buildTableContent = (headers, body) => {
   const safeHeaders = Array.isArray(headers) ? headers : [];
@@ -135,8 +142,8 @@ const PdfExportEngine = {
     }
   },
 
-  // 1. Export für einen einzelnen Report (Abwärtskompatibel für Single- & Multi-Charts)
-  exportReport: async ({ title, subtitle, tableHeaders, tableBody, chartBase64, chartsBase64 }) => {
+  // 1. Export für einen einzelnen Report
+  exportReport: async ({ title, subtitle, tableHeaders, tableBody, chartBase64, chartsBase64, data }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
       if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
@@ -149,16 +156,20 @@ const PdfExportEngine = {
       const subtitleMain = parts[0] ? parts[0].trim() : '';
       const hasFocusMetric = safeSubtitle.includes('|');
 
+      const ownerName = getOwnerName(data);
+      const pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINSPA PRO').toUpperCase();
+      const pdfSubtitleStr = (data?.settings?.pdfSubtitle || 'ENTERPRISE ASSET MANAGEMENT & REPORTING').toUpperCase();
+
       const docContent = [
-        { text: 'FINSPA PRO', style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
-        { text: 'ENTERPRISE ASSET MANAGEMENT & REPORTING', style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
+        { text: pdfTitleStr, style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
+        { text: pdfSubtitleStr, style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
         { canvas: [{ type: 'line', x1: 220, y1: 0, x2: 520, y2: 0, lineWidth: 1.5, lineColor: '#3b82f6' }], alignment: 'center' },
         
         { text: title.toUpperCase(), style: 'coverReportTitle', alignment: 'center', margin: [0, 60, 0, 10] },
         { text: subtitleMain, style: 'coverReportSubtitle', alignment: 'center', margin: [0, 0, 0, 120] },
         
         { text: 'ERSTELLT FÜR', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
-        { text: 'Thomas Kerle', style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: ownerName, style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
         { text: 'ZEITPUNKT DER GENERIERUNG', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
         { text: timestampStr, style: 'coverMetaValue', alignment: 'center' },
         
@@ -218,7 +229,7 @@ const PdfExportEngine = {
   },
 
   // 2. Globaler Export für alle zusammengestellten Reports
-  exportAllReports: async ({ mainTitle = "Gesamtauswertung", reports = [] }) => {
+  exportAllReports: async ({ mainTitle = "Gesamtauswertung", reports = [], data }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
       if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
@@ -231,17 +242,21 @@ const PdfExportEngine = {
       const now = new Date();
       const timestampStr = `${now.toLocaleDateString('de-CH')} um ${now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`;
 
+      const ownerName = getOwnerName(data);
+      const pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINSPA PRO').toUpperCase();
+      const pdfSubtitleStr = (data?.settings?.pdfSubtitle || 'ENTERPRISE ASSET MANAGEMENT & REPORTING').toUpperCase();
+
       // Master Deckblatt
       const docContent = [
-        { text: 'FINSPA PRO', style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
-        { text: 'ENTERPRISE ASSET MANAGEMENT & REPORTING', style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
+        { text: pdfTitleStr, style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
+        { text: pdfSubtitleStr, style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
         { canvas: [{ type: 'line', x1: 220, y1: 0, x2: 520, y2: 0, lineWidth: 1.5, lineColor: '#3b82f6' }], alignment: 'center' },
         
         { text: mainTitle.toUpperCase(), style: 'coverReportTitle', alignment: 'center', margin: [0, 60, 0, 10] },
         { text: `Umfassendes Portfolio-Dossier mit ${reports.length} Auswertungen`, style: 'coverReportSubtitle', alignment: 'center', margin: [0, 0, 0, 120] },
         
         { text: 'ERSTELLT FÜR', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
-        { text: 'Thomas Kerle', style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: ownerName, style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] }, 
         { text: 'ZEITPUNKT DER GENERIERUNG', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
         { text: timestampStr, style: 'coverMetaValue', alignment: 'center' },
         

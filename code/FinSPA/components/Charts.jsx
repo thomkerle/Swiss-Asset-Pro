@@ -1,9 +1,9 @@
 const React = require('react');
 
-const PieChartSVG = ({ data, fCur }) => {
-  if (!data || data.length === 0) return <div className="text-gray-500">Keine Daten verfügbar</div>;
+const PieChartSVG = ({ data, fCur, t }) => {
+  if (!data || data.length === 0) return <div className="text-gray-500">{t ? t('chartNoDataAvailable') : 'Keine Daten verfügbar'}</div>;
   const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
-  if (total === 0) return <div className="text-gray-500">Werte sind 0 oder negativ</div>;
+  if (total === 0) return <div className="text-gray-500">{t ? t('chartValuesZeroNegative') : 'Werte sind 0 oder negativ'}</div>;
   let currentAngle = 0;
   return (
     <div className="flex flex-wrap items-center justify-center gap-8 w-full">
@@ -33,10 +33,10 @@ const PieChartSVG = ({ data, fCur }) => {
   );
 };
 
-const LineChartSVG = ({ datasets, labels, height = 300, fCur }) => {
+const LineChartSVG = ({ datasets, labels, height = 300, fCur, t }) => {
   const width = 800, padding = 40;
   const allValues = datasets.flatMap(ds => ds.data);
-  if(allValues.length === 0) return <div>Keine Daten</div>;
+  if(allValues.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
   const maxValue = Math.max(...allValues, 10) * 1.1;
   const minValue = Math.min(...allValues, 0);
   const range = maxValue - minValue || 1;
@@ -74,9 +74,9 @@ const LineChartSVG = ({ datasets, labels, height = 300, fCur }) => {
   );
 };
 
-const WaterfallChartSVG = ({ data, fCur }) => {
+const WaterfallChartSVG = ({ data, fCur, t }) => {
   const width = 800, height = 350, padding = 50;
-  if(!data || data.length === 0) return <div>Keine Daten</div>;
+  if(!data || data.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
   const maxValue = Math.max(...data.map(d => Math.max(d.start, d.end))) * 1.1;
   const minValue = Math.min(...data.map(d => Math.min(d.start, d.end)), 0);
   const range = maxValue - minValue || 1;
@@ -110,9 +110,9 @@ const WaterfallChartSVG = ({ data, fCur }) => {
   );
 };
 
-const BarChartSVG = ({ data, fCur }) => {
+const BarChartSVG = ({ data, fCur, t }) => {
    const width = 800, height = 300, padding = 40;
-   if(!data || data.length === 0) return <div>Keine Daten</div>;
+   if(!data || data.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
    const absMax = Math.max(...data.map(d => Math.abs(d.value)));
    const maxValue = absMax === 0 ? 10 : absMax * 1.1;
    const getX = (i) => padding + (i * (width - 2 * padding) / data.length);
