@@ -1,0 +1,34 @@
+name: Build FinSPA Mac App
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v3
+
+      - name: Node.js installieren
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Pakete installieren
+        working-directory: ./finspa-desktop
+        run: npm install
+
+      - name: DMG für Mac bauen
+        working-directory: ./finspa-desktop
+        run: npm run build:mac
+
+      - name: Fertige DMG hochladen
+        uses: actions/upload-artifact@v3
+        with:
+          name: FinSPA-Mac
+          path: finspa-desktop/dist/*.dmg
