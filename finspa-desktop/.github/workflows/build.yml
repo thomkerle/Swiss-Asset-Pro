@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - master
 
 jobs:
   build:
@@ -19,13 +20,15 @@ jobs:
           node-version: 18
 
       - name: Pakete installieren
+        working-directory: ./finspa-desktop
         run: npm install
 
       - name: DMG für Mac bauen
+        working-directory: ./finspa-desktop
         run: npm run build:mac
 
       - name: Fertige DMG hochladen
         uses: actions/upload-artifact@v3
         with:
           name: FinSPA-Mac
-          path: dist/*.dmg
+          path: finspa-desktop/dist/*.dmg
