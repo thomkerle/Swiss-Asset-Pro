@@ -17,6 +17,16 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         if (!initial.bookingCategories) initial.bookingCategories = defaultBookingCategories;
         
         if (initial.aiEnabled === undefined) initial.aiEnabled = true;
+        
+        // Objekt für API-Keys der Cloud-Anbieter initialisieren
+        if (!initial.aiApiKeys) {
+            initial.aiApiKeys = {
+                openai: '',
+                anthropic: '',
+                gemini: ''
+            };
+        }
+
         if (!initial.aiModels) {
             initial.aiModels = [
                 { id: 'qwen2.5-coder:14b', name: 'Qwen 2.5 Coder (14B)' },
@@ -26,15 +36,15 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
 
         if (!initial.assetClasses) {
             initial.assetClasses = [
-                { id: 'cash', name: 'Bargeld / Konto', description: 'Liquide Mittel und Girokonten' },
-                { id: 'fund', name: 'Fonds / ETF', description: 'Investmentfonds und passive ETFs' },
-                { id: 'stock', name: 'Aktien', description: 'Direktinvestitionen in Einzelaktien' },
-                { id: 'crypto', name: 'Krypto', description: 'Kryptowährungen wie BTC, ETH' },
-                { id: 'realestate', name: 'Immobilien', description: 'Liegenschaften, Haus, Wohnung' },
-                { id: 'mortgage', name: 'Hypothek', description: 'Hypothekarische Belastungen' },
-                { id: 'pension_cash', name: 'Pensionskasse', description: 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
-                { id: 'pension_3a_cash', name: '3a Vorsorgekonto', description: 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
-                { id: 'pension_3a_fund', name: '3a Vorsorgefonds', description: 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' }
+                { id: 'cash', name: t('acCash') || 'Bargeld / Konto', description: t('descCash') || 'Liquide Mittel und Girokonten' },
+                { id: 'fund', name: t('acFund') || 'Fonds / ETF', description: t('descFund') || 'Investmentfonds und passive ETFs' },
+                { id: 'stock', name: t('acStock') || 'Aktien', description: t('descStock') || 'Direktinvestitionen in Einzelaktien' },
+                { id: 'crypto', name: t('acCrypto') || 'Krypto', description: t('descCrypto') || 'Kryptowährungen wie BTC, ETH' },
+                { id: 'realestate', name: t('acRealEstate') || 'Immobilien', description: t('descRealEstate') || 'Liegenschaften, Haus, Wohnung' },
+                { id: 'mortgage', name: t('acMortgage') || 'Hypothek', description: t('descMortgage') || 'Hypothekarische Belastungen' },
+                { id: 'pension_cash', name: t('acPension_cash') || 'Pensionskasse', description: t('descPensionCash') || 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
+                { id: 'pension_3a_cash', name: t('acPension3aCash') || '3a Vorsorgekonto', description: t('descPension3aCash') || 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
+                { id: 'pension_3a_fund', name: t('acPension3aFund') || '3a Vorsorgefonds', description: t('descPension3aFund') || 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' }
             ];
         }
         
@@ -141,6 +151,17 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         setLocalSettings({ ...localSettings, assetClasses: newClasses });
         setNewAssetName('');
         setNewAssetDesc('');
+    };
+
+    // Hilfsfunktion zum Aktualisieren der API Keys
+    const updateApiKey = (provider, value) => {
+        setLocalSettings({
+            ...localSettings,
+            aiApiKeys: {
+                ...localSettings.aiApiKeys,
+                [provider]: value
+            }
+        });
     };
 
     const TabButton = ({ id, label }) => (
@@ -305,13 +326,15 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     className="w-5 h-5 accent-blue-600"
                                 />
                                 <div>
-                                    <div className="font-bold text-sm">{t('settingsAiEnable') || 'KI Dashboard aktivieren'}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('settingsAiEnableDesc') || 'Zeigt das KI-Copilot Interface im Menü an.'}</div>
+                                    <div className="font-bold text-sm">{t('settingsAiEnable') || 'KI Beleg-Scanner aktivieren'}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">{t('settingsAiEnableDesc') || 'Ermöglicht das Auslesen von PDF-Rechnungen und Dokumenten.'}</div>
                                 </div>
                             </label>
 
                             <div className={`transition-opacity duration-300 ${localSettings.aiEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-                                <h4 className="font-bold mb-3 text-xs text-gray-400 uppercase tracking-wider">{t('labelAvailableModels') || 'Verfügbare lokale Modelle'}</h4>
+                                
+                                {/* LOKALE MODELLE */}
+                                <h4 className="font-bold mb-3 text-xs text-gray-400 uppercase tracking-wider">{t('labelAvailableModels') || 'Lokale Modelle (Ollama)'}</h4>
                                 <div className="space-y-2 mb-6">
                                     {localSettings.aiModels.map(model => (
                                         <div key={model.id} className="flex justify-between items-center p-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-sm">
@@ -326,8 +349,8 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     ))}
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
-                                    <label className="block font-bold mb-3 text-xs text-gray-400 uppercase tracking-wider">{t('labelNewModel') || 'Neues Modell (Ollama String) hinzufügen'}</label>
+                                <div className="pt-2 mb-8 border-b border-gray-200 dark:border-slate-700 pb-8">
+                                    <label className="block font-bold mb-3 text-xs text-gray-400 uppercase tracking-wider">{t('labelNewModel') || 'Neues lokales Modell (Ollama String) hinzufügen'}</label>
                                     <div className="flex flex-col sm:flex-row gap-3">
                                         <input 
                                             type="text" value={newAiModelId} onChange={e=>setNewAiModelId(e.target.value)} 
@@ -346,6 +369,55 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     </div>
                                     <p className="text-xs text-gray-500 mt-2">{t('settingsAiNotice') || "Das Modell muss über deine lokale Ollama Installation verfügbar sein (z.B. via 'ollama run ...')."}</p>
                                 </div>
+
+{/* EXTERNE CLOUD MODELLE */}
+                                <div>
+                                    <h4 className="font-bold mb-2 text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Icon name="Cloud" size={14} /> {t('labelCloudAi') || 'Externe Cloud-KIs (Anonymisiert)'}
+                                    </h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                                        {t('cloudAiDesc') || 'Hinterlege hier API-Keys für externe Anbieter. PDF-Daten werden vor der Übermittlung an die Cloud lokal anonymisiert (Kontonamen, IBANs etc. werden entfernt).'}
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border border-gray-200 dark:border-slate-700 rounded-xl">
+                                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('keyOpenAiApiKey') || 'OpenAI API-Key (ChatGPT)'}</label>
+                                            <input 
+                                                type="password" 
+                                                value={localSettings.aiApiKeys?.openai || ''}
+                                                onChange={e => updateApiKey('openai', e.target.value)}
+                                                placeholder="sk-..." 
+                                                className="w-full max-w-lg p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            <p className="text-[10px] text-gray-400 mt-1">{t('descOpenAiApiKey') || 'Aktiviert Modelle wie GPT-4o und GPT-4o-mini im Beleg-Scanner.'}</p>
+                                        </div>
+
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border border-gray-200 dark:border-slate-700 rounded-xl">
+                                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('keyGeminiApiKey') || 'Google Gemini API-Key'}</label>
+                                            <input 
+                                                type="password" 
+                                                value={localSettings.aiApiKeys?.gemini || ''}
+                                                onChange={e => updateApiKey('gemini', e.target.value)}
+                                                placeholder="AIza..." 
+                                                className="w-full max-w-lg p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            <p className="text-[10px] text-gray-400 mt-1">{t('descGeminiApiKey') || 'Aktiviert Modelle wie Gemini 1.5 Pro im Beleg-Scanner.'}</p>
+                                        </div>
+
+                                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border border-gray-200 dark:border-slate-700 rounded-xl">
+                                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('keyAnthropicApiKey') || 'Anthropic API-Key (Claude)'}</label>
+                                            <input 
+                                                type="password" 
+                                                value={localSettings.aiApiKeys?.anthropic || ''}
+                                                onChange={e => updateApiKey('anthropic', e.target.value)}
+                                                placeholder="sk-ant-..." 
+                                                className="w-full max-w-lg p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            <p className="text-[10px] text-gray-400 mt-1">{t('descAnthropicApiKey') || 'Aktiviert Modelle wie Claude 3.5 Sonnet im Beleg-Scanner.'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     )}

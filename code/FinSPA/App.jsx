@@ -1021,14 +1021,13 @@ const App = () => {
               <span className="flex items-center gap-1">
                   <div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady')}
               </span>
-              <span>Modus: <strong className="uppercase">{viewMode}</strong></span>
-          </div>
+<span>{t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong></span>          </div>
           <div className="flex gap-6">
               <span>{t('version')}: Beta - 0.9.1</span>
           </div>
       </div>
       
-      <ModalHandler />
+      {ModalHandler()}
       
       <div className="fixed bottom-4 right-4 z-[200] space-y-2 pointer-events-none">
           {toasts.map(toast => (

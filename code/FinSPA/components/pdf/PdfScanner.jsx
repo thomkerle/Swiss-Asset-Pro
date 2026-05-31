@@ -8,25 +8,47 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
     const [extractedText, setExtractedText] = useState('');
     const [error, setError] = useState('');
     
+    // States für den Privacy-Review-Schritt
+    const [isReviewingText, setIsReviewingText] = useState(false);
+    const [sanitizedPagesReview, setSanitizedPagesReview] = useState([]);
+    const [activeDicts, setActiveDicts] = useState([]);
+    
     // States für die bearbeitbaren Tabellenzeilen
     const [transactions, setTransactions] = useState([]);
     const [selectedAssetId, setSelectedAssetId] = useState('');
     
-    // Hole die verfügbaren Modelle aus den globalen Einstellungen oder nutze Fallbacks
-    const availableModels = data?.settings?.aiModels && data.settings.aiModels.length > 0 
-        ? data.settings.aiModels 
-        : [
-            { id: 'qwen2.5-coder:14b', name: 'Qwen 2.5 Coder (14B)' },
-            { id: 'llama3:latest', name: 'Llama 3 (8B)' }
-        ];
-          
-    const [selectedModel, setSelectedModel] = useState(availableModels[0].id);
+    const buildAvailableModels = () => {
+        const tLocal = t ? t('suffixLocal') : '- Lokal';
+        const tCloud = t ? t('suffixCloud') : '(Cloud)';
 
-    // States für die seitenweise Verarbeitung
+        let models = data?.settings?.aiModels && data.settings.aiModels.length > 0 
+            ? [...data.settings.aiModels] 
+            : [
+                { id: 'qwen2.5-coder:14b', name: `Qwen 2.5 Coder (14B) ${tLocal}` },
+                { id: 'llama3:latest', name: `Llama 3 (8B) ${tLocal}` }
+            ];
+            
+        const keys = data?.settings?.aiApiKeys || {};
+        
+       if (keys.gemini) {
+            models.push({ id: 'gemini-3.5-flash', name: `Gemini 3.5 Flash ${tCloud}` });
+            models.push({ id: 'gemini-pro-latest', name: `Gemini Pro Latest ${tCloud}` });
+        }
+        if (keys.openai) {
+            models.push({ id: 'gpt-4o', name: `GPT-4o ${tCloud}` });
+            models.push({ id: 'gpt-4o-mini', name: `GPT-4o-mini ${tCloud}` });
+        }
+        if (keys.anthropic) {
+            models.push({ id: 'claude-3-5-sonnet-20240620', name: `Claude 3.5 Sonnet ${tCloud}` });
+        }
+        return models;
+    };
+
+    const availableModels = buildAvailableModels();
+    const [selectedModel, setSelectedModel] = useState(availableModels[0].id);
     const [extractedPages, setExtractedPages] = useState([]);
     const [processingStatus, setProcessingStatus] = useState('');
 
-    // Kategorien aus den globalen Settings laden
     const activeBookingCategories = data?.settings?.bookingCategories || {
         'Einzahlung': ['Lohn', 'Dividenden', 'Zinsen', 'Verkauf', 'Mieteinnahmen', 'Umbuchung Eingang', 'Sonstiges'],
         'Auszahlung': ['Steuern', 'Gebühren', 'Lebensmittel', 'Telekommunikation', 'Versicherungen', 'Verkehr', 'Umbuchung Ausgang', 'Sonstiges']
@@ -38,6 +60,93 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
         if (node.type === 'asset') assets.push(node);
         if (node.children) node.children.forEach(child => { assets = assets.concat(getBankAssets(child)); });
         return assets;
+    };
+
+    // ERWEITERTER SANITIZER: Anonymisiert das PDF tiefgreifender
+    const sanitizePdfText = (rawText) => {
+        let safeText = rawText;
+        const dict = {};
+        let counter = 1;
+
+        // 1. IBANs filtern
+        const ibanRegex = /[a-zA-Z]{2}[0-9]{2}\s?([0-9a-zA-Z]{4}\s?){4,5}[0-9a-zA-Z]{0,2}/gi;
+        safeText = safeText.replace(ibanRegex, t ? t('placeholderIban') : '[IBAN_ANONYMISIERT]');
+
+        // 2. E-Mail-Adressen filtern
+        const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+        safeText = safeText.replace(emailRegex, t ? t('placeholderEmail') : '[EMAIL_ANONYMISIERT]');
+
+        // 3. Kreditkarten / Lange Kontonummern (13-16 Ziffern)
+        const creditCardRegex = /\b(?:\d[ -]*?){13,16}\b/g;
+        safeText = safeText.replace(creditCardRegex, t ? t('placeholderCard') : '[KARTENNUMMER_ANONYMISIERT]');
+
+        // 4. Typische Adressmuster (Strasse, Weg, Gasse, Matte + Hausnummer)
+        const streetRegex = /\b[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß]+(?:strasse|str\.|weg|gasse|platz|allee|matte)\s+\d+[a-zA-Z]?\b/gi;
+        safeText = safeText.replace(streetRegex, t ? t('placeholderStreet') : '[STRASSE_ANONYMISIERT]');
+
+        // 5. Postleitzahl + Ort (4- oder 5-stellige Ziffern gefolgt von einem Wort)
+        const zipCityRegex = /\b[1-9]\d{3,4}\s+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+\b/g;
+        safeText = safeText.replace(zipCityRegex, t ? t('placeholderZip') : '[PLZ_ORT_ANONYMISIERT]');
+
+        // 6. Postfach
+        const postfachRegex = /\bPostfach(?:\s+\d+)?\b/gi;
+        safeText = safeText.replace(postfachRegex, t ? t('placeholderPOBox') : '[POSTFACH_ANONYMISIERT]');
+
+        // 7. Telefonnummern
+        const phoneRegex = /(?:(?:\+|00)(?:41|49|43)|0\d{1,3})[\s.-]?\d{2,4}[\s.-]?\d{2,4}[\s.-]?\d{2,4}\b/g;
+        safeText = safeText.replace(phoneRegex, t ? t('placeholderPhone') : '[TELEFON_ANONYMISIERT]');
+
+        // 8. Bekannte Daten aus dem State dynamisch ersetzen
+        const userFields = [
+            { val: data?.settings?.ownerName || data?.settings?.userName, placeholder: t ? t('placeholderUser') : '[BENUTZERNAME]' },
+            { val: data?.settings?.address, placeholder: t ? t('placeholderStreet') : '[STRASSE_ANONYMISIERT]' },
+            { val: data?.settings?.city, placeholder: t ? t('placeholderCity') : '[ORT_ANONYMISIERT]' },
+            { val: data?.settings?.zip, placeholder: t ? t('placeholderZipOnly') : '[PLZ_ANONYMISIERT]' }
+        ];
+
+        userFields.forEach(field => {
+            if (field.val && typeof field.val === 'string' && field.val.length > 2) {
+                const escapedVal = field.val.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+                safeText = safeText.replace(new RegExp(escapedVal, 'gi'), field.placeholder);
+            }
+        });
+
+        // 9. Bank- und Kontonamen aus dem State dynamisch ersetzen
+        const placeholderBankStr = t ? t('placeholderBank') : '[BANK_';
+        const placeholderAccountStr = t ? t('placeholderAccount') : '[KONTO_';
+
+        if (data && data.banks) {
+            data.banks.forEach(bank => {
+                if (bank.name && bank.name.length > 2) {
+                    const placeholder = `${placeholderBankStr}${counter++}]`;
+                    dict[placeholder] = bank.name;
+                    const escapedName = bank.name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+                    safeText = safeText.replace(new RegExp(escapedName, 'gi'), placeholder);
+                }
+                const anonymizeNodes = (nodes) => {
+                    nodes.forEach(node => {
+                        if (node.name && node.name.length > 2) {
+                            const placeholder = `${placeholderAccountStr}${counter++}]`;
+                            dict[placeholder] = node.name;
+                            const escapedName = node.name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+                            safeText = safeText.replace(new RegExp(escapedName, 'gi'), placeholder);
+                        }
+                        if (node.children) anonymizeNodes(node.children);
+                    });
+                };
+                if (bank.children) anonymizeNodes(bank.children);
+            });
+        }
+        
+        return { safeText, dict };
+    };
+
+    const desanitizeText = (llmJsonString, dict) => {
+        let restoredString = llmJsonString;
+        Object.entries(dict).forEach(([placeholder, realName]) => {
+            restoredString = restoredString.replace(new RegExp(placeholder.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'), realName);
+        });
+        return restoredString;
     };
 
     const handleFileUpload = async (e) => {
@@ -53,12 +162,12 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
         setExtractedText(''); 
         setTransactions([]); 
         setExtractedPages([]);
+        setIsReviewingText(false);
 
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
             
-            // 1. Durchgang: Sammeln inkl. Styles und Seitenhöhe
             const allPagesData = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -66,32 +175,22 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
                 const viewport = page.getViewport({ scale: 1.0 });
                 const validItems = textContent.items.filter(item => item.str.trim().length > 0);
                 
-                allPagesData.push({ 
-                    items: validItems, 
-                    styles: textContent.styles,
-                    pageHeight: viewport.height 
-                });
+                allPagesData.push({ items: validItems, styles: textContent.styles, pageHeight: viewport.height });
             }
 
-            // 2. Frequenzanalyse (Header/Footer filtern)
             const stringFrequency = {};
             if (pdf.numPages > 1) {
                 allPagesData.forEach(pageData => {
                     const uniqueStringsOnPage = new Set(pageData.items.map(item => item.str.trim()));
-                    uniqueStringsOnPage.forEach(str => {
-                        stringFrequency[str] = (stringFrequency[str] || 0) + 1;
-                    });
+                    uniqueStringsOnPage.forEach(str => { stringFrequency[str] = (stringFrequency[str] || 0) + 1; });
                 });
             }
 
             const recurrenceThreshold = Math.ceil(pdf.numPages * 0.6);
             const recurringStrings = new Set(
-                Object.entries(stringFrequency)
-                    .filter(([str, count]) => count >= recurrenceThreshold && str.length > 3)
-                    .map(([str]) => str)
+                Object.entries(stringFrequency).filter(([str, count]) => count >= recurrenceThreshold && str.length > 3).map(([str]) => str)
             );
 
-            // 3. Durchgang: Layout rekonstruieren inkl. Formatierung
             let fullText = '';
             let pagesArray = [];
             const lineTolerance = 4;
@@ -106,31 +205,17 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
                     const x = item.transform[4];
                     const y = item.transform[5];
 
-                    // Nur extreme 5% Ränder als Header/Footer behandeln!
                     const isHeaderOrFooter = (y > pageHeight * 0.95) || (y < pageHeight * 0.05);
-                    
-                    if (recurringStrings.has(str) && isHeaderOrFooter) {
-                        return; 
-                    }
+                    if (recurringStrings.has(str) && isHeaderOrFooter) return; 
 
                     const fontInfo = styles[item.fontName];
-                    const isBold = fontInfo && (
-                        (fontInfo.fontFamily && fontInfo.fontFamily.toLowerCase().includes('bold')) ||
-                        (fontInfo.name && fontInfo.name.toLowerCase().includes('bold'))
-                    );
+                    const isBold = fontInfo && ((fontInfo.fontFamily && fontInfo.fontFamily.toLowerCase().includes('bold')) || (fontInfo.name && fontInfo.name.toLowerCase().includes('bold')));
 
-                    let formattedText = str;
-                    if (isBold) {
-                        formattedText = `**${str}**`;
-                    }
-
+                    let formattedText = isBold ? `**${str}**` : str;
                     let foundLine = lines.find(line => Math.abs(line.y - y) <= lineTolerance);
 
-                    if (foundLine) {
-                        foundLine.items.push({ x, text: formattedText });
-                    } else {
-                        lines.push({ y, items: [{ x, text: formattedText }] });
-                    }
+                    if (foundLine) foundLine.items.push({ x, text: formattedText });
+                    else lines.push({ y, items: [{ x, text: formattedText }] });
                 });
 
                 lines.sort((a, b) => b.y - a.y);
@@ -139,33 +224,18 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
                 for (let i = 0; i < lines.length; i++) {
                     lines[i].items.sort((a, b) => a.x - b.x);
                     
-                    // NEU: Räumliche Rekonstruktion (Layout-Mapping)
-                    // Berechnet Leerzeichen basierend auf der physischen X-Koordinate
                     let lineText = "";
                     lines[i].items.forEach(item => {
-                        // Ein typisches PDF-Zeichen ist ca. 4.5 Punkte breit. Wir übersetzen X in Leerzeichen.
                         const targetPos = Math.max(0, Math.floor(item.x / 4.5));
-                        
                         if (targetPos > lineText.length) {
-                            // Fülle mit Leerzeichen auf, bis die echte visuelle Spalten-Position erreicht ist
                             lineText += ' '.repeat(targetPos - lineText.length);
                         } else if (lineText.length > 0) {
-                            // Mindestens 1 Leerzeichen Abstand, falls Wörter aneinander kleben
                             lineText += ' ';
                         }
                         lineText += item.text;
                     });
 
-                    if (i > 0) {
-                        const prevY = lines[i-1].y;
-                        const currY = lines[i].y;
-                        const gap = prevY - currY;
-                        
-                        if (gap > 12) {
-                            // Längere Trennlinie für das nun breitere Layout
-                            textLines.push('\n' + '-'.repeat(100) + '\n'); 
-                        }
-                    }
+                    if (i > 0 && (lines[i-1].y - lines[i].y) > 12) { textLines.push('\n' + '-'.repeat(100) + '\n'); }
                     textLines.push(lineText);
                 }
 
@@ -185,10 +255,37 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
         }
     };
 
-    const analyzeWithLLM = async () => {
+    // Bereitet den Text vor und entscheidet, ob ein Review nötig ist
+    const prepareAnalysis = () => {
         if (!extractedPages || extractedPages.length === 0) return;
+        
+        const isCloudModel = selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude');
+        
+        if (isCloudModel) {
+            const preparedPages = [];
+            const dicts = [];
+            
+            extractedPages.forEach(page => {
+                const { safeText, dict } = sanitizePdfText(page);
+                preparedPages.push(safeText);
+                dicts.push(dict);
+            });
+            
+            setSanitizedPagesReview(preparedPages);
+            setActiveDicts(dicts);
+            setIsReviewingText(true); 
+        } else {
+            executeLLMAnalysis(extractedPages, Array(extractedPages.length).fill({}));
+        }
+    };
+
+    const executeLLMAnalysis = async (pagesToProcess, dictsForPages) => {
+        setIsReviewingText(false);
         setIsLlmProcessing(true); 
         setError('');
+
+        const isCloudModel = selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude');
+        const apiKeys = data?.settings?.aiApiKeys || {};
 
         const categoriesString = Object.entries(activeBookingCategories)
             .map(([type, cats]) => `- ${type}: ${cats.join(', ')}`)
@@ -211,11 +308,8 @@ Allowed Categories:
 ${categoriesString}
 If no specific category fits perfectly, use "Sonstiges". Do NOT invent new categories.
 
-STEP-BY-STEP REASONING:
-Briefly analyze the blocks line-by-line. Identify the payee and the amount within the same block, map amounts to their vertical column headers, and determine the best matching category from the allowed list.
-
 FINAL OUTPUT:
-After your reasoning, you MUST output the final JSON enclosed in markdown code blocks like this:
+You MUST output the final JSON enclosed in markdown code blocks like this:
 \`\`\`json
 {
   "transactions": [
@@ -233,37 +327,99 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
 
         let allTransactions = [];
 
-        for (let i = 0; i < extractedPages.length; i++) {
-            const pageText = extractedPages[i];
+        for (let i = 0; i < pagesToProcess.length; i++) {
+            const pageText = pagesToProcess[i];
+            const dict = dictsForPages[i] || {};
+            
             if (pageText.trim().length < 50) continue; 
 
-            const estimatedTokens = Math.ceil((systemPrompt.length + pageText.length) / 3) + 1200; 
-            const optimizedNumCtx = Math.max(1024, Math.ceil(estimatedTokens / 256) * 256);
-
-            setProcessingStatus(`Analysiere Seite ${i + 1} von ${extractedPages.length} (Kontext: ${optimizedNumCtx} Tokens)...`);
+            setProcessingStatus(`${t ? t('pdfStatusAnalyzePage') : 'Analysiere Seite'} ${i + 1} ${t ? t('pdfStatusOf') : 'von'} ${pagesToProcess.length} ${t ? t('pdfStatusWith') : 'mit'} ${selectedModel}...`);
 
             try {
-                const response = await fetch('http://localhost:11434/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: selectedModel,
-                        messages: [
-                            { role: "system", content: systemPrompt },
-                            { role: "user", content: "Rechnungstext der aktuellen Seite:\n\n" + pageText }
-                        ],
-                        stream: false, 
-                        options: { 
-                            temperature: 0.1,
-                            num_ctx: optimizedNumCtx 
-                        } 
-                    })
-                });
+                let rawContent = "";
 
-                if (!response.ok) throw new Error(`API Fehler bei Seite ${i + 1}`);
-                const responseData = await response.json();
-                const rawContent = responseData.message.content;
+                if (selectedModel.startsWith('gpt')) {
+                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [
+                                { role: "system", content: systemPrompt },
+                                { role: "user", content: "Rechnungstext der aktuellen Seite:\n\n" + pageText }
+                            ],
+                            temperature: 0.1,
+                            response_format: { type: "json_object" }
+                        })
+                    });
+                    if (!response.ok) throw new Error(t ? t('pdfErrOpenAi') : "OpenAI API Fehler");
+                    const resData = await response.json();
+                    rawContent = resData.choices[0].message.content;
+
+                } else if (selectedModel.startsWith('gemini')) {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKeys.gemini}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\nRechnungstext:\n\n" + pageText }] }],
+                            generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+                        })
+                    });
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}));
+                        throw new Error(`Google API: ${errData.error?.message || response.statusText || 'Unbekannter Fehler'}`);
+                    }
+                    const resData = await response.json();
+                    rawContent = resData.candidates[0].content.parts[0].text;
+
+                } else if (selectedModel.startsWith('claude')) {
+                    const response = await fetch('https://api.anthropic.com/v1/messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': apiKeys.anthropic,
+                            'anthropic-version': '2023-06-01',
+                            'anthropic-dangerous-direct-browser-access': 'true'
+                        },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            max_tokens: 2000,
+                            temperature: 0.1,
+                            system: systemPrompt,
+                            messages: [{ role: "user", content: "Hier ist der Rechnungstext. Bitte extrahiere die Daten als JSON.\n\n" + pageText }]
+                        })
+                    });
+                    if (!response.ok) throw new Error(t ? t('pdfErrAnthropic') : "Anthropic API Fehler (Möglicherweise blockiert durch CORS)");
+                    const resData = await response.json();
+                    rawContent = resData.content[0].text;
+
+                } else {
+                    const estimatedTokens = Math.ceil((systemPrompt.length + pageText.length) / 3) + 1200; 
+                    const optimizedNumCtx = Math.max(1024, Math.ceil(estimatedTokens / 256) * 256);
+                    
+                    const response = await fetch('http://localhost:11434/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            model: selectedModel,
+                            messages: [
+                                { role: "system", content: systemPrompt },
+                                { role: "user", content: "Rechnungstext der aktuellen Seite:\n\n" + pageText }
+                            ],
+                            stream: false, 
+                            options: { temperature: 0.1, num_ctx: optimizedNumCtx } 
+                        })
+                    });
+                    if (!response.ok) throw new Error(t ? t('pdfErrOllama') : "Lokaler Ollama API Fehler");
+                    const resData = await response.json();
+                    rawContent = resData.message.content;
+                }
                 
+                // DE-SANITIZER: Ersetze Platzhalter wieder durch die echten Namen
+                if (isCloudModel) {
+                    rawContent = desanitizeText(rawContent, dict);
+                }
+
                 let jsonStr = "";
                 const match = rawContent.match(/[\`]{3}(?:json)?\s*(\{[\s\S]*?\})\s*[\`]{3}/i);
                 
@@ -282,12 +438,13 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                 const jsonResult = JSON.parse(jsonStr);
                 
                 if (jsonResult.transactions && jsonResult.transactions.length > 0) {
-                    allTransactions = [...allTransactions, ...jsonResult.transactions];
+                    const mappedTxs = jsonResult.transactions.map(tx => ({...tx, isApplied: false}));
+                    allTransactions = [...allTransactions, ...mappedTxs];
                     setTransactions(allTransactions);
                 }
             } catch (err) {
                 console.error(`Fehler bei Seite ${i + 1}:`, err);
-                setError(`Fehler bei der KI-Analyse auf Seite ${i + 1}. Die restlichen Seiten wurden abgebrochen.`);
+                setError(`${t ? t('pdfErrModelPage') : 'Fehler bei Modell'} ${selectedModel} ${t ? t('pdfErrOnPage') : 'auf Seite'} ${i + 1}: ${err.message}`);
                 break; 
             }
         }
@@ -383,6 +540,8 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
 
     const applySingleTransaction = (index) => {
         const tx = transactions[index];
+        if (tx.isApplied) return;
+
         if (tx.category === 'Dividenden' && !tx.sourceAssetId) {
             alert(t ? t('pdfAlertSelectSource') : 'Bitte wähle für die Dividende das Ursprungskonto (Depot) aus.');
             return;
@@ -390,28 +549,34 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
 
         const success = saveBookingsToAsset([tx]);
         if (success) {
-            setTransactions(transactions.filter((_, i) => i !== index));
+            const updatedTxs = [...transactions];
+            updatedTxs[index].isApplied = true;
+            setTransactions(updatedTxs);
         }
     };
 
     const applyAllTransactions = () => {
-        const missingSource = transactions.some(tx => tx.category === 'Dividenden' && !tx.sourceAssetId);
+        const pendingTxs = transactions.filter(tx => !tx.isApplied);
+        if (pendingTxs.length === 0) return;
+
+        const missingSource = pendingTxs.some(tx => tx.category === 'Dividenden' && !tx.sourceAssetId);
         if (missingSource) {
             alert(t ? t('pdfAlertSelectSourceAll') : 'Bitte wähle für alle Dividenden das Ursprungskonto aus, bevor du fortfährst.');
             return;
         }
 
-        const success = saveBookingsToAsset(transactions);
+        const success = saveBookingsToAsset(pendingTxs);
         if (success) {
-            setTransactions([]); 
+            const updatedTxs = transactions.map(tx => ({...tx, isApplied: true}));
+            setTransactions(updatedTxs);
         }
     };
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center z-[100] p-4 sm:p-6 transition-all duration-300">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-indigo-500/10 w-full max-w-7xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-indigo-500/10 w-full max-w-7xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden flex flex-col h-[90vh]">
                 
-                {/* Header mit modernem Gradient */}
+                {/* Header */}
                 <div className="flex justify-between items-center px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-900">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400">
@@ -422,13 +587,12 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                         </h3>
                     </div>
                     
-                    {/* Modellauswahl als Select-Dropdown */}
                     <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-inner">
                         <Icon name="Cpu" size={14} className="text-slate-400" />
                         <select 
                             value={selectedModel} 
                             onChange={(e) => setSelectedModel(e.target.value)}
-                            className="text-xs bg-transparent border-none outline-none font-bold text-slate-600 dark:text-slate-300 w-40 cursor-pointer focus:ring-0"
+                            className="text-xs bg-transparent border-none outline-none font-bold text-slate-600 dark:text-slate-300 w-48 cursor-pointer focus:ring-0"
                             title="KI-Modell auswählen"
                         >
                             {availableModels.map(model => (
@@ -444,11 +608,9 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                     </div>
                 </div>
 
-                {/* Body Area */}
                 <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50 dark:bg-slate-900/50">
-                    
-                    {/* Upload State */}
-                    {!extractedText && !isLoading && (
+                    {/* 1. UPLOAD STATE */}
+                    {!extractedText && !isLoading && !isReviewingText && (
                         <div className="h-full flex items-center justify-center min-h-[400px]">
                             <label className="group cursor-pointer flex flex-col items-center justify-center w-full max-w-2xl p-16 bg-white dark:bg-slate-900 border-2 border-dashed border-indigo-200 dark:border-indigo-500/30 rounded-3xl hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
                                 <div className="w-20 h-20 mb-6 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/30 transition-all duration-500 ease-out">
@@ -461,7 +623,7 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                         </div>
                     )}
 
-                    {/* Loading & Processing States */}
+                    {/* 2. LOADING STATE */}
                     {(isLoading || isLlmProcessing) && (
                         <div className="h-full flex flex-col items-center justify-center min-h-[400px] space-y-6">
                             <div className="relative">
@@ -483,14 +645,13 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                 </p>
                             </div>
                             
-                            {/* Animated Progress Bar Placeholder */}
                             <div className="w-64 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                                 <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-1/2 animate-progress-indeterminate rounded-full"></div>
                             </div>
                         </div>
                     )}
 
-                    {/* Error State */}
+                    {/* ERROR STATE */}
                     {error && (
                         <div className="mb-6 p-5 bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500 rounded-r-xl shadow-sm flex items-start gap-3">
                             <Icon name="AlertCircle" className="text-red-500 mt-0.5" />
@@ -501,17 +662,83 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                         </div>
                     )}
 
-                    {/* Results Area */}
-                    {extractedText && !isLoading && !isLlmProcessing && (
+                    {/* 3. PRIVACY REVIEW STATE */}
+                    {isReviewingText && (
+                        <div className="h-full flex flex-col max-w-4xl mx-auto">
+                            <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-2xl p-5 flex gap-4">
+                                <div className="text-yellow-600 dark:text-yellow-500 mt-1"><Icon name="Shield" size={24} /></div>
+                                <div>
+                                    <h4 className="font-bold text-yellow-800 dark:text-yellow-400 text-lg mb-1">
+                                        {t ? t('pdfReviewTitle') : 'Privatsphäre-Prüfung vor Cloud-Versand'}
+                                    </h4>
+                                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                                        {t ? t('pdfReviewDesc') : 'Du hast ein Cloud-Modell ausgewählt. Hier siehst du die anonymisierten Daten, die an die externe KI gesendet werden. IBANs, Banknamen und E-Mail-Adressen wurden durch Platzhalter ersetzt. Überprüfe, ob noch sensible Daten sichtbar sind, die du nicht teilen möchtest.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-900 min-h-[300px]">
+                                <div className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700">
+                                    <span className="text-[12px] font-mono font-medium text-slate-400">sanitized_payload.txt</span>
+                                </div>
+                                <div className="p-4 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-emerald-400/80 flex-1 custom-scrollbar">
+                                    {sanitizedPagesReview.join(`\n\n${t ? t('pdfNextPage') : '--- NÄCHSTE SEITE ---'}\n\n`)}
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button 
+                                    onClick={() => {
+                                        setIsReviewingText(false);
+                                        setExtractedText('');
+                                    }} 
+                                    className="px-6 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                >
+                                    {t ? t('btnCancel') : 'Abbrechen'}
+                                </button>
+                                <button 
+                                    onClick={() => executeLLMAnalysis(sanitizedPagesReview, activeDicts)}
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
+                                >
+                                    <Icon name="Send" size={16} /> {t ? t('pdfBtnRelease') : 'Daten freigeben & analysieren'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. RESULT STATE */}
+                    {extractedText && !isLoading && !isLlmProcessing && !isReviewingText && transactions.length === 0 && (
+                        <div className="h-full flex items-center justify-center">
+                            <div className="text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-xl max-w-lg">
+                                <div className="w-20 h-20 mx-auto mb-6 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center">
+                                    <Icon name="FileText" size={32} className="text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">{t ? t('pdfReadSuccess') : 'PDF erfolgreich gelesen'}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
+                                    {t ? t('pdfReadPages_1') : 'Das Dokument hat '} {extractedPages.length} {t ? t('pdfReadPages_2') : ' Seiten. Die Strukturen wurden rekonstruiert. Klicke auf den Button, um die Daten '} 
+                                    {selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude') 
+                                        ? (t ? t('pdfCloudPrepare') : 'für den sicheren Cloud-Versand vorzubereiten') 
+                                        : (t ? t('pdfLocalAnalyze') : 'mit der lokalen KI zu analysieren')}.
+                                </p>
+                                <button 
+                                    onClick={prepareAnalysis} 
+                                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex justify-center items-center gap-2"
+                                >
+                                    <Icon name="Sparkles" size={18} /> {t ? t('pdfBtnStart') : 'Analyse starten'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 5. FINISHED TRANSACTIONS STATE */}
+                    {transactions.length > 0 && !isLoading && !isLlmProcessing && !isReviewingText && (
                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-                            
-                            {/* Linke Seite: Rohtext (Terminal Style) */}
+                            {/* Raw Data Sidebar */}
                             <div className="lg:col-span-1 flex flex-col h-[65vh]">
                                 <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                     <Icon name="Terminal" size={14} /> {t ? t('pdfRawText') : 'PDF Rohtext'}
                                 </h4>
                                 <div className="flex-1 flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none bg-slate-900">
-                                    {/* Terminal Header */}
                                     <div className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
@@ -520,17 +747,14 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                         </div>
                                         <span className="text-[10px] font-mono font-medium text-slate-500">raw_data.txt</span>
                                     </div>
-                                    {/* Terminal Content */}
                                     <div className="p-4 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-emerald-400/80 flex-1 custom-scrollbar">
                                         {extractedText}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Rechte Seite: Interaktive Tabelle */}
+                            {/* Table Area */}
                             <div className="lg:col-span-3 flex flex-col h-[65vh]">
-                                
-                                {/* Action Bar */}
                                 <div className="mb-4 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 transition-all">
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -561,27 +785,26 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                         </div>
                                     </div>
 
-                                    {transactions.length > 0 && selectedAssetId && (
+                                    {transactions.filter(t => !t.isApplied).length > 0 && selectedAssetId && (
                                         <button 
                                             onClick={applyAllTransactions}
                                             className="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-sm font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-teal-500/20 transition-all hover:-translate-y-0.5 flex items-center gap-2"
                                         >
                                             <Icon name="Save" size={16} className="group-hover:scale-110 transition-transform" /> 
-                                            {t ? t('pdfTakeoverAll') : 'Alle übernehmen'} ({transactions.length})
+                                            {t ? t('pdfTakeoverAll') : 'Alle übernehmen'} ({transactions.filter(t => !t.isApplied).length})
                                         </button>
                                     )}
                                 </div>
                                 
-                                {/* Table Area */}
-                                {transactions.length === 0 ? (
+                                {transactions.filter(t => !t.isApplied).length === 0 ? (
                                     <div className="flex-1 bg-indigo-50/50 dark:bg-indigo-900/10 border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 rounded-3xl flex flex-col items-center justify-center text-center p-8">
                                         <div className="w-20 h-20 mb-4 bg-white dark:bg-slate-800 rounded-full shadow-sm flex items-center justify-center">
                                             <Icon name="CheckCircle" size={40} className="text-indigo-400"/>
                                         </div>
                                         <h4 className="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2">{t ? t('pdfAllDone') : 'Alles erledigt!'}</h4>
                                         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6">{t ? t('pdfNoMoreBookings') : 'Es gibt keine offenen Buchungen mehr auf diesen Seiten. Du kannst ein neues PDF hochladen oder die KI neu starten.'}</p>
-                                        <button onClick={analyzeWithLLM} className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-6 py-2.5 rounded-xl font-bold shadow-sm transition-all flex items-center gap-2">
-                                            <Icon name="RefreshCw" size={16}/> {t ? t('pdfRepeatAnalysis') : 'Analyse wiederholen'}
+                                        <button onClick={() => { setTransactions([]); setExtractedText(''); }} className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-6 py-2.5 rounded-xl font-bold shadow-sm transition-all flex items-center gap-2">
+                                            <Icon name="RefreshCw" size={16}/> {t ? t('pdfRepeatAnalysis') : 'Neue Datei'}
                                         </button>
                                     </div>
                                 ) : (
@@ -603,11 +826,12 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                         const availableSubCats = activeBookingCategories[tx.type] || [];
                                                         
                                                         return (
-                                                            <tr key={idx} className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors duration-200">
+                                                            <tr key={idx} className={`group transition-colors duration-200 ${tx.isApplied ? 'bg-emerald-50/40 dark:bg-emerald-900/10 opacity-70 hidden' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/30'}`}>
                                                                 <td className="px-5 py-4 align-top">
                                                                     <input 
                                                                         type="date" 
-                                                                        className="bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-2.5 py-1.5 w-[120px] text-xs font-medium text-slate-600 dark:text-slate-300 outline-none transition-all"
+                                                                        disabled={tx.isApplied}
+                                                                        className="bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-2.5 py-1.5 w-[120px] text-xs font-medium text-slate-600 dark:text-slate-300 outline-none transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                                                                         value={tx.date || ''}
                                                                         onChange={(e) => handleTransactionChange(idx, 'date', e.target.value)}
                                                                     />
@@ -615,7 +839,8 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                 <td className="px-5 py-4 align-top">
                                                                     <input 
                                                                         type="text" 
-                                                                        className="bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-3 py-1.5 w-full text-xs font-bold text-slate-800 dark:text-slate-200 outline-none transition-all placeholder:font-normal"
+                                                                        disabled={tx.isApplied}
+                                                                        className="bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-3 py-1.5 w-full text-xs font-bold text-slate-800 dark:text-slate-200 outline-none transition-all placeholder:font-normal disabled:opacity-70 disabled:cursor-not-allowed"
                                                                         value={tx.vendor || ''}
                                                                         onChange={(e) => handleTransactionChange(idx, 'vendor', e.target.value)}
                                                                         placeholder={t ? t('pdfPlaceholderDesc') : 'Händler / Beschreibung'}
@@ -625,15 +850,17 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                     <div className="flex flex-col gap-2">
                                                                         <div className="flex gap-2">
                                                                             <select 
-                                                                                className={`bg-white dark:bg-slate-800 border rounded-lg px-2 py-1.5 text-xs font-bold outline-none shadow-sm transition-all ${isDeposit ? 'border-emerald-200 text-emerald-700 dark:border-emerald-900 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20' : 'border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-400 focus:ring-2 focus:ring-rose-500/20'}`}
+                                                                                disabled={tx.isApplied}
+                                                                                className={`bg-white dark:bg-slate-800 border rounded-lg px-2 py-1.5 text-xs font-bold outline-none shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed ${isDeposit ? 'border-emerald-200 text-emerald-700 dark:border-emerald-900 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500/20' : 'border-rose-200 text-rose-700 dark:border-rose-900 dark:text-rose-400 focus:ring-2 focus:ring-rose-500/20'}`}
                                                                                 value={tx.type || ''}
                                                                                 onChange={(e) => handleTransactionChange(idx, 'type', e.target.value)}
                                                                             >
-                                                                                {availableTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                                                                {availableTypes.map(typeOpt => <option key={typeOpt} value={typeOpt}>{typeOpt}</option>)}
                                                                             </select>
                                                                             
                                                                             <select 
-                                                                                className="flex-1 bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none transition-all"
+                                                                                disabled={tx.isApplied}
+                                                                                className="flex-1 bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                                                                                 value={tx.category || ''}
                                                                                 onChange={(e) => handleTransactionChange(idx, 'category', e.target.value)}
                                                                             >
@@ -648,7 +875,8 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                                     <Icon name="CornerDownRight" size={12} className="text-indigo-400" />
                                                                                 </div>
                                                                                 <select 
-                                                                                    className="w-full pl-6 pr-2 py-1.5 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-medium text-indigo-700 dark:text-indigo-300 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                                                                                    disabled={tx.isApplied}
+                                                                                    className="w-full pl-6 pr-2 py-1.5 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-medium text-indigo-700 dark:text-indigo-300 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                                                                                     value={tx.sourceAssetId || ''}
                                                                                     onChange={(e) => handleTransactionChange(idx, 'sourceAssetId', e.target.value)}
                                                                                 >
@@ -674,7 +902,8 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                         <input 
                                                                             type="number" 
                                                                             step="any"
-                                                                            className={`bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-3 py-1.5 w-[110px] text-right text-sm font-mono font-black outline-none transition-all ${isDeposit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}
+                                                                            disabled={tx.isApplied}
+                                                                            className={`bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-800 rounded-lg px-3 py-1.5 w-[110px] text-right text-sm font-mono font-black outline-none transition-all disabled:opacity-70 disabled:cursor-not-allowed ${isDeposit ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}
                                                                             value={tx.amount || ''}
                                                                             onChange={(e) => handleTransactionChange(idx, 'amount', e.target.value)}
                                                                         />
@@ -683,10 +912,17 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                                                                 <td className="px-5 py-4 text-center align-top">
                                                                     <button 
                                                                         onClick={() => applySingleTransaction(idx)}
-                                                                        className={`w-full flex justify-center items-center py-2 rounded-lg font-bold shadow-sm transition-all ${selectedAssetId ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500 dark:hover:text-white border border-indigo-200 dark:border-indigo-800' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 cursor-not-allowed border'}`}
-                                                                        title={!selectedAssetId ? (t ? t('pdfBtnSelectAccount') : 'Konto wählen') : (t ? t('pdfBtnTakeoverSingle') : 'Einzeln übernehmen')}
+                                                                        disabled={tx.isApplied}
+                                                                        className={`w-full flex justify-center items-center py-2 rounded-lg font-bold shadow-sm transition-all ${
+                                                                            tx.isApplied 
+                                                                                ? 'bg-emerald-100 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-800 cursor-default'
+                                                                                : selectedAssetId 
+                                                                                    ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500 dark:hover:text-white border border-indigo-200 dark:border-indigo-800' 
+                                                                                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:border-slate-700 cursor-not-allowed border'
+                                                                        }`}
+                                                                        title={tx.isApplied ? 'Bereits übernommen' : (!selectedAssetId ? (t ? t('pdfBtnSelectAccount') : 'Konto wählen') : (t ? t('pdfBtnTakeoverSingle') : 'Einzeln übernehmen'))}
                                                                     >
-                                                                        <Icon name="Plus" size={16} />
+                                                                        {tx.isApplied ? <Icon name="Check" size={16} /> : <Icon name="Plus" size={16} />}
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -702,7 +938,6 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                     )}
                 </div>
 
-                {/* Footer */}
                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex justify-end shrink-0 rounded-b-3xl">
                     <button 
                         onClick={() => setModalObj(null)} 
@@ -713,7 +948,6 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                 </div>
             </div>
             
-            {/* Custom CSS for Progress Bar Animation & Scrollbars */}
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes progress-indeterminate {
                     0% { transform: translateX(-100%); }
@@ -722,20 +956,10 @@ After your reasoning, you MUST output the final JSON enclosed in markdown code b
                 .animate-progress-indeterminate {
                     animation: progress-indeterminate 1.5s infinite linear;
                 }
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                    height: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: rgba(156, 163, 175, 0.3);
-                    border-radius: 20px;
-                }
-                .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-                    background-color: rgba(156, 163, 175, 0.5);
-                }
+                .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 20px; }
+                .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); }
             `}} />
         </div>
     );

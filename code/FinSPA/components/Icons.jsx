@@ -18,9 +18,10 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         ArrowUp: 'fa-arrow-up', ChevronUp: 'fa-chevron-up', Copy: 'fa-copy',
         PlusCircle: 'fa-circle-plus', BookOpen: 'fa-book-open', Box: 'fa-box',
         
-        // PDF Scanner Icons (Neu)
+        // PDF Scanner & Settings Icons (Neu)
         Scan: 'fa-expand', UploadCloud: 'fa-cloud-arrow-up', AlertCircle: 'fa-circle-exclamation',
-        Terminal: 'fa-terminal', CheckCircle: 'fa-circle-check', CornerDownRight: 'fa-arrow-turn-down'
+        Terminal: 'fa-terminal', CheckCircle: 'fa-circle-check', CornerDownRight: 'fa-arrow-turn-down',
+        Cloud: 'fa-cloud', Send: 'fa-paper-plane'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -80,16 +81,18 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         BookOpen: 'text-blue-500',
         Box: 'text-gray-400',
         
-        // PDF Scanner Icons (Neu)
+        // PDF Scanner & Settings Icons (Neu)
         Scan: 'text-indigo-500',
         UploadCloud: 'text-indigo-500',
         AlertCircle: 'text-red-500',
         Terminal: 'text-slate-400',
         CheckCircle: 'text-indigo-500',
-        CornerDownRight: 'text-indigo-400'
+        CornerDownRight: 'text-indigo-400',
+        Cloud: 'text-indigo-500',
+        Send: 'text-blue-500'
     };
 
-    // RegEx prüft jetzt spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])
+    // RegEx prüft spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);
     
     // Standardfarbe anwenden, wenn keine explizite Farbklasse existiert

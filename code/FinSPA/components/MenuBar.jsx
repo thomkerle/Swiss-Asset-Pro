@@ -120,8 +120,8 @@ const MenuBar = ({
          <MenuSubItem label={t ? t('helpAbout') : 'Über FinSPA'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
       </MenuItem>
 
-      <div className="ml-auto flex items-center pr-[150px]">
-        <MenuItem title={lang.toUpperCase()}>
+<div className="ml-auto flex items-center">      
+         <MenuItem title={lang.toUpperCase()}>
           <MenuSubItem label="Deutsch" onClick={() => setLang('de')} rightText={lang === 'de' ? '✓' : ''} />
           <MenuSubItem label="English" onClick={() => setLang('en')} rightText={lang === 'en' ? '✓' : ''} />
           <MenuSubItem label="Français" onClick={() => setLang('fr')} rightText={lang === 'fr' ? '✓' : ''} />

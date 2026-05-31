@@ -1,141 +1,141 @@
 {
-  "title": "Manuel d'utilisation",
+  "title": "Manuale utente",
   "sections": [
     {
       "id": "intro",
-      "title": "Bienvenue & Concept UI",
+      "title": "Benvenuto & Concetto UI",
       "icon": "Info",
       "content": [
-        { "type": "h4", "text": "Bienvenue sur FinSPA" },
-        { "type": "p", "text": "FinSPA est une Single Page Application (SPA) moderne pour la gestion globale de vos actifs et de votre budget." },
-        { "type": "h5", "text": "La disposition en 3 colonnes" },
+        { "type": "h4", "text": "Benvenuto su FinSPA" },
+        { "type": "p", "text": "FinSPA è una moderna Single Page Application (SPA) per la gestione globale del tuo patrimonio e del tuo budget." },
+        { "type": "h5", "text": "Il layout a 3 colonne" },
         { "type": "list", "items": [
-          "**Arborescence (Gauche) :** Gérez ici vos banques, courtiers, catégories et les actifs qu'ils contiennent.",
-          "**Éditeur & Tableaux de bord (Centre) :** L'espace de travail central pour les analyses, les tableaux de bord et les écritures.",
-          "**Éditeur de propriétés (Droite) :** Modifiez les données de base pour l'élément sélectionné."
+          "**Albero (Sinistra):** Gestisci qui le tue banche, broker, categorie e gli asset in esse contenuti.",
+          "**Editor & Dashboard (Centro):** L'area di lavoro centrale per analisi, dashboard e registrazioni.",
+          "**Editor delle proprietà (Destra):** Modifica i dati di base per l'elemento selezionato."
         ]}
       ]
     },
     {
       "id": "uc1-3",
-      "title": "Banques & Catégories",
+      "title": "Banche & Categorie",
       "icon": "Shield",
       "content": [
-        { "type": "h4", "text": "Structuration de votre patrimoine" },
-        { "type": "p", "text": "**Saisir des banques :** Au niveau supérieur de l'arborescence (cliquez sur l'icône `+`)." },
-        { "type": "p", "text": "**Créer des catégories :** Imbriquées aussi profondément que souhaité au sein des banques (cliquez sur l'icône de dossier avec un plus)." }
+        { "type": "h4", "text": "Strutturazione del tuo patrimonio" },
+        { "type": "p", "text": "**Inserire banche:** Al livello superiore dell'albero (clicca sull'icona `+`)." },
+        { "type": "p", "text": "**Creare categorie:** Nidificate a piacere all'interno delle banche (clicca sull'icona della cartella con un più)." }
       ]
     },
     {
       "id": "uc4-5",
-      "title": "Comptes & Écritures",
+      "title": "Conti & Registrazioni",
       "icon": "List",
       "content": [
-        { "type": "h4", "text": "Gérer les actifs & comptes" },
-        { "type": "p", "text": "**Saisir des actifs :** L'élément le plus profond de l'arborescence est toujours un actif (par ex. compte, dépôt)." },
-        { "type": "p", "text": "**Écritures :** Saisissez des transactions telles que des dépôts ou des retraits avec des sous-catégories détaillées (salaire, impôts, etc.)." }
+        { "type": "h4", "text": "Gestire asset & conti" },
+        { "type": "p", "text": "**Inserire asset:** L'elemento più profondo dell'albero è sempre un asset (es. conto, deposito)." },
+        { "type": "p", "text": "**Registrazioni:** Inserisci transazioni come depositi o prelievi con sottocategorie dettagliate (stipendio, tasse, ecc.)." }
       ]
     },
     {
       "id": "uc6",
-      "title": "Titres & Dépôts",
+      "title": "Titoli & Depositi",
       "icon": "TrendingUp",
       "content": [
-        { "type": "h4", "text": "Négociation d'actions et de fonds" },
-        { "type": "p", "text": "Définissez la classe d'actifs sur action ou fonds. Saisissez les achats, les ventes et les dividendes." },
-        { "type": "p", "text": "La boîte de dialogue demande automatiquement la quantité, le prix, les frais, les impôts et le taux de change du jour." },
-        { "type": "infoBox", "text": "Lors d'un fractionnement d'actions, archivez l'ancien actif et créez-en un nouveau avec les valeurs actuelles." }
+        { "type": "h4", "text": "Negoziazione di azioni e fondi" },
+        { "type": "p", "text": "Imposta la classe di asset su azione o fondo. Inserisci acquisti, vendite e dividendi." },
+        { "type": "p", "text": "La finestra di dialogo richiede automaticamente la quantità, il prezzo, le commissioni, le tasse e il tasso di cambio del giorno." },
+        { "type": "infoBox", "text": "In caso di frazionamento azionario, archivia il vecchio asset e creane uno nuovo con i valori attuali." }
       ]
     },
     {
       "id": "uc7",
-      "title": "Prévoyance (Pilier 2 & 3a)",
+      "title": "Previdenza (Pilastro 2 & 3a)",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Prévoyance professionnelle et liée (Suisse)" },
+        { "type": "h4", "text": "Previdenza professionale e vincolata (Svizzera)" },
         { "type": "list", "items": [
-          "**Caisse de pension (2e pilier) :** Votre capital de prévoyance professionnelle. Est marqué comme *non liquide*.",
-          "**Compte de prévoyance 3a :** Avoirs en espèces liés de la prévoyance privée.",
-          "**Fonds de prévoyance 3a :** Permet la négociation et le suivi des fonds du 3e pilier."
+          "**Cassa pensioni (2° pilastro):** Il tuo capitale di previdenza professionale. È contrassegnato come *non liquido*.",
+          "**Conto di previdenza 3a:** Averi in contanti vincolati della previdenza privata.",
+          "**Fondo di previdenza 3a:** Consente la negoziazione e il monitoraggio dei fondi del 3° pilastro."
         ]}
       ]
     },
     {
       "id": "uc8",
-      "title": "Crypto-monnaies",
+      "title": "Criptovalute",
       "icon": "Coins",
       "content": [
-        { "type": "h4", "text": "Actifs cryptographiques" },
-        { "type": "p", "text": "Bitcoin, Ethereum, etc. se comportent comme des actions, mais sont considérés comme très liquides." }
+        { "type": "h4", "text": "Asset crittografici" },
+        { "type": "p", "text": "Bitcoin, Ethereum, ecc. si comportano come azioni, ma sono considerati molto liquidi." }
       ]
     },
     {
       "id": "uc9",
-      "title": "Immobilier & Hypothèques",
+      "title": "Immobili & Ipoteche",
       "icon": "Home",
       "content": [
-        { "type": "h4", "text": "Gestion des actifs corporels" },
+        { "type": "h4", "text": "Gestione dei beni materiali" },
         { "type": "list", "items": [
-          "**Immobilier :** Valeur positive. Utilisez *Ajustement de valeur* pour les changements de valeur marchande.",
-          "**Hypothèque :** Saisie comme un *solde négatif à la date de référence*. Utilisez *Amortissement* ou *Paiement des intérêts*."
+          "**Immobile:** Valore positivo. Utilizza *Adeguamento di valore* per le variazioni del valore di mercato.",
+          "**Ipoteca:** Inserita come *saldo negativo alla data di riferimento*. Utilizza *Ammortamento* o *Pagamento interessi*."
         ]}
       ]
     },
     {
       "id": "ai_copilot",
-      "title": "Copilote IA",
+      "title": "Copilota IA",
       "icon": "Cpu",
       "content": [
-        { "type": "h4", "text": "Intégration d'IA locale (Ollama)" },
-        { "type": "p", "text": "FinSPA propose une interface intégrée avec des grands modèles linguistiques (LLM) locaux via Ollama. Vos données financières ne quittent jamais votre appareil." },
+        { "type": "h4", "text": "Integrazione di IA locale (Ollama)" },
+        { "type": "p", "text": "FinSPA offre un'interfaccia integrata con Large Language Models (LLM) locali tramite Ollama. I tuoi dati finanziari non lasciano mai il tuo dispositivo." },
         { "type": "list", "items": [
-          "**Générer des widgets :** Décrivez en langage naturel les graphiques ou tableaux que vous souhaitez voir.",
-          "**Interaction dynamique :** L'IA crée des tableaux de bord personnalisés basés sur vos données en direct.",
-          "**Activation :** Le mode IA doit d'abord être activé globalement dans les paramètres."
+          "**Generare widget:** Descrivi in linguaggio naturale i grafici o le tabelle che desideri visualizzare.",
+          "**Interazione dinamica:** L'IA crea dashboard personalizzate basate sui tuoi dati in tempo reale.",
+          "**Attivazione:** La modalità IA deve prima essere attivata globalmente nelle impostazioni."
         ]},
-        { "type": "infoBox", "text": "Condition préalable : Vous devez avoir installé Ollama localement et héberger un modèle compatible (ex. Qwen, Llama 3) via le port 11434." }
+        { "type": "infoBox", "text": "Requisito: Devi aver installato Ollama localmente e ospitare un modello compatibile (es. Qwen, Llama 3) tramite la porta 11434." }
       ]
     },
     {
       "id": "reports",
-      "title": "Rapports & Tableaux de bord",
+      "title": "Report & Dashboard",
       "icon": "PieChart",
       "content": [
-        { "type": "h4", "text": "Analyses complètes" },
+        { "type": "h4", "text": "Analisi complete" },
         { "type": "list", "items": [
-          "**Rapports d'inventaire :** Allocation, risque de liquidité et rapports fiscaux.",
-          "**Rapports de mouvements :** Flux de trésorerie, analyses des écritures et revenus passifs.",
-          "**Rapports futurs :** Simulation de l'avenir, y compris les régressions et les scénarios futurs personnalisés (objectifs d'épargne FIRE)."
+          "**Report d'inventario:** Allocazione, rischio di liquidità e report fiscali.",
+          "**Report di movimento:** Flussi di cassa, analisi delle registrazioni e reddito passivo.",
+          "**Report futuri:** Simulazione del futuro, incluse regressioni e scenari futuri personalizzati (obiettivi di risparmio FIRE)."
         ]}
       ]
     },
     {
       "id": "settings",
-      "title": "Paramètres & Données",
+      "title": "Impostazioni & Dati",
       "icon": "Settings",
       "content": [
-        { "type": "h4", "text": "Configuration" },
-        { "type": "p", "text": "**Extensibilité :** Vous pouvez définir des devises de base, vos propres catégories de transactions et même de toutes nouvelles classes d'actifs." },
-        { "type": "p", "text": "**Modèles IA :** Ajoutez vos propres modèles Ollama (chaînes) dans l'onglet correspondant." },
-        { "type": "p", "text": "**Sauvegarde des données :** Utilisez JSON pour des sauvegardes locales sécurisées." }
+        { "type": "h4", "text": "Configurazione" },
+        { "type": "p", "text": "**Estensibilità:** Puoi definire valute di base, le tue categorie di transazioni e persino classi di asset completamente nuove." },
+        { "type": "p", "text": "**Modelli IA:** Aggiungi i tuoi modelli Ollama (stringhe) nella scheda corrispondente." },
+        { "type": "p", "text": "**Salvataggio dei dati:** Utilizza JSON per backup locali sicuri." }
       ]
     }
   ],
   "translations": {
-    "menuFile": "Fichier", "menuWealth": "Patrimoine", "menuBudget": "Budget", "menuViews": "Vues", "menuReports": "Rapports", "menuData": "Vue des données",
-    "fileNew": "Nouveau (Projet vide)", "fileOpen": "Ouvrir (JSON)", "fileSave": "Enregistrer (JSON)", "fileImport": "Importer (CSV)", "fileExport": "Exporter (CSV)", "filePrint": "Imprimer", "fileSettings": "Paramètres",
-    "menuHelp": "Aide", "helpManual": "Manuel d'utilisation",
-    "viewWealth": "Gestion de patrimoine", "viewBudget": "Gestion du budget", "viewData": "Données internes (JSON)",
-    "repStock": "Rapports d'inventaire", "repFlow": "Rapports de mouvements", "repFuture": "Rapports futurs", "repBudget": "Rapports de budget",
-    "repAlloc": "Allocation par banque", "repLiq": "Risque de liquidité", "repHist": "Historique", "repTax": "Rapport fiscal (31.12)",
-    "repCatFlow": "Flux de catégories", "repWaterfall": "Flux en cascade", "repPassive": "Revenus passifs", "repTopFlow": "Top Flow Assets", "repBookAna": "Analyse des écritures",
-    "repSimReg": "Simulation & Régression", "repScenFire": "Scénarios & FIRE",
-    "tree": "Arborescence", "propEditor": "Éditeur de propriétés", "statusReady": "Prêt", "version": "Version", "dateSelect": "Période",
-    "btnApply": "Appliquer", "btnCancel": "Annuler", "btnSave": "Enregistrer", "btnAdd": "Ajouter", "btnDelete": "Supprimer",
-    "assetClass": "Classe d'actifs", "currency": "Devise", "exchangeRate": "Taux de change", "isLiquid": "Actif liquide", "isArchived": "Archivé",
-    "bookings": "Écritures", "date": "Date", "type": "Type", "category": "Catégorie", "amount": "Montant", "income": "Dépôt", "expense": "Retrait",
-    "addBank": "Ajouter une banque", "addCategory": "Ajouter une catégorie", "addAsset": "Ajouter un actif", "deleteConfirm": "Vraiment supprimer ?",
-    "acCash": "Compte", "acFund": "Fonds / ETF", "acStock": "Action", "acCrypto": "Crypto", "acRealEstate": "Immobilier", "acMortgage": "Hypothèque", "acPensionCash": "Caisse de pension", "acPension3aCash": "Compte de prévoyance 3a", "acPension3aFund": "Fonds de prévoyance 3a",
-    "typeDeposit": "Dépôt", "typeWithdrawal": "Retrait", "typeBuy": "Achat", "typeSell": "Vente", "typeAmortization": "Amortissement", "typeReval": "Ajustement de valeur", "typeInterest": "Paiement des intérêts", "typeDiv": "Dividende", "typeDebtInc": "Augmentation de dette", "typeFee": "Frais"
+    "menuFile": "File", "menuWealth": "Patrimonio", "menuBudget": "Budget", "menuViews": "Viste", "menuReports": "Report", "menuData": "Vista dati",
+    "fileNew": "Nuovo (Progetto vuoto)", "fileOpen": "Apri (JSON)", "fileSave": "Salva (JSON)", "fileImport": "Importa (CSV)", "fileExport": "Esporta (CSV)", "filePrint": "Stampa", "fileSettings": "Impostazioni",
+    "menuHelp": "Aiuto", "helpManual": "Manuale utente",
+    "viewWealth": "Gestione patrimoniale", "viewBudget": "Gestione budget", "viewData": "Dati interni (JSON)",
+    "repStock": "Report d'inventario", "repFlow": "Report di movimento", "repFuture": "Report futuri", "repBudget": "Report di budget",
+    "repAlloc": "Allocazione per banca", "repLiq": "Rischio di liquidità", "repHist": "Cronologia", "repTax": "Report fiscale (31.12)",
+    "repCatFlow": "Flusso per categorie", "repWaterfall": "Flusso a cascata", "repPassive": "Reddito passivo", "repTopFlow": "Top Flow Assets", "repBookAna": "Analisi delle registrazioni",
+    "repSimReg": "Simulazione & Regressione", "repScenFire": "Scenari & FIRE",
+    "tree": "Albero", "propEditor": "Editor delle proprietà", "statusReady": "Pronto", "version": "Versione", "dateSelect": "Periodo",
+    "btnApply": "Applica", "btnCancel": "Annulla", "btnSave": "Salva", "btnAdd": "Aggiungi", "btnDelete": "Elimina",
+    "assetClass": "Classe di asset", "currency": "Valuta", "exchangeRate": "Tasso di cambio", "isLiquid": "Asset liquido", "isArchived": "Archiviato",
+    "bookings": "Registrazioni", "date": "Data", "type": "Tipo", "category": "Categoria", "amount": "Importo", "income": "Deposito", "expense": "Prelievo",
+    "addBank": "Aggiungi banca", "addCategory": "Aggiungi categoria", "addAsset": "Aggiungi asset", "deleteConfirm": "Eliminare veramente?",
+    "acCash": "Conto", "acFund": "Fondo / ETF", "acStock": "Azione", "acCrypto": "Cripto", "acRealEstate": "Immobile", "acMortgage": "Ipoteca", "acPensionCash": "Cassa pensioni", "acPension3aCash": "Conto di previdenza 3a", "acPension3aFund": "Fondo di previdenza 3a",
+    "typeDeposit": "Deposito", "typeWithdrawal": "Prelievo", "typeBuy": "Acquisto", "typeSell": "Vendita", "typeAmortization": "Ammortamento", "typeReval": "Adeguamento di valore", "typeInterest": "Pagamento interessi", "typeDiv": "Dividendo", "typeDebtInc": "Aumento del debito", "typeFee": "Commissioni"
   }
 }
