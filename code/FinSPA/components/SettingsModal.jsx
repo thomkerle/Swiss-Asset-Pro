@@ -153,7 +153,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         setNewAssetDesc('');
     };
 
-    // Hilfsfunktion zum Aktualisieren der API Keys
     const updateApiKey = (provider, value) => {
         setLocalSettings({
             ...localSettings,
@@ -162,6 +161,16 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                 [provider]: value
             }
         });
+    };
+
+    // HILFSFUNKTION: Übersetzt Standard-Asset-Namen On-The-Fly für die Anzeige
+    const getTranslatedAsset = (asset) => {
+        const titleMap = {
+            'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
+            'realestate': 'acRealEstate', 'mortgage': 'acMortgage', 
+            'pension_cash': 'acPension_cash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund'
+        };
+        return titleMap[asset.id] && t(titleMap[asset.id]) !== titleMap[asset.id] ? t(titleMap[asset.id]) : asset.name;
     };
 
     const TabButton = ({ id, label }) => (
@@ -189,7 +198,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                 </div>
                 <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
                     
-                    {/* TAB: BENUTZER & PDF */}
                     {activeTab === 'user' && (
                         <div className="space-y-6">
                             <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded text-sm mb-4">
@@ -231,7 +239,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                         </div>
                     )}
 
-                    {/* TAB: KATEGORIEN */}
                     {activeTab === 'categories' && (
                         <div className="space-y-4 h-full flex flex-col">
                             <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded text-sm mb-4 shrink-0">
@@ -268,7 +275,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                         </div>
                     )}
 
-                    {/* TAB: ASSET-KLASSEN */}
                     {activeTab === 'assets' && (
                         <div className="space-y-6 flex flex-col h-full">
                             <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded-lg text-sm shrink-0">
@@ -279,7 +285,8 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                 {localSettings.assetClasses.map(asset => (
                                     <div key={asset.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{asset.name}</span>
+                                            {/* HIER WIRD DIE ÜBERSETZUNG ANGEWENDET */}
+                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{getTranslatedAsset(asset)}</span>
                                             <span className="text-[10px] font-mono bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-md">{asset.id}</span>
                                         </div>
                                         <input 
@@ -315,7 +322,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                         </div>
                     )}
 
-                    {/* TAB: KI-ASSISTENT */}
                     {activeTab === 'ai' && (
                         <div className="space-y-6">
                             <label className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
@@ -333,7 +339,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
 
                             <div className={`transition-opacity duration-300 ${localSettings.aiEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                                 
-                                {/* LOKALE MODELLE */}
                                 <h4 className="font-bold mb-3 text-xs text-gray-400 uppercase tracking-wider">{t('labelAvailableModels') || 'Lokale Modelle (Ollama)'}</h4>
                                 <div className="space-y-2 mb-6">
                                     {localSettings.aiModels.map(model => (
@@ -370,7 +375,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     <p className="text-xs text-gray-500 mt-2">{t('settingsAiNotice') || "Das Modell muss über deine lokale Ollama Installation verfügbar sein (z.B. via 'ollama run ...')."}</p>
                                 </div>
 
-{/* EXTERNE CLOUD MODELLE */}
                                 <div>
                                     <h4 className="font-bold mb-2 text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-2">
                                         <Icon name="Cloud" size={14} /> {t('labelCloudAi') || 'Externe Cloud-KIs (Anonymisiert)'}
@@ -422,7 +426,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                         </div>
                     )}
 
-                    {/* TAB: ALLGEMEIN & SICHERHEIT */}
                     {activeTab === 'general' && (
                         <div className="space-y-8">
                             <div className="space-y-4 max-w-sm">

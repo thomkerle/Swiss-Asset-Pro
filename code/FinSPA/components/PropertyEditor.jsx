@@ -1,7 +1,22 @@
 const React = require('react');
 const Icon = require('./Icons.jsx');
 
+const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
+const safeRequire = getRequire();
+
+// DataEngine laden, um auf alle Konten zugreifen zu können (für das Zielkonto-Dropdown)
+const DataEngine = safeRequire('../data/DataEngine.jsx') || (typeof window !== 'undefined' && window.__FinSPAModules && window.__FinSPAModules['data/DataEngine.jsx']?.exports) || {};
+const { getAllAssets = () => [], generateId = () => Math.random().toString(36).substr(2, 9) } = DataEngine;
+
 const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, updateTreeData, syncExchangeRates, t }) => {
+  // Lokaler State, um sich das Zielkonto für eine Umbuchung im Editor zu merken
+  const [transferTargetId, setTransferTargetId] = React.useState('');
+  
+  // Zielkonto zurücksetzen, wenn eine andere Buchung angeklickt wird
+  React.useEffect(() => {
+      setTransferTargetId('');
+  }, [selectedNode?.selectedBooking?.id]);
+
   if (activeReport || !selectedNode) return <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex items-center justify-center text-gray-400 shrink-0 text-center">{t ? t('propEditor') : 'Eigenschaftseditor'} {t ? t('propInactive') : 'inaktiv.'}</div>;
 
   if (selectedNode.budgetType) {
@@ -62,28 +77,64 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
     const booking = selectedNode.selectedBooking;
     const isBal = booking._isBal;
     
-    // Globale Basiswährung auslesen und Fremdwährungs-Check durchführen
     const baseCurrency = data?.settings?.baseCurrency || 'CHF';
     const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
 
+    const getActualShares = (node) => {
+        if (!node) return 0;
+        let sh = 0;
+        if (node.bookings) {
+            node.bookings.forEach(b => {
+                if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
+                if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
+            });
+        }
+        return sh > 0 ? sh : (node.shares || 0);
+    };
+
+    const getActualPrice = (node) => {
+        if (!node) return 0;
+        let p = 0;
+        if (node.bookings) {
+            const sorted = [...node.bookings].sort((a,b) => new Date(b.date) - new Date(a.date));
+            const lastWithPrice = sorted.find(b => ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
+            if (lastWithPrice) p = Number(lastWithPrice.price);
+        }
+        return p > 0 ? p : (node.price || 0);
+    };
+
+    const actualShares = getActualShares(selectedNode);
+    const actualPrice = getActualPrice(selectedNode);
+
     const handleBookingPropChange = (keyOrObj, val) => {
-      // Unterstützt atomare Key-Value Updates ODER ganze Zustandsobjekte (verhindert Race Conditions)
       const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
+      
+      if (booking.type === 'Wertanpassung' || changes.type === 'Wertanpassung') {
+          changes.shares = undefined;
+      }
+
       const updatedBooking = { ...booking, ...changes };
       
-      // Lokalen State aktualisieren für sofortiges UI-Feedback
-      setSelectedNode(prev => ({ ...prev, selectedBooking: updatedBooking }));
+      let newBookings = selectedNode.bookings || [];
+      let newBalances = selectedNode.balances || [];
       
-      // Globales TreeData-Update (für Berechnungen in Echtzeit)
+      if (isBal) {
+          newBalances = newBalances.map(b => b.id === booking.id ? updatedBooking : b);
+      } else {
+          newBookings = newBookings.map(b => b.id === booking.id ? updatedBooking : b);
+      }
+
+      // Lokalen State sofort aktualisieren für Echtzeit-UI-Feedback in der EditorArea!
+      setSelectedNode(prev => ({ 
+          ...prev, 
+          selectedBooking: updatedBooking,
+          bookings: newBookings,
+          balances: newBalances
+      }));
+      
       const updateRecursive = (nodes) => nodes.map(n => {
         if (n.id === selectedNode.id) {
-          if (isBal) {
-            const newBalances = (n.balances || []).map(b => b.id === booking.id ? updatedBooking : b);
-            return { ...n, balances: newBalances };
-          } else {
-            const newBookings = (n.bookings || []).map(b => b.id === booking.id ? updatedBooking : b);
-            return { ...n, bookings: newBookings };
-          }
+          return { ...n, bookings: newBookings, balances: newBalances };
         }
         if (n.children) return { ...n, children: updateRecursive(n.children) };
         return n;
@@ -177,8 +228,43 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <option value="Wertanpassung">Wertanpassung</option>
                 <option value="Abzahlung">Abzahlung</option>
                 <option value="Schulderhöhung">Schulderhöhung</option>
+                <option value="Umbuchung">Umbuchung</option>
               </select>
             </div>
+          )}
+
+          {/* NEU: ZIELKONTO-AUSWAHL DIREKT IM EDITOR */}
+          {!isBal && ['Dividende', 'Umbuchung'].includes(booking.type) && (
+              <div className="mt-4 p-3 bg-blue-50/60 dark:bg-slate-800/40 border border-blue-200 dark:border-slate-700 rounded-lg shadow-sm">
+                  <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('targetAccount') : 'Zielkonto für Gegenbuchung'}</label>
+                  <select 
+                      className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                      value={transferTargetId} 
+                      onChange={e => setTransferTargetId(e.target.value)}
+                  >
+                      <option value="">-- Optional: Zielkonto wählen --</option>
+                      {data.banks.map(bank => {
+                          const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
+                          if (eligibleAssets.length === 0) return null;
+                          
+                          return (
+                              <optgroup key={bank.id} label={bank.name}>
+                                  {eligibleAssets.map(a => (
+                                      <option key={a.id} value={a.id}>
+                                          {a.name} ({a.currency})
+                                      </option>
+                                  ))}
+                              </optgroup>
+                          );
+                      })}
+                  </select>
+                  {transferTargetId && (
+                      <div className="text-xs text-blue-600 dark:text-blue-400 mt-2 flex gap-1.5 items-start font-medium">
+                          <Icon name="Info" size={14} className="shrink-0 mt-0.5" />
+                          <span>Klick auf "Übernehmen" generiert die entsprechende Eingangs-Buchung im Zielkonto.</span>
+                      </div>
+                  )}
+              </div>
           )}
 
           {!isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(booking.type) && (
@@ -220,12 +306,101 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             </div>
           )}
 
+          {!isBal && booking.type === 'Wertanpassung' && ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(selectedNode?.assetClass) && (
+              <div className="grid grid-cols-2 gap-3 bg-blue-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-blue-200 dark:border-slate-700 mt-2">
+                <div>
+                  <label className="block text-blue-600 dark:text-blue-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('currentShares') : 'Aktuelle Stücke'}</label>
+                  <input 
+                    type="number" step="any" 
+                    className="w-full p-2 border border-blue-300 dark:border-slate-600 rounded-lg bg-gray-100 dark:bg-slate-800/50 text-gray-500 shadow-sm text-sm cursor-not-allowed" 
+                    value={actualShares} 
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label className="block text-blue-600 dark:text-blue-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('newPrice') : 'Neuer Kurs'} (Bisher: {actualPrice})</label>
+                  <input 
+                    type="number" step="any" 
+                    className="w-full p-2 border border-blue-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" 
+                    placeholder={actualShares > 0 ? "Tippen = Berechnen" : "Betrag manuell eintippen"}
+                    value={booking.price ?? ''} 
+                    onChange={e => {
+                      const pr = e.target.value;
+                      if (pr !== '' && actualShares > 0) {
+                        handleBookingPropChange({
+                          price: Number(pr),
+                          amount: Number(((Number(pr) - Number(actualPrice)) * actualShares).toFixed(2))
+                        });
+                      } else {
+                        handleBookingPropChange({ price: pr === '' ? undefined : Number(pr) });
+                      }
+                    }} 
+                  />
+                </div>
+              </div>
+          )}
+
           {!isBal && (
             <div>
               <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryDetail') : 'Detail / Notiz'}</label>
               <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
             </div>
           )}
+        </div>
+
+        <div className="pt-6 mt-6 border-t border-gray-200 dark:border-slate-700">
+           <button 
+             onClick={() => {
+                 // NEU: Logik zur Generierung der Gegenbuchung beim Klick auf "Übernehmen"
+                 if (transferTargetId && !isBal) {
+                     const finalAmount = Number(booking.amount) || 0;
+                     
+                     const updateRecursive = (nodes) => nodes.map(n => {
+                         let copy = { ...n };
+                         
+                         // 1. Ursprungs-Konto: Setze den Vermerk sicherheitshalber auf Ausgang
+                         if (n.id === selectedNode.id) {
+                             copy.bookings = (copy.bookings || []).map(b => {
+                                 if (b.id === booking.id) {
+                                     return { ...b, subCategory: booking.type === 'Dividende' ? 'Dividende' : 'Umbuchung Ausgang' };
+                                 }
+                                 return b;
+                             });
+                         }
+
+                         // 2. Ziel-Konto: Generiere die frische Gegenbuchung
+                         if (n.id === transferTargetId) {
+                             if (!copy.bookings) copy.bookings = [];
+                             const isTargetSecurity = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(copy.assetClass);
+                             copy.bookings.push({
+                                 id: generateId(),
+                                 date: booking.date,
+                                 type: isTargetSecurity ? 'Kauf' : 'Einzahlung',
+                                 subCategory: booking.type === 'Dividende' ? 'Dividenden Eingang' : 'Umbuchung Eingang',
+                                 amount: finalAmount,
+                                 bookingExchangeRate: 1
+                             });
+                         }
+
+                         if (n.children) copy.children = updateRecursive(n.children);
+                         return copy;
+                     });
+
+                     updateTreeData({ banks: updateRecursive(data.banks) });
+                 }
+
+                 // Editor schließen & Feedback
+                 setSelectedNode({ ...selectedNode, selectedBooking: null });
+                 setTransferTargetId('');
+                 
+                 if (typeof window !== 'undefined' && window.showToast) {
+                     window.showToast(t ? t('msgSaved') || "Buchung übernommen" : "Buchung übernommen", "success");
+                 }
+             }} 
+             className="w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md"
+           >
+               <Icon name="Save" size={16}/> {t ? t('btnApply') : 'Übernehmen'}
+           </button>
         </div>
       </div>
     );
@@ -279,9 +454,16 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   }}
               >
                 {data?.settings?.assetClasses ? (
-                    data.settings.assetClasses.map(ac => (
-                        <option key={ac.id} value={ac.id}>{ac.name}</option>
-                    ))
+                    data.settings.assetClasses.map(ac => {
+                        // HILFSFUNKTION: Übersetzt Standard-Asset-Namen im Dropdown
+                        const titleMap = {
+                            'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
+                            'realestate': 'acRealEstate', 'mortgage': 'acMortgage', 
+                            'pension_cash': 'acPension_cash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund'
+                        };
+                        const translatedName = titleMap[ac.id] && t(titleMap[ac.id]) !== titleMap[ac.id] ? t(titleMap[ac.id]) : ac.name;
+                        return <option key={ac.id} value={ac.id}>{translatedName}</option>
+                    })
                 ) : (
                     <>
                         <option value="cash">{t ? t('acCash') : 'Konto'}</option>
@@ -334,7 +516,16 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               </div>
             )}
             <div className="pt-6 mt-6 border-t border-gray-200 dark:border-slate-700">
-               <button className="w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md"><Icon name="Save" size={16}/> {t ? t('btnApply') : 'Anwenden'}</button>
+               <button 
+                 onClick={() => {
+                     if (typeof window !== 'undefined' && window.showToast) {
+                         window.showToast(t ? t('msgSaved') || "Eigenschaften gespeichert" : "Eigenschaften gespeichert", "success");
+                     }
+                 }} 
+                 className="w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md"
+               >
+                 <Icon name="Save" size={16}/> {t ? t('btnApply') : 'Anwenden'}
+               </button>
             </div>
           </>
         )}

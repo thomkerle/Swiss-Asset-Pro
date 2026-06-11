@@ -44,21 +44,22 @@ const MenuBar = ({
         <MenuSubItem label={t ? t('fileNew') : 'Neu (Leeres Projekt)'} iconName="FilePlus" onClick={handleNewProject} />
         
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="FolderOpen" size={14} className="w-4 text-center"/> {t ? t('fileOpenZip') : 'Öffnen (JSON/ZIP)'}
+          <Icon name="FolderOpen" size={14} className="w-4 text-center"/> {t ? t('fileOpen') : 'Öffnen'}
           <input type="file" accept=".json,.zip" className="hidden" onChange={handleOpenProject} />
         </label>
         
-        <MenuSubItem label={t ? t('fileSaveZip') : 'Sichern (JSON/ZIP)'} iconName="Save" onClick={handleSaveProject} />
+        <MenuSubItem label={t ? t('fileSave') : 'Speichern'} iconName="Save" onClick={() => handleSaveProject(false)} />
+        <MenuSubItem label={t ? t('fileSaveAs') : 'Speichern unter...'} iconName="Copy" onClick={() => handleSaveProject(true)} />
         
         <hr className="dark:border-slate-700 my-1"/>
         
       <MenuNestedItem label={t ? t('fileImport') : 'Importieren'} iconName="Download">
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="List" size={14} className="w-4 text-center"/> {t ? t('fileImportStandard') : 'Standard Import (CSV)'}
+          <Icon name="List" size={14} className="w-4 text-center"/> {t ? t('fileImportStandard') : 'Buchungen importieren'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
         </label>
         <label className="px-4 py-2 hover:bg-blue-50 dark:hover:bg-slate-700 flex items-center gap-3 cursor-pointer transition-colors">
-          <Icon name="TrendingUp" size={14} className="w-4 text-center"/> {t ? t('fileImportParqet') : 'parqet-Import (.csv)'}
+          <Icon name="TrendingUp" size={14} className="w-4 text-center"/> {t ? t('fileImportParqet') : 'Parqet Daten importieren'}
           <input type="file" accept=".csv" className="hidden" onChange={handleImportParqetCSV} />
         </label>
         {data?.settings?.aiEnabled !== false && (
@@ -66,8 +67,8 @@ const MenuBar = ({
         )}
       </MenuNestedItem>
 
-        <MenuNestedItem label={t ? t('fileExport') : 'Exportieren'} iconName="Upload">
-            <MenuSubItem label={t ? t('fileExport') : 'Als CSV exportieren'} iconName="List" onClick={handleExportCSV} />
+        <MenuNestedItem label={t ? t('fileExportTitle') : 'Exportieren'} iconName="Upload">
+            <MenuSubItem label={t ? t('fileExportCsv') : 'Buchungen exportieren'} iconName="List" onClick={handleExportCSV} />
             <MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handleExportPDF} />
         </MenuNestedItem>
         
@@ -120,7 +121,7 @@ const MenuBar = ({
          <MenuSubItem label={t ? t('helpAbout') : 'Über FinSPA'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
       </MenuItem>
 
-<div className="ml-auto flex items-center">      
+      <div className="ml-auto flex items-center">      
          <MenuItem title={lang.toUpperCase()}>
           <MenuSubItem label="Deutsch" onClick={() => setLang('de')} rightText={lang === 'de' ? '✓' : ''} />
           <MenuSubItem label="English" onClick={() => setLang('en')} rightText={lang === 'en' ? '✓' : ''} />
