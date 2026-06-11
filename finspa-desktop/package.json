@@ -9,25 +9,31 @@
   },
   "build": {
     "appId": "com.finspa.app",
-    "productName": "FinSPA",
+    "productName": "FinSPA Pro",
     "directories": {
       "output": "dist"
     },
     "files": [
       "index.html",
       "main.js",
-      "app.zip"
+      "app.zip",
+      "build/FinSPA_Logo_Modern.ico"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/FinSPA_Logo_Modern.ico"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "build/FinSPA_Logo_Modern.icns"
     }
   },
   "devDependencies": {
     "electron": "^42.3.0",
     "electron-builder": "^26.8.1"
+  },
+  "overrides": {
+    "@noble/hashes": "1.3.2"
   },
   "description": "",
   "keywords": [],
