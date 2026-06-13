@@ -17,6 +17,12 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
     const [transactions, setTransactions] = useState([]);
     const [selectedAssetId, setSelectedAssetId] = useState('');
     
+    // FIX: Strikte Unterscheidung von Cloud-Modellen (um gpt-oss als lokales Modell zu erkennen)
+    const isCloudModelFn = (id) => ['gpt-4o', 'gpt-4o-mini', 'gemini-3.5-flash', 'gemini-pro-latest', 'claude-3-5-sonnet-20240620'].includes(id);
+    const isOpenAI = (id) => ['gpt-4o', 'gpt-4o-mini'].includes(id);
+    const isGemini = (id) => ['gemini-3.5-flash', 'gemini-pro-latest'].includes(id);
+    const isClaude = (id) => ['claude-3-5-sonnet-20240620'].includes(id);
+
     const buildAvailableModels = () => {
         const tLocal = t ? t('suffixLocal') : '- Lokal';
         const tCloud = t ? t('suffixCloud') : '(Cloud)';
@@ -255,11 +261,11 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
         }
     };
 
-    // Bereitet den Text vor und entscheidet, ob ein Review nötig ist
     const prepareAnalysis = () => {
         if (!extractedPages || extractedPages.length === 0) return;
         
-        const isCloudModel = selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude');
+        // FIX: Nutze die Helper-Funktion für saubere Evaluierung
+        const isCloudModel = isCloudModelFn(selectedModel);
         
         if (isCloudModel) {
             const preparedPages = [];
@@ -284,7 +290,7 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
         setIsLlmProcessing(true); 
         setError('');
 
-        const isCloudModel = selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude');
+        const isCloudModel = isCloudModelFn(selectedModel);
         const apiKeys = data?.settings?.aiApiKeys || {};
 
         const categoriesString = Object.entries(activeBookingCategories)
@@ -338,7 +344,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
             try {
                 let rawContent = "";
 
-                if (selectedModel.startsWith('gpt')) {
+                if (isOpenAI(selectedModel)) {
                     const response = await fetch('https://api.openai.com/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.openai}` },
@@ -356,7 +362,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     const resData = await response.json();
                     rawContent = resData.choices[0].message.content;
 
-                } else if (selectedModel.startsWith('gemini')) {
+                } else if (isGemini(selectedModel)) {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKeys.gemini}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -372,7 +378,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     const resData = await response.json();
                     rawContent = resData.candidates[0].content.parts[0].text;
 
-                } else if (selectedModel.startsWith('claude')) {
+                } else if (isClaude(selectedModel)) {
                     const response = await fetch('https://api.anthropic.com/v1/messages', {
                         method: 'POST',
                         headers: {
@@ -394,6 +400,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     rawContent = resData.content[0].text;
 
                 } else {
+                    // LOKALES MODELL FALLBACK (Ollama)
                     const estimatedTokens = Math.ceil((systemPrompt.length + pageText.length) / 3) + 1200; 
                     const optimizedNumCtx = Math.max(1024, Math.ceil(estimatedTokens / 256) * 256);
                     
@@ -662,7 +669,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                         </div>
                     )}
 
-                    {/* 3. PRIVACY REVIEW STATE */}
+                    {/* 3. PRIVACY REVIEW STATE (EDITIERBAR) */}
                     {isReviewingText && (
                         <div className="h-full flex flex-col max-w-4xl mx-auto">
                             <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-2xl p-5 flex gap-4">
@@ -672,21 +679,39 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                                         {t ? t('pdfReviewTitle') : 'Privatsphäre-Prüfung vor Cloud-Versand'}
                                     </h4>
                                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                        {t ? t('pdfReviewDesc') : 'Du hast ein Cloud-Modell ausgewählt. Hier siehst du die anonymisierten Daten, die an die externe KI gesendet werden. IBANs, Banknamen und E-Mail-Adressen wurden durch Platzhalter ersetzt. Überprüfe, ob noch sensible Daten sichtbar sind, die du nicht teilen möchtest.'}
+                                        {t ? t('pdfReviewDesc') : 'Du hast ein Cloud-Modell ausgewählt. Hier siehst du die anonymisierten Daten, die an die externe KI gesendet werden. IBANs, Banknamen und Adressen wurden durch Platzhalter ersetzt. Du kannst den Text in den Boxen manuell editieren, um weitere sensible Daten zu entfernen.'}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex-1 flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-900 min-h-[300px]">
                                 <div className="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700">
-                                    <span className="text-[12px] font-mono font-medium text-slate-400">sanitized_payload.txt</span>
+                                    <span className="text-[12px] font-mono font-medium text-slate-400 flex items-center gap-2">
+                                        <Icon name="Edit" size={12} /> sanitized_payload.txt - Editierbar
+                                    </span>
                                 </div>
-                                <div className="p-4 overflow-y-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-emerald-400/80 flex-1 custom-scrollbar">
-                                    {sanitizedPagesReview.join(`\n\n${t ? t('pdfNextPage') : '--- NÄCHSTE SEITE ---'}\n\n`)}
+                                <div className="p-4 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                                    {sanitizedPagesReview.map((pageText, idx) => (
+                                        <div key={idx} className="flex flex-col">
+                                            <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">
+                                                {t ? t('pdfPage') : 'Seite'} {idx + 1}
+                                            </div>
+                                            <textarea 
+                                                value={pageText}
+                                                onChange={(e) => {
+                                                    const newPages = [...sanitizedPagesReview];
+                                                    newPages[idx] = e.target.value;
+                                                    setSanitizedPagesReview(newPages);
+                                                }}
+                                                className="w-full min-h-[250px] bg-slate-950 border border-slate-700 rounded-xl p-3 font-mono text-[11px] leading-relaxed text-emerald-400/90 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y custom-scrollbar shadow-inner"
+                                                spellCheck="false"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="mt-6 flex justify-end gap-3">
+                            <div className="mt-6 flex justify-end gap-3 shrink-0">
                                 <button 
                                     onClick={() => {
                                         setIsReviewingText(false);
@@ -716,7 +741,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                                 <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">{t ? t('pdfReadSuccess') : 'PDF erfolgreich gelesen'}</h3>
                                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">
                                     {t ? t('pdfReadPages_1') : 'Das Dokument hat '} {extractedPages.length} {t ? t('pdfReadPages_2') : ' Seiten. Die Strukturen wurden rekonstruiert. Klicke auf den Button, um die Daten '} 
-                                    {selectedModel.startsWith('gpt') || selectedModel.startsWith('gemini') || selectedModel.startsWith('claude') 
+                                    {isCloudModelFn(selectedModel)
                                         ? (t ? t('pdfCloudPrepare') : 'für den sicheren Cloud-Versand vorzubereiten') 
                                         : (t ? t('pdfLocalAnalyze') : 'mit der lokalen KI zu analysieren')}.
                                 </p>

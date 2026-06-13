@@ -1,6 +1,17 @@
 const i18n = {
   de: {
     // --- Neue Keys (Automatisch generiert) ---
+    labelIncomesReal: 'Echte Einnahmen',
+labelExpensesReal: 'Echte Ausgaben',
+labelSavingsRate: 'Sparquote',
+expenseBreakdown: 'Ausgabenverteilung',
+topExpenses: 'Top Ausgabenkategorien',
+labelWealthShifts: 'Vermögensverschiebungen (Geld-Transfers & Investitionen)',
+descWealthShifts: 'Umbuchungen zwischen eigenen Konten, Investitionen (z.B. Säule 3a, Aktienkäufe) und Amortisationen sind hier ausgeklammert. Sie verändern dein Nettovermögen nicht, sondern verschieben es lediglich.',
+shiftsOut: 'Investiert / Überwiesen',
+shiftsIn: 'Liquidation / Eingang',
+
+    // --- Neue Keys (Automatisch generiert) ---
     fileSave: 'Speichern',
 fileSaveAs: 'Speichern unter...',
 fileOpen: 'Öffnen',
@@ -311,7 +322,7 @@ zipWarning: 'Beim verschlüsselten ZIP wird das gesamte Projekt mittels AES-256 
 
     // Menu & Allgemeine Navigation
     menuFile: 'Datei', menuWealth: 'Vermögen', menuBudget: 'Budget', menuViews: 'Ansichten', menuReports: 'Reports', menuData: 'Datensicht',
-    fileNew: 'Neu (Leeres Projekt)', fileOpen: 'Öffnen (JSON)', fileSave: 'Sichern (JSON)', fileImport: 'Importieren (CSV)', 
+    fileNew: 'Neu (Leeres Projekt)', fileOpen: 'Öffnen', fileSave: 'Sichern', fileImport: 'Importieren (CSV)', 
     fileImportParqet: 'parqet-Import (.csv)', fileExport: 'Exportieren (CSV)', filePrint: 'Drucken', filePrintPdf: 'Als PDF exportieren', fileSettings: 'Einstellungen',
     menuHelp: 'Hilfe', helpManual: 'Benutzerhandbuch', helpAbout: 'Über FinSPA',
     themeToggle: 'Design umschalten',
@@ -616,6 +627,17 @@ zipWarning: 'Beim verschlüsselten ZIP wird das gesamte Projekt mittels AES-256 
   },
 
   en: {
+    // --- Neue Keys (Automatisch generiert) ---
+    labelIncomesReal: 'Real Incomes',
+labelExpensesReal: 'Real Expenses',
+labelSavingsRate: 'Savings Rate',
+expenseBreakdown: 'Expense Breakdown',
+topExpenses: 'Top Expense Categories',
+labelWealthShifts: 'Wealth Shifts (Transfers & Investments)',
+descWealthShifts: 'Transfers between own accounts, investments (e.g. Pillar 3a, stock purchases) and amortizations are excluded here. They do not change your net wealth, they only shift it.',
+shiftsOut: 'Invested / Transferred',
+shiftsIn: 'Liquidated / Received',
+
     // --- Neue Keys (Automatisch generiert) ---
     fileSave: 'Save',
 fileSaveAs: 'Save As...',
@@ -927,8 +949,8 @@ zipWarning: 'With the encrypted ZIP, the entire project is secured using AES-256
 
     // Menu & General Navigation
     menuFile: 'File', menuWealth: 'Wealth', menuBudget: 'Budget', menuViews: 'Views', menuReports: 'Reports', menuData: 'Data View',
-    fileNew: 'New (Empty Project)', fileOpen: 'Open (JSON)', fileSave: 'Save (JSON)', fileImport: 'Import (CSV)', 
-    fileImportParqet: 'parqet Import (.csv)', fileExport: 'Export (CSV)', filePrint: 'Print', filePrintPdf: 'Export as PDF', fileSettings: 'Settings',
+    fileNew: 'New (Empty Project)', fileOpen: 'Open', fileSave: 'Save', fileImport: 'Import (CSV)', 
+    fileImportParqet: 'parqet Import (.csv)', fileExport: 'Export', filePrint: 'Print', filePrintPdf: 'Export as PDF', fileSettings: 'Settings',
     menuHelp: 'Help', helpManual: 'User Manual', helpAbout: 'About FinSPA',
     themeToggle: 'Toggle Theme',
     
@@ -1228,6 +1250,17 @@ zipWarning: 'With the encrypted ZIP, the entire project is secured using AES-256
   },
 
   fr: {
+    // --- Neue Keys (Automatisch generiert) ---
+    labelIncomesReal: 'Revenus réels',
+labelExpensesReal: 'Dépenses réelles',
+labelSavingsRate: 'Taux d\'épargne',
+expenseBreakdown: 'Répartition des dépenses',
+topExpenses: 'Principales catégories de dépenses',
+labelWealthShifts: 'Transferts de patrimoine',
+descWealthShifts: 'Les virements entre vos propres comptes, les investissements (ex. pilier 3a, achats d\'actions) et les amortissements sont exclus ici. Ils ne modifient pas votre patrimoine net, ils ne font que le déplacer.',
+shiftsOut: 'Investi / Transféré',
+shiftsIn: 'Liquidé / Reçu',
+
     // --- Neue Keys (Automatisch generiert) ---
     fileSave: 'Enregistrer',
 fileSaveAs: 'Enregistrer sous...',
@@ -1539,8 +1572,8 @@ zipWarning: 'Avec le ZIP crypté, l\'ensemble du projet est sécurisé via AES-2
 
     // Menu & Navigation Générale
     menuFile: 'Fichier', menuWealth: 'Patrimoine', menuBudget: 'Budget', menuViews: 'Vues', menuReports: 'Rapports', menuData: 'Vue des données',
-    fileNew: 'Nouveau (Projet vide)', fileOpen: 'Ouvrir (JSON)', fileSave: 'Enregistrer (JSON)', fileImport: 'Importer (CSV)', 
-    fileImportParqet: 'Import parqet (.csv)', fileExport: 'Exporter (CSV)', filePrint: 'Imprimer', filePrintPdf: 'Exporter en PDF', fileSettings: 'Paramètres',
+    fileNew: 'Nouveau (Projet vide)', fileOpen: 'Ouvrir', fileSave: 'Enregistrer', fileImport: 'Importer (CSV)', 
+    fileImportParqet: 'Import parqet (.csv)', fileExport: 'Exporter', filePrint: 'Imprimer', filePrintPdf: 'Exporter en PDF', fileSettings: 'Paramètres',
     menuHelp: 'Aide', helpManual: 'Manuel d\'utilisation', helpAbout: 'À propos de FinSPA',
     themeToggle: 'Changer de thème',
     
@@ -1842,6 +1875,17 @@ zipWarning: 'Avec le ZIP crypté, l\'ensemble du projet est sécurisé via AES-2
   },
 
   it: {
+    // --- Neue Keys (Automatisch generiert) ---
+    labelIncomesReal: 'Entrate Reali',
+labelExpensesReal: 'Uscite Reali',
+labelSavingsRate: 'Tasso di Risparmio',
+expenseBreakdown: 'Ripartizione delle Spese',
+topExpenses: 'Principali Categorie di Spesa',
+labelWealthShifts: 'Spostamenti di Patrimonio',
+descWealthShifts: 'I trasferimenti tra i propri conti, gli investimenti (es. Pilastro 3a, acquisto di azioni) e gli ammortamenti sono esclusi qui. Non modificano il patrimonio netto, lo spostano solo.',
+shiftsOut: 'Investito / Trasferito',
+shiftsIn: 'Liquidato / Ricevuto',
+
     // --- Neue Keys (Automatisch generiert) ---
     fileSave: 'Salva',
 fileSaveAs: 'Salva con nome...',
@@ -2153,8 +2197,8 @@ zipWarning: 'Con lo ZIP crittografato, l\'intero progetto viene protetto tramite
 
     // Menu & Navigazione Generale
     menuFile: 'File', menuWealth: 'Patrimonio', menuBudget: 'Budget', menuViews: 'Viste', menuReports: 'Report', menuData: 'Vista Dati',
-    fileNew: 'Nuovo (Progetto vuoto)', fileOpen: 'Apri (JSON)', fileSave: 'Salva (JSON)', fileImport: 'Importa (CSV)', 
-    fileImportParqet: 'Importazione parqet (.csv)', fileExport: 'Esporta (CSV)', filePrint: 'Stampa', filePrintPdf: 'Esporta come PDF', fileSettings: 'Impostazioni',
+    fileNew: 'Nuovo (Progetto vuoto)', fileOpen: 'Apri', fileSave: 'Salva', fileImport: 'Importa (CSV)', 
+    fileImportParqet: 'Importazione parqet (.csv)', fileExport: 'Esporta', filePrint: 'Stampa', filePrintPdf: 'Esporta come PDF', fileSettings: 'Impostazioni',
     menuHelp: 'Aiuto', helpManual: 'Manuale utente', helpAbout: 'Informazioni su FinSPA',
     themeToggle: 'Cambia tema',
     

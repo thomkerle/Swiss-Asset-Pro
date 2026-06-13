@@ -5,8 +5,16 @@ const getRequire = () => { try { return require; } catch (e) { return () => ({})
 const safeRequire = getRequire();
 
 const Icon = safeRequire('./Icons.jsx') || (({name}) => <span>[{name}]</span>);
+
 const DataEngine = safeRequire('../data/DataEngine.jsx') || {};
-const { getAllAssets = (banks) => [], getAssetValueAtDate = () => 0, getAssetRawValueAtDate = () => 0, generateId = () => Math.random().toString(36).substr(2, 9) } = DataEngine;
+const { 
+  getAllAssets = (banks) => [], 
+  getAssetValueAtDate = () => 0, 
+  getAssetRawValueAtDate = () => 0, 
+  getAssetSharesAtDate = () => 0, 
+  getAssetPriceAtDate = () => 0,
+  generateId = () => Math.random().toString(36).substr(2, 9) 
+} = DataEngine;
 
 const AllocationReport = safeRequire('./reports/AllocationReport.jsx') || (() => <div>AllocationReport</div>);
 const LiquidityReport = safeRequire('./reports/LiquidityReport.jsx') || (() => <div>LiquidityReport</div>);
@@ -31,29 +39,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
 
-  const getActualShares = (node) => {
-      if (!node) return 0;
-      let sh = 0;
-      if (node.bookings) {
-          node.bookings.forEach(b => {
-              if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
-              if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
-          });
-      }
-      return sh > 0 ? sh : (node.shares || 0);
-  };
-
-  const getActualPrice = (node) => {
-      if (!node) return 0;
-      let p = 0;
-      if (node.bookings) {
-          const sorted = [...node.bookings].sort((a,b) => new Date(b.date) - new Date(a.date));
-          const lastWithPrice = sorted.find(b => ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
-          if (lastWithPrice) p = Number(lastWithPrice.price);
-      }
-      return p > 0 ? p : (node.price || 0);
-  };
-
   const applyAutoValuation = (assetNode) => {
       const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetNode.assetClass);
       if (!isSecurities || !assetNode.bookings) return assetNode;
@@ -65,7 +50,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
           if (b.type !== 'Wertanpassung') return true;
           const sub = b.subCategory || '';
           const isLegacyAuto = sub.includes('Auto-Anpassung') || (localizedAutoString && sub.includes(localizedAutoString));
-          
           return !(b._isAutoValuation || isLegacyAuto);
       });
 
@@ -74,9 +58,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       let totalShares = 0;
       let runningInvestedRaw = 0; 
       let finalBookings = [];
+      let lastBookingDate = new Date().toISOString().split('T')[0];
 
       copy.bookings.forEach(b => {
           finalBookings.push(b);
+          lastBookingDate = b.date;
           
           const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(b.type);
           const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung', 'Umbuchung'].includes(b.type);
@@ -99,13 +85,31 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       type: 'Wertanpassung',
                       subCategory: t ? t('autoAdjustment') || 'Auto-Anpassung (Kurs)' : 'Auto-Anpassung (Kurs)',
                       amount: adjAmount,
-                      bookingExchangeRate: b.bookingExchangeRate || 1,
+                      bookingExchangeRate: b.bookingExchangeRate || assetNode.exchangeRate || 1,
                       _isAutoValuation: true 
                   });
                   runningInvestedRaw += adjAmount; 
               }
           }
       });
+
+      if (totalShares > 0 && Number(assetNode.price) > 0) {
+          const expectedCurrentValue = totalShares * Number(assetNode.price);
+          const diff = expectedCurrentValue - runningInvestedRaw;
+
+          if (Math.abs(diff) > 0.01) {
+              const todayStr = new Date().toISOString().split('T')[0];
+              finalBookings.push({
+                  id: Math.random().toString(36).substr(2, 9),
+                  date: todayStr > lastBookingDate ? todayStr : lastBookingDate,
+                  type: 'Wertanpassung',
+                  subCategory: t ? t('autoAdjustment') || 'Auto-Anpassung (Aktueller Kurs)' : 'Auto-Anpassung (Aktueller Kurs)',
+                  amount: Number(diff.toFixed(2)),
+                  bookingExchangeRate: assetNode.exchangeRate || 1,
+                  _isAutoValuation: true 
+              });
+          }
+      }
 
       copy.bookings = finalBookings.sort((a,b) => new Date(b.date) - new Date(a.date));
       return copy;
@@ -117,7 +121,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <Icon name="Settings" className="text-gray-400"/> {t ? t('viewData') : 'Datensicht'}
         </h2>
-        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-slate-900 rounded-lg border dark:border-slate-800 p-4 font-mono text-xs text-gray-800 dark:text-gray-300 shadow-inner">
+        <div className="flex-1 overflow-auto finspa-scrollbar bg-gray-50 dark:bg-slate-900 rounded-lg border dark:border-slate-800 p-4 font-mono text-xs text-gray-800 dark:text-gray-300 shadow-inner">
           <pre>{JSON.stringify(data, null, 2)}</pre>
         </div>
       </div>
@@ -152,7 +156,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     };
     
     return (
-      <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto">
+      <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
         <div className="print-hide flex justify-end mb-4">
            <div className="flex items-center gap-3 bg-gray-50 border px-4 py-2 rounded-lg text-sm shadow-sm dark:bg-slate-900 dark:border-slate-800">
              <Icon name="Calendar" className="text-gray-400"/>
@@ -197,8 +201,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         if (node.type === 'asset') {
           if (node.isArchived && !showArchived) return [];
 
-          const baseVal = getAssetValueAtDate(node, new Date().toISOString().split('T')[0], activeAssets) || 0;
-          const origVal = getAssetRawValueAtDate(node, new Date().toISOString().split('T')[0]);
+          const todayStr = new Date().toISOString().split('T')[0];
+          const origVal = getAssetRawValueAtDate(node, todayStr);
+          const baseVal = getAssetValueAtDate(node, todayStr, allAssets);
 
           const subCatKey = node.assetClass || 'cash';
           const subCategoryName = t ? (t(`ac${subCatKey.charAt(0).toUpperCase() + subCatKey.slice(1)}`) || subCatKey.toUpperCase()) : subCatKey.toUpperCase();
@@ -251,7 +256,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         : (t ? t('allocByCatSub') : 'Kategorie-Übersicht und enthaltene Assets');
 
       return (
-        <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">
+        <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-6 mb-6 gap-4">
             <div>
               <h2 className="text-3xl font-black flex items-center gap-3">
@@ -364,8 +369,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       const baseCurrency = data?.settings?.baseCurrency || 'CHF';
       const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
       
-      const currentVal = getAssetValueAtDate(selectedNode, new Date().toISOString().split('T')[0], activeAssets);
-      const rawSum = getAssetRawValueAtDate(selectedNode, new Date().toISOString().split('T')[0]);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const rawSum = getAssetRawValueAtDate(selectedNode, todayStr);
+      const currentVal = getAssetValueAtDate(selectedNode, todayStr, allAssets);
 
       let defaultType = 'Einzahlung'; 
       const ac = selectedNode.assetClass;
@@ -411,7 +417,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       };
 
       return (
-        <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto">
+        <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
           <div className="flex justify-between items-start border-b border-gray-200 dark:border-slate-800 pb-6 mb-6">
              <div>
                <h2 className="text-3xl font-black flex items-center gap-3">
@@ -464,7 +470,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               )}
 
             </div>
-            <div className="overflow-auto flex-1">
+            <div className="overflow-auto finspa-scrollbar flex-1">
               <table className="w-full text-left text-sm border-collapse">
                 <thead className="bg-gray-50 dark:bg-slate-800 sticky top-0 border-b">
                   <tr>
@@ -513,7 +519,12 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       details += ` [${t ? t('rateLabel') : 'Kurs:'} ${item.bookingExchangeRate}]`;
                     }
                     
-                    const usedRate = item.bookingExchangeRate || selectedNode.exchangeRate || 1;
+                    const bookingRate = item.bookingExchangeRate ? parseFloat(String(item.bookingExchangeRate).replace(',', '.')) : 0;
+                    const nodeRate = selectedNode.exchangeRate ? parseFloat(String(selectedNode.exchangeRate).replace(',', '.')) : 1;
+                    
+                    let usedRate = bookingRate;
+                    if ((!usedRate || usedRate === 1) && isForeignCurrency) usedRate = nodeRate;
+                    if (!usedRate) usedRate = 1;
                     
                     return (
                     <tr 
@@ -572,7 +583,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     );
   }
 
-  // RECHTER INLINE-EDITOR
   if (selectedNode?.selectedBooking) {
     const booking = selectedNode.selectedBooking;
     const isBal = booking._isBal;
@@ -580,8 +590,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     const baseCurrency = data?.settings?.baseCurrency || 'CHF';
     const isForeignCurrency = selectedNode.currency && selectedNode.currency !== baseCurrency;
 
-    const actualShares = getActualShares(selectedNode);
-    const actualPrice = getActualPrice(selectedNode);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const actualShares = getAssetSharesAtDate(selectedNode, todayStr);
+    const actualPrice = getAssetPriceAtDate(selectedNode, todayStr);
 
     const handleBookingPropChange = (keyOrObj, val) => {
       const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
@@ -601,7 +612,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
             copy.balances = (copy.balances || []).map(b => b.id === booking.id ? updatedBooking : b);
           } else {
             copy.bookings = (copy.bookings || []).map(b => b.id === booking.id ? updatedBooking : b);
-            copy = applyAutoValuation(copy); // Sofort neu berechnen bei Inline-Edit!
+            copy = applyAutoValuation(copy); 
           }
           return copy;
         }
@@ -621,7 +632,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               copy.balances = (copy.balances || []).filter(b => b.id !== booking.id);
             } else {
               copy.bookings = (copy.bookings || []).filter(b => b.id !== booking.id);
-              copy = applyAutoValuation(copy); // Sofort neu berechnen nach dem Löschen
+              copy = applyAutoValuation(copy);
             }
             return copy;
           }
@@ -655,7 +666,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               size={18}
               className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" 
               onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} 
-              title={t ? t('btnBackToAsset') : "Zurück zum Asset"}
+              title="Zurück zum Asset"
             />
           </div>
         </div>
@@ -690,17 +701,17 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
             <div>
               <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('entryType') : 'Typ'}</label>
               <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
-                <option value="Einzahlung">{t ? t('typeDeposit') : 'Einzahlung'}</option>
-                <option value="Auszahlung">{t ? t('typeWithdrawal') : 'Auszahlung'}</option>
-                <option value="Kauf">{t ? t('typeBuy') : 'Kauf'}</option>
-                <option value="Verkauf">{t ? t('typeSell') : 'Verkauf'}</option>
-                <option value="Dividende">{t ? t('typeDiv') : 'Dividende'}</option>
-                <option value="Zinszahlung">{t ? t('typeInterest') : 'Zinszahlung'}</option>
-                <option value="Gebühr">{t ? t('typeFee') : 'Gebühr'}</option>
-                <option value="Wertanpassung">{t ? t('typeReval') : 'Wertanpassung'}</option>
-                <option value="Abzahlung">{t ? t('typeAmortization') : 'Abzahlung'}</option>
-                <option value="Schulderhöhung">{t ? t('typeDebtInc') : 'Schulderhöhung'}</option>
-                <option value="Umbuchung">{t ? t('typeTransfer') : 'Umbuchung'}</option>
+                <option value="Einzahlung">Einzahlung</option>
+                <option value="Auszahlung">Auszahlung</option>
+                <option value="Kauf">Kauf</option>
+                <option value="Verkauf">Verkauf</option>
+                <option value="Dividende">Dividende</option>
+                <option value="Zinszahlung">Zinszahlung</option>
+                <option value="Gebühr">Gebühr</option>
+                <option value="Wertanpassung">Wertanpassung</option>
+                <option value="Abzahlung">Abzahlung</option>
+                <option value="Schulderhöhung">Schulderhöhung</option>
+                <option value="Umbuchung">Umbuchung</option>
               </select>
             </div>
           )}
@@ -795,7 +806,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     );
   }
 
-  // DIALOG MODAL (NEUE BUCHUNG)
   if (modalObj && ['addBooking', 'editBooking', 'addBalance', 'editBalance', 'addGoal', 'editGoal', 'addScenario', 'addCategory', 'addAsset', 'addBank', 'addBudget', 'editBudget'].includes(modalObj.type)) {
       const FormModal = () => {
           const baseCurrency = data.settings?.baseCurrency || 'CHF';
@@ -815,10 +825,10 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                   newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; 
               } 
               else if (modalObj.type === 'addScenario') { 
-                  newData.scenarios.push({ id: generateId(), name: form.name||'Neu', date: form.date, impact: Number(form.impact||0) }); 
+                  newData.scenarios.push({ id: generateId(), name: form.name||(t('newTargetName')||'Neu'), date: form.date, impact: Number(form.impact||0) }); 
               } 
               else if (modalObj.type === 'addBank') { 
-                  newData.banks.push({ id: generateId(), name: form.name || 'Neue Bank', type: 'bank', isArchived: false, children: [] }); 
+                  newData.banks.push({ id: generateId(), name: form.name || (t('newBankName')||'Neue Bank'), type: 'bank', isArchived: false, children: [] }); 
               } 
               else if (modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
                   const group = modalObj.budgetGroup;
@@ -832,7 +842,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                               : item
                       );
                   } else {
-                      newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || 'Neuer Posten', amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
+                      newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || (t('newBudgetItem')||'Neuer Posten'), amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
                   }
               } 
               else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
@@ -842,20 +852,16 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       if (form.targetAssetId && n.id === form.targetAssetId && modalObj.type === 'addBooking') {
                           if (!copy.bookings) copy.bookings = [];
                           
-                          // ZIELKONTO-LOGIK: Wenn das Ziel ein Wertpapier ist, generiere einen Kauf!
                           const isTargetSecurity = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(copy.assetClass);
                           
                           copy.bookings.push({
                               id: generateId(),
                               date: form.date,
-                              type: isTargetSecurity ? 'Kauf' : 'Einzahlung',
-                              subCategory: form.type === 'Dividende' ? 'Dividenden' : 'Umbuchung Eingang',
+                              type: isTargetSecurity ? 'Kauf' : 'Einzahlung', 
+                              subCategory: form.type === 'Dividende' ? (t('divIn')||'Dividenden Eingang') : (t('transferIn')||'Umbuchung Eingang'),
                               amount: Number(form.amount),
                               bookingExchangeRate: 1
                           });
-                          
-                          // Wichtig: Neuberechnung auch für das Ziel-Asset anstoßen, falls es ein Fonds/Aktie ist
-                          copy = applyAutoValuation(copy);
                       }
 
                       if (n.id === modalObj.assetId) {
@@ -867,7 +873,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                               let saveCat = form.subCategory;
                               if (form.type === 'Umbuchung') {
                                   saveType = 'Auszahlung';
-                                  saveCat = 'Umbuchung Ausgang';
+                                  saveCat = t('transferOut') || 'Umbuchung Ausgang';
                               }
 
                               copy.bookings.push({ 
@@ -882,9 +888,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                                   taxes: form.taxes ? Number(form.taxes) : undefined, 
                                   bookingExchangeRate: form.bookingExchangeRate ? Number(form.bookingExchangeRate) : 1 
                               });
-
-                              copy = applyAutoValuation(copy);
-
                           } else {
                               if (!copy.balances) copy.balances = [];
                               if (modalObj.item) copy.balances = copy.balances.filter(b=>b.id !== modalObj.item.id);
@@ -906,11 +909,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                           let copy = {...n};
                           if (!copy.children) copy.children = [];
                           if (modalObj.type === 'addCategory') {
-                              copy.children.push({ id: generateId(), name: form.name || 'Neue Kategorie', type: 'category', isArchived: false, children: [] });
+                              copy.children.push({ id: generateId(), name: form.name || (t('newCategoryName')||'Neue Kategorie'), type: 'category', isArchived: false, children: [] });
                           } else {
-                              const ac = form.assetClass || 'cash';
-                              const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage'].includes(ac);
-                              copy.children.push({ id: generateId(), name: form.name || 'Neues Asset', type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [] });
+                          const ac = form.assetClass || 'cash';
+                          const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage'].includes(ac);
+                          copy.children.push({ id: generateId(), name: form.name || (t('newAssetName')||'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [] });
                           }
                           return copy;
                       }
@@ -919,11 +922,11 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                   });
                   newData.banks = updateRecursive(newData.banks);
               }
-              if (typeof window !== 'undefined' && window.showToast) window.showToast("Erfolgreich gespeichert", "success");
+              if (typeof window !== 'undefined' && window.showToast) window.showToast(t('msgSaveSuccess2') || "Erfolgreich gespeichert", "success");
               updateTreeData(newData); 
               setModalObj(null);
           };
-        
+	
           const handleItemDelete = () => {
               if (!modalObj.item || !modalObj.assetId) return;
               let newData = {...data};
@@ -932,7 +935,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       let copy = {...n};
                       if (modalObj.type.includes('Booking') && copy.bookings) {
                           copy.bookings = copy.bookings.filter(b => b.id !== modalObj.item.id);
-                          copy = applyAutoValuation(copy); 
                       } else if (modalObj.type.includes('Balance') && copy.balances) {
                           copy.balances = copy.balances.filter(b => b.id !== modalObj.item.id);
                       }
@@ -947,7 +949,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                   const getUpdatedNode = (nodes) => { for(let i=0; i<nodes.length; i++) { if(nodes[i].id === selectedNode.id) return nodes[i]; if(nodes[i].children) { let r = getUpdatedNode(nodes[i].children); if(r) return r; } } };
                   setSelectedNode(getUpdatedNode(newData.banks));
               }
-              if (typeof window !== 'undefined' && window.showToast) window.showToast("Gelöscht", "success");
+              if (typeof window !== 'undefined' && window.showToast) window.showToast(t('msgDeleted') || "Gelöscht", "success");
               setModalObj(null);
           };
 
@@ -960,12 +962,13 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               else if (['pension_cash', 'pension_3a_cash'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
           }
 
-          const activeBookingCategories = data.settings?.bookingCategories || defaultBookingCategories || {};
+          const activeBookingCategories = data.settings?.bookingCategories || {};
           const availableSubCategories = activeBookingCategories[form.type] || [];
           const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
 
-          const currentSh = getActualShares(selectedNode);
-          const currentPr = getActualPrice(selectedNode);
+          const todayStr = new Date().toISOString().split('T')[0];
+          const currentSh = getAssetSharesAtDate(selectedNode, todayStr);
+          const currentPr = getAssetPriceAtDate(selectedNode, todayStr);
 
           return (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -1117,7 +1120,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                                     <div>
                                         <label className="block font-bold mb-1 text-xs uppercase text-blue-700 dark:text-blue-400">{t ? t('newPrice') : 'Neuer Kurs'} (Bisher: {currentPr})</label>
                                         <input type="number" step="any" className="w-full p-2.5 border border-blue-300 dark:border-blue-700 rounded-lg dark:bg-slate-800 bg-transparent" 
-                                            placeholder={currentSh > 0 ? "Tippen = Berechnen" : "Betrag manuell eintippen"}
+                                            placeholder={currentSh > 0 ? (t('placeholderCalcPrice') || "Tippen = Berechnen") : (t('placeholderManualAmount') || "Betrag manuell eintippen")}
                                             value={form.price || ''}
                                             onChange={e => {
                                                 const newPr = e.target.value;
@@ -1138,9 +1141,8 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                                 <div>
                                     <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{t ? t('targetAccount') : 'Zielkonto'}</label>
                                     <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
-                                        <option value="">-- Optional: Zielkonto wählen --</option>
+                                        <option value="">{t('optTargetAccount') || '-- Optional: Zielkonto wählen --'}</option>
                                         {data.banks.map(bank => {
-                                            // ALLE relevanten Assets erlauben (Aktien, Fonds, Krypto etc.)
                                             const eligibleAssets = getAllAssets([bank]).filter(a => 
                                                 a.id !== selectedNode?.id && 
                                                 ['cash', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass)
@@ -1165,7 +1167,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                                 <div>
                                     <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('category') : 'Kategorie'}</label>
                                     <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.subCategory || ''} onChange={e=>setForm({...form, subCategory: e.target.value})}>
-                                        <option value="">-- Optional --</option>
+                                        <option value="">{t('optOptional') || '-- Optional --'}</option>
                                         {availableSubCategories.map(cat => (
                                             <option key={cat} value={cat}>
                                                 {t ? t(cat) : cat}
@@ -1239,7 +1241,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
             <div className="h-full flex items-center justify-center">
               <div className="text-center text-gray-400">
                 <Icon name="PieChart" size={64} className="mx-auto mb-6 opacity-20 text-blue-500" />
-                <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinSPA'}</h2>
+                <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinSPA Pro'}</h2>
                 <p>{t ? t('welcomePrompt') : 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.'}</p>
               </div>
             </div>
@@ -1248,14 +1250,18 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       );
   }
 
-  return (
-    <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-slate-950">
-      <div className="text-center text-gray-400">
-        <Icon name="PieChart" size={64} className="mx-auto mb-6 opacity-20 text-blue-500" />
-        <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinSPA'}</h2>
-        <p>{t ? t('welcomePrompt') : 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.'}</p>
+return (
+    <>
+
+      {/* Hier wurde 'custom-editor-scrollbar' zur Klassenliste hinzugefügt */}
+      <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 finspa-scrollbar overflow-auto">
+        <div className="text-center text-gray-400">
+          <Icon name="PieChart" size={64} className="mx-auto mb-6 opacity-20 text-blue-500" />
+          <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinSPA Pro'}</h2>
+          <p>{t ? t('welcomePrompt') : 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.'}</p>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

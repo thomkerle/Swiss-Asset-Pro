@@ -6,7 +6,9 @@ const safeRequire = getRequire();
 
 const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
 const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
+// NEU: Importiere die benötigten Helfer direkt
 const { getAssetValueAtDate = () => 0 } = DataEngine;
+
 const ReportHeader = safeRequire('../ReportHeader.jsx') || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
@@ -15,7 +17,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
 
-  // Filtern auf reine Aktien und Fonds (Säule 3a, Krypto, Immos etc. explizit ausgeschlossen)
   const securitiesAssets = (activeAssets || []).filter(a => ['stock', 'fund'].includes(a.assetClass));
 
   if (securitiesAssets.length === 0) {
@@ -36,7 +37,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
     );
   }
 
-  // 1. Frühestes Datum finden
   let earliestDate = new Date().toISOString().split('T')[0];
   securitiesAssets.forEach(asset => {
       (asset.balances || []).forEach(b => { if (b.date < earliestDate) earliestDate = b.date; });
@@ -46,61 +46,46 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
   const currentYear = new Date().getFullYear();
   let startYear = new Date(earliestDate).getFullYear();
 
-  // FIX: Damit das Liniendiagramm immer gezeichnet wird (braucht mind. 2 Punkte), 
-  // zwingen wir den Startpunkt mindestens auf das Vorjahr.
   if (startYear === currentYear) {
       startYear -= 1;
   }
 
   const todayStr = new Date().toISOString().split('T')[0];
-
-  // 2. Messpunkte generieren
   const dataPoints = [];
   
-  const calculateInvestedAndDividends = (asset, targetDate) => {
-      let invested = 0;
-      let dividends = 0;
-      
-      // Das älteste Balance-Datum als initialen Startwert (Einstandskapital) nehmen
-      let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
-      let firstBalance = sortedBalances.length > 0 ? sortedBalances[0] : null;
-      let baseDate = '1970-01-01';
+  // FIX: Nutzt jetzt intern getAssetValueAtDate für garantierte UI/Engine Synchronität!
+  const calculateHistoricalStats = (asset, targetDate) => {
+      let totalInvestedCHF = 0;
+      let totalDividendsCHF = 0;
 
-      if (firstBalance && firstBalance.date <= targetDate) {
-          invested = firstBalance.amount;
-          baseDate = firstBalance.date;
-      }
+      const sortedBookings = [...(asset.bookings || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
 
-      (asset.bookings || []).forEach(bk => {
+      sortedBookings.forEach(bk => {
           if (bk.date <= targetDate) {
-              // Dividenden immer kumulieren (Erträge)
-              if (bk.type === 'Dividende') dividends += Number(bk.amount);
-          }
-
-          if (bk.date > baseDate && bk.date <= targetDate) {
-              // Reale Zahlungsflüsse NACH dem Basis-Saldo verändern das investierte Kapital
-              if (['Kauf', 'Einzahlung'].includes(bk.type)) invested += Number(bk.amount);
-              if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
-          } else if (!firstBalance && bk.date <= targetDate) {
-              // Fallback falls es keine Salden gibt
-              if (['Kauf', 'Einzahlung'].includes(bk.type)) invested += Number(bk.amount);
-              if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
+              const bkRate = parseFloat(String(bk.bookingExchangeRate || '1').replace(',', '.'));
+              const assetRate = parseFloat(String(asset.exchangeRate || '1').replace(',', '.'));
+              const rate = (bkRate !== 1 && bkRate !== 0) ? bkRate : assetRate;
+              
+              if (['Kauf', 'Einzahlung'].includes(bk.type)) {
+                  totalInvestedCHF += Number(bk.amount) * rate;
+              }
+              if (['Verkauf', 'Auszahlung'].includes(bk.type)) {
+                  totalInvestedCHF -= Number(bk.amount) * rate;
+              }
+              if (bk.type === 'Dividende') {
+                  totalDividendsCHF += Number(bk.amount) * rate;
+              }
           }
       });
-      
-      // Globaler Fallback für Währung
-      let applicableRate = firstBalance?.bookingExchangeRate || asset.exchangeRate || 1;
-      
-      // Rückwärts-Suchlauf für den Kurs analog zur DataEngine
-      if (applicableRate === 1 && asset.currency && asset.currency !== 'CHF') {
-           activeAssets.forEach(other => {
-                if (other.currency === asset.currency && other.exchangeRate && other.exchangeRate !== 1) {
-                    applicableRate = other.exchangeRate;
-                }
-           });
-      }
 
-      return { invested: invested * applicableRate, dividends: dividends * applicableRate };
+      // Zieht den korrekten aktuellen CHF Wert direkt aus der zentralen DataEngine!
+      const actualCHF = getAssetValueAtDate(asset, targetDate, activeAssets);
+      
+      return { 
+          invested: totalInvestedCHF, 
+          dividends: totalDividendsCHF, 
+          actual: actualCHF 
+      };
   };
 
   for (let y = startYear; y <= currentYear; y++) {
@@ -112,13 +97,12 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
       let totalDividends = 0;
 
       securitiesAssets.forEach(asset => {
-          const stats = calculateInvestedAndDividends(asset, targetDate);
+          const stats = calculateHistoricalStats(asset, targetDate);
           totalInvested += stats.invested;
           totalDividends += stats.dividends;
-          totalActual += getAssetValueAtDate(asset, targetDate, activeAssets);
+          totalActual += stats.actual; 
       });
 
-      // Punkte immer aufzeichnen
       const priceProfit = totalActual - totalInvested;
       const priceRoi = totalInvested > 0 ? (priceProfit / totalInvested) * 100 : 0;
       
@@ -143,7 +127,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
   const repTitle = t ? t('repSecuritiesTitle') || "Aktien & Fonds Performance" : "Aktien & Fonds Performance";
   const repSub = t ? t('repSecuritiesSub') || "Rendite-Analyse des freien Markt-Portfolios (ohne Säule 3a)" : "Rendite-Analyse des freien Markt-Portfolios (ohne Säule 3a)";
 
-  // Event-Listener für den PDF-Export
   useEffect(() => {
     const handlePdfExport = async () => {
       try {
@@ -178,7 +161,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
           chartBase64
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im SecuritiesPerformanceReport:", err);
+        console.error("[FinSPA Pro] PDF Export Error im SecuritiesPerformanceReport:", err);
       }
     };
 
@@ -220,7 +203,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
          </div>
       </div>
 
-      {/* NEUE CHART SEKTION - Sauber migriert auf UniversalChart */}
       {dataPoints.length > 1 && (
          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-8">
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
@@ -236,19 +218,19 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
                         {
                             label: t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert',
                             data: dataPoints.map(d => d.invested),
-                            backgroundColor: '#94a3b8', // Dezentes Grau für die Basisinvestition
+                            backgroundColor: '#94a3b8', 
                             valueFormatter: fCur
                         },
                         {
                             label: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert',
                             data: dataPoints.map(d => d.actual),
-                            backgroundColor: latestData.priceProfit >= 0 ? '#10b981' : '#3b82f6', // Grün bei Kursgewinn
+                            backgroundColor: latestData.priceProfit >= 0 ? '#10b981' : '#3b82f6', 
                             valueFormatter: fCur
                         },
                         {
                             label: t ? t('labelTotalValueDiv') || 'Total Value (inkl. Div)' : 'Total Value (inkl. Div)',
                             data: dataPoints.map(d => d.actual + d.dividends),
-                            backgroundColor: '#6366f1', // Indigo für den Total Return
+                            backgroundColor: '#6366f1', 
                             valueFormatter: fCur
                         }
                     ]} 

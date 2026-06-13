@@ -5,7 +5,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
     const map = {
         Printer: 'fa-print', Save: 'fa-save', FilePlus: 'fa-file-circle-plus', FolderOpen: 'fa-folder-open', Folder: 'fa-folder', FolderPlus: 'fa-folder-plus',
         Download: 'fa-download', Upload: 'fa-upload', Plus: 'fa-plus', Trash: 'fa-trash', Edit: 'fa-edit', Star: 'fa-star',
-        Settings: 'fa-cog', PieChart: 'fa-chart-pie', TrendingUp: 'fa-chart-line', BarChart: 'fa-chart-bar',
+        Settings: 'fa-cog', PieChart: 'fa-chart-pie', TrendingUp: 'fa-chart-line', TrendingDown: 'fa-arrow-trend-down', BarChart: 'fa-chart-bar',
         List: 'fa-list', Moon: 'fa-moon', Sun: 'fa-sun', Check: 'fa-check', Calendar: 'fa-calendar-alt',
         Activity: 'fa-heartbeat', DollarSign: 'fa-dollar-sign', Shield: 'fa-shield-alt', Target: 'fa-bullseye',
         Menu: 'fa-bars', ChevronRight: 'fa-chevron-right', ChevronLeft: 'fa-chevron-left', ChevronDown: 'fa-chevron-down',
@@ -41,6 +41,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Settings: 'text-slate-500 dark:text-slate-400',
         PieChart: 'text-indigo-500',
         TrendingUp: 'text-emerald-500',
+        TrendingDown: 'text-rose-500',
         BarChart: 'text-blue-500',
         List: 'text-gray-500',
         Moon: 'text-indigo-300',

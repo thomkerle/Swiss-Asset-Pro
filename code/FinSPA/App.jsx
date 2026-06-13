@@ -202,7 +202,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.1", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.4", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
@@ -352,88 +352,98 @@ const App = () => {
   };
 
   const handleSaveProject = async (saveAs = false) => {
-    const saveMethod = data.settings?.saveMethod || 'plaintext';
+    let isZip = false;
+    
+    // 1. Format-Erkennung: Normales Speichern (bestehendes Handle) vs. Speichern Unter (Settings)
+    if (!saveAs && fileHandle) {
+        isZip = fileHandle.name.endsWith('.zip');
+    } else {
+        isZip = data.settings?.saveMethod === 'zip';
+    }
+
+    let targetHandle = saveAs ? null : fileHandle;
+
+    // 2. OS-Dateidialog SOFORT aufrufen! 
+    // Dies verhindert, dass der Browser den Dialog blockiert, weil der "User Gesture"-Kontext 
+    // intakt bleibt. Wir machen das VOR dem PIN-Modal.
+    if ((saveAs || !targetHandle) && window.showSaveFilePicker) {
+        try {
+            targetHandle = await window.showSaveFilePicker({
+                suggestedName: targetHandle ? targetHandle.name : `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`,
+                types: isZip
+                    ? [{ description: 'FinSPA Verschlüsselt', accept: { 'application/zip': ['.zip'] } }]
+                    : [{ description: 'FinSPA Projekt', accept: { 'application/json': ['.json'] } }]
+            });
+        } catch (err) {
+            // User hat auf "Abbrechen" im OS-Dialog geklickt
+            if (err.name !== 'AbortError') {
+                console.error("[FinSPA Diagnose] FilePicker Fehler:", err);
+                showToast((t('msgSaveError') || "Fehler beim Dateidialog: ") + err.message, "error");
+            }
+            return; // Kompletter Abbruch
+        }
+    }
+
     const jsonStr = JSON.stringify(data, null, 2);
 
-    if (saveMethod === 'zip') {
-        setModalObj({ 
-            type: 'pinPrompt', 
-            action: 'save',
-            onConfirm: async (pin) => {
-                showToast(t('msgEncrypting') || "Verschlüsselung wird durchgeführt...", "success");
+    // 3. Schreiblogik (wird ausgeführt, sobald der PIN da ist, oder bei JSON sofort)
+    const executeWrite = async (pin) => {
+        try {
+            let finalContent;
+            if (isZip) {
+                if (typeof window.CryptoJS === 'undefined') throw new Error(t('msgCryptoNotLoaded') || "CryptoJS ist nicht geladen.");
+                if (typeof window.JSZip === 'undefined') throw new Error(t('msgZipNotLoaded') || "JSZip ist nicht geladen.");
                 
-                try {
-                    if (typeof window.CryptoJS === 'undefined') {
-                        throw new Error(t('msgCryptoNotLoaded') || "CryptoJS ist nicht geladen.");
-                    }
-                    if (typeof window.JSZip === 'undefined') {
-                        throw new Error(t('msgZipNotLoaded') || "JSZip ist nicht geladen.");
-                    }
+                const encrypted = window.CryptoJS.AES.encrypt(jsonStr, pin).toString();
+                const zip = new window.JSZip();
+                zip.file("project.data.enc", encrypted);
+                finalContent = await zip.generateAsync({ type: "uint8array" });
+            } else {
+                finalContent = jsonStr;
+            }
 
-                    const encrypted = window.CryptoJS.AES.encrypt(jsonStr, pin).toString();
-                    const zip = new window.JSZip();
-                    zip.file("project.data.enc", encrypted);
-                    
-                    const zipContent = await zip.generateAsync({type: "uint8array"});
-                    
-                    if (window.showSaveFilePicker) {
-                        let handle = saveAs ? null : fileHandle;
-                        if (!handle || !handle.name.endsWith('.zip')) {
-                            handle = await window.showSaveFilePicker({
-                                suggestedName: `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.zip`,
-                                types: [{ description: 'FinSPA Verschlüsselt', accept: { 'application/zip': ['.zip'] } }]
-                            });
-                            setFileHandle(handle);
-                        }
-                        const writable = await handle.createWritable();
-                        await writable.write(zipContent);
-                        await writable.close();
-                        showToast(t('msgZipExportSuccess') || "Projekt erfolgreich verschlüsselt gespeichert", "success");
-                    } else {
-                        const blob = new Blob([zipContent], { type: "application/zip" });
-                        const a = document.createElement('a'); 
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.zip`;
-                        a.click(); 
-                        showToast(t('msgExportSuccess') || "Projekt exportiert", "success");
-                    }
-                } catch(err) {
-                    if (err.name !== 'AbortError') {
-                        console.error("[FinSPA Diagnose] Fehler bei ZIP-Export:", err);
-                        showToast((t('msgEncryptError') || "Fehler bei der Verschlüsselung: ") + err.message, "error");
+            if (targetHandle && window.showSaveFilePicker) {
+                // Native File System API
+                const opts = { mode: 'readwrite' };
+                if ((await targetHandle.queryPermission(opts)) !== 'granted') {
+                    if ((await targetHandle.requestPermission(opts)) !== 'granted') {
+                        throw new Error(t('msgPermissionDenied') || "Keine Schreibberechtigung für die Datei.");
                     }
                 }
+                const writable = await targetHandle.createWritable();
+                await writable.write(isZip ? finalContent : jsonStr);
+                await writable.close();
+                
+                // Nach erfolgreichem Schreiben dauerhaft für "Schnellspeichern" merken
+                setFileHandle(targetHandle);
+                showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt gespeichert") : (t('msgSaveSuccess2') || "Projekt erfolgreich gespeichert"), "success");
+            } else {
+                // Fallback (Firefox / Safari / mobile Browser)
+                const blob = new Blob([finalContent], { type: isZip ? "application/zip" : "application/json" });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
+                a.click();
+                showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
+            }
+        } catch (error) {
+            console.error("[FinSPA Diagnose] Speicherfehler:", error);
+            showToast((t('msgSaveError') || "Fehler beim Speichern: ") + error.message, "error");
+        }
+    };
+
+    // 4. Verschlüsselung (PIN Abfrage Modal) oder direkt speichern
+    if (isZip) {
+        setModalObj({
+            type: 'pinPrompt',
+            action: 'save',
+            onConfirm: (pin) => {
+                showToast(t('msgEncrypting') || "Verschlüsselung wird durchgeführt...", "success");
+                executeWrite(pin);
             }
         });
     } else {
-        try {
-            if (window.showSaveFilePicker) {
-                let handle = saveAs ? null : fileHandle;
-                if (!handle || !handle.name.endsWith('.json')) {
-                    handle = await window.showSaveFilePicker({
-                        suggestedName: `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.json`,
-                        types: [{ description: 'FinSPA Projekt', accept: { 'application/json': ['.json'] } }]
-                    });
-                    setFileHandle(handle);
-                }
-                const writable = await handle.createWritable();
-                await writable.write(jsonStr);
-                await writable.close();
-                showToast(t('msgSaveSuccess2') || "Projekt erfolgreich gespeichert", "success");
-            } else {
-                const blob = new Blob([jsonStr], { type: "application/json" });
-                const a = document.createElement('a'); 
-                a.href = URL.createObjectURL(blob);
-                a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.json`;
-                a.click(); 
-                showToast(t('msgExportSuccess') || "Projekt exportiert", "success");
-            }
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                console.error("[FinSPA] Fehler beim Speichern:", err);
-                showToast((t('msgSaveError') || "Fehler beim Speichern: ") + err.message, "error");
-            }
-        }
+        executeWrite(null);
     }
   };
 
@@ -1068,7 +1078,7 @@ const App = () => {
                       
                       <div>
                           <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Fin SPA Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.1</p>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.4</p>
                       </div>
                       
                       <hr className="border-gray-200 dark:border-slate-700 my-4" />
@@ -1122,12 +1132,44 @@ const App = () => {
           );
       }
 
-      // HIER IST DIE RETTUNG: FormModal nur aufrufen, wenn es wirklich eins der Formulare ist
       return <FormModal />;
   };
 
   return (
     <div id="app-container" className="h-screen w-screen flex flex-col font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
+
+{/* Zentrales CSS - Einmal definiert, überall verfügbar */}
+      <style>{`
+        .finspa-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 transparent;
+        }
+        .dark .finspa-scrollbar {
+          scrollbar-color: #475569 transparent;
+        }
+        .finspa-scrollbar::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .finspa-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .finspa-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #cbd5e1;
+          border-radius: 9999px;
+          border: 2px solid transparent;
+          background-clip: content-box;
+        }
+        .dark .finspa-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #475569;
+        }
+        .finspa-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: #94a3b8;
+        }
+        .dark .finspa-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: #64748b;
+        }
+      `}</style>
       <MenuBar 
         data={data} 
         viewMode={viewMode} 
@@ -1165,6 +1207,7 @@ const App = () => {
             toggleExpand={toggleExpand} 
             deleteNode={requestDeleteNode} 
             setModalObj={setModalObj} 
+            updateTreeData={updateTreeData} /* HIER ERGÄNZT FÜR DRAG & DROP */
             t={t} 
         />
 
@@ -1208,11 +1251,10 @@ const App = () => {
               <span>{t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong></span>
           </div>
           <div className="flex gap-6">
-              <span>{t('version') || 'Version'}: Beta - 0.9.2</span>
+              <span>{t('version') || 'Version'}: Beta - 0.9.4</span>
           </div>
       </div>
       
-      {/* UND HIER WURDE SIE ALS FIXE KOMPONENTE ENTFERNT, UM DEN ABSTURZ ZU VERHINDERN */}
       {ModalHandler()}
       
       <div className="fixed bottom-4 right-4 z-[200] space-y-2 pointer-events-none">
