@@ -81,7 +81,8 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
           subtitle: `${dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to} | Einnahmen: ${fCur(totalIncomes)} | Ausgaben: ${fCur(totalExpenses)} | Sparquote: ${savingsRate.toFixed(1)}%`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im BookingAnalysisReport:", err);

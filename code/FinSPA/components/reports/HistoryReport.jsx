@@ -73,7 +73,8 @@ const HistoryReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
           subtitle: `${t ? t('repHistSubDev') || 'Vermögensentwicklung' : 'Vermögensentwicklung'} (${finalDates[0] || dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to}).`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im HistoryReport:", err);

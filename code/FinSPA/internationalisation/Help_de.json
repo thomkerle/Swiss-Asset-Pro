@@ -37,6 +37,21 @@
       ]
     },
     {
+      "id": "budget",
+      "title": "Budget & 50/30/20",
+      "icon": "DollarSign",
+      "content": [
+        { "type": "h4", "text": "Budgetierung leicht gemacht" },
+        { "type": "p", "text": "FinSPA ordnet Ihre Ausgaben automatisch nach der **50/30/20 Regel**:" },
+        { "type": "list", "items": [
+          "**Needs (50%):** Fixkosten wie Wohnen, Steuern, Grundversorgung.",
+          "**Wants (30%):** Lifestyle, Freizeit, Abonnements.",
+          "**Savings (20%):** Sparen, Investitionen, Säule 3a."
+        ]},
+        { "type": "infoBox", "text": "Im Budget-Editor können Sie auch Kündigungsfristen für Verträge und Abonnements hinterlegen, um Kündigungstermine nicht zu verpassen." }
+      ]
+    },
+    {
       "id": "uc6",
       "title": "Wertpapiere & Depots",
       "icon": "TrendingUp",
@@ -61,15 +76,6 @@
       ]
     },
     {
-      "id": "uc8",
-      "title": "Kryptowährungen",
-      "icon": "Coins",
-      "content": [
-        { "type": "h4", "text": "Krypto-Assets" },
-        { "type": "p", "text": "Bitcoin, Ethereum etc. verhalten sich wie Aktien, werden aber als hochliquide betrachtet." }
-      ]
-    },
-    {
       "id": "uc9",
       "title": "Immobilien & Hypotheken",
       "icon": "Home",
@@ -79,6 +85,19 @@
           "**Immobilie:** Positiver Wert. Nutzen Sie *Wertanpassung* für Marktwertänderungen.",
           "**Hypothek:** Als *negativer Stichtags-Saldo* erfasst. Nutzen Sie *Abzahlung* oder *Zinszahlung*."
         ]}
+      ]
+    },
+    {
+      "id": "import_scanner",
+      "title": "Import & PDF-Scanner",
+      "icon": "FileText",
+      "content": [
+        { "type": "h4", "text": "Datenübernahme & KI-Erfassung" },
+        { "type": "list", "items": [
+          "**Parqet Import:** Sie können CSV-Exporte direkt aus Parqet importieren. Die Daten werden automatisch migriert.",
+          "**KI Beleg-Scanner:** Laden Sie PDF-Auszüge oder Rechnungen hoch. Die KI extrahiert Datum, Betrag und schlägt Buchungskategorien vor."
+        ]},
+        { "type": "infoBox", "text": "Datenschutz (Privacy-First): Bevor PDFs an externe Cloud-KIs (OpenAI, Claude, Gemini) gesendet werden, durchlaufen sie einen lokalen Filter. FinSPA anonymisiert alle IBANs, Namen, Adressen und Kartennummern." }
       ]
     },
     {
@@ -104,9 +123,32 @@
         { "type": "h4", "text": "Umfangreiche Analysen" },
         { "type": "list", "items": [
           "**Bestandesreports:** Allokation, Liquiditätsrisiko und Steuerreports.",
-          "**Bewegungsreports:** Cashflows, Buchungsanalysen und Passives Einkommen.",
-          "**Zukunftsreports:** Simulation der Zukunft inkl. Regressionen und eigenen Zukunftsszenarien (FIRE-Sparziele)."
+          "**Bewegungsreports:** Cashflows, Buchungsanalysen und Passives Einkommen."
         ]}
+      ]
+    },
+    {
+      "id": "fire_scenarios",
+      "title": "FIRE & Szenarien",
+      "icon": "Target",
+      "content": [
+        { "type": "h4", "text": "Finanzielle Unabhängigkeit planen" },
+        { "type": "p", "text": "Im Report **Szenarien & FIRE** können Sie Ihr persönliches FIRE-Ziel (Financial Independence, Retire Early) und das gewünschte Zieljahr festlegen." },
+        { "type": "p", "text": "Erstellen Sie **Zukunftsszenarien** (z.B. Autokauf, Erbschaft, Sabbatical), um präzise zu simulieren, wie sich einmalige Events auf Ihren Zinseszins und Vermögensverlauf auswirken." }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Sicherheit & Verschlüsselung",
+      "icon": "Shield",
+      "content": [
+        { "type": "h4", "text": "Ihre Daten gehören Ihnen" },
+        { "type": "p", "text": "FinSPA speichert alle Daten lokal im Browser. Für Backups und den Dateitransfer stehen zwei Formate zur Verfügung:" },
+        { "type": "list", "items": [
+          "**Klartext (JSON):** Standardformat, schnell und einfach in anderen Tools weiterzuverarbeiten.",
+          "**Verschlüsseltes ZIP:** Nutzt modernste **AES-256 Verschlüsselung** und erfordert ein PIN-Passwort."
+        ]},
+        { "type": "infoBox", "text": "Achtung: FinSPA kann den PIN nicht wiederherstellen. Wenn Sie das Passwort vergessen, sind die Daten im ZIP-Archiv unwiderruflich verloren." }
       ]
     },
     {
@@ -116,14 +158,13 @@
       "content": [
         { "type": "h4", "text": "Konfiguration" },
         { "type": "p", "text": "**Erweiterbarkeit:** Sie können Basiswährungen, eigene Buchungskategorien und sogar völlig neue Asset-Klassen definieren." },
-        { "type": "p", "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) hinzu." },
-        { "type": "p", "text": "**Datensicherung:** Nutzen Sie JSON für lokale, sichere Backups." }
+        { "type": "p", "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) oder API-Keys für externe Anbieter hinzu." }
       ]
     }
   ],
   "translations": {
     "menuFile": "Datei", "menuWealth": "Vermögen", "menuBudget": "Budget", "menuViews": "Ansichten", "menuReports": "Reports", "menuData": "Datensicht",
-    "fileNew": "Neu (Leeres Projekt)", "fileOpen": "Öffnen (JSON)", "fileSave": "Sichern (JSON)", "fileImport": "Importieren (CSV)", "fileExport": "Exportieren (CSV)", "filePrint": "Drucken", "fileSettings": "Einstellungen",
+    "fileNew": "Neu (Leeres Projekt)", "fileOpen": "Öffnen (JSON/ZIP)", "fileSave": "Sichern (JSON/ZIP)", "fileImport": "Importieren (CSV)", "fileExport": "Exportieren", "filePrint": "Drucken", "fileSettings": "Einstellungen",
     "menuHelp": "Hilfe", "helpManual": "Benutzerhandbuch",
     "viewWealth": "Vermögensverwaltung", "viewBudget": "Budgetverwaltung", "viewData": "Innere Datenhaltung (JSON)",
     "repStock": "Bestandesreports", "repFlow": "Bewegungsreports", "repFuture": "Zukunftsreports", "repBudget": "Budgetreports",

@@ -158,7 +158,8 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, isTreeVisible, setIsT
           subtitle: repSub,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA Pro] PDF Export Error im SecuritiesPerformanceReport:", err);

@@ -1,6 +1,14 @@
 const i18n = {
   de: {
     // --- Neue Keys (Automatisch generiert) ---
+    share: 'Anteil',
+totalVolume: 'Gesamtvolumen',
+allocation: 'Allokation',
+institutionsWeighting: 'Institute & Gewichtung',
+assets: 'Assets',
+distribution: 'Verteilung',
+
+    // --- Neue Keys (Automatisch generiert) ---
     labelIncomesReal: 'Echte Einnahmen',
 labelExpensesReal: 'Echte Ausgaben',
 labelSavingsRate: 'Sparquote',
@@ -442,8 +450,7 @@ zipWarning: 'Beim verschlüsselten ZIP wird das gesamte Projekt mittels AES-256 
     // Asset Klassen & Eigenschaften
     acPension_cash: 'Vorsorge (Konten)', acPension_fund: 'Vorsorge (Depots)',
     assetClass: 'Anlageklasse', currency: 'Währung', exchangeRate: 'Wechselkurs', isLiquid: 'Liquides Mittel', isArchived: 'Archiviert', propName: 'Name', propInactive: 'inaktiv.',
-    acCash: 'Konto', acFund: 'Fonds / ETF', acStock: 'Aktie', acCrypto: 'Krypto', acRealEstate: 'Immobilie', acMortgage: 'Hypothek', acPensionCash: 'Vorsorgekonto 3a', acPensionFund: 'Vorsorgedepot 3a',
-    propTrackRateTitle: 'Genereller Tracking-Kurs', propCurrentRate: 'Aktueller Kurs', propSecurityStatus: 'Wertpapier Status', propCurrentShares: 'Aktuelle Stückzahl', propCurrentPrice: 'Aktueller Preis',
+acCash: 'Konto', acFund: 'Fonds / ETF', acStock: 'Aktie', acCrypto: 'Krypto', acRealEstate: 'Immobilie', acMortgage: 'Hypothek', acPensionCash: 'Pensionskasse (2. Säule)', acPensionFund: 'PK-Fonds (2. Säule)', acPension3aCash: 'Vorsorgekonto 3a', acPension3aFund: 'Vorsorgedepot 3a',    propTrackRateTitle: 'Genereller Tracking-Kurs', propCurrentRate: 'Aktueller Kurs', propSecurityStatus: 'Wertpapier Status', propCurrentShares: 'Aktuelle Stückzahl', propCurrentPrice: 'Aktueller Preis',
     
     // EditorArea (Dashboard & Buchungen)
     welcomeTitle: 'Willkommen in FinSPA', welcomePrompt: 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.',
@@ -627,6 +634,14 @@ zipWarning: 'Beim verschlüsselten ZIP wird das gesamte Projekt mittels AES-256 
   },
 
   en: {
+    // --- Neue Keys (Automatisch generiert) ---
+    share: 'Share',
+totalVolume: 'Total Volume',
+allocation: 'Allocation',
+institutionsWeighting: 'Institutions & Weighting',
+assets: 'Assets',
+distribution: 'Distribution',
+
     // --- Neue Keys (Automatisch generiert) ---
     labelIncomesReal: 'Real Incomes',
 labelExpensesReal: 'Real Expenses',
@@ -1068,8 +1083,7 @@ zipWarning: 'With the encrypted ZIP, the entire project is secured using AES-256
     // Asset Classes & Properties
     acPension_cash: 'Pension (Accounts)', acPension_fund: 'Pension (Portfolios)',
     assetClass: 'Asset Class', currency: 'Currency', exchangeRate: 'Exchange Rate', isLiquid: 'Liquid Asset', isArchived: 'Archived', propName: 'Name', propInactive: 'inactive.',
-    acCash: 'Account', acFund: 'Fund / ETF', acStock: 'Stock', acCrypto: 'Crypto', acRealEstate: 'Real Estate', acMortgage: 'Mortgage', acPensionCash: 'Pension Account 3a', acPensionFund: 'Pension Portfolio 3a',
-    propTrackRateTitle: 'General Tracking Rate', propCurrentRate: 'Current Rate', propSecurityStatus: 'Security Status', propCurrentShares: 'Current Shares', propCurrentPrice: 'Current Price',
+acCash: 'Account', acFund: 'Fund / ETF', acStock: 'Stock', acCrypto: 'Crypto', acRealEstate: 'Real Estate', acMortgage: 'Mortgage', acPensionCash: 'Pension Fund (2nd Pillar)', acPensionFund: 'Pension Portfolio (2nd Pillar)', acPension3aCash: 'Pension Account 3a', acPension3aFund: 'Pension Portfolio 3a',    propTrackRateTitle: 'General Tracking Rate', propCurrentRate: 'Current Rate', propSecurityStatus: 'Security Status', propCurrentShares: 'Current Shares', propCurrentPrice: 'Current Price',
     
     // EditorArea (Dashboard & Bookings)
     welcomeTitle: 'Welcome to FinSPA', welcomePrompt: 'Please select an item from the tree on the left or open a report.',
@@ -1250,6 +1264,14 @@ zipWarning: 'With the encrypted ZIP, the entire project is secured using AES-256
   },
 
   fr: {
+    // --- Neue Keys (Automatisch generiert) ---
+    share: 'Part',
+totalVolume: 'Volume total',
+allocation: 'Allocation',
+institutionsWeighting: 'Institutions & Pondération',
+assets: 'Actifs',
+distribution: 'Distribution',
+
     // --- Neue Keys (Automatisch generiert) ---
     labelIncomesReal: 'Revenus réels',
 labelExpensesReal: 'Dépenses réelles',
@@ -1691,8 +1713,7 @@ zipWarning: 'Avec le ZIP crypté, l\'ensemble du projet est sécurisé via AES-2
     // Classes d'actifs & Propriétés
     acPension_cash: 'Prévoyance (Comptes)', acPension_fund: 'Prévoyance (Dépôts)',
     assetClass: 'Classe d\'actifs', currency: 'Devise', exchangeRate: 'Taux de change', isLiquid: 'Actif liquide', isArchived: 'Archivé', propName: 'Nom', propInactive: 'inactif.',
-    acCash: 'Compte', acFund: 'Fonds / ETF', acStock: 'Action', acCrypto: 'Crypto', acRealEstate: 'Immobilier', acMortgage: 'Hypothèque', acPensionCash: 'Compte de prévoyance 3a', acPensionFund: 'Dépôt de prévoyance 3a',
-    propTrackRateTitle: 'Taux de suivi général', propCurrentRate: 'Taux actuel', propSecurityStatus: 'Statut du titre', propCurrentShares: 'Parts actuelles', propCurrentPrice: 'Prix actuel',
+acCash: 'Compte', acFund: 'Fonds / ETF', acStock: 'Action', acCrypto: 'Crypto', acRealEstate: 'Immobilier', acMortgage: 'Hypothèque', acPensionCash: 'Caisse de pension (2e pilier)', acPensionFund: 'Fonds de pension (2e pilier)', acPension3aCash: 'Compte de prévoyance 3a', acPension3aFund: 'Dépôt de prévoyance 3a',    propTrackRateTitle: 'Taux de suivi général', propCurrentRate: 'Taux actuel', propSecurityStatus: 'Statut du titre', propCurrentShares: 'Parts actuelles', propCurrentPrice: 'Prix actuel',
     
     // EditorArea (Tableau de bord & Écritures)
     welcomeTitle: 'Bienvenue dans FinSPA', welcomePrompt: 'Veuillez sélectionner un élément dans l\'arborescence à gauche ou ouvrir un rapport.',
@@ -1875,6 +1896,14 @@ zipWarning: 'Avec le ZIP crypté, l\'ensemble du projet est sécurisé via AES-2
   },
 
   it: {
+    // --- Neue Keys (Automatisch generiert) ---
+    share: 'Quota',
+totalVolume: 'Volume totale',
+allocation: 'Allocazione',
+institutionsWeighting: 'Istituti e Ponderazione',
+assets: 'Asset',
+distribution: 'Distribuzione',
+
     // --- Neue Keys (Automatisch generiert) ---
     labelIncomesReal: 'Entrate Reali',
 labelExpensesReal: 'Uscite Reali',
@@ -2316,8 +2345,7 @@ zipWarning: 'Con lo ZIP crittografato, l\'intero progetto viene protetto tramite
     // Classi di Asset & Proprietà
     acPension_cash: 'Previdenza (Conti)', acPension_fund: 'Previdenza (Depositi)',
     assetClass: 'Classe di asset', currency: 'Valuta', exchangeRate: 'Tasso di cambio', isLiquid: 'Asset liquido', isArchived: 'Archiviato', propName: 'Nome', propInactive: 'inattivo.',
-    acCash: 'Conto', acFund: 'Fondo / ETF', acStock: 'Azione', acCrypto: 'Cripto', acRealEstate: 'Immobile', acMortgage: 'Ipoteca', acPensionCash: 'Conto previdenza 3a', acPensionFund: 'Deposito previdenza 3a',
-    propTrackRateTitle: 'Tasso di tracciamento generale', propCurrentRate: 'Tasso attuale', propSecurityStatus: 'Stato del titolo', propCurrentShares: 'Quote attuali', propCurrentPrice: 'Prezzo attuale',
+acCash: 'Conto', acFund: 'Fondo / ETF', acStock: 'Azione', acCrypto: 'Crypto', acRealEstate: 'Immobile', acMortgage: 'Ipoteca', acPensionCash: 'Cassa pensione (2° pilastro)', acPensionFund: 'Fondo pensione (2° pilastro)', acPension3aCash: 'Conto previdenza 3a', acPension3aFund: 'Deposito previdenza 3a',    propTrackRateTitle: 'Tasso di tracciamento generale', propCurrentRate: 'Tasso attuale', propSecurityStatus: 'Stato del titolo', propCurrentShares: 'Quote attuali', propCurrentPrice: 'Prezzo attuale',
     
     // EditorArea (Dashboard & Registrazioni)
     welcomeTitle: 'Benvenuto in FinSPA', welcomePrompt: 'Si prega di selezionare un elemento dall\'albero a sinistra o aprire un report.',

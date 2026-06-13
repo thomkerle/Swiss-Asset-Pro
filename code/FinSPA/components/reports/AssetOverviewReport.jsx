@@ -138,7 +138,8 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
           subtitle: `${t ? t('repOverviewSub') || 'Konsolidierte Übersicht der Assets per' : 'Konsolidierte Übersicht der Assets per'} ${targetDate} | Gesamtvolumen: ${fCur(grandTotal)}`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+ 	  data : data	
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im AssetOverviewReport:", err);

@@ -1,6 +1,6 @@
 /**
  * @file FinSpaApiInject.js
- * @description Vollständige FinSPA_API inkl. Budget-Methoden.
+ * @description Vollständige FinSPA_API inkl. Budget-Methoden und synchronisierter DataEngine Logik.
  */
 
 const getFinSpaApiScript = () => `
@@ -9,6 +9,17 @@ const getFinSpaApiScript = () => `
 window.FinSPA_API = {
     _getData: function() { 
         return window.finspaData || { banks: [], budget: {}, settings: {} }; 
+    },
+
+    // --- Helper (synchron mit DataEngine) ---
+    _isSecurity: function(assetClass) {
+        return ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetClass);
+    },
+    _parseRate: function(val) {
+        return parseFloat(String(val || '1').replace(',', '.'));
+    },
+    _getTodayStr: function() {
+        return new Date().toISOString().split('T')[0];
     },
 
     // --- Assets & Navigation ---
@@ -41,34 +52,138 @@ window.FinSPA_API = {
         return this.getAllAssets().filter(a => a.assetClass === assetClass);
     },
 
+    // --- Neue dynamische Wertermittlung (aus DataEngine) ---
+    getAssetSharesAtDate: function(asset, targetDate) {
+        if (!this._isSecurity(asset.assetClass)) return 0;
+        let sh = 0;
+        if (asset.bookings) {
+            asset.bookings.forEach(b => {
+                if (b.date <= targetDate) {
+                    if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
+                    if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
+                }
+            });
+        }
+        return sh > 0 ? sh : (Number(asset.shares) || 0);
+    },
+
+    getAssetPriceAtDate: function(asset, targetDate) {
+        if (!this._isSecurity(asset.assetClass)) return 1;
+        
+        if (targetDate >= this._getTodayStr() && Number(asset.price) > 0) {
+            return Number(asset.price);
+        }
+        
+        let p = 0;
+        if (asset.bookings) {
+            const sorted = [...asset.bookings].sort((a,b) => new Date(a.date) - new Date(b.date));
+            const pastBookings = sorted.filter(b => b.date <= targetDate && ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
+            if (pastBookings.length > 0) {
+                p = Number(pastBookings[pastBookings.length - 1].price);
+            }
+        }
+        return p > 0 ? p : (Number(asset.price) || 0);
+    },
+
+    getAssetRawValueAtDate: function(asset, targetDate) {
+        if (this._isSecurity(asset.assetClass)) {
+            const sh = this.getAssetSharesAtDate(asset, targetDate);
+            const pr = this.getAssetPriceAtDate(asset, targetDate);
+            if (sh > 0 && pr > 0) return sh * pr;
+        }
+
+        let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+        let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+        let baseAmount = applicableBalance ? Number(applicableBalance.amount) : 0;
+        let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+        let netBookings = 0;
+
+        if (asset.bookings) {
+            asset.bookings.forEach(bk => {
+                if (bk.date > baseDate && bk.date <= targetDate) {
+                    const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
+                    const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
+                    if (isPositive) netBookings += Number(bk.amount);
+                    else if (isNegative) netBookings -= Number(bk.amount);
+                }
+            });
+        }
+        return baseAmount + netBookings;
+    },
+
+    getAssetValueAtDate: function(asset, targetDate, allAssets) {
+        const rawValue = this.getAssetRawValueAtDate(asset, targetDate);
+        
+        if (!asset.currency || asset.currency === 'CHF') return rawValue;
+
+        if (targetDate >= this._getTodayStr() && asset.exchangeRate) {
+            return rawValue * this._parseRate(asset.exchangeRate);
+        }
+
+        let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+        let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+        let applicableRate = applicableBalance && applicableBalance.bookingExchangeRate ? applicableBalance.bookingExchangeRate : this._parseRate(asset.exchangeRate);
+        let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+
+        if (asset.bookings) {
+            asset.bookings.forEach(bk => {
+                if (bk.date > baseDate && bk.date <= targetDate) {
+                    if (bk.bookingExchangeRate && bk.bookingExchangeRate !== 1) applicableRate = bk.bookingExchangeRate;
+                }
+            });
+        }
+
+        if (!applicableRate || applicableRate === 1) {
+            let latestDate = '1970-01-01';
+            const searchAssets = allAssets || this.getAllAssets();
+            searchAssets.forEach(otherAsset => {
+                if (otherAsset.currency === asset.currency) {
+                    if (otherAsset.bookings) {
+                        otherAsset.bookings.forEach(b => {
+                            if (b.bookingExchangeRate && b.bookingExchangeRate !== 1 && b.date <= targetDate && b.date > latestDate) {
+                                applicableRate = b.bookingExchangeRate;
+                                latestDate = b.date;
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        return rawValue * this._parseRate(applicableRate || 1);
+    },
+
+    // --- Legacy Kompatibilität für die KI ---
     getLatestBalanceValue: function(asset) {
-        if (!asset || !asset.balances || asset.balances.length === 0) return 0;
-        const latest = asset.balances.reduce((latest, current) => {
-            return new Date(current.date) > new Date(latest.date) ? current : latest;
-        }, asset.balances[0]);
-        const rate = latest.bookingExchangeRate || asset.exchangeRate || 1;
-        return latest.amount * rate;
+        return this.getAssetValueAtDate(asset, this._getTodayStr(), this.getAllAssets());
     },
 
     // --- Wealth Calculations ---
     getTotalWealth: function() {
-        return this.getAllAssets().reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+        const today = this._getTodayStr();
+        const allAssets = this.getAllAssets();
+        return allAssets.reduce((sum, asset) => sum + this.getAssetValueAtDate(asset, today, allAssets), 0);
     },
 
     getTotalLiquidWealth: function() {
-        return this.getLiquidAssets().reduce((sum, asset) => sum + this.getLatestBalanceValue(asset), 0);
+        const today = this._getTodayStr();
+        const allAssets = this.getAllAssets();
+        return this.getLiquidAssets().reduce((sum, asset) => sum + this.getAssetValueAtDate(asset, today, allAssets), 0);
     },
 
     getWealthDistributionByClass: function() {
         const data = this._getData();
-        const assets = this.getAllAssets();
+        const allAssets = this.getAllAssets();
+        const today = this._getTodayStr();
         const distribution = {};
         const classMap = {};
+        
         if (data.settings && data.settings.assetClasses) {
             data.settings.assetClasses.forEach(ac => classMap[ac.id] = ac.name);
         }
-        assets.forEach(asset => {
-            const val = this.getLatestBalanceValue(asset);
+        
+        allAssets.forEach(asset => {
+            const val = this.getAssetValueAtDate(asset, today, allAssets);
             const acName = classMap[asset.assetClass] || asset.assetClass || 'unknown';
             distribution[acName] = (distribution[acName] || 0) + val;
         });
@@ -76,13 +191,16 @@ window.FinSPA_API = {
     },
 
     getWealthByBank: function() {
-        const assets = this.getAllAssets();
+        const allAssets = this.getAllAssets();
+        const today = this._getTodayStr();
         const bankTotals = {};
-        assets.forEach(asset => {
+        
+        allAssets.forEach(asset => {
             const bName = asset.bankName || 'Unbekannt';
-            const val = this.getLatestBalanceValue(asset);
+            const val = this.getAssetValueAtDate(asset, today, allAssets);
             bankTotals[bName] = (bankTotals[bName] || 0) + val;
         });
+        
         return Object.keys(bankTotals).map(name => ({
             bankName: name,
             totalValue: bankTotals[name]
@@ -192,19 +310,17 @@ window.FinSPA_API = {
                 return;
             }
 
-            // Automatisches Extrahieren ALLER Charts auf dem Dashboard
             let chartsBase64 = [];
             const canvases = document.querySelectorAll('canvas');
             
             canvases.forEach(canvas => {
-                // Weißen Hintergrund erzwingen, da transparente PNGs in PDFs schwarz werden können
                 const tempCtx = canvas.getContext('2d');
                 const origComposite = tempCtx.globalCompositeOperation;
                 tempCtx.globalCompositeOperation = 'destination-over';
                 tempCtx.fillStyle = '#ffffff';
                 tempCtx.fillRect(0, 0, canvas.width, canvas.height);
                 chartsBase64.push(canvas.toDataURL('image/png', 1.0));
-                tempCtx.globalCompositeOperation = origComposite; // Reset
+                tempCtx.globalCompositeOperation = origComposite;
             });
 
             await window.PdfExportEngine.exportReport({
@@ -212,13 +328,13 @@ window.FinSPA_API = {
                 subtitle: config.subtitle || '',
                 tableHeaders: config.tables?.[0]?.headers || [],
                 tableBody: config.tables?.[0]?.rows || [],
-                chartsBase64: chartsBase64 // <-- NEU: Array mit allen Charts
+                chartsBase64: chartsBase64,
+		data: window.FinSPA_API._getData()
             });
         }
-    } // <-- Ende des PDF-Objekts (nur Klammer, KEIN Semikolon)
-}; // <-- Ende des FinSPA_API-Objekts (mit Semikolon)
+    }
+};
 
-// Fallback, damit die KI die Methoden auch ohne 'window.' aufrufen kann
 const FinSPA_API = window.FinSPA_API;
 </script>
 `;

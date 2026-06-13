@@ -68,7 +68,8 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           subtitle: `${subText} | ${t ? t('labelFireGoal') || 'Ziel' : 'Ziel'}: ${fCur(fireTarget)}`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im ScenariosReport:", err);

@@ -18,10 +18,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         ArrowUp: 'fa-arrow-up', ChevronUp: 'fa-chevron-up', Copy: 'fa-copy',
         PlusCircle: 'fa-circle-plus', BookOpen: 'fa-book-open', Box: 'fa-box',
         
-        // PDF Scanner & Settings Icons (Neu)
+        // PDF Scanner, Settings & Report Icons (Ergänzt)
         Scan: 'fa-expand', UploadCloud: 'fa-cloud-arrow-up', AlertCircle: 'fa-circle-exclamation',
         Terminal: 'fa-terminal', CheckCircle: 'fa-circle-check', CornerDownRight: 'fa-arrow-turn-down',
-        Cloud: 'fa-cloud', Send: 'fa-paper-plane'
+        Cloud: 'fa-cloud', Send: 'fa-paper-plane', Layers: 'fa-layer-group', Users: 'fa-users',
+        Globe: 'fa-globe', Link: 'fa-link'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -82,7 +83,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         BookOpen: 'text-blue-500',
         Box: 'text-gray-400',
         
-        // PDF Scanner & Settings Icons (Neu)
+        // PDF Scanner, Settings & Report Icons (Ergänzt)
         Scan: 'text-indigo-500',
         UploadCloud: 'text-indigo-500',
         AlertCircle: 'text-red-500',
@@ -90,7 +91,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         CheckCircle: 'text-indigo-500',
         CornerDownRight: 'text-indigo-400',
         Cloud: 'text-indigo-500',
-        Send: 'text-blue-500'
+        Send: 'text-blue-500',
+        Layers: 'text-indigo-500',
+        Users: 'text-blue-500',
+        Globe: 'text-blue-400',
+        Link: 'text-gray-400'
     };
 
     // RegEx prüft spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])

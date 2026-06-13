@@ -113,7 +113,8 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
           subtitle: t ? t('repSimRegSubProj') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung',
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im FutureReport:", err);

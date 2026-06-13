@@ -37,6 +37,21 @@
       ]
     },
     {
+      "id": "budget",
+      "title": "Budget & 50/30/20",
+      "icon": "DollarSign",
+      "content": [
+        { "type": "h4", "text": "La budgétisation simplifiée" },
+        { "type": "p", "text": "FinSPA classe automatiquement vos dépenses selon la **règle 50/30/20** :" },
+        { "type": "list", "items": [
+          "**Besoins (50%) :** Coûts fixes comme le logement, les impôts, les besoins vitaux.",
+          "**Envies (30%) :** Style de vie, loisirs, abonnements.",
+          "**Épargne (20%) :** Épargne, investissements, Pilier 3a."
+        ]},
+        { "type": "infoBox", "text": "Dans l'éditeur de budget, vous pouvez également enregistrer les délais de résiliation pour les contrats et les abonnements afin de ne jamais manquer une date limite." }
+      ]
+    },
+    {
       "id": "uc6",
       "title": "Titres & Dépôts",
       "icon": "TrendingUp",
@@ -61,15 +76,6 @@
       ]
     },
     {
-      "id": "uc8",
-      "title": "Crypto-monnaies",
-      "icon": "Coins",
-      "content": [
-        { "type": "h4", "text": "Actifs cryptographiques" },
-        { "type": "p", "text": "Bitcoin, Ethereum, etc. se comportent comme des actions, mais sont considérés comme très liquides." }
-      ]
-    },
-    {
       "id": "uc9",
       "title": "Immobilier & Hypothèques",
       "icon": "Home",
@@ -79,6 +85,19 @@
           "**Immobilier :** Valeur positive. Utilisez *Ajustement de valeur* pour les changements de valeur marchande.",
           "**Hypothèque :** Saisie comme un *solde négatif à la date de référence*. Utilisez *Amortissement* ou *Paiement des intérêts*."
         ]}
+      ]
+    },
+    {
+      "id": "import_scanner",
+      "title": "Import & Scanner PDF",
+      "icon": "FileText",
+      "content": [
+        { "type": "h4", "text": "Transfert de données & Extraction IA" },
+        { "type": "list", "items": [
+          "**Import Parqet :** Vous pouvez importer des exports CSV directement depuis Parqet. Les données sont migrées automatiquement.",
+          "**Scanner de reçus IA :** Téléchargez des relevés PDF ou des factures. L'IA extrait la date, le montant et suggère des catégories."
+        ]},
+        { "type": "infoBox", "text": "Confidentialité (Privacy-First) : Avant que les PDF ne soient envoyés aux IA cloud externes (OpenAI, Claude, Gemini), ils passent par un filtre local. FinSPA anonymise tous les IBAN, noms, adresses et numéros de carte." }
       ]
     },
     {
@@ -104,9 +123,32 @@
         { "type": "h4", "text": "Analyses complètes" },
         { "type": "list", "items": [
           "**Rapports d'inventaire :** Allocation, risque de liquidité et rapports fiscaux.",
-          "**Rapports de mouvements :** Flux de trésorerie, analyses des écritures et revenus passifs.",
-          "**Rapports futurs :** Simulation de l'avenir, y compris les régressions et les scénarios futurs personnalisés (objectifs d'épargne FIRE)."
+          "**Rapports de mouvements :** Flux de trésorerie, analyses des écritures et revenus passifs."
         ]}
+      ]
+    },
+    {
+      "id": "fire_scenarios",
+      "title": "FIRE & Scénarios",
+      "icon": "Target",
+      "content": [
+        { "type": "h4", "text": "Planifier l'indépendance financière" },
+        { "type": "p", "text": "Dans le rapport **Scénarios & FIRE**, vous pouvez définir votre objectif FIRE personnel (Indépendance financière, retraite anticipée) et l'année cible souhaitée." },
+        { "type": "p", "text": "Créez des **Scénarios futurs** (par ex., achat de voiture, héritage, congé sabbatique) pour simuler avec précision comment des événements ponctuels affecteront vos intérêts composés et l'évolution de votre patrimoine." }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Sécurité & Cryptage",
+      "icon": "Shield",
+      "content": [
+        { "type": "h4", "text": "Vos données vous appartiennent" },
+        { "type": "p", "text": "FinSPA stocke toutes les données localement dans le navigateur. Deux formats sont disponibles pour les sauvegardes et transferts :" },
+        { "type": "list", "items": [
+          "**Texte clair (JSON) :** Format standard, rapide et facile à traiter dans d'autres outils.",
+          "**ZIP crypté :** Utilise un cryptage de pointe **AES-256** et nécessite un mot de passe PIN."
+        ]},
+        { "type": "infoBox", "text": "Attention : FinSPA ne peut pas récupérer le PIN. Si vous oubliez le mot de passe, les données contenues dans l'archive ZIP sont irrémédiablement perdues." }
       ]
     },
     {
@@ -116,14 +158,13 @@
       "content": [
         { "type": "h4", "text": "Configuration" },
         { "type": "p", "text": "**Extensibilité :** Vous pouvez définir des devises de base, vos propres catégories de transactions et même de toutes nouvelles classes d'actifs." },
-        { "type": "p", "text": "**Modèles IA :** Ajoutez vos propres modèles Ollama (chaînes) dans l'onglet correspondant." },
-        { "type": "p", "text": "**Sauvegarde des données :** Utilisez JSON pour des sauvegardes locales sécurisées." }
+        { "type": "p", "text": "**Modèles IA :** Ajoutez vos propres modèles Ollama (chaînes) ou des clés API pour des fournisseurs externes dans l'onglet correspondant." }
       ]
     }
   ],
   "translations": {
     "menuFile": "Fichier", "menuWealth": "Patrimoine", "menuBudget": "Budget", "menuViews": "Vues", "menuReports": "Rapports", "menuData": "Vue des données",
-    "fileNew": "Nouveau (Projet vide)", "fileOpen": "Ouvrir (JSON)", "fileSave": "Enregistrer (JSON)", "fileImport": "Importer (CSV)", "fileExport": "Exporter (CSV)", "filePrint": "Imprimer", "fileSettings": "Paramètres",
+    "fileNew": "Nouveau (Projet vide)", "fileOpen": "Ouvrir (JSON/ZIP)", "fileSave": "Enregistrer (JSON/ZIP)", "fileImport": "Importer (CSV)", "fileExport": "Exporter", "filePrint": "Imprimer", "fileSettings": "Paramètres",
     "menuHelp": "Aide", "helpManual": "Manuel d'utilisation",
     "viewWealth": "Gestion de patrimoine", "viewBudget": "Gestion du budget", "viewData": "Données internes (JSON)",
     "repStock": "Rapports d'inventaire", "repFlow": "Rapports de mouvements", "repFuture": "Rapports futurs", "repBudget": "Rapports de budget",

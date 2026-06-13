@@ -99,7 +99,8 @@ const TaxReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }
           subtitle: `${taxDateLabel} ${taxDate} | Netto: ${fCur(totalWealth - totalDebts)}`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im TaxReport:", err);

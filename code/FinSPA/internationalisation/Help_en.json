@@ -37,6 +37,21 @@
       ]
     },
     {
+      "id": "budget",
+      "title": "Budget & 50/30/20",
+      "icon": "DollarSign",
+      "content": [
+        { "type": "h4", "text": "Budgeting made easy" },
+        { "type": "p", "text": "FinSPA automatically categorizes your expenses according to the **50/30/20 Rule**:" },
+        { "type": "list", "items": [
+          "**Needs (50%):** Fixed costs like housing, taxes, basic necessities.",
+          "**Wants (30%):** Lifestyle, leisure, subscriptions.",
+          "**Savings (20%):** Savings, investments, Pillar 3a."
+        ]},
+        { "type": "infoBox", "text": "In the budget editor, you can also store notice periods for contracts and subscriptions so you never miss a cancellation deadline." }
+      ]
+    },
+    {
       "id": "uc6",
       "title": "Securities & Portfolios",
       "icon": "TrendingUp",
@@ -61,15 +76,6 @@
       ]
     },
     {
-      "id": "uc8",
-      "title": "Cryptocurrencies",
-      "icon": "Coins",
-      "content": [
-        { "type": "h4", "text": "Crypto Assets" },
-        { "type": "p", "text": "Bitcoin, Ethereum, etc. behave like stocks but are considered highly liquid." }
-      ]
-    },
-    {
       "id": "uc9",
       "title": "Real Estate & Mortgages",
       "icon": "Home",
@@ -79,6 +85,19 @@
           "**Real Estate:** Positive value. Use *Value Adjustment* for market value changes.",
           "**Mortgage:** Recorded as a *negative reporting date balance*. Use *Payoff* or *Interest Payment*."
         ]}
+      ]
+    },
+    {
+      "id": "import_scanner",
+      "title": "Import & PDF Scanner",
+      "icon": "FileText",
+      "content": [
+        { "type": "h4", "text": "Data Transfer & AI Extraction" },
+        { "type": "list", "items": [
+          "**Parqet Import:** You can import CSV exports directly from Parqet. The data is migrated automatically.",
+          "**AI Receipt Scanner:** Upload PDF statements or invoices. The AI extracts the date, amount, and suggests booking categories."
+        ]},
+        { "type": "infoBox", "text": "Privacy-First: Before PDFs are sent to external cloud AIs (OpenAI, Claude, Gemini), they pass through a local filter. FinSPA anonymizes all IBANs, names, addresses, and card numbers." }
       ]
     },
     {
@@ -104,9 +123,32 @@
         { "type": "h4", "text": "Comprehensive Analyses" },
         { "type": "list", "items": [
           "**Inventory Reports:** Allocation, liquidity risk, and tax reports.",
-          "**Movement Reports:** Cash flows, transaction analyses, and passive income.",
-          "**Future Reports:** Simulation of the future incl. regressions and custom future scenarios (FIRE savings goals)."
+          "**Movement Reports:** Cash flows, transaction analyses, and passive income."
         ]}
+      ]
+    },
+    {
+      "id": "fire_scenarios",
+      "title": "FIRE & Scenarios",
+      "icon": "Target",
+      "content": [
+        { "type": "h4", "text": "Planning Financial Independence" },
+        { "type": "p", "text": "In the **Scenarios & FIRE** report, you can set your personal FIRE goal (Financial Independence, Retire Early) and your desired target year." },
+        { "type": "p", "text": "Create **Future Scenarios** (e.g., buying a car, receiving an inheritance, sabbatical) to precisely simulate how one-time events will affect your compound interest and wealth progression." }
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security & Encryption",
+      "icon": "Shield",
+      "content": [
+        { "type": "h4", "text": "Your Data belongs to You" },
+        { "type": "p", "text": "FinSPA stores all data locally in the browser. Two formats are available for backups and file transfers:" },
+        { "type": "list", "items": [
+          "**Plaintext (JSON):** Standard format, fast and easy to process in other tools.",
+          "**Encrypted ZIP:** Uses state-of-the-art **AES-256 encryption** and requires a PIN password."
+        ]},
+        { "type": "infoBox", "text": "Warning: FinSPA cannot recover the PIN. If you forget the password, the data in the ZIP archive is irretrievably lost." }
       ]
     },
     {
@@ -116,14 +158,13 @@
       "content": [
         { "type": "h4", "text": "Configuration" },
         { "type": "p", "text": "**Extensibility:** You can define base currencies, custom transaction categories, and even completely new asset classes." },
-        { "type": "p", "text": "**AI Models:** Add your own Ollama models (strings) in the respective tab." },
-        { "type": "p", "text": "**Data Backup:** Use JSON for secure, local backups." }
+        { "type": "p", "text": "**AI Models:** Add your own Ollama models (strings) or API keys for external providers in the respective tab." }
       ]
     }
   ],
   "translations": {
     "menuFile": "File", "menuWealth": "Wealth", "menuBudget": "Budget", "menuViews": "Views", "menuReports": "Reports", "menuData": "Data View",
-    "fileNew": "New (Empty Project)", "fileOpen": "Open (JSON)", "fileSave": "Save (JSON)", "fileImport": "Import (CSV)", "fileExport": "Export (CSV)", "filePrint": "Print", "fileSettings": "Settings",
+    "fileNew": "New (Empty Project)", "fileOpen": "Open (JSON/ZIP)", "fileSave": "Save (JSON/ZIP)", "fileImport": "Import (CSV)", "fileExport": "Export", "filePrint": "Print", "fileSettings": "Settings",
     "menuHelp": "Help", "helpManual": "User Manual",
     "viewWealth": "Wealth Management", "viewBudget": "Budget Management", "viewData": "Internal Data (JSON)",
     "repStock": "Inventory Reports", "repFlow": "Movement Reports", "repFuture": "Future Reports", "repBudget": "Budget Reports",

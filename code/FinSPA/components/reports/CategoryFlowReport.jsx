@@ -54,7 +54,8 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
           subtitle: `${subtitlePrefix} (${dateRange.from} ${wordToText} ${dateRange.to}).`, 
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im CategoryFlowReport:", err);

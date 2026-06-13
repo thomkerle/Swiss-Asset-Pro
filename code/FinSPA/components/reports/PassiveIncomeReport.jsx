@@ -113,7 +113,8 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
           subtitle: `${subtitlePrefix} ${dateRange.from} ${wordTo} ${dateRange.to} | Gesamt: ${fCur(totalPassive)}`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im PassiveIncomeReport:", err);

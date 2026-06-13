@@ -62,7 +62,8 @@ const TopFlowReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisibl
           subtitle: `${repSub} (${dateRange.from} ${wordTo} ${dateRange.to})`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im TopFlowReport:", err);

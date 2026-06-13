@@ -35,13 +35,20 @@ const buildTableBody = (body) => {
 
     return row.map((cell) => {
       const cellStr = String(cell || '');
-      const isNumeric = cellStr.includes('CHF') || cellStr.includes('€') || cellStr.includes('$') || cellStr.includes('%') || !isNaN(cellStr.replace(/[^0-9.-]/g, ''));
+      
+      // STRIKTE ERKENNUNG: 
+      // Prüft ob der String (abgesehen von Währungssymbolen) NUR aus Ziffern, 
+      // Vorzeichen, Leerzeichen, Punkten, Kommas und Hochkommas (1'000) besteht.
+      const isNumeric = /^[-+−]?\s*(?:CHF|€|\$)?\s*\d[\d\s.,']*\s*(?:CHF|€|\$|%)?\s*$/i.test(cellStr.trim());
       
       let textColor = '#334155';
-      if (cellStr.includes('-') || cellStr.includes('−')) {
-        textColor = '#ef4444';
-      } else if (cellStr.includes('+') || cellStr.toLowerCase().includes('gewinn')) {
-        textColor = '#10b981';
+      
+      if (isNumeric) {
+          if (cellStr.includes('-') || cellStr.includes('−')) {
+            textColor = '#ef4444';
+          } else if (cellStr.includes('+') || cellStr.toLowerCase().includes('gewinn')) {
+            textColor = '#10b981';
+          }
       }
 
       const safeText = isNumeric ? cellStr.replace(/ /g, '\u00A0') : cellStr;

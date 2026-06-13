@@ -84,7 +84,8 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           subtitle: `${repSub} (${dateRange.from} bis ${dateRange.to})`,
           tableHeaders,
           tableBody,
-          chartBase64
+          chartBase64,
+	  data: data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im WaterfallReport:", err);
