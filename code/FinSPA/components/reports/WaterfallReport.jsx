@@ -4,7 +4,8 @@ const { useEffect, useRef } = React;
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
-const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
+const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name, size = 16}) => <span style={{fontSize: size}}>[{name}]</span>);
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
 const { getTotalWealthAtDate, getNormalizedBookings } = safeRequire('../../../data/DataEngine.jsx') || window.DataEngine || {};
@@ -13,55 +14,88 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || 'echarts';
 
+  // 1. Basiswerte ermitteln
   const startVal = getTotalWealthAtDate(activeAssets, dateRange.from);
   const endVal = getTotalWealthAtDate(activeAssets, dateRange.to);
   
   let sumInc = 0, sumExp = 0;
+  const flowBreakdown = { positive: {}, negative: {} };
   
-  // 1. Alle Buchungen normalisiert holen
+  // 2. Buchungen holen und aggregieren (erweitert für Breakdown)
   const normBookings = getNormalizedBookings ? getNormalizedBookings(activeAssets) : [];
 
-  // 2. Filter und Berechnung
   normBookings.filter(bk => bk.date >= dateRange.from && bk.date <= dateRange.to).forEach(bk => {
-      const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Abzahlung'].includes(bk.normType);
-      const isNegative = ['Auszahlung', 'Verkauf', 'Schulderhöhung'].includes(bk.normType);
+      const type = bk.normType || (t ? t('catOthers') || 'Sonstiges' : 'Sonstiges');
+      const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Abzahlung'].includes(type);
+      const isNegative = ['Auszahlung', 'Verkauf', 'Schulderhöhung'].includes(type);
       
-      if(isPositive) sumInc += bk._baseValue; 
-      else if (isNegative) sumExp += bk._baseValue;
+      if(isPositive) {
+          sumInc += bk._baseValue;
+          flowBreakdown.positive[type] = (flowBreakdown.positive[type] || 0) + bk._baseValue;
+      } else if (isNegative) {
+          sumExp += bk._baseValue;
+          flowBreakdown.negative[type] = (flowBreakdown.negative[type] || 0) + bk._baseValue;
+      }
   });
   
   const marketPerf = endVal - startVal - sumInc + sumExp; 
   const netCashflow = sumInc - sumExp;
   
+  // Renditeberechnung (approximiert auf eingesetztes Kapital)
+  const investedCapital = startVal + (sumInc / 2); // Einfache Annahme: Einzahlungen verteilen sich linear
+  const marketPerfPercent = investedCapital > 0 ? (marketPerf / investedCapital) * 100 : 0;
+  
   // Text-Fallbacks
   const repTitle = t ? t('repWaterfallTitle') || "Wasserfall-Analyse" : "Wasserfall-Analyse";
   const repSub = t ? t('repWaterfallSub') || "Brücke zwischen Start- und Endvermögen" : "Brücke zwischen Start- und Endvermögen";
-  
   const lblStart = t ? t('labelWaterfallStart') || 'Startvermögen' : 'Startvermögen';
   const lblIn = t ? t('labelWaterfallInflows') || 'Einzahlungen' : 'Einzahlungen';
   const lblOut = t ? t('labelWaterfallOutflows') || 'Auszahlungen' : 'Auszahlungen';
   const lblMarket = t ? t('labelMarketEffect') || 'Markteffekt' : 'Markteffekt';
   const lblEnd = t ? t('labelWaterfallEnd') || 'Endvermögen' : 'Endvermögen';
 
-  // Chart-Daten (Wir nutzen ein Standard-Balkendiagramm zur Visualisierung der Treiber)
+  // Chart-Daten
   const chartLabels = [lblStart, lblIn, lblOut, lblMarket, lblEnd];
   const chartData = [startVal, sumInc, -sumExp, marketPerf, endVal];
   const chartColors = [
-      '#3b82f6', // Start (Blau)
-      '#22c55e', // Inflows (Grün)
-      '#ef4444', // Outflows (Rot)
-      marketPerf >= 0 ? '#22c55e' : '#ef4444', // Market (Grün oder Rot)
-      '#3b82f6'  // End (Blau)
+      '#64748b', // Start (Slate)
+      '#10b981', // Inflows (Emerald)
+      '#f43f5e', // Outflows (Rose)
+      marketPerf >= 0 ? '#10b981' : '#f43f5e', // Market (Emerald oder Rose)
+      '#3b82f6'  // End (Blue)
   ];
 
-  // 3. Event-Listener für den PDF-Export
+  const loadHtml2Canvas = () => {
+    return new Promise((resolve) => {
+        if (window.html2canvas) return resolve(window.html2canvas);
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        script.onload = () => resolve(window.html2canvas);
+        document.head.appendChild(script);
+    });
+  };
+
+  // 3. PDF-Export (Modernisiert mit html2canvas)
   useEffect(() => {
     const handlePdfExport = async () => {
       try {
-        let chartBase64 = null;
-        if (chartRef.current) {
-            const canvas = chartRef.current.querySelector('canvas');
-            if (canvas) chartBase64 = canvas.toDataURL('image/png', 1.0);
+        if (!PdfExportEngine) return;
+        const html2canvas = await loadHtml2Canvas();
+        let chartsData = [];
+        
+        const isDark = document.documentElement.classList.contains('dark');
+        const bgColor = isDark ? '#0f172a' : '#ffffff';
+
+        const kpiBlock = document.querySelector('.kpi-waterfall-export-block');
+        if (kpiBlock) {
+            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
+        }
+
+        const chartBlock = document.querySelector('.chart-waterfall-export-block');
+        if (chartBlock) {
+            const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            chartsData.push({ title: repTitle, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -70,26 +104,24 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             capitalize(t ? t('amount') || 'Betrag' : 'Betrag')
         ];
 
-        // Die Brücken-Tabelle
         const tableBody = [
-            [lblStart, fCur(startVal)],
-            [lblIn, `+${fCur(sumInc)}`],
-            [lblOut, `-${fCur(sumExp)}`],
-            [lblMarket, `${marketPerf >= 0 ? '+' : ''}${fCur(marketPerf)}`],
+            [lblStart.toUpperCase(), fCur(startVal)],
+            ['   + ' + lblIn, fCur(sumInc)],
+            ['   - ' + lblOut, `-${fCur(sumExp)}`],
+            [`   ${marketPerf >= 0 ? '+' : '-'} ` + lblMarket, `${marketPerf >= 0 ? '+' : ''}${fCur(marketPerf)}`],
+            ['', ''],
             [lblEnd.toUpperCase(), fCur(endVal)]
         ];
 
         await PdfExportEngine.exportReport({
           title: repTitle,
-          subtitle: `${repSub} (${dateRange.from} bis ${dateRange.to})`,
+          subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} bis ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
           tableHeaders,
           tableBody,
-          chartBase64,
-	  data: data
+          chartsData,
+          data: activeAssets // Hier als Mock/Fallback, in der Regel 'data'
         });
-      } catch (err) {
-        console.error("[FinSPA] PDF Export Error im WaterfallReport:", err);
-      }
+      } catch (err) { console.error("[FinSPA] PDF Export Error im WaterfallReport:", err); }
     };
 
     window.addEventListener('triggerPdfExport', handlePdfExport);
@@ -97,62 +129,199 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   }, [startVal, sumInc, sumExp, marketPerf, endVal, dateRange, fCur, t, repTitle, repSub, lblStart, lblIn, lblOut, lblMarket, lblEnd]);
 
   return (
-   <div className="max-w-6xl px-4 md:px-8 pb-12">
+   <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
       <ReportHeader 
         title={repTitle} 
-        subtitle={`${repSub} (${dateRange.from} - ${dateRange.to})`} 
+        subtitle={`${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} - ${new Date(dateRange.to).toLocaleDateString('de-CH')})`} 
         isTreeVisible={isTreeVisible} 
         setIsTreeVisible={setIsTreeVisible} 
       />
 
-      {/* KPI Kacheln */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-         <div className="p-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
-             <div className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{lblStart}</div>
-             <div className="text-xl font-black text-slate-800 dark:text-slate-100">{fCur(startVal)}</div>
-         </div>
-         
-         <div className={`p-5 border rounded-xl shadow-sm ${netCashflow >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}`}>
-             <div className={`text-xs font-bold uppercase mb-1 ${netCashflow >= 0 ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}`}>
-                 {t ? t('labelNetCashflow') || 'Netto Cashflow' : 'Netto Cashflow'}
+      <div className="w-full bg-white dark:bg-transparent">
+          
+          {/* KPI DASHBOARD ROW */}
+          <div className="kpi-waterfall-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+             
+             {/* KPI 1: Startvermögen */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400">
+                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Icon name="Calendar" size={14} className="text-slate-500"/>
+                    {lblStart}
+                </div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white">
+                    {fCur(startVal)}
+                </div>
              </div>
-             <div className={`text-xl font-black ${netCashflow >= 0 ? 'text-green-800 dark:text-green-500' : 'text-red-700 dark:text-red-500'}`}>
-                 {netCashflow >= 0 ? '+' : ''}{fCur(netCashflow)}
+             
+             {/* KPI 2: Netto Cashflow */}
+             <div className={`p-6 border rounded-2xl shadow-sm border-b-4 relative overflow-hidden ${
+                 netCashflow >= 0 
+                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 border-b-emerald-500' 
+                    : 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800/50 border-b-rose-500'
+             }`}>
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Icon name="Activity" size={48} className={netCashflow >= 0 ? "text-emerald-500" : "text-rose-500"} />
+                </div>
+                <div className={`text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10 ${netCashflow >= 0 ? 'text-emerald-800 dark:text-emerald-400' : 'text-rose-800 dark:text-rose-400'}`}>
+                    <Icon name={netCashflow >= 0 ? "TrendingUp" : "TrendingDown"} size={14} />
+                    {t ? t('labelNetCashflow') || 'Netto Cashflow' : 'Netto Cashflow'}
+                </div>
+                <div className={`text-3xl font-black relative z-10 ${netCashflow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {netCashflow >= 0 ? '+' : ''}{fCur(netCashflow)}
+                </div>
+                <div className={`text-xs font-medium mt-2 relative z-10 ${netCashflow >= 0 ? 'text-emerald-700/70 dark:text-emerald-500/70' : 'text-rose-700/70 dark:text-rose-500/70'}`}>
+                    {fCur(sumInc)} In / {fCur(sumExp)} Out
+                </div>
              </div>
-         </div>
 
-         <div className={`p-5 border rounded-xl shadow-sm ${marketPerf >= 0 ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-800/50' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50'}`}>
-             <div className={`text-xs font-bold uppercase mb-1 ${marketPerf >= 0 ? 'text-green-800 dark:text-green-400' : 'text-red-800 dark:text-red-400'}`}>
-                 {lblMarket}
+             {/* KPI 3: Markteffekt */}
+             <div className={`p-6 border rounded-2xl shadow-sm border-b-4 relative overflow-hidden ${
+                 marketPerf >= 0 
+                    ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 border-b-emerald-500' 
+                    : 'bg-rose-50 dark:bg-rose-900/10 border-rose-200 dark:border-rose-800/50 border-b-rose-500'
+             }`}>
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Icon name="BarChart2" size={48} className={marketPerf >= 0 ? "text-emerald-500" : "text-rose-500"} />
+                </div>
+                <div className={`text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10 ${marketPerf >= 0 ? 'text-emerald-800 dark:text-emerald-400' : 'text-rose-800 dark:text-rose-400'}`}>
+                    <Icon name={marketPerf >= 0 ? "TrendingUp" : "TrendingDown"} size={14} />
+                    {lblMarket}
+                </div>
+                <div className={`text-3xl font-black relative z-10 ${marketPerf >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {marketPerf >= 0 ? '+' : ''}{fCur(marketPerf)}
+                </div>
+                <div className={`text-xs font-medium mt-2 relative z-10 ${marketPerf >= 0 ? 'text-emerald-700/70 dark:text-emerald-500/70' : 'text-rose-700/70 dark:text-rose-500/70'}`}>
+                    {marketPerfPercent >= 0 ? '+' : ''}{marketPerfPercent.toFixed(2)}% {t ? t('labelReturn') || 'Rendite' : 'Rendite'}
+                </div>
              </div>
-             <div className={`text-xl font-black ${marketPerf >= 0 ? 'text-green-800 dark:text-green-500' : 'text-red-700 dark:text-red-500'}`}>
-                 {marketPerf >= 0 ? '+' : ''}{fCur(marketPerf)}
+
+             {/* KPI 4: Endvermögen */}
+             <div className="bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-blue-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-600 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Icon name="Database" size={48} className="text-blue-600" />
+                </div>
+                <div className="text-blue-800 dark:text-blue-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10">
+                    <Icon name="CheckCircle" size={14} />
+                    {lblEnd}
+                </div>
+                <div className="text-3xl font-black text-blue-700 dark:text-blue-400 relative z-10">
+                    {fCur(endVal)}
+                </div>
              </div>
-         </div>
+          </div>
 
-         <div className="p-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
-             <div className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">{lblEnd}</div>
-             <div className="text-xl font-black text-slate-800 dark:text-slate-100">{fCur(endVal)}</div>
-         </div>
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+            
+            {/* CHART SEITE */}
+            <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-waterfall-export-block self-start sticky top-8">
+                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                    <Icon name="BarChart" className="text-indigo-500" /> {repTitle}
+                </h3>
+                <div ref={chartRef} style={{ width: '100%', height: '400px' }}>
+                    <UniversalChart 
+                        engine={activeChartEngine}
+                        type="bar"
+                        labels={chartLabels}
+                        datasets={[{
+                            label: t ? t('amount') || 'Betrag' : 'Betrag',
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            valueFormatter: (val) => {
+                                const isDeltaCol = chartData.indexOf(val) !== 0 && chartData.indexOf(val) !== 4;
+                                return `${isDeltaCol && val > 0 ? '+' : ''}${fCur(val)}`;
+                            }
+                        }]}
+                        height="100%"
+                    />
+                </div>
+            </div>
 
-      {/* Universelles Diagramm als Ersatz für das SVG */}
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
-        <h3 className="text-sm font-bold uppercase text-gray-500 dark:text-gray-400 mb-6">{repTitle}</h3>
-        <div ref={chartRef} style={{ width: '100%', height: '350px' }}>
-            <UniversalChart 
-                engine={activeChartEngine}
-                type="bar"
-                labels={chartLabels}
-                datasets={[{
-                    label: t ? t('amount') || 'Betrag' : 'Betrag',
-                    data: chartData,
-                    backgroundColor: chartColors,
-                    valueFormatter: (val) => `${val > 0 && chartData.indexOf(val) !== 0 && chartData.indexOf(val) !== 4 ? '+' : ''}${fCur(val)}`
-                }]}
-                height="100%"
-            />
-        </div>
+            {/* DETAILS SEITE */}
+            <div className="lg:col-span-5 space-y-5">
+                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2 ml-1">
+                    <Icon name="List" className="text-slate-500" />
+                    {t ? t('titleCashflowComposition') || 'Zusammensetzung Cashflow' : 'Zusammensetzung Cashflow'}
+                </h3>
+                
+                {/* Positive Cashflows / Einzahlungen */}
+                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div className="bg-emerald-50/50 dark:bg-slate-800/50 p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                        <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            {lblIn}
+                        </div>
+                        <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            +{fCur(sumInc)}
+                        </div>
+                    </div>
+                    <div className="p-0">
+                        {Object.keys(flowBreakdown.positive).length > 0 ? (
+                            <table className="w-full text-sm">
+                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                                    {Object.keys(flowBreakdown.positive)
+                                        .sort((a,b) => flowBreakdown.positive[b] - flowBreakdown.positive[a])
+                                        .map((type, i) => (
+                                        <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30">
+                                            <td className="p-3 pl-5 text-gray-600 dark:text-gray-300">{t ? t(type) || type : type}</td>
+                                            <td className="p-3 pr-5 text-right font-mono text-xs text-gray-700 dark:text-gray-300">
+                                                {fCur(flowBreakdown.positive[type])}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="p-4 text-sm text-center text-gray-400">{t ? t('noPositiveInflowsFound') || 'Keine positiven Zuflüsse gefunden' : 'Keine positiven Zuflüsse gefunden'}</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Negative Cashflows / Auszahlungen */}
+                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div className="bg-rose-50/50 dark:bg-slate-800/50 p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                        <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                            {lblOut}
+                        </div>
+                        <div className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                            -{fCur(sumExp)}
+                        </div>
+                    </div>
+                    <div className="p-0">
+                        {Object.keys(flowBreakdown.negative).length > 0 ? (
+                            <table className="w-full text-sm">
+                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                                    {Object.keys(flowBreakdown.negative)
+                                        .sort((a,b) => flowBreakdown.negative[b] - flowBreakdown.negative[a])
+                                        .map((type, i) => (
+                                        <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30">
+                                            <td className="p-3 pl-5 text-gray-600 dark:text-gray-300">{t ? t(type) || type : type}</td>
+                                            <td className="p-3 pr-5 text-right font-mono text-xs text-gray-700 dark:text-gray-300">
+                                                {fCur(flowBreakdown.negative[type])}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="p-4 text-sm text-center text-gray-400">{t ? t('noOutflowsFound') || 'Keine Abflüsse gefunden' : 'Keine Abflüsse gefunden'}</div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mt-6 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/30 p-4 rounded-xl border border-gray-100 dark:border-slate-700 flex gap-3 items-start">
+                    <Icon name="Info" className="text-blue-400 mt-0.5 shrink-0" />
+                    <p>
+                        {t ? t('infoMarketEffect1') || 'Der ' : 'Der '}
+                        <strong>{lblMarket}</strong> ({fCur(marketPerf)}) 
+                        {t ? t('infoMarketEffect2') || ' ergibt sich aus der Differenz zwischen Start- und Endvermögen abzüglich des Netto-Cashflows (' : ' ergibt sich aus der Differenz zwischen Start- und Endvermögen abzüglich des Netto-Cashflows ('}
+                        {fCur(netCashflow)}
+                        {t ? t('infoMarketEffect3') || '). Er beinhaltet Kursgewinne, Währungsschwankungen sowie erhaltene Dividenden/Zinsen (sofern diese nicht explizit als Einzahlung erfasst wurden).' : '). Er beinhaltet Kursgewinne, Währungsschwankungen sowie erhaltene Dividenden/Zinsen (sofern diese nicht explizit als Einzahlung erfasst wurden).'}
+                    </p>
+                </div>
+
+            </div>
+          </div>
       </div>
     </div>
   );

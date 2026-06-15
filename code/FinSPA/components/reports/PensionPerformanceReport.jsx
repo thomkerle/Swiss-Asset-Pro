@@ -390,8 +390,9 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                 const roi = stats.invested > 0 ? (totalProfit / stats.invested) * 100 : 0;
                 const isPos = totalProfit >= 0;
                 
+                // HIER: Korrektur auf titlePensionCash anstatt devPension2
                 const titleMap = { 
-                    'pension_cash': t ? t('devPension2') || 'Pensionskasse (2. Säule)' : 'Pensionskasse (2. Säule)', 
+                    'pension_cash': t ? t('titlePensionCash') || 'Pensionskasse' : 'Pensionskasse', 
                     'pension_3a_cash': t ? t('titlePension3aCash') || '3a Vorsorgekonto' : '3a Vorsorgekonto', 
                     'pension_3a_fund': t ? t('titlePension3aFund') || '3a Vorsorgefonds' : '3a Vorsorgefonds' 
                 };

@@ -85,7 +85,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         let sh = 0;
         if (node.bookings) {
             node.bookings.forEach(b => {
-                if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
+                if (['Kauf', 'Einzahlung'].includes(b.type) && b.shares) sh += Number(b.shares);
                 if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
             });
         }
@@ -267,7 +267,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               </div>
           )}
 
-          {!isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(booking.type) && (
+          {!isBal && ['Kauf', 'Verkauf'].includes(booking.type) && (
             <div className="grid grid-cols-2 gap-3 bg-yellow-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-gray-200 dark:border-slate-800">
               <div>
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('shares') : 'Stücke'}</label>
@@ -351,14 +351,18 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         <div className="pt-6 mt-6 border-t border-gray-200 dark:border-slate-700">
            <button 
              onClick={() => {
-                 // NEU: Logik zur Generierung der Gegenbuchung beim Klick auf "Übernehmen"
                  if (transferTargetId && !isBal) {
-                     const finalAmount = Number(booking.amount) || 0;
+                     // 1. Umrechnung des Quellbetrags in die Basiswährung
+                     const bookingRate = booking.bookingExchangeRate ? parseFloat(String(booking.bookingExchangeRate).replace(',', '.')) : 0;
+                     const nodeRate = selectedNode.exchangeRate ? parseFloat(String(selectedNode.exchangeRate).replace(',', '.')) : 1;
+                     const sourceRate = isForeignCurrency ? (bookingRate || nodeRate || 1) : 1;
+                     
+                     const amountInBaseCurrency = (Number(booking.amount) || 0) * sourceRate;
                      
                      const updateRecursive = (nodes) => nodes.map(n => {
                          let copy = { ...n };
                          
-                         // 1. Ursprungs-Konto: Setze den Vermerk sicherheitshalber auf Ausgang
+                         // Ursprungs-Konto: Setze den Vermerk auf Ausgang
                          if (n.id === selectedNode.id) {
                              copy.bookings = (copy.bookings || []).map(b => {
                                  if (b.id === booking.id) {
@@ -368,17 +372,25 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                              });
                          }
 
-                         // 2. Ziel-Konto: Generiere die frische Gegenbuchung
+                         // Ziel-Konto: Generiere die frische Gegenbuchung inkl. Währungsumrechnung
                          if (n.id === transferTargetId) {
                              if (!copy.bookings) copy.bookings = [];
                              const isTargetSecurity = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(copy.assetClass);
+                             
+                             // 2. Umrechnung in die Währung des Zielkontos
+                             const isTargetForeign = copy.currency && copy.currency !== baseCurrency;
+                             let targetRate = copy.exchangeRate ? parseFloat(String(copy.exchangeRate).replace(',', '.')) : 1;
+                             if (!isTargetForeign) targetRate = 1;
+                             
+                             const finalTargetAmount = targetRate !== 0 ? (amountInBaseCurrency / targetRate) : amountInBaseCurrency;
+
                              copy.bookings.push({
                                  id: generateId(),
                                  date: booking.date,
                                  type: isTargetSecurity ? 'Kauf' : 'Einzahlung',
                                  subCategory: booking.type === 'Dividende' ? 'Dividenden Eingang' : 'Umbuchung Eingang',
-                                 amount: finalAmount,
-                                 bookingExchangeRate: 1
+                                 amount: Number(finalTargetAmount.toFixed(2)),
+                                 bookingExchangeRate: isTargetForeign ? targetRate : 1
                              });
                          }
 

@@ -70,10 +70,10 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
           if (isPositive) runningInvestedRaw += Number(b.amount);
           else if (isNegative) runningInvestedRaw -= Number(b.amount);
 
-          if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) totalShares += Number(b.shares);
+          if (['Kauf', 'Einzahlung'].includes(b.type) && b.shares) totalShares += Number(b.shares);
           if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) totalShares -= Number(b.shares);
 
-          if (['Kauf', 'Verkauf', 'Dividende'].includes(b.type) && Number(b.price) > 0 && totalShares > 0) {
+          if (['Kauf', 'Verkauf'].includes(b.type) && Number(b.price) > 0 && totalShares > 0) {
               const expectedMarketValue = totalShares * Number(b.price);
               const diff = expectedMarketValue - runningInvestedRaw;
 
@@ -512,7 +512,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                       }
                     }
 
-                    if (!item._isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(item.type) && item.shares) {
+                    if (!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares) {
                       details += ` (${item.shares} ${t ? t('pcsAt') : 'Stk. à'} ${item.price})`;
                     }
                     if (item.bookingExchangeRate && item.bookingExchangeRate !== 1) {
@@ -716,7 +716,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
             </div>
           )}
 
-          {!isBal && ['Kauf', 'Verkauf', 'Dividende'].includes(booking.type) && (
+          {!isBal && ['Kauf', 'Verkauf'].includes(booking.type) && (
             <div className="grid grid-cols-2 gap-3 bg-yellow-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-gray-200 dark:border-slate-800">
               <div>
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{t ? t('shares') : 'Stücke'}</label>

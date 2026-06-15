@@ -27,23 +27,34 @@ const buildTableBody = (body) => {
   return safeBody.map((row) => {
     if (!row) return [];
     
-    const firstCellStr = String(row[0] || '').toLowerCase();
+    let firstCellText = row[0];
+    if (typeof firstCellText === 'object' && firstCellText !== null) firstCellText = firstCellText.text;
+    const firstCellStr = String(firstCellText || '').toLowerCase();
+    
     const isTotalRow = firstCellStr.includes('total') || 
                        firstCellStr.includes('gesamt') || 
                        firstCellStr.includes('summe') ||
                        firstCellStr.includes('volumen');
 
     return row.map((cell) => {
-      const cellStr = String(cell || '');
+      let rawText = cell;
+      let isCellBold = isTotalRow;
+      let overrideColor = null;
+
+      if (typeof cell === 'object' && cell !== null && cell.text !== undefined) {
+         rawText = cell.text;
+         if (cell.bold !== undefined) isCellBold = cell.bold || isTotalRow;
+         if (cell.color !== undefined) overrideColor = cell.color;
+      }
+
+      const cellStr = String(rawText || '');
       
-      // STRIKTE ERKENNUNG: 
-      // Prüft ob der String (abgesehen von Währungssymbolen) NUR aus Ziffern, 
-      // Vorzeichen, Leerzeichen, Punkten, Kommas und Hochkommas (1'000) besteht.
-      const isNumeric = /^[-+−]?\s*(?:CHF|€|\$)?\s*\d[\d\s.,']*\s*(?:CHF|€|\$|%)?\s*$/i.test(cellStr.trim());
+      // KORREKTUR: Erkennt Vorzeichen flexibel vor und nach Währungskennungen (z.B. "CHF -132'843.75")
+      const isNumeric = /^[-+−]?\s*(?:CHF|€|\$)?\s*[-+−]?\s*\d[\d\s.,']*\s*(?:CHF|€|\$|%)?\s*$/i.test(cellStr.trim());
       
-      let textColor = '#334155';
+      let textColor = overrideColor || '#334155';
       
-      if (isNumeric) {
+      if (!overrideColor && isNumeric) {
           if (cellStr.includes('-') || cellStr.includes('−')) {
             textColor = '#ef4444';
           } else if (cellStr.includes('+') || cellStr.toLowerCase().includes('gewinn')) {
@@ -55,8 +66,8 @@ const buildTableBody = (body) => {
 
       return {
         text: safeText,
-        style: isNumeric ? 'tableCellRight' : 'tableCell',
-        bold: isTotalRow,
+        style: isNumeric ? 'tableCellRight' : 'tableCell', 
+        bold: isCellBold,
         color: textColor
       };
     });
@@ -108,7 +119,7 @@ const pdfStyles = {
   kpiValue: { fontSize: 12, font: 'Roboto', bold: true, color: '#0f172a', margin: [0, 2, 0, 0] },
   reportSectionTitle: { fontSize: 18, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 10, 0, 5] },
   reportSectionSubtitle: { fontSize: 10, font: 'Roboto', color: '#64748b', margin: [0, 0, 0, 15] },
-  chartTitlePdf: { fontSize: 14, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 15, 0, 5] }, 
+  chartTitlePdf: { fontSize: 12, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 5, 0, 5] }, 
   tableHeader: { bold: true, fontSize: 7.5, color: '#ffffff', margin: [3, 4, 3, 4] },
   tableCell: { fontSize: 7.5, color: '#334155', margin: [3, 4, 3, 4] },
   tableCellRight: { fontSize: 7.5, color: '#334155', alignment: 'right', font: 'Roboto', margin: [3, 4, 3, 4] },
@@ -141,7 +152,7 @@ const PdfExportEngine = {
     }
   },
 
-  exportReport: async ({ title, subtitle, tableHeaders, customHeaderRows, tableBody, chartsData, chartsBase64, chartBase64, data }) => {
+  exportReport: async ({ title, subtitle, tableHeaders, customHeaderRows, tableBody, chartsData, chartsBase64, chartBase64, data, kpis }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
       if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
@@ -174,54 +185,73 @@ const PdfExportEngine = {
         { text: '', pageBreak: 'after' }
       ];
 
-      docContent.push({
-        columns: [
-          { stack: [{ text: 'BERICHTSART', style: 'kpiLabel' }, { text: title, style: 'kpiValue' }], width: '*' },
-          { stack: [{ text: 'ANALYSE-ZEITRAUM', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[0].replace(/Stichtag:|per/gi, '').trim(), style: 'kpiValue' }], width: '*' },
-          hasFocusMetric ? { stack: [{ text: 'KONSOLIDIERTES TOTAL', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[1].replace(/Gesamtvolumen:|Anzahl Buchungen:/gi, '').trim(), style: 'kpiValue', color: '#1e40af' }], width: 'auto' } : { text: '', width: 'auto' }
-        ],
-        margin: [0, 10, 0, 15]
-      });
+      if (kpis && kpis.length > 0) {
+          const kpiColumns = kpis.map(kpi => ({
+              stack: [
+                  { text: (kpi.label || '').toUpperCase(), style: 'kpiLabel' },
+                  { text: String(kpi.value || ''), style: 'kpiValue', color: kpi.color || '#0f172a' }
+              ],
+              width: '*'
+          }));
+          
+          docContent.push({
+            columns: kpiColumns,
+            margin: [0, 10, 0, 15]
+          });
+      } else {
+          docContent.push({
+            columns: [
+              { stack: [{ text: 'BERICHTSART', style: 'kpiLabel' }, { text: title, style: 'kpiValue' }], width: '*' },
+              { stack: [{ text: 'ANALYSE-ZEITRAUM', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[0].replace(/Stichtag:|per/gi, '').trim(), style: 'kpiValue' }], width: '*' },
+              hasFocusMetric ? { stack: [{ text: 'KONSOLIDIERTES TOTAL', style: 'kpiLabel' }, { text: safeSubtitle.split('|')[1].replace(/Gesamtvolumen:|Anzahl Buchungen:/gi, '').trim(), style: 'kpiValue', color: '#1e40af' }], width: 'auto' } : { text: '', width: 'auto' }
+            ],
+            margin: [0, 10, 0, 15]
+          });
+      }
 
       docContent.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 760, y2: 0, lineWidth: 0.5, lineColor: '#cbd5e1' }], margin: [0, 0, 0, 20] });
 
+      // KORREKTUR: Spaltenlayout-Generator für Charts (2 Charts nebeneinander platzieren)
       if (chartsData && chartsData.length > 0) {
-          chartsData.forEach((chartObj, index) => {
-              if (chartObj.title) {
-                  docContent.push({ text: chartObj.title, style: 'chartTitlePdf' });
-              }
-
-              if (chartObj.image) {
+          const chartColumns = [];
+          
+          chartsData.forEach((chartObj) => {
+              if (chartObj.width === 760 || !chartObj.fit) {
+                  if (chartColumns.length > 0) {
+                      docContent.push({ columns: [...chartColumns], margin: [0, 5, 0, 15] });
+                      chartColumns.length = 0;
+                  }
+                  if (chartObj.title) {
+                      docContent.push({ text: chartObj.title, style: 'chartTitlePdf' });
+                  }
                   docContent.push({
                       image: chartObj.image,
-                      fit: [740, 360], 
+                      width: chartObj.width || 760,
                       alignment: 'center',
-                      // FIX: Rand unten vergrößert, da wir die Legenden-Abstände entfernt haben
-                      margin: [0, 5, 0, 30] 
+                      margin: [0, 5, 0, 20]
                   });
-              }
-
-              const isLastChart = index === chartsData.length - 1;
-              const hasTable = (tableBody && tableBody.length > 0);
-              if (!isLastChart || hasTable) {
-                  docContent.push({ text: '', pageBreak: 'after' });
+              } else {
+                  chartColumns.push({
+                      stack: [
+                          { text: chartObj.title, style: 'chartTitlePdf', alignment: 'center', margin: [0, 0, 0, 6] },
+                          { image: chartObj.image, fit: chartObj.fit || [360, 260], alignment: 'center' }
+                      ],
+                      width: '*'
+                  });
+                  
+                  if (chartColumns.length === 2) {
+                      docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+                      chartColumns.length = 0;
+                  }
               }
           });
-      } else {
-          let allCharts = [];
-          if (chartsBase64 && Array.isArray(chartsBase64)) allCharts = chartsBase64;
-          else if (chartBase64) allCharts = [chartBase64];
-
-          if (allCharts.length > 0) {
-            allCharts.forEach((chartImg, index) => {
-              docContent.push({
-                image: chartImg,
-                fit: [740, 440],
-                alignment: 'center',
-                margin: [0, 10, 0, index === allCharts.length - 1 ? 0 : 20],
-                pageBreak: (index < allCharts.length - 1 || (tableBody && tableBody.length > 0)) ? 'after' : undefined
-              });
-            });
+          
+          if (chartColumns.length > 0) {
+              docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+          }
+          
+          if (tableBody && tableBody.length > 0) {
+              docContent.push({ text: '', pageBreak: 'after' });
           }
       }
 
@@ -263,7 +293,8 @@ const PdfExportEngine = {
           styles: pdfStyles, 
           footer: function(currentPage, pageCount) { 
               if (currentPage === 1) return null; 
-              return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 8, color: '#94a3b8', margin: [0, 0, 20, 0] }; 
+              // KORREKTUR: Schriftgröße auf 9 angehoben und Font explizit gesetzt, um Rendering-Verzerrungen zu eliminieren
+              return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 9, font: 'Roboto', color: '#94a3b8', margin: [0, 0, 20, 0] }; 
           } 
       };
 

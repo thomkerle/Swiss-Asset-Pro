@@ -21,7 +21,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         let sh = 0;
         if (node.bookings) {
             node.bookings.forEach(b => {
-                if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
+                if (['Kauf', 'Einzahlung'].includes(b.type) && b.shares) sh += Number(b.shares);
                 if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
             });
         }
@@ -74,19 +74,34 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             }
         } 
         else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
+            // Umrechnung des Quellbetrags in die Basiswährung
+            const bookingRate = form.bookingExchangeRate ? parseFloat(String(form.bookingExchangeRate).replace(',', '.')) : 0;
+            const nodeRate = selectedNode?.exchangeRate ? parseFloat(String(selectedNode.exchangeRate).replace(',', '.')) : 1;
+            const sourceRate = isForeignCurrency ? (bookingRate || nodeRate || 1) : 1;
+            const amountInBaseCurrency = (Number(form.amount) || 0) * sourceRate;
+
             const updateRecursive = (nodes) => nodes.map(n => {
                 let copy = {...n};
 
+                // Gegenbuchung im Zielkonto generieren
                 if (form.targetAssetId && n.id === form.targetAssetId && modalObj.type === 'addBooking') {
                     if (!copy.bookings) copy.bookings = [];
                     const isTargetSecurity = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(copy.assetClass);
+                    
+                    // Umrechnung in die Zielwährung des ausgewählten Zielkontos
+                    const isTargetForeign = copy.currency && copy.currency !== baseCurrency;
+                    let targetRate = copy.exchangeRate ? parseFloat(String(copy.exchangeRate).replace(',', '.')) : 1;
+                    if (!isTargetForeign) targetRate = 1;
+                    
+                    const finalTargetAmount = targetRate !== 0 ? (amountInBaseCurrency / targetRate) : amountInBaseCurrency;
+
                     copy.bookings.push({
                         id: generateId(),
                         date: form.date,
                         type: isTargetSecurity ? 'Kauf' : 'Einzahlung', 
                         subCategory: form.type === 'Dividende' ? (t('divIn')||'Dividenden Eingang') : (t('transferIn')||'Umbuchung Eingang'),
-                        amount: Number(form.amount),
-                        bookingExchangeRate: 1
+                        amount: Number(finalTargetAmount.toFixed(2)),
+                        bookingExchangeRate: isTargetForeign ? targetRate : 1
                     });
                 }
 
@@ -129,7 +144,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 setSelectedNode(getUpdatedNode(newData.banks));
             }
         } 
-        else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset') {
+        else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
             const updateRecursive = (nodes) => nodes.map(n => {
                 if (n.id === modalObj.parentId) {
                     let copy = {...n};
@@ -337,7 +352,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           <div className="grid grid-cols-2 gap-3 mt-3 bg-blue-50/50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800/50">
                               <div>
                                   <label className="block font-bold mb-1 text-xs uppercase text-blue-700 dark:text-blue-400">{t ? t('currentShares') : 'Aktuelle Stücke'}</label>
-                                  <input type="number" className="w-full p-2.5 border border-blue-300 dark:border-blue-700 rounded-lg bg-gray-100 dark:bg-slate-800/50 text-gray-500 cursor-not-allowed" 
+                                  <input type="number" className="w-full p-2.5 border border-blue-300 border-blue-700 rounded-lg bg-gray-100 dark:bg-slate-800/50 text-gray-500 cursor-not-allowed" 
                                       value={currentSh} 
                                       disabled
                                   />
@@ -402,7 +417,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           </div>
                       )}
 
-                      {isSecurities && ['Kauf', 'Verkauf', 'Dividende'].includes(form.type) && (
+                      {isSecurities && ['Kauf', 'Verkauf'].includes(form.type) && (
                           <div className="grid grid-cols-2 gap-3">
                               <div>
                                   <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('shares') : 'Stücke'}</label>

@@ -202,7 +202,9 @@ const getNormalizedBookings = (assets) => {
                 _assetCurrency: asset.currency,
                 _assetExchangeRate: parseRate(asset.exchangeRate || 1),
                 _assetClass: asset.assetClass,
-                _baseValue: Number(bk.amount) * parseRate(asset.exchangeRate || 1)
+                _baseValue: Number(bk.amount) * parseRate(asset.exchangeRate || 1),
+                // BUGFIX: Hier übergeben wir nun den echten Namen der Anlage!
+                assetName: asset.name 
             });
         });
     });
@@ -214,8 +216,8 @@ module.exports = {
     initialData, 
     defaultBookingCategories, 
     getAllAssets, 
-    getAssetSharesAtDate,    // NEU
-    getAssetPriceAtDate,     // NEU
+    getAssetSharesAtDate,
+    getAssetPriceAtDate,
     getAssetRawValueAtDate, 
     getAssetValueAtDate, 
     getTotalWealthAtDate, 
