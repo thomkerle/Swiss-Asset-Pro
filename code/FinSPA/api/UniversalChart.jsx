@@ -14,8 +14,8 @@ const UniversalChart = ({
     engine = 'echarts', 
     type = 'bar',       
     title = '',
-    xAxisName = '',      // NEU: Beschriftung für die X-Achse
-    yAxisName = '',      // NEU: Beschriftung für die Y-Achse
+    xAxisName = '',      
+    yAxisName = '',      
     labels = [],
     datasets = [],      
     height = '300px',
@@ -88,21 +88,36 @@ const UniversalChart = ({
             containerRef.current.appendChild(canvas);
             const ctx = canvas.getContext('2d');
 
+            const isPieOrDoughnut = type === 'pie' || type === 'doughnut';
+
             chartInstanceRef.current = new window.Chart(ctx, {
                 type: type,
                 data: {
                     labels: labels,
                     datasets: datasets.map((ds, idx) => {
-                        const color = ds.backgroundColor || defaultColors[idx % defaultColors.length];
+                        let bgColor;
+                        let borderColor;
+
+                        if (isPieOrDoughnut) {
+                            bgColor = Array.isArray(ds.backgroundColor) 
+                                ? ds.backgroundColor 
+                                : labels.map((_, i) => defaultColors[i % defaultColors.length]);
+                            borderColor = isDark ? '#0f172a' : '#ffffff';
+                        } else {
+                            const color = ds.backgroundColor || defaultColors[idx % defaultColors.length];
+                            bgColor = type === 'line' ? color + '1A' : color;
+                            borderColor = color;
+                        }
+
                         return {
                             label: getDsName(ds, idx), 
                             data: ds.data,
-                            backgroundColor: type === 'line' ? color + '1A' : color, 
-                            borderColor: color, 
-                            borderWidth: type === 'line' ? 2 : 1, 
+                            backgroundColor: bgColor, 
+                            borderColor: borderColor, 
+                            borderWidth: isPieOrDoughnut ? 2 : (type === 'line' ? 2 : 1), 
                             fill: type === 'line', 
                             tension: 0,
-                            pointBackgroundColor: color,
+                            pointBackgroundColor: borderColor,
                             pointBorderColor: '#ffffff',
                             pointRadius: 0, 
                             pointHoverRadius: 5 
@@ -114,7 +129,10 @@ const UniversalChart = ({
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: horizontal ? 'y' : 'x', 
-                    scales: {
+                    scales: isPieOrDoughnut ? {
+                        x: { display: false },
+                        y: { display: false }
+                    } : {
                         x: { 
                             beginAtZero: horizontal ? (type !== 'line') : false,
                             grid: { color: lineColor },
@@ -125,24 +143,14 @@ const UniversalChart = ({
                                 minRotation: horizontal ? 35 : undefined
                             },
                             stacked: type === 'bar' ? isStacked : false,
-                            title: {
-                                display: !!xAxisName,
-                                text: xAxisName,
-                                color: textColor,
-                                font: { family: fontFamily, weight: 'bold', size: 12 }
-                            }
+                            title: { display: !!xAxisName, text: xAxisName, color: textColor, font: { family: fontFamily, weight: 'bold', size: 12 } }
                         },
                         y: { 
                             beginAtZero: horizontal ? false : (type !== 'line'),
                             grid: { color: lineColor },
                             ticks: { color: textColor, font: { family: fontFamily } },
                             stacked: type === 'bar' ? isStacked : false,
-                            title: {
-                                display: !!yAxisName,
-                                text: yAxisName,
-                                color: textColor,
-                                font: { family: fontFamily, weight: 'bold', size: 12 }
-                            }
+                            title: { display: !!yAxisName, text: yAxisName, color: textColor, font: { family: fontFamily, weight: 'bold', size: 12 } }
                         }
                     },
                     plugins: {
@@ -163,8 +171,19 @@ const UniversalChart = ({
                             callbacks: {
                                 label: function(context) {
                                     const ds = datasets[context.datasetIndex];
-                                    const val = context.parsed.y !== undefined ? context.parsed.y : context.parsed.x;
-                                    return (context.dataset.label || '') + ': ' + (ds.valueFormatter ? ds.valueFormatter(val) : val);
+                                    // FIX: raw für Pie (numerischer Wert), parsed für andere Typen
+                                    let val = context.raw !== undefined ? context.raw : context.parsed;
+                                    if (typeof val === 'object' && val !== null) {
+                                        val = val.y !== undefined ? val.y : val.x;
+                                    }
+                                    
+                                    const formattedVal = ds.valueFormatter ? ds.valueFormatter(val) : val;
+                                    const label = context.label || context.dataset.label || '';
+                                    
+                                    if (isPieOrDoughnut) {
+                                        return ` ${label}: ${formattedVal}`;
+                                    }
+                                    return (context.dataset.label || '') + ': ' + formattedVal;
                                 }
                             }
                         }
@@ -203,11 +222,25 @@ const UniversalChart = ({
             let option = {};
 
             if (type === 'pie' || type === 'doughnut') {
+                const pieFormatter = datasets[0]?.valueFormatter;
                 option = {
                     color: chartColors,
                     animation: false,
                     title: { text: title, left: 'center', textStyle: { color: textColor, fontFamily } },
-                    tooltip: { trigger: 'item', textStyle: { fontFamily } },
+                    tooltip: { 
+                        trigger: 'item', 
+                        textStyle: { fontFamily, fontSize: 13 },
+                        // FIX: Eigenes Tooltip-Format für ECharts Pie
+                        formatter: function(params) {
+                            const val = pieFormatter ? pieFormatter(params.value) : params.value;
+                            return `<div style="display:flex; align-items:center; gap:8px;">
+                                      ${params.marker} <span style="font-weight:bold; color:${isDark ? '#fff' : '#000'}">${params.name}</span>
+                                    </div>
+                                    <div style="margin-top: 4px; padding-left: 20px;">
+                                      ${val} <span style="color: ${isDark ? '#94a3b8' : '#64748b'};">(${params.percent}%)</span>
+                                    </div>`;
+                        }
+                    },
                     legend: { 
                         show: true, 
                         type: 'scroll', 
@@ -222,7 +255,15 @@ const UniversalChart = ({
                         name: datasets[0]?.label || '',
                         type: 'pie',
                         radius: type === 'doughnut' ? ['45%', '75%'] : '70%',
-                        label: { show: resolveShowLabels, fontFamily },
+                        label: { 
+                            show: resolveShowLabels, 
+                            fontFamily,
+                            // FIX: Data-Labels Formatter (falls aktiviert)
+                            formatter: function(params) {
+                                const val = pieFormatter ? pieFormatter(params.value) : params.value;
+                                return `${params.name}\n${val}`;
+                            }
+                        },
                         data: labels.map((lbl, idx) => ({
                             name: lbl,
                             value: datasets[0]?.data[idx] || 0
@@ -240,13 +281,8 @@ const UniversalChart = ({
                     nameTextStyle: { color: textColor, fontFamily, fontSize: 12, fontWeight: 'bold' },
                     data: horizontal ? [...labels].reverse() : labels, 
                     axisLabel: { 
-                        color: textColor, 
-                        fontWeight: '500', 
-                        fontSize: 11,
-                        fontFamily,
-                        margin: 12,
-                        lineHeight: 14, 
-                        interval: labels.length > 10 ? 'auto' : 0, 
+                        color: textColor, fontWeight: '500', fontSize: 11, fontFamily,
+                        margin: 12, lineHeight: 14, interval: labels.length > 10 ? 'auto' : 0, 
                         rotate: (!horizontal && labels.length > 6 && !hasNewlines) ? 30 : 0 
                     },
                     axisTick: { show: false },
@@ -258,15 +294,12 @@ const UniversalChart = ({
                     scale: type === 'line',
                     name: horizontal ? xAxisName : yAxisName,
                     nameLocation: 'center',
-                    nameGap: horizontal ? 55 : 40, // Platz für geschrägte X-Achsen Labels
+                    nameGap: horizontal ? 55 : 40, 
                     nameTextStyle: { color: textColor, fontFamily, fontSize: 12, fontWeight: 'bold' },
                     splitLine: { lineStyle: { type: 'dashed', color: lineColor, width: 1 } }, 
                     axisLabel: { 
-                        color: textColor, 
-                        fontSize: 11, 
-                        fontFamily, 
-                        margin: 12,
-                        rotate: horizontal ? 35 : 0 // NEU: Schrägstellung der Währungsbeträge um 35 Grad
+                        color: textColor, fontSize: 11, fontFamily, margin: 12,
+                        rotate: horizontal ? 35 : 0 
                     },
                     axisLine: { show: false },
                     axisTick: { show: false }
@@ -277,27 +310,17 @@ const UniversalChart = ({
                     animation: false, 
                     title: { text: title, textStyle: { color: textColor, fontFamily } },
                     legend: { 
-                        show: true, 
-                        type: 'scroll',
-                        bottom: 0, 
-                        icon: 'circle', 
-                        itemWidth: 10,
-                        itemHeight: 10,
-                        itemGap: 24,
+                        show: true, type: 'scroll', bottom: 0, icon: 'circle', 
+                        itemWidth: 10, itemHeight: 10, itemGap: 24,
                         textStyle: { color: textColor, fontSize: 12, fontWeight: '500', fontFamily } 
                     },
                     tooltip: { 
                         trigger: 'axis', 
                         backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                        borderColor: isDark ? '#334155' : '#e2e8f0',
-                        borderWidth: 1,
-                        padding: [12, 16],
+                        borderColor: isDark ? '#334155' : '#e2e8f0', borderWidth: 1, padding: [12, 16],
                         textStyle: { color: isDark ? '#cbd5e1' : '#334155', fontSize: 12, fontFamily },
                         extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;',
-                        axisPointer: { 
-                            type: 'line', 
-                            lineStyle: { color: isDark ? '#475569' : '#94a3b8', width: 1, type: 'dashed' } 
-                        },
+                        axisPointer: { type: 'line', lineStyle: { color: isDark ? '#475569' : '#94a3b8', width: 1, type: 'dashed' } },
                         formatter: (params) => {
                             let tooltipHtml = `<div style="font-weight:bold; padding-bottom: 6px; border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; margin-bottom: 6px; font-family: ${fontFamily};">${params[0].name}</div>`;
                             params.forEach(item => {
@@ -316,27 +339,14 @@ const UniversalChart = ({
                             return tooltipHtml;
                         }
                     },
-                    // NEU: Grid so anpassen, dass die Achsenbeschriftung und die gekippten Labels sicher Platz haben
-                    grid: { 
-                        top: 40, 
-                        left: 20, 
-                        right: horizontal ? 60 : 20, 
-                        bottom: (xAxisName || horizontal) ? 70 : 40, 
-                        containLabel: true 
-                    },
+                    grid: { top: 40, left: 20, right: horizontal ? 60 : 20, bottom: (xAxisName || horizontal) ? 70 : 40, containLabel: true },
                     xAxis: horizontal ? valueAxis : categoryAxis,
                     yAxis: horizontal ? categoryAxis : valueAxis,
                     series: datasets.map((ds, idx) => {
                         let itemColor = chartColors[idx];
                         return {
-                            name: getDsName(ds, idx),
-                            type: type,
-                            smooth: false, 
-                            symbol: 'circle',
-                            showSymbol: false, 
-                            symbolSize: 6,
-                            itemStyle: { color: itemColor }, 
-                            stack: ds.stack, 
+                            name: getDsName(ds, idx), type: type, smooth: false, symbol: 'circle', showSymbol: false, symbolSize: 6,
+                            itemStyle: { color: itemColor }, stack: ds.stack, 
                             lineStyle: type === 'line' ? { width: 2 } : undefined, 
                             areaStyle: type === 'line' ? { opacity: 0.1, color: itemColor } : undefined,
                             data: (horizontal ? [...ds.data].reverse() : ds.data).map((val, i) => {
@@ -345,11 +355,7 @@ const UniversalChart = ({
                                     c = horizontal ? [...ds.backgroundColor].reverse()[i] : ds.backgroundColor[i];
                                 }
                                 return {
-                                    value: val,
-                                    itemStyle: {
-                                        color: c,
-                                        borderRadius: horizontal ? [0, 4, 4, 0] : (val >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4])
-                                    }
+                                    value: val, itemStyle: { color: c, borderRadius: horizontal ? [0, 4, 4, 0] : (val >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]) }
                                 };
                             }),
                             label: {
@@ -385,45 +391,29 @@ const UniversalChart = ({
 
             let data = [];
             let layout = {
-                title: title,
-                font: { family: fontFamily },
-                margin: { t: 40, b: 60, l: 60, r: 40 },
-                autosize: true,
-                colorway: defaultColors,
+                title: title, font: { family: fontFamily },
+                margin: { t: 40, b: 60, l: 60, r: 40 }, autosize: true, colorway: defaultColors,
                 barmode: type === 'bar' ? (isStacked ? 'stack' : 'group') : undefined, 
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                legend: { 
-                    orientation: 'h', 
-                    yanchor: 'top',
-                    y: -0.2,          
-                    xanchor: 'center',
-                    x: 0.5,
-                    font: { color: textColor, family: fontFamily } 
-                },
-                xaxis: { 
-                    type: horizontal ? 'linear' : 'category', 
-                    title: { text: xAxisName, font: { color: textColor, family: fontFamily, size: 12 } },
-                    tickfont: { color: textColor, family: fontFamily }, 
-                    gridcolor: lineColor,
-                    tickangle: horizontal ? -35 : -30 
-                },
-                yaxis: { 
-                    type: horizontal ? 'category' : 'linear',
-                    title: { text: yAxisName, font: { color: textColor, family: fontFamily, size: 12 } },
-                    tickfont: { color: textColor, family: fontFamily }, 
-                    gridcolor: lineColor 
-                }
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                legend: { orientation: 'h', yanchor: 'top', y: -0.2, xanchor: 'center', x: 0.5, font: { color: textColor, family: fontFamily } },
+                xaxis: { type: horizontal ? 'linear' : 'category', title: { text: xAxisName, font: { color: textColor, family: fontFamily, size: 12 } }, tickfont: { color: textColor, family: fontFamily }, gridcolor: lineColor, tickangle: horizontal ? -35 : -30 },
+                yaxis: { type: horizontal ? 'category' : 'linear', title: { text: yAxisName, font: { color: textColor, family: fontFamily, size: 12 } }, tickfont: { color: textColor, family: fontFamily }, gridcolor: lineColor }
             };
 
             if (type === 'pie' || type === 'doughnut') {
+                const ds = datasets[0];
+                // FIX: Formattierte Werte berechnen für Plotly Hover
+                const formattedValues = ds?.data?.map(v => ds.valueFormatter ? ds.valueFormatter(v) : v) || [];
+                
                 data = [{ 
-                    values: datasets[0]?.data || [], 
+                    values: ds?.data || [], 
                     labels: labels, 
                     type: 'pie', 
                     hole: type === 'doughnut' ? 0.45 : 0,
+                    text: formattedValues, // Übergeben der formatierten Werte
                     textinfo: resolveShowLabels ? 'label+percent' : 'none',
-                    marker: { colors: Array.isArray(datasets[0]?.backgroundColor) ? datasets[0].backgroundColor : defaultColors }
+                    hoverinfo: 'label+text+percent', // Zeige Label, unseren Formatter-Text und Plotly-Prozent
+                    marker: { colors: Array.isArray(ds?.backgroundColor) ? ds.backgroundColor : defaultColors }
                 }];
             } else {
                 const plotlyType = type === 'line' ? 'scatter' : 'bar';

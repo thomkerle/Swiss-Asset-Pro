@@ -14,7 +14,7 @@ const defaultBookingCategories = {
 };
 
 const initialData = {
-  version: "Beta-0.9.2", lastModified: new Date().toISOString(), 
+  version: "Beta-0.9.4", lastModified: new Date().toISOString(), 
   settings: { 
       baseCurrency: 'CHF', 
       showTaxesForDividends: true, 
@@ -38,7 +38,7 @@ const getAllAssets = (nodes) => {
   return assets;
 };
 
-// --- NEU: Zentrale Stückzahl-Berechnung ---
+// --- Zentrale Stückzahl-Berechnung ---
 const getAssetSharesAtDate = (asset, targetDate) => {
     if (!isSecurity(asset.assetClass)) return 0;
     let sh = 0;
@@ -53,7 +53,7 @@ const getAssetSharesAtDate = (asset, targetDate) => {
     return sh > 0 ? sh : (Number(asset.shares) || 0);
 };
 
-// --- NEU: Zentrale Preis-Berechnung ---
+// --- Zentrale Preis-Berechnung (KORRIGIERT FÜR ALLE BUCHUNGSTYPEN) ---
 const getAssetPriceAtDate = (asset, targetDate) => {
     if (!isSecurity(asset.assetClass)) return 1;
     
@@ -65,7 +65,8 @@ const getAssetPriceAtDate = (asset, targetDate) => {
     let p = 0;
     if (asset.bookings) {
         const sorted = [...asset.bookings].sort((a,b) => new Date(a.date) - new Date(b.date));
-        const pastBookings = sorted.filter(b => b.date <= targetDate && ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
+        // BUGFIX: Wir filtern nicht mehr nach Typ! Jeder Eintrag mit einem Preis > 0 ist gültig.
+        const pastBookings = sorted.filter(b => b.date <= targetDate && Number(b.price) > 0);
         if (pastBookings.length > 0) {
             p = Number(pastBookings[pastBookings.length - 1].price);
         }
@@ -73,16 +74,32 @@ const getAssetPriceAtDate = (asset, targetDate) => {
     return p > 0 ? p : (Number(asset.price) || 0);
 };
 
-// --- KORRIGIERT: Ermittelt den reinen Asset-Wert (ohne Währungsumrechnung) ---
+// --- Zentrale Klassifizierung von Buchungsflüssen (In/Out) ---
+const getBookingFlow = (booking) => {
+    let amt = Number(booking.amount || 0);
+    // Standard-Klassifizierung
+    let isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(booking.type);
+    
+    // Sonderfall: Negative Wertanpassung wird als Abfluss/Wertminderung gewertet
+    if (booking.type === 'Wertanpassung' && amt < 0) {
+        isPositive = false;
+        amt = Math.abs(amt);
+    }
+
+    return {
+        isPositive,
+        amount: amt
+    };
+};
+
+// --- Ermittelt den reinen Asset-Wert (ohne Währungsumrechnung) ---
 const getAssetRawValueAtDate = (asset, targetDate) => {
-    // 1. Logik für Wertpapiere (Stücke * Preis)
     if (isSecurity(asset.assetClass)) {
         const sh = getAssetSharesAtDate(asset, targetDate);
         const pr = getAssetPriceAtDate(asset, targetDate);
         if (sh > 0 && pr > 0) return sh * pr;
     }
 
-    // 2. Logik für Cash / Konten (Summierung der Buchungen)
     let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
     let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
     let baseAmount = applicableBalance ? Number(applicableBalance.amount) : 0;
@@ -92,17 +109,17 @@ const getAssetRawValueAtDate = (asset, targetDate) => {
     if (asset.bookings) {
         asset.bookings.forEach(bk => {
             if (bk.date > baseDate && bk.date <= targetDate) {
-                const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
-                const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
-                if (isPositive) netBookings += Number(bk.amount);
-                else if (isNegative) netBookings -= Number(bk.amount);
+                // Zentralisierte In/Out Logik nutzen
+                const flow = getBookingFlow(bk);
+                if (flow.isPositive) netBookings += flow.amount;
+                else netBookings -= flow.amount;
             }
         });
     }
     return baseAmount + netBookings;
 };
 
-// --- KORRIGIERT: Ermittelt den finalen Wert in Basiswährung (CHF) ---
+// --- Ermittelt den finalen Wert in Basiswährung (CHF) ---
 const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
     const rawValue = getAssetRawValueAtDate(asset, targetDate);
     
@@ -203,7 +220,6 @@ const getNormalizedBookings = (assets) => {
                 _assetExchangeRate: parseRate(asset.exchangeRate || 1),
                 _assetClass: asset.assetClass,
                 _baseValue: Number(bk.amount) * parseRate(asset.exchangeRate || 1),
-                // BUGFIX: Hier übergeben wir nun den echten Namen der Anlage!
                 assetName: asset.name 
             });
         });
@@ -225,5 +241,6 @@ module.exports = {
     calcLinearRegression, 
     calcExpRegression, 
     formatCurrency,
-    getNormalizedBookings
+    getNormalizedBookings,
+    getBookingFlow
 };

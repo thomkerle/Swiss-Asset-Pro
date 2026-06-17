@@ -14,6 +14,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Plus: 'fa-plus', 
         Trash: 'fa-trash', 
         Edit: 'fa-edit', 
+        Edit3: 'fa-pen', 
         Star: 'fa-star',
         Settings: 'fa-cog', 
         PieChart: 'fa-chart-pie', 
@@ -38,12 +39,19 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Info: 'fa-info-circle', 
         Eye: 'fa-eye', 
         EyeSlash: 'fa-eye-slash', 
+        EyeOff: 'fa-eye-slash', 
+        CheckSquare: 'fa-square-check', 
         Archive: 'fa-archive',
         Home: 'fa-house', 
         Building: 'fa-building', 
         Lock: 'fa-lock', 
         Coins: 'fa-coins', 
         FileText: 'fa-file-lines',
+        Filter: 'fa-filter', 
+        
+        // Fenster-Controls (Standalone / Electron)
+        Minus: 'fa-minus',
+        Square: 'fa-square', 
         
         // KI-Assistent & Dashboard Icons
         Cpu: 'fa-microchip', 
@@ -80,7 +88,15 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Inbox: 'fa-inbox', 
         Database: 'fa-database',
         Landmark: 'fa-landmark',
-        Bitcoin: 'fab fa-bitcoin' // WICHTIG: Das ist ein Brand-Icon (fab)
+        Bitcoin: 'fab fa-bitcoin',
+
+        // --- NEUE ICONS FÜR DAS BUDGET & NAVIGATION ---
+        ArrowLeft: 'fa-arrow-left',
+        ArrowRight: 'fa-arrow-right',
+        ArrowDown: 'fa-arrow-down',
+        CreditCard: 'fa-credit-card',
+        Wallet: 'fa-wallet',
+        PiggyBank: 'fa-piggy-bank'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -96,6 +112,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Plus: 'text-green-500',
         Trash: 'text-red-500',
         Edit: 'text-amber-500',
+        Edit3: 'text-gray-500 hover:text-blue-500', 
         Star: 'text-yellow-500',
         Settings: 'text-slate-500 dark:text-slate-400',
         PieChart: 'text-indigo-500',
@@ -120,14 +137,17 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Info: 'text-blue-500',
         Eye: 'text-gray-500',
         EyeSlash: 'text-gray-500',
+        EyeOff: 'text-gray-500', 
+        CheckSquare: 'text-gray-400', 
         Archive: 'text-amber-600 dark:text-amber-500',
         Home: 'text-blue-500',
         Building: 'text-red-500',
         Lock: 'text-slate-500',
         Coins: 'text-orange-500',
         FileText: 'text-red-500',
-        
-        // KI-Assistent & Dashboard Icons
+        Filter: 'text-gray-500 dark:text-gray-400', 
+        Minus: 'text-gray-400',
+        Square: 'text-gray-400',
         Cpu: 'text-blue-500',
         Zap: 'text-yellow-500',
         Wind: 'text-sky-500',
@@ -140,8 +160,6 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         PlusCircle: 'text-green-500',
         BookOpen: 'text-blue-500',
         Box: 'text-gray-400',
-        
-        // PDF Scanner, Settings & Report Icons
         Scan: 'text-indigo-500',
         UploadCloud: 'text-indigo-500',
         AlertCircle: 'text-red-500',
@@ -155,24 +173,29 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Globe: 'text-blue-400',
         Link: 'text-gray-400',
         Search: 'text-gray-400',
-
-        // Spezifische Report Icons
         Droplet: 'text-blue-500',
         BarChart2: 'text-indigo-500',
         Inbox: 'text-gray-400',
         Database: 'text-slate-500 dark:text-slate-400',
         Landmark: 'text-slate-500',
-        Bitcoin: 'text-amber-500'
+        Bitcoin: 'text-amber-500',
+        
+        // --- NEUE ICONS DEFAULTS ---
+        ArrowLeft: 'text-gray-500 hover:text-blue-500 transition-colors',
+        ArrowRight: 'text-gray-500 hover:text-blue-500 transition-colors',
+        ArrowDown: 'text-gray-500',
+        CreditCard: 'text-slate-500 dark:text-slate-400',
+        Wallet: 'text-emerald-500',
+        PiggyBank: 'text-pink-500'
     };
 
-    // RegEx prüft spezifisch auf Tailwind-Farben (text-white, text-black oder text-[farbe]-[zahl])
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);
-    
-    // Standardfarbe anwenden, wenn keine explizite Farbklasse existiert
     const colorClass = (!hasCustomColor && defaultColors[name]) ? defaultColors[name] : '';
-
-    // Prüft, ob es ein 'Brand'-Icon ist (z.B. Bitcoin), ansonsten Fallback auf 'fa-solid'
+    
+    // Fallback auf Fragezeichen, falls das Icon nicht gefunden wird
     const faClassRaw = map[name] || 'fa-question';
+    
+    // Erkennt automatisch, ob es ein Marken-Logo (fab) oder Standard-Icon (fa-solid) ist
     const finalIconClass = faClassRaw.includes('fab') ? faClassRaw : `fa-solid ${faClassRaw}`;
 
     return (

@@ -1,135 +1,201 @@
 const React = require('react');
-const { PieChartSVG } = require('../Charts.jsx');
 
-const BudgetDashboard = ({ data, fCur, t }) => {
-    // 1. Normalisierungs-Engine: Rechnet alles auf monatliche Basis um
+const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
+const safeRequire = getRequire();
+
+const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name}) => <span>[{name}]</span>);
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({ title, subtitle, isTreeVisible, setIsTreeVisible }) => (
+  <div className="mb-8 border-b border-gray-200 dark:border-slate-800 pb-4">
+    <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+       {!isTreeVisible && setIsTreeVisible && <Icon name="ChevronRight" size={24} className="cursor-pointer text-gray-400 hover:text-gray-600 print-hide" onClick={() => setIsTreeVisible(true)} />}
+       {title}
+    </h2>
+    <p className="text-gray-500 mt-2">{subtitle}</p>
+  </div>
+));
+const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
+
+const BudgetDashboard = ({ data, fCur, t, isTreeVisible, setIsTreeVisible }) => {
+    // Vollständige Normalisierungs-Engine für alle 4 Zahlungsintervalle
     const getMonthly = (item) => {
         const amt = Number(item.amount) || 0;
-        return item.frequency === 'yearly' ? amt / 12 : amt;
+        const freq = String(item.frequency || 'monthly').toLowerCase();
+        switch (freq) {
+            case 'yearly':
+            case 'jährlich': 
+                return amt / 12;
+            case 'semi-annually':
+            case 'half-yearly':
+            case 'halbjährlich': 
+                return amt / 6;
+            case 'quarterly':
+            case 'vierteljährlich': 
+                return amt / 3;
+            case 'monthly':
+            case 'monatlich':
+            default: 
+                return amt;
+        }
     };
 
     const incomes = data.budget?.incomeSources?.reduce((s, i) => s + getMonthly(i), 0) || 0;
-    
-    let needs = 0;
-    let wants = 0;
-    let explicitSavings = 0;
-    let totalExp = 0;
+    let needs = 0, wants = 0, explicitSavings = 0, totalExp = 0;
 
-    // 2. Kategorisierung & Systematik auswerten
     const allOutflows = [...(data.budget?.expenses || []), ...(data.budget?.subscriptions || [])];
     allOutflows.forEach(item => {
         const mAmount = getMonthly(item);
         totalExp += mAmount;
-        
-        const cat = item.ruleCategory || 'needs'; // Direkter Fallback auf 'needs'
-
+        const cat = item.ruleCategory || 'needs';
         if (cat === 'wants') wants += mAmount;
         else if (cat === 'savings') explicitSavings += mAmount;
         else needs += mAmount; 
     });
 
-    // 3. Puffer und echte Sparquote berechnen
     const leftover = incomes - totalExp;
     const trueSavings = explicitSavings; 
-    
-    // NEU: Die effektive Sparquote beinhaltet auch das Geld, das am Ende des Monats übrig bleibt
     const effectiveSavings = explicitSavings + Math.max(0, leftover);
 
-    // 4. Daten für Kuchendiagramm aufbereiten
-    const expData = [
-      { label: `Fixe Ausgaben (${t('budgetRuleCat')} Needs)`, value: needs, color: '#ef4444' },
-      { label: `Lifestyle & Abos (${t('budgetRuleCat')} Wants)`, value: wants, color: '#f97316' },
-      { label: t('ruleSavings') ? t('ruleSavings').split(' ')[0] : 'Savings', value: trueSavings, color: '#22c55e' } 
+    const activeChartEngine = data?.settings?.chartEngine || 'echarts';
+
+    const chartLabels = [
+        `Fixkosten (${t ? t('budgetRuleCat') : 'Needs'})`, 
+        `Lifestyle (${t ? t('budgetRuleCat') : 'Wants'})`, 
+        t ? t('ruleSavings') : 'Savings'
     ];
-    
+    const chartDataValues = [needs, wants, trueSavings];
+    const chartColors = ['#ef4444', '#f97316', '#10b981'];
+
     if (leftover > 0) {
-        expData.push({ label: t('labelNetCashflow') || 'Net Cashflow', value: leftover, color: '#94a3b8' });
+        chartLabels.push(t ? t('labelNetCashflow') : 'Net Cashflow');
+        chartDataValues.push(leftover);
+        chartColors.push('#3b82f6');
     }
 
     const pct = (val) => incomes > 0 ? Math.round((val / incomes) * 100) : 0;
 
+    const KpiCard = ({ title, value, icon, accentBorder, iconColor, subtext }) => (
+        <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 ${accentBorder}`}>
+            <div className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Icon name={icon} size={14} className={iconColor} />
+                <span>{title}</span>
+            </div>
+            <div className="text-3xl font-black text-slate-900 dark:text-white">
+                {value}
+            </div>
+            {subtext && <div className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-medium">{subtext}</div>}
+        </div>
+    );
+
+    const safeSubTitle = (t && t('budgetDashboardSub') && t('budgetDashboardSub') !== 'budgetDashboardSub') 
+        ? t('budgetDashboardSub') 
+        : 'Monatliche Analyse & 50/30/20 Verteilung';
+
     return (
-        <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto">
-            <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6">
-                {t('menuBudget')}
-            </h2>
+        <div className="w-full pt-8 px-4 md:px-8 pb-12 relative h-full overflow-auto finspa-scrollbar">
+            <ReportHeader 
+                title={t ? t('menuBudget') : 'Budget Dashboard'} 
+                subtitle={safeSubTitle}
+                isTreeVisible={isTreeVisible} 
+                setIsTreeVisible={setIsTreeVisible} 
+            />
             
-            <div className="grid grid-cols-4 gap-4 mb-8">
-                 <div className="p-6 bg-gray-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-sm">
-                     <div className="text-sm text-gray-500 font-bold uppercase tracking-wider">{t('incomeSources')} (Mt.)</div>
-                     <div className="text-2xl font-black text-gray-800 dark:text-white mt-2">{fCur(incomes)}</div>
-                 </div>
-                 <div className="p-6 bg-gray-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-sm">
-                     <div className="text-sm text-gray-500 font-bold uppercase tracking-wider">{t('labelTotalExpenses')}</div>
-                     <div className="text-2xl font-black text-gray-800 dark:text-white mt-2">{fCur(totalExp)}</div>
-                 </div>
-                 <div className="p-6 bg-gray-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-sm">
-                     <div className="text-sm text-gray-500 font-bold uppercase tracking-wider">{t('labelRatio')} ({t('ruleSavings') ? t('ruleSavings').split(' ')[0] : 'Savings'})</div>
-                     <div className="text-2xl font-black text-green-600 mt-2">{fCur(trueSavings)}</div>
-                 </div>
-                 <div className={`p-6 border rounded-xl shadow-sm ${leftover >= 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
-                     <div className={`text-sm font-bold uppercase tracking-wider ${leftover >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-                         {t('labelNetCashflow')}
-                     </div>
-                     <div className={`text-2xl font-black mt-2 ${leftover >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'}`}>
-                         {fCur(leftover)}
-                     </div>
-                 </div>
-             </div>
+            {/* KPI Metriken */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+                <KpiCard title={t ? t('incomeSources') : 'Einkommen'} value={fCur ? fCur(incomes) : incomes} icon="TrendingUp" accentBorder="border-b-emerald-500" iconColor="text-emerald-500" />
+                <KpiCard title={t ? t('labelTotalExpenses') : 'Ausgaben'} value={fCur ? fCur(totalExp) : totalExp} icon="CreditCard" accentBorder="border-b-rose-500" iconColor="text-rose-500" />
+                <KpiCard title={t ? t('ruleSavings') : 'Sparquote (Fix)'} value={fCur ? fCur(trueSavings) : trueSavings} icon="Target" accentBorder="border-b-indigo-500" iconColor="text-indigo-500" subtext={`${pct(trueSavings)}% vom Einkommen`} />
+                <KpiCard 
+                    title={t ? t('labelNetCashflow') : 'Net Cashflow'} 
+                    value={fCur ? fCur(leftover) : leftover} 
+                    icon="Activity" 
+                    accentBorder={leftover >= 0 ? 'border-b-blue-500' : 'border-b-red-500'} 
+                    iconColor={leftover >= 0 ? 'text-blue-500' : 'text-red-500'} 
+                    subtext={leftover >= 0 ? 'Frei verfügbarer monatlicher Puffer' : 'Defizit im aktuellen Monat'} 
+                />
+            </div>
 
-             <div className="grid grid-cols-2 gap-8">
-                 <div className="p-8 bg-gray-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-sm flex flex-col items-center justify-center">
-                    <h3 className="font-bold text-lg mb-6 text-gray-800 dark:text-gray-200">{t('allocByCat')} ({t('freqMonthly')})</h3>
-                    <PieChartSVG data={expData} fCur={fCur} />
-                 </div>
-
-                 <div className="p-8 bg-gray-50 dark:bg-slate-900 border dark:border-slate-800 rounded-xl shadow-sm">
-                    <h3 className="font-bold text-lg mb-4 text-gray-800 dark:text-gray-200 flex justify-between items-center">
-                        50/30/20 Analyse
-                        <span className="text-xs font-normal text-gray-500">Benchmark</span>
+            {/* Daten-Visualisierung */}
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+                
+                {/* Kuchen-Diagramm mit min-w-0 Fix gegen Skalierungs-Overflow */}
+                <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col min-w-0">
+                    <h3 className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <Icon name="PieChart" className="text-indigo-500" /> {t ? t('allocByCat') : 'Verteilung'}
                     </h3>
-                    <div className="space-y-6 mt-6">
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Needs ({t('freqMonthly')}) - Ziel: max. 50%</span>
-                                <span className="text-sm font-bold text-red-500">{pct(needs)}% ({fCur(needs)})</span>
+                    <p className="text-xs text-gray-500 mb-6">Mittelallokation nach Regelwerk</p>
+                    
+                    <div className="w-full flex-1 relative flex items-center justify-center overflow-hidden min-h-[300px]">
+                        {chartDataValues.reduce((a,b) => a+b, 0) > 0 ? (
+                            <div className="w-full h-[300px] relative">
+                                <UniversalChart 
+                                    engine={activeChartEngine} 
+                                    type="doughnut" 
+                                    height="100%" 
+                                    labels={chartLabels} 
+                                    datasets={[{ 
+                                        data: chartDataValues, 
+                                        backgroundColor: chartColors,
+                                        borderWidth: 0
+                                    }]} 
+                                />
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
-                                <div className="bg-red-500 h-2.5 rounded-full" style={{width: `${Math.min(pct(needs), 100)}%`}}></div>
+                        ) : (
+                            <div className="text-gray-400 text-sm flex flex-col items-center justify-center h-full gap-2">
+                                <Icon name="Inbox" size={32} className="opacity-20" />
+                                Keine Budget-Daten vorhanden
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 50/30/20 Progress-Bars (Corporate-Stil) */}
+                <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col min-w-0">
+                    <h3 className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-200 flex justify-between items-center">
+                        <span className="flex items-center gap-2"><Icon name="BarChart2" className="text-blue-500" /> 50/30/20 Budget-Struktur</span>
+                        <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px] font-bold text-gray-400 uppercase tracking-wider">Target Benchmark</span>
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-8">Performanceabgleich gegen standardisierte Allokationsmodelle</p>
+                    
+                    <div className="flex-1 space-y-6 flex flex-col justify-center">
+                        {/* Needs */}
+                        <div>
+                            <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div><span className="truncate">Needs (Lebenshaltung & Fixkosten) — Ziel: max. 50%</span></span>
+                                <span className={`shrink-0 ml-4 ${pct(needs) > 50 ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>{pct(needs)}% ({fCur ? fCur(needs) : needs})</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pct(needs) > 50 ? 'bg-rose-500' : 'bg-slate-700 dark:bg-slate-400'}`} style={{ width: `${Math.min(pct(needs), 100)}%` }}></div>
                             </div>
                         </div>
+
+                        {/* Wants */}
                         <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Wants ({t('freqMonthly')}) - Ziel: max. 30%</span>
-                                <span className="text-sm font-bold text-orange-500">{pct(wants)}% ({fCur(wants)})</span>
+                            <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-500 shrink-0"></div><span className="truncate">Wants (Lifestyle & Abos) — Ziel: max. 30%</span></span>
+                                <span className={`shrink-0 ml-4 ${pct(wants) > 30 ? 'text-orange-500' : 'text-slate-900 dark:text-white'}`}>{pct(wants)}% ({fCur ? fCur(wants) : wants})</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
-                                <div className="bg-orange-500 h-2.5 rounded-full" style={{width: `${Math.min(pct(wants), 100)}%`}}></div>
+                            <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pct(wants) > 30 ? 'bg-orange-500' : 'bg-slate-700 dark:bg-slate-400'}`} style={{ width: `${Math.min(pct(wants), 100)}%` }}></div>
                             </div>
                         </div>
+
+                        {/* Savings & Cashflow */}
                         <div>
-                            <div className="flex justify-between mb-1">
-                                {/* Hier nutzen wir nun die effektive Sparquote, damit der Puffer als "gespart" gewertet wird */}
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Savings (inkl. Cashflow) - Ziel: min. 20%</span>
-                                <span className="text-sm font-bold text-green-500">{pct(effectiveSavings)}% ({fCur(effectiveSavings)})</span>
+                            <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
+                                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div><span className="truncate">Effective Savings (Sparen + Puffer) — Ziel: min. 20%</span></span>
+                                <span className={`shrink-0 ml-4 ${pct(effectiveSavings) >= 20 ? 'text-emerald-500' : 'text-amber-500'}`}>{pct(effectiveSavings)}% ({fCur ? fCur(effectiveSavings) : effectiveSavings})</span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
-                                <div className="bg-green-500 h-2.5 rounded-full" style={{width: `${Math.min(pct(effectiveSavings), 100)}%`}}></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{t('labelNetCashflow')}</span>
-                                <span className="text-sm font-bold text-blue-500">{pct(leftover)}% ({fCur(leftover)})</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 overflow-hidden">
-                                <div className="bg-blue-500 h-2.5 rounded-full" style={{width: `${Math.max(0, Math.min(pct(leftover), 100))}%`}}></div>
+                            <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                                <div className="bg-emerald-500 h-full" style={{ width: `${Math.min(pct(trueSavings), 100)}%` }}></div>
+                                {leftover > 0 && <div className="bg-blue-400 dark:bg-blue-500 h-full opacity-80" style={{ width: `${Math.min(pct(leftover), 100 - pct(trueSavings))}%` }}></div>}
                             </div>
                         </div>
                     </div>
-                 </div>
-             </div>
+                </div>
+
+            </div>
         </div>
     );
 };
+
 module.exports = BudgetDashboard;

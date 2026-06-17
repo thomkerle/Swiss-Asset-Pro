@@ -203,7 +203,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.4", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.5", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
@@ -617,7 +617,7 @@ const App = () => {
                       
                       <div>
                           <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Fin SPA Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.4</p>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.5</p>
                       </div>
                       
                       <hr className="border-gray-200 dark:border-slate-700 my-4" />
@@ -682,6 +682,37 @@ const App = () => {
           defaultBookingCategories={defaultBookingCategories} 
       />;
   };
+
+  // --- STATUS BAR PRECALCULATIONS ---
+  const todayStr = new Date().toISOString().split('T')[0];
+  const baseCur = data?.settings?.baseCurrency || 'CHF';
+  
+  // 1. Hole alle Assets als flache Liste
+  const flatAssets = typeof getAllAssets === 'function' ? getAllAssets(data?.banks || []) : [];
+  const allAssetsCount = flatAssets.length;
+  const banksCount = data?.banks?.length || 0;
+
+  // 2. Berechne das Totalvermögen direkt hier robust auf Basis der Assets
+  const totalWealth = flatAssets.reduce((sum, asset) => {
+      if (asset.isArchived) return sum; // Archivierte Assets in der Totalsumme ignorieren
+      const val = typeof getAssetValueAtDate === 'function' ? getAssetValueAtDate(asset, todayStr, flatAssets) : 0;
+      return sum + (Number(val) || 0);
+  }, 0);
+
+  // 3. NEU: Budget-Berechnungen für die Statusbar
+  const getMonthlyBudget = (item) => {
+      const amt = Number(item.amount) || 0;
+      const freq = String(item.frequency || 'monthly').toLowerCase();
+      if (freq === 'yearly' || freq === 'jährlich') return amt / 12;
+      if (freq === 'semi-annually' || freq === 'halbjährlich') return amt / 6;
+      if (freq === 'quarterly' || freq === 'vierteljährlich') return amt / 3;
+      return amt;
+  };
+  const budgetIn = data?.budget?.incomeSources?.reduce((s, i) => s + getMonthlyBudget(i), 0) || 0;
+  const budgetOut = [...(data?.budget?.expenses || []), ...(data?.budget?.subscriptions || [])].reduce((s, i) => s + getMonthlyBudget(i), 0) || 0;
+  const budgetNet = budgetIn - budgetOut;
+
+  const lastModTime = data?.lastModified ? new Date(data.lastModified).toLocaleTimeString(lang === 'de' ? 'de-CH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
 
   return (
     <div id="app-container" className="h-screen w-screen flex flex-col font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
@@ -789,15 +820,48 @@ const App = () => {
         )}
       </div>
 
-      <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-xs text-gray-600 dark:text-gray-400 z-50">
-          <div className="flex gap-6">
-              <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div> {t('statusReady') || 'Bereit'}
+      <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-[11px] md:text-xs text-gray-600 dark:text-gray-400 z-50 select-none">
+          {/* Linke Seite: Status & Speicherung */}
+          <div className="flex items-center gap-4 md:gap-6">
+              <span className="flex items-center gap-1.5" title={t('titleReadySaveActive') || "System ist bereit & Auto-Save aktiv"}>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  {t('statusReady') || 'Bereit'}
               </span>
-              <span>{t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong></span>
+              <span className="hidden sm:inline-flex items-center gap-1" title={t('titleLastSaveTime') || "Uhrzeit des letzten Auto-Saves"}>
+                  <Icon name="Save" size={10} className="opacity-70" /> {lastModTime}
+              </span>
+              <span className="hidden md:inline">
+                  {t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong>
+              </span>
           </div>
-          <div className="flex gap-6">
-              <span>{t('version') || 'Version'}: Beta - 0.9.4</span>
+
+          {/* Mitte: Portfolio Quick Stats */}
+          <div className="hidden lg:flex items-center gap-4 opacity-80">
+              <span className="flex items-center gap-1" title={t('titleBankCatCount') || "Anzahl Banken / Hauptkategorien"}><Icon name="Shield" size={10} /> {banksCount}</span>
+              <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} Assets</span>
+              <span className="flex items-center gap-1" title={t('titleBaseCurrency') || "Basiswährung der Anwendung"}><Icon name="Globe" size={10} /> {baseCur}</span>
+          </div>
+
+          {/* Rechte Seite: Nettovermögen, Budget & Version */}
+          <div className="flex items-center gap-4 md:gap-6">
+              {viewMode === 'vermoegen' && (
+                  <span className="flex items-center gap-2 bg-gray-200 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200" title={`${t('titleNetWealth') || "Aktuelles Nettovermögen in"} ${baseCur}`}>
+                      <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelTotalShort') || 'Total'}</span>
+                      <strong className="font-mono tracking-tight text-sm">{fCur ? fCur(totalWealth, baseCur) : totalWealth}</strong>
+                  </span>
+              )}
+              {viewMode === 'budget' && (
+                  <span className={`flex items-center gap-2 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200 ${budgetNet >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-red-100 dark:bg-red-900/30'}`} title={`${t('titleNetCashflow') || "Monatlicher Net Cashflow in"} ${baseCur}`}>
+                      <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelCashflow') || 'Cashflow'}</span>
+                      <strong className={`font-mono tracking-tight text-sm ${budgetNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
+                          {budgetNet >= 0 ? '+' : ''}{fCur ? fCur(budgetNet, baseCur) : budgetNet}
+                      </strong>
+                  </span>
+              )}
+              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.5</span>
           </div>
       </div>
       
