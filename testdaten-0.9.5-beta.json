@@ -1,0 +1,211 @@
+{
+  "version": "Beta - 0.9.5",
+  "lastModified": "2026-06-17T10:30:31.000Z",
+  "settings": {
+    "baseCurrency": "CHF",
+    "showTaxesForDividends": true,
+    "showFeesForSecurities": true,
+    "bookingCategories": {
+      "Einzahlung": ["Lohn", "Dividenden", "Zinsen", "Verkauf", "Mieteinnahmen", "Umbuchung Eingang", "Sonstiges"],
+      "Auszahlung": ["Steuern", "Gebühren", "Lebensmittel", "Telekommunikation", "Versicherungen", "Verkehr", "Umbuchung Ausgang", "Sonstiges"],
+      "Kauf": ["Investition", "Reinvestition"],
+      "Verkauf": ["Liquidation", "Teilverkauf"],
+      "Dividende": ["Ausschüttung"],
+      "Wertanpassung": ["Marktbewertung", "Abschreibung"],
+      "Abzahlung": ["Amortisation", "Sondertilgung"],
+      "Zinszahlung": ["Hypothekarzins", "Sollzins"],
+      "Schulderhöhung": ["Aufstockung"],
+      "Gebühr": ["Depotgebühr", "Transaktionsgebühr"]
+    }
+  },
+  "budget": {
+    "incomeSources": [
+      { "id": "bud_inc_1", "name": "Hauptberuf Lohn", "amount": 6500, "frequency": "monthly", "ruleCategory": "needs" }
+    ],
+    "expenses": [
+      { "id": "bud_exp_1", "name": "Miete & Nebenkosten", "amount": 2000, "frequency": "monthly", "ruleCategory": "needs" },
+      { "id": "bud_exp_2", "name": "Lebensmittel", "amount": 600, "frequency": "monthly", "ruleCategory": "needs" },
+      { "id": "bud_exp_3", "name": "Steuerrückstellung", "amount": 1000, "frequency": "monthly", "ruleCategory": "needs" }
+    ],
+    "subscriptions": [
+      { "id": "bud_sub_1", "name": "Netflix", "amount": 19.90, "frequency": "monthly", "ruleCategory": "wants" },
+      { "id": "bud_sub_2", "name": "Halbtax SBB", "amount": 185, "frequency": "yearly", "ruleCategory": "needs" }
+    ]
+  },
+  "goals": {
+    "fire": {
+      "target": 1500000,
+      "year": 2040
+    }
+  },
+  "scenarios": [],
+  "aiContext": {
+    "history": [],
+    "apiMessages": []
+  },
+  "banks": [
+    {
+      "id": "bank_ubs_1",
+      "name": "UBS Switzerland",
+      "type": "bank",
+      "isArchived": false,
+      "children": [
+        {
+          "id": "cat_ubs_alltag",
+          "name": "Alltagsfinanzen",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "asset_ubs_privat",
+              "name": "Privatkonto",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": true,
+              "isArchived": false,
+              "assetClass": "cash",
+              "balances": [
+                { "id": "bal_ubs_1", "date": "2024-12-31", "amount": 15000, "bookingExchangeRate": 1 }
+              ],
+              "bookings": [
+                { "id": "bk_u1", "date": "2025-01-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 6500, "bookingExchangeRate": 1 },
+                { "id": "bk_u2", "date": "2025-01-28", "type": "Auszahlung", "subCategory": "Miete", "amount": 2000, "bookingExchangeRate": 1 },
+                { "id": "bk_u3", "date": "2025-02-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 6500, "bookingExchangeRate": 1 },
+                { "id": "bk_u4", "date": "2025-02-28", "type": "Auszahlung", "subCategory": "Miete", "amount": 2000, "bookingExchangeRate": 1 },
+                { "id": "bk_u5", "date": "2025-03-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 6500, "bookingExchangeRate": 1 },
+                { "id": "bk_u6", "date": "2025-03-28", "type": "Auszahlung", "subCategory": "Miete", "amount": 2000, "bookingExchangeRate": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cat_ubs_vorsorge",
+          "name": "Vorsorge 3a",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "asset_ubs_3a",
+              "name": "Viac Global 100",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "assetClass": "pension_3a_fund",
+              "balances": [],
+              "bookings": [
+                { "id": "bk_3a_1", "date": "2025-01-15", "type": "Einzahlung", "subCategory": "Umbuchung Eingang", "amount": 7056, "bookingExchangeRate": 1 },
+                { "id": "bk_3a_2", "date": "2025-12-31", "type": "Wertanpassung", "subCategory": "Marktbewertung", "amount": 845, "bookingExchangeRate": 1 },
+                { "id": "bk_3a_3", "date": "2026-01-10", "type": "Einzahlung", "subCategory": "Umbuchung Eingang", "amount": 7056, "bookingExchangeRate": 1 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bank_ibkr_1",
+      "name": "Interactive Brokers",
+      "type": "bank",
+      "isArchived": false,
+      "children": [
+        {
+          "id": "cat_ibkr_depot",
+          "name": "Aktien & ETFs",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "asset_ibkr_vt",
+              "name": "Vanguard All-World (VT)",
+              "type": "asset",
+              "currency": "USD",
+              "exchangeRate": 0.89,
+              "isLiquid": true,
+              "isArchived": false,
+              "assetClass": "fund",
+              "shares": 150,
+              "price": 115.50,
+              "balances": [],
+              "bookings": [
+                { "id": "bk_vt_1", "date": "2025-02-10", "type": "Kauf", "subCategory": "Investition", "shares": 100, "price": 105.00, "amount": 10500, "bookingExchangeRate": 0.88 },
+                { "id": "bk_vt_2", "date": "2025-06-15", "type": "Dividende", "subCategory": "Ausschüttung", "amount": 185.50, "bookingExchangeRate": 0.89 },
+                { "id": "bk_vt_3", "date": "2025-08-20", "type": "Kauf", "subCategory": "Investition", "shares": 50, "price": 110.00, "amount": 5500, "bookingExchangeRate": 0.87 },
+                { "id": "bk_vt_4", "date": "2025-12-15", "type": "Dividende", "subCategory": "Ausschüttung", "amount": 250.00, "bookingExchangeRate": 0.86 },
+                { "id": "bk_vt_5", "date": "2026-06-10", "type": "Wertanpassung", "subCategory": "Marktbewertung", "price": 115.50, "amount": 0, "bookingExchangeRate": 0.89 }
+              ]
+            },
+            {
+              "id": "asset_ibkr_btc",
+              "name": "Bitcoin (BTC)",
+              "type": "asset",
+              "currency": "USD",
+              "exchangeRate": 0.89,
+              "isLiquid": true,
+              "isArchived": false,
+              "assetClass": "crypto",
+              "shares": 0.5,
+              "price": 68000.00,
+              "balances": [],
+              "bookings": [
+                { "id": "bk_btc_1", "date": "2025-03-01", "type": "Kauf", "subCategory": "Investition", "shares": 0.5, "price": 42000, "amount": 21000, "bookingExchangeRate": 0.88 },
+                { "id": "bk_btc_2", "date": "2025-11-15", "type": "Wertanpassung", "subCategory": "Marktbewertung", "price": 55000, "amount": 0, "bookingExchangeRate": 0.87 },
+                { "id": "bk_btc_3", "date": "2026-06-15", "type": "Wertanpassung", "subCategory": "Marktbewertung", "price": 68000, "amount": 0, "bookingExchangeRate": 0.89 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bank_zkb_1",
+      "name": "Kantonalbank",
+      "type": "bank",
+      "isArchived": false,
+      "children": [
+        {
+          "id": "cat_zkb_immo",
+          "name": "Immobilien",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "asset_zkb_haus",
+              "name": "Einfamilienhaus",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "assetClass": "realestate",
+              "balances": [],
+              "bookings": [
+                { "id": "bk_haus_1", "date": "2025-01-01", "type": "Wertanpassung", "subCategory": "Marktbewertung", "amount": 1250000, "bookingExchangeRate": 1 }
+              ]
+            },
+            {
+              "id": "asset_zkb_hypo",
+              "name": "Festhypothek",
+              "type": "asset",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "assetClass": "mortgage",
+              "balances": [
+                { "id": "bal_hypo_1", "date": "2024-12-31", "amount": -850000, "bookingExchangeRate": 1 }
+              ],
+              "bookings": [
+                { "id": "bk_hypo_1", "date": "2025-06-30", "type": "Abzahlung", "subCategory": "Amortisation", "amount": 5000, "bookingExchangeRate": 1 },
+                { "id": "bk_hypo_2", "date": "2025-12-31", "type": "Abzahlung", "subCategory": "Amortisation", "amount": 5000, "bookingExchangeRate": 1 },
+                { "id": "bk_hypo_3", "date": "2025-12-31", "type": "Zinszahlung", "subCategory": "Hypothekarzins", "amount": 4250, "bookingExchangeRate": 1 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
