@@ -20,8 +20,7 @@ const safeRequire = getRequire();
 
 const i18n = getModule('Translations.jsx', () => safeRequire('./internationalisation/Translations.jsx'));
 const DataEngine = getModule('DataEngine.jsx', () => safeRequire('./data/DataEngine.jsx'));
-const { initialData, generateId, getAllAssets, getAssetValueAtDate, getTotalWealthAtDate, generateMonthEnds, calcLinearRegression, calcExpRegression, formatCurrency, defaultBookingCategories } = DataEngine;
-
+const { initialData, generateId, getAllAssets, getAssetValueAtDate, getTotalWealthAtDate, generateMonthEnds, calcLinearRegression, calcExpRegression, formatCurrency, defaultBookingCategories, ensureDefaultAssetClasses } = DataEngine;
 const MenuBar = getModule('MenuBar.jsx', () => safeRequire('./components/MenuBar.jsx'));
 const TreeView = getModule('TreeView.jsx', () => safeRequire('./components/TreeView.jsx'));
 const EditorArea = getModule('EditorArea.jsx', () => safeRequire('./components/EditorArea.jsx'));
@@ -33,11 +32,22 @@ const ParqetModule = getModule('ParqetCsvImport.jsx', () => safeRequire('./compo
 const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'));
 const PdfScanner = getModule('PdfScanner.jsx', () => safeRequire('./components/pdf/PdfScanner.jsx'));
 const FormModal = getModule('FormModal.jsx', () => safeRequire('./components/FormModal.jsx'));
-
+const FullPdfOrchestrator = getModule('FullPdfOrchestrator.jsx', () => safeRequire('./components/reports/FullPdfOrchestrator.jsx')) || (() => null);
 const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
 window.PdfExportEngine = PdfExportEngine; 
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
+
+// --- EIGENE LOGO KOMPONENTE ---
+const FinSpaLogo = ({ className = "h-24 w-24" }) => (
+  <svg viewBox="0 0 100 100" className={`overflow-visible ${className}`}>
+    <circle cx="50" cy="50" r="44" stroke="#2563eb" strokeWidth="5" fill="none" className="logo-pulse-circle origin-center" />
+    <path d="M 28 62 L 42 72 L 68 42" stroke="#10b981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" className="logo-glow-path" />
+    <path d="M 54 42 L 68 42 L 68 56" stroke="#10b981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" className="logo-glow-path" />
+    <rect x="36" y="32" width="7" height="7" rx="2" fill="#10b981" className="logo-float-rect1" />
+    <rect x="52" y="22" width="7" height="7" rx="2" fill="#10b981" className="logo-float-rect2" />
+  </svg>
+);
 
 const App = () => {
   const [fileHandle, setFileHandle] = useState(null);
@@ -203,7 +213,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.5", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.6", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
@@ -247,7 +257,7 @@ const App = () => {
                             };
                             imported.budget = safeBudget;
                             setFileHandle(handle); 
-                            setData(imported);
+                            setData(ensureDefaultAssetClasses(imported));
                             showToast(t('msgOpenSuccess') || "Erfolgreich geöffnet", "success");
                         }
                     } catch (err) {
@@ -595,6 +605,7 @@ const App = () => {
           return <HelpViewer setModalObj={setModalObj} lang={lang} />;
       }
 
+      // HIER WURDE DAS NEUE LOGO EINGEBAUT
       if (modalObj.type === 'about') return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all">
@@ -610,14 +621,14 @@ const App = () => {
                   
                   <div className="p-6 text-center space-y-4">
                       <div className="flex justify-center mb-2">
-                          <div className="bg-blue-700 text-white p-4 rounded-full shadow-lg">
-                          <Icon name="PieChart" size={40} />
+                          <div className="p-2">
+                              <FinSpaLogo className="h-28 w-28 drop-shadow-xl" />
                           </div>
                       </div>
                       
                       <div>
-                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Fin SPA Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.5</p>
+                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">FinSPA Pro</h2>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.6</p>
                       </div>
                       
                       <hr className="border-gray-200 dark:border-slate-700 my-4" />
@@ -746,6 +757,28 @@ const App = () => {
         .dark .finspa-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: #64748b;
         }
+
+        /* LOGO ANIMATIONS */
+        @keyframes pulseCircle {
+          0%, 100% { transform: scale(1); stroke: #2563eb; filter: drop-shadow(0 0 2px rgba(37,99,235,0.2)); }
+          50% { transform: scale(1.03); stroke: #3b82f6; filter: drop-shadow(0 0 8px rgba(37,99,235,0.6)); }
+        }
+        @keyframes glowPath {
+          0%, 100% { filter: drop-shadow(0 0 2px rgba(16,185,129,0.3)); stroke: #10b981; }
+          50% { filter: drop-shadow(0 0 8px rgba(16,185,129,0.8)); stroke: #34d399; }
+        }
+        @keyframes float1 {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+        }
+        .logo-pulse-circle { animation: pulseCircle 3s ease-in-out infinite; }
+        .logo-glow-path { animation: glowPath 2.5s ease-in-out infinite; }
+        .logo-float-rect1 { animation: float1 4s ease-in-out infinite; }
+        .logo-float-rect2 { animation: float2 3.5s ease-in-out infinite; animation-delay: 0.5s; }
       `}</style>
       <MenuBar 
         data={data} 
@@ -861,9 +894,18 @@ const App = () => {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.5</span>
+              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.6</span>
           </div>
       </div>
+
+     
+      <FullPdfOrchestrator 
+          data={data} 
+          activeAssets={showArchived ? flatAssets : flatAssets.filter(a => !a?.isArchived)}
+          dateRange={dateRange} 
+          fCur={fCur} 
+          t={t} 
+      />
       
       {ModalHandler()}
       

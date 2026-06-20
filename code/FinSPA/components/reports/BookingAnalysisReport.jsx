@@ -58,7 +58,6 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   const cashflow = totalIncomes - totalExpenses;
   const savingsRate = totalIncomes > 0 ? (cashflow / totalIncomes) * 100 : 0;
 
-  // NEU: Kreative, harmonische FinTech-Palette für bessere Lesbarkeit
   const chartColors = [
       '#4f46e5', // Indigo
       '#7c3aed', // Violet
@@ -71,7 +70,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
       '#0d9488', // Teal
       '#0284c7', // Sky Blue
       '#2563eb', // Royal Blue
-      '#475569'  // Slate (Fallback für Sonstiges)
+      '#475569'  // Slate
   ];
 
   const repTitle = t ? t('repBookAnaTitle') || 'Buchungsanalyse & Cashflow' : 'Buchungsanalyse & Cashflow';
@@ -88,21 +87,22 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. KPIs
         const kpiBlock = document.querySelector('.kpi-booking-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // 2. Charts
         const chartBlock = document.querySelector('.chart-booking-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
@@ -113,6 +113,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             });
         }
 
+        // 3. Tabellendaten
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
             capitalize(t ? t('category') || 'Kategorie' : 'Kategorie'), 
@@ -132,6 +133,15 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             sortedExpCategories.forEach(cat => tableBody.push([`   - ${cat}`, fCur(expenses[cat])]));
         }
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: repTitle,
           subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} bis ${new Date(dateRange.to).toLocaleDateString('de-CH')}) | ${t ? t('labelSavingsRate') || 'Sparquote' : 'Sparquote'}: ${savingsRate.toFixed(1)}%`,
@@ -145,8 +155,37 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 7, 
+                    title: repTitle,
+                    subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} bis ${new Date(dateRange.to).toLocaleDateString('de-CH')}) | ${t ? t('labelSavingsRate') || 'Sparquote' : 'Sparquote'}: ${savingsRate.toFixed(1)}%`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im BookingAnalysisReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [sortedExpCategories, sortedIncCategories, expenses, incomes, dateRange, fCur, t, totalIncomes, totalExpenses, savingsRate, repTitle, repSub, data, activeAssets]);
 
   return (

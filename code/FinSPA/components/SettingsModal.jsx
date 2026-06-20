@@ -34,19 +34,30 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
             ];
         }
 
+        // --- NEU: Auto-Migration für fehlende Asset-Klassen ---
         if (!initial.assetClasses) {
-            initial.assetClasses = [
-                { id: 'cash', name: t('acCash') || 'Bargeld / Konto', description: t('descCash') || 'Liquide Mittel und Girokonten' },
-                { id: 'fund', name: t('acFund') || 'Fonds / ETF', description: t('descFund') || 'Investmentfonds und passive ETFs' },
-                { id: 'stock', name: t('acStock') || 'Aktien', description: t('descStock') || 'Direktinvestitionen in Einzelaktien' },
-                { id: 'crypto', name: t('acCrypto') || 'Krypto', description: t('descCrypto') || 'Kryptowährungen wie BTC, ETH' },
-                { id: 'realestate', name: t('acRealEstate') || 'Immobilien', description: t('descRealEstate') || 'Liegenschaften, Haus, Wohnung' },
-                { id: 'mortgage', name: t('acMortgage') || 'Hypothek', description: t('descMortgage') || 'Hypothekarische Belastungen' },
-                { id: 'pension_cash', name: t('acPension_cash') || 'Pensionskasse', description: t('descPensionCash') || 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
-                { id: 'pension_3a_cash', name: t('acPension3aCash') || '3a Vorsorgekonto', description: t('descPension3aCash') || 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
-                { id: 'pension_3a_fund', name: t('acPension3aFund') || '3a Vorsorgefonds', description: t('descPension3aFund') || 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' }
-            ];
+            initial.assetClasses = [];
         }
+        
+        const systemClasses = [
+            { id: 'cash', name: t('acCash') || 'Bargeld / Konto', description: t('descCash') || 'Liquide Mittel und Girokonten' },
+            { id: 'fund', name: t('acFund') || 'Fonds / ETF', description: t('descFund') || 'Investmentfonds und passive ETFs' },
+            { id: 'stock', name: t('acStock') || 'Aktien', description: t('descStock') || 'Direktinvestitionen in Einzelaktien' },
+            { id: 'crypto', name: t('acCrypto') || 'Krypto', description: t('descCrypto') || 'Kryptowährungen wie BTC, ETH' },
+            { id: 'realestate', name: t('acRealEstate') || 'Immobilien', description: t('descRealEstate') || 'Liegenschaften, Haus, Wohnung' },
+            { id: 'mortgage', name: t('acMortgage') || 'Hypothek', description: t('descMortgage') || 'Hypothekarische Belastungen' },
+            { id: 'pension_cash', name: t('acPension_cash') || 'Pensionskasse', description: t('descPensionCash') || 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
+            { id: 'pension_3a_cash', name: t('acPension3aCash') || '3a Vorsorgekonto', description: t('descPension3aCash') || 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
+            { id: 'pension_3a_fund', name: t('acPension3aFund') || '3a Vorsorgefonds', description: t('descPension3aFund') || 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' },
+            { id: 'managed_fund', name: t('acManagedFund') || 'Verwaltetes Vermögen', description: t('descManagedFund') || 'Robo-Advisor oder Fonds ohne Einzelkurse (z.B. TrueWealth)' },
+            { id: 'pension_3a_managed', name: t('acPension3aManaged') || '3a Verwaltetes Vermögen', description: t('descPension3aManaged') || 'Säule 3a Fondslösung über Gesamtwert (z.B. Viac, frankly)' }
+        ];
+
+        systemClasses.forEach(sysClass => {
+            if (!initial.assetClasses.find(c => c.id === sysClass.id)) {
+                initial.assetClasses.push(sysClass);
+            }
+        });
         
         return initial;
     });
@@ -163,12 +174,12 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         });
     };
 
-    // HILFSFUNKTION: Übersetzt Standard-Asset-Namen On-The-Fly für die Anzeige
     const getTranslatedAsset = (asset) => {
         const titleMap = {
             'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
             'realestate': 'acRealEstate', 'mortgage': 'acMortgage', 
-            'pension_cash': 'acPension_cash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund'
+            'pension_cash': 'acPension_cash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund',
+            'managed_fund': 'acManagedFund', 'pension_3a_managed': 'acPension3aManaged'
         };
         return titleMap[asset.id] && t(titleMap[asset.id]) !== titleMap[asset.id] ? t(titleMap[asset.id]) : asset.name;
     };
@@ -282,22 +293,45 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                             </div>
                             
                             <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
-                                {localSettings.assetClasses.map(asset => (
-                                    <div key={asset.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            {/* HIER WIRD DIE ÜBERSETZUNG ANGEWENDET */}
-                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{getTranslatedAsset(asset)}</span>
-                                            <span className="text-[10px] font-mono bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-md">{asset.id}</span>
-                                        </div>
-                                        <input 
-                                            type="text" 
-                                            value={asset.description || ''} 
-                                            onChange={e => updateAssetDesc(asset.id, e.target.value)}
-                                            placeholder={t('placeholderAssetDesc') || 'Beschreibung (Optional)'}
-                                            className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                ))}
+{localSettings.assetClasses.map(asset => {
+    // Mapping für die System-Standardbeschreibungen
+    const systemDescMap = {
+        'cash': 'descCash', 'fund': 'descFund', 'stock': 'descStock', 'crypto': 'descCrypto',
+        'realestate': 'descRealEstate', 'mortgage': 'descMortgage', 
+        'pension_cash': 'descPensionCash', 'pension_3a_cash': 'descPension3aCash', 'pension_3a_fund': 'descPension3aFund',
+        'managed_fund': 'descManagedFund', 'pension_3a_managed': 'descPension3aManaged'
+    };
+    
+    const systemKey = systemDescMap[asset.id];
+    const hardcodedDefaults = [
+        'Liquide Mittel und Girokonten', 'Investmentfonds und passive ETFs', 'Direktinvestitionen in Einzelaktien',
+        'Kryptowährungen wie BTC, ETH', 'Liegenschaften, Haus, Wohnung', 'Hypothekarische Belastungen',
+        'Berufliche Vorsorge (2. Säule) / Pensionsguthaben', 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)',
+        'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)', 'Robo-Advisor oder Fonds ohne Einzelkurse (z.B. TrueWealth)',
+        'Säule 3a Fondslösung über Gesamtwert (z.B. Viac, frankly)'
+    ];
+
+    // Wenn es ein System-Key ist und die Beschreibung dem harten Default entspricht, live übersetzen
+    const displayDesc = (systemKey && (!asset.description || hardcodedDefaults.includes(asset.description))) 
+        ? (t(systemKey) || asset.description) 
+        : asset.description;
+
+    return (
+        <div key={asset.id} className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+                <span className="font-bold text-sm text-slate-800 dark:text-slate-100">{getTranslatedAsset(asset)}</span>
+                <span className="text-[10px] font-mono bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-md">{asset.id}</span>
+            </div>
+            <input 
+                type="text" 
+                value={displayDesc || ''} 
+                onChange={e => updateAssetDesc(asset.id, e.target.value)}
+                placeholder={t('placeholderAssetDesc') || 'Beschreibung (Optional)'}
+                className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+    );
+})}
                             </div>
 
                             <div className="pt-4 border-t border-gray-200 dark:border-slate-700 shrink-0">

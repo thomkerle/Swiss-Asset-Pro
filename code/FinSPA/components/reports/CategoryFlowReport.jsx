@@ -87,27 +87,29 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. KPI Block
         const kpiBlock = document.querySelector('.kpi-cat-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // 2. Chart Block
         const chartBlock = document.querySelector('.chart-cat-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: t ? t('performanceByCategory') || 'Performance nach Kategorien' : 'Performance nach Kategorien', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
+        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
             capitalize(t ? t('category') || 'Kategorie / Asset' : 'Kategorie / Asset'), 
@@ -140,6 +142,15 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
         tableBody.push(['', '', '', '']);
         tableBody.push([t ? t('totalPortfolio') || 'GESAMTPORTFOLIO' : 'GESAMTPORTFOLIO', fCur(totalStart), fCur(totalEnd), `${totalDelta >= 0 ? '+' : ''}${fCur(totalDelta)}`]);
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: titleText, 
           subtitle: `${subtitlePrefix} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordToText} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`, 
@@ -151,8 +162,37 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
       } catch (err) { console.error("[FinSPA] PDF Export Error im CategoryFlowReport:", err); }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 5, 
+                    title: titleText,
+                    subtitle: `${subtitlePrefix} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordToText} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im CategoryFlowReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [catData, dateRange, fCur, t, titleText, subtitlePrefix, wordToText, totalStart, totalEnd, totalDelta, data]);
 
   if (catData.length === 0) {

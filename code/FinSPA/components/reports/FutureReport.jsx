@@ -107,29 +107,30 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
     });
   };
 
-  // Event-Listener für den PDF-Export (Modernisiert)
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. KPI Block
         const kpiBlock = document.querySelector('.kpi-future-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // 2. Chart Block
         const chartBlock = document.querySelector('.chart-future-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: t ? t('chartDevelopmentOverTime') || 'Entwicklung über Zeit' : 'Entwicklung über Zeit', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
+        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         
         const tableHeaders = [
@@ -146,6 +147,15 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             return row;
         });
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: titleText,
           subtitle: `${subText} (${t ? t('basisMonthlyCashflow') || 'Basis' : 'Basis'}: ${fCur(monthlyCashflow)}${t ? t('perMonthCashflow') || '/Mt. Cashflow' : '/Mt. Cashflow'})`,
@@ -157,8 +167,37 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
       } catch (err) { console.error("[FinSPA] PDF Export Error im FutureReport:", err); }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 9, // Letzter Report im Master-PDF
+                    title: titleText,
+                    subtitle: `${subText} (${t ? t('basisMonthlyCashflow') || 'Basis' : 'Basis'}: ${fCur(monthlyCashflow)}${t ? t('perMonthCashflow') || '/Mt. Cashflow' : '/Mt. Cashflow'})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im FutureReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [futureLabels, linD, marketCurves, fCur, t, monthlyCashflow, titleText, subText, data]);
 
   return (

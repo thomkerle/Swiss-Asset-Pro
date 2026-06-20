@@ -139,24 +139,21 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         });
     };
 
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) {
-            console.error("[FinSPA Diagnose] PdfExportEngine nicht verfügbar.");
-            return;
-        }
-
+    // Helfer-Funktion, die die Extraktion bündelt (für Einzel- und Batch-Export nutzbar)
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. KPI Block extrahieren
         const kpiBlock = document.querySelector('.kpi-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // 2. Charts extrahieren inkl. der speziellen ECharts-Legenden-Manipulation
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
@@ -177,6 +174,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             isDoughnut = true; 
                         }
                         
+                        // Optionen für den Snapshot anpassen
                         chartInstance.setOption({
                             legend: hasLegend ? { 
                                 type: 'plain',
@@ -202,6 +200,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             backgroundColor: bgColor
                         });
                         
+                        // Original-Optionen wiederherstellen
                         chartInstance.setOption({
                             legend: hasLegend ? { 
                                 type: 'scroll',
@@ -224,11 +223,13 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                     }
                 }
                 
+                // Fallback, falls es kein EChart ist
                 const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
                 chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
             }
         }
 
+        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
         const tableHeaders = [
@@ -256,6 +257,19 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
             });
         });
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) {
+            console.error("[FinSPA Diagnose] PdfExportEngine nicht verfügbar.");
+            return;
+        }
+
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: repTitle,
           subtitle: `${repSub} ${new Date(targetDate).toLocaleDateString('de-CH')} | Gesamtvolumen: ${fCur ? fCur(grandTotal) : grandTotal}`,
@@ -269,8 +283,37 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
       }
     };
 
+    // --- NEU: BATCH EXPORT FÜR DEN ORCHESTRATOR ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 1, // Priorität 1 im PDF-Dokument (nach dem Deckblatt)
+                    title: repTitle,
+                    subtitle: `${repSub} ${new Date(targetDate).toLocaleDateString('de-CH')} | Gesamtvolumen: ${fCur ? fCur(grandTotal) : grandTotal}`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im AssetOverviewReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [sortedClasses, overview, targetDate, grandTotal, fCur, t, data, repTitle, repSub]);
 
   if (sortedClasses.length === 0) {

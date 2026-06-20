@@ -75,23 +75,23 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
     });
   };
 
-  // 3. PDF-Export (Modernisiert mit html2canvas)
+  // 3. PDF-Export (Modernisiert mit html2canvas & Batch-Fähigkeit)
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // Snapshot KPI Block
         const kpiBlock = document.querySelector('.kpi-waterfall-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // Snapshot Chart Block
         const chartBlock = document.querySelector('.chart-waterfall-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
@@ -99,19 +99,30 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
         }
 
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+        
+        // Flache Tabellenstruktur
         const tableHeaders = [
             capitalize(t ? t('labelPosition') || 'Position' : 'Position'),
             capitalize(t ? t('amount') || 'Betrag' : 'Betrag')
         ];
 
         const tableBody = [
-            [lblStart.toUpperCase(), fCur(startVal)],
+            [{ text: lblStart.toUpperCase(), bold: true }, fCur(startVal)],
             ['   + ' + lblIn, fCur(sumInc)],
             ['   - ' + lblOut, `-${fCur(sumExp)}`],
             [`   ${marketPerf >= 0 ? '+' : '-'} ` + lblMarket, `${marketPerf >= 0 ? '+' : ''}${fCur(marketPerf)}`],
             ['', ''],
-            [lblEnd.toUpperCase(), fCur(endVal)]
+            [{ text: lblEnd.toUpperCase(), bold: true }, fCur(endVal)]
         ];
+
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
 
         await PdfExportEngine.exportReport({
           title: repTitle,
@@ -121,12 +132,43 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           chartsData,
           data: activeAssets // Hier als Mock/Fallback, in der Regel 'data'
         });
-      } catch (err) { console.error("[FinSPA] PDF Export Error im WaterfallReport:", err); }
+      } catch (err) { 
+          console.error("[FinSPA] PDF Export Error im WaterfallReport:", err); 
+      }
+    };
+
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 15, 
+                    title: repTitle,
+                    subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} bis ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im WaterfallReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
     };
 
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
-  }, [startVal, sumInc, sumExp, marketPerf, endVal, dateRange, fCur, t, repTitle, repSub, lblStart, lblIn, lblOut, lblMarket, lblEnd]);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
+  }, [startVal, sumInc, sumExp, marketPerf, endVal, dateRange, fCur, t, repTitle, repSub, lblStart, lblIn, lblOut, lblMarket, lblEnd, activeAssets]);
 
   return (
    <div className="max-w-7xl px-4 md:px-8 pb-12 relative">

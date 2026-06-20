@@ -39,7 +39,7 @@ const BudgetEditor = safeRequire('./budget/BudgetEditor.jsx') || (() => <div>Bud
 const AssetOverviewReport = safeRequire('./reports/AssetOverviewReport.jsx') || (() => <div>AssetOverviewReport</div>);
 const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport.jsx') || (() => <div>PensionPerformanceReport</div>);
 const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
-const UniversalChart = require('../../api/UniversalChart.jsx');
+const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>{t ? t('errDivCalendarMissing') : 'DividendCalendarReport fehlt'}</div>);const UniversalChart = require('../../api/UniversalChart.jsx');
 
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
 
@@ -125,6 +125,12 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
 
   // Zielkonto für Umbuchungen
   const [transferTargetId, setTransferTargetId] = useState('');
+
+const safeT = (key, fallback) => {
+      if (!t) return fallback;
+      const res = t(key);
+      return (res && res !== key) ? res : fallback;
+  };
 
   // Effekte
   useEffect(() => {
@@ -350,6 +356,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
         case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+	case 'dividendCalendar': return <DividendCalendarReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         default: return <div className="text-gray-500">{t ? t('reportLoading') : 'Report wird geladen...'}</div>;
       }
     };
@@ -827,9 +834,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
              </div>
 
              <div className="flex items-end gap-10 print-hide ml-4 h-full pt-2">
-                 <Sparkline dataSeries={dataBase} title={isSecurities ? `Performance (${baseCurrency})` : `Wertentwicklung (${baseCurrency})`} />
-                 {isForeignCurrency && <Sparkline dataSeries={dataRaw} title={isSecurities ? `Performance (${adjustedNode.currency})` : `Wertentwicklung (${adjustedNode.currency})`} />}
-             </div>
+    <Sparkline dataSeries={dataBase} title={isSecurities ? `${t ? t('titlePerformance') || 'Performance' : 'Performance'} (${baseCurrency})` : `${t ? t('titleValueDevelopment') || 'Wertentwicklung' : 'Wertentwicklung'} (${baseCurrency})`} />
+    {isForeignCurrency && <Sparkline dataSeries={dataRaw} title={isSecurities ? `${t ? t('titlePerformance') || 'Performance' : 'Performance'} (${adjustedNode.currency})` : `${t ? t('titleValueDevelopment') || 'Wertentwicklung' : 'Wertentwicklung'} (${adjustedNode.currency})`} />}
+</div>
           </div>
 
           {/* REITER / TABS FÜR WERTPAPIERE */}
@@ -850,8 +857,8 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               
               {(!isSecurities || activeTab === 'transactions') ? (
                 <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType})} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-colors">
-                    <Icon name="Plus"/> {isSecurities ? 'Transaktion erfassen' : (t ? t('addBookingBtn') : 'Buchung erfassen')}
-                </button>
+    <Icon name="Plus"/> {isSecurities ? (t ? t('addTransactionBtn') : 'Transaktion erfassen') : (t ? t('addBookingBtn') : 'Buchung erfassen')}
+</button>
               ) : (
                 <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType: 'Wertanpassung'})} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-colors">
                     <Icon name="TrendingUp"/> {t ? t('btnAddMarketValue') || 'Kurs / Marktwert erfassen' : 'Kurs / Marktwert erfassen'}
@@ -1121,13 +1128,13 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                             const runningTotalBase = runningTotal * usedRate; 
                             
                             let hoverText = `${t ? t('balanceAt') || 'Bestand am' : 'Bestand am'} ${item.date}: ${fCur ? fCur(runningTotal, adjustedNode.currency) : runningTotal}`;
-                            if (isSecurities) {
-                                hoverText = `Stichtag: ${item.date}\nStücke am Tag: ${runningShares} Stk.\nBörsenkurs: ${runningPrice} ${adjustedNode.currency}\nWert (${adjustedNode.currency}): ${fCur ? fCur(runningTotal, adjustedNode.currency) : runningTotal}`;
-                            }
-                            if (isForeignCurrency) {
-                                hoverText += `\nWechselkurs: ${usedRate}`;
-                                hoverText += `\n${t ? t('inBaseCurrency') || 'In Basiswährung' : 'In Basiswährung'} (${baseCurrency}): ${fCur ? fCur(runningTotalBase, baseCurrency) : runningTotalBase}`;
-                            }
+if (isSecurities) {
+    hoverText = `${t ? t('labelDateAt') || 'Stichtag' : 'Stichtag'}: ${item.date}\n${t ? t('labelSharesAtDate') || 'Stücke am Tag' : 'Stücke am Tag'}: ${runningShares} ${t ? t('labelPcs') || 'Stk.' : 'Stk.'}\n${t ? t('labelMarketPrice') || 'Börsenkurs' : 'Börsenkurs'}: ${runningPrice} ${adjustedNode.currency}\n${t ? t('labelValue') || 'Wert' : 'Wert'} (${adjustedNode.currency}): ${fCur ? fCur(runningTotal, adjustedNode.currency) : runningTotal}`;
+}
+                        if (isForeignCurrency) {
+    hoverText += `\n${safeT('labelExchangeRate', 'Wechselkurs')}: ${usedRate}`;
+    hoverText += `\n${safeT('inBaseCurrency', 'In Basiswährung')} (${baseCurrency}): ${fCur ? fCur(runningTotalBase, baseCurrency) : runningTotalBase}`;
+}
 
                             const badgeColor = item._isBal 
                                 ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20' 

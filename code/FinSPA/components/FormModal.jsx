@@ -54,6 +54,23 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         bulkOperation: 'delete'
     });
 
+    // --- NEU: Globale Hilfsfunktion um das UI sofort neu zu zeichnen ---
+    const refreshActiveNode = (newBanks) => {
+        if (!selectedNode) return;
+        const findNode = (nodes) => {
+            for (let n of nodes) {
+                if (n.id === selectedNode.id) return n;
+                if (n.children) {
+                    let r = findNode(n.children);
+                    if (r) return r;
+                }
+            }
+            return null;
+        };
+        const updatedNode = findNode(newBanks);
+        if (updatedNode) setSelectedNode(updatedNode);
+    };
+
     const handlePrintAssetBookings = () => {
         const { fromDate, toDate, filterType } = form;
         const items = [...(selectedNode.balances || []).map(b => ({ ...b, _isBal: true })), ...(selectedNode.bookings || [])];
@@ -153,7 +170,9 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             });
             newData.banks = updateRecursive(newData.banks);
             if (typeof window !== 'undefined' && window.showToast) window.showToast(`${modalObj.selectedIds.length} ${t ? t('msgEntriesEdited') || 'Einträge bearbeitet' : 'Einträge bearbeitet'}`, "success");
+            
             updateTreeData(newData);
+            refreshActiveNode(newData.banks); // --- NEU: Erzwingt sofortiges Neuladen bei Bulk-Actions ---
             setModalObj(null);
             return;
         }
@@ -229,10 +248,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 return copy;
             });
             newData.banks = updateRecursive(newData.banks);
-            if (selectedNode && selectedNode.id === modalObj.assetId) {
-                const getUpdatedNode = (nodes) => { for(let i=0; i<nodes.length; i++) { if(nodes[i].id === selectedNode.id) return nodes[i]; if(nodes[i].children) { let r = getUpdatedNode(nodes[i].children); if(r) return r; } } };
-                setSelectedNode(getUpdatedNode(newData.banks));
-            }
+            refreshActiveNode(newData.banks); // --- NEU: Erzwingt sofortiges Neuladen bei Speichern ---
         } 
         else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
             const updateRecursive = (nodes) => nodes.map(n => {
@@ -243,7 +259,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                         copy.children.push({ id: generateId(), name: form.name || (t('newCategoryName')||'Neue Kategorie'), type: 'category', isArchived: false, children: [] });
                     } else {
                         const ac = form.assetClass || 'cash';
-                        const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage'].includes(ac);
+                        const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage', 'pension_3a_managed'].includes(ac);
                         copy.children.push({ id: generateId(), name: form.name || (t('newAssetName')||'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [] });
                     }
                     return copy;
@@ -270,14 +286,13 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             }
             if (n.children) return { ...n, children: updateRecursive(n.children) };
             return n;
-            });
+        });
         newData.banks = updateRecursive(newData.banks);
         updateTreeData(newData);
-        if (selectedNode && selectedNode.id === modalObj.assetId) {
-            const getUpdatedNode = (nodes) => { for(let i=0; i<nodes.length; i++) { if(nodes[i].id === selectedNode.id) return nodes[i]; if(nodes[i].children) { let r = getUpdatedNode(newData.banks); if(r) return r; } } };
-            setSelectedNode(getUpdatedNode(newData.banks));
-        }
-        if (typeof window !== 'undefined' && window.showToast) window.showToast(t('msgDeleted') || "Gelöscht", "success");
+        
+        refreshActiveNode(newData.banks); // --- NEU: Der Bug-Fix. Erzwingt das sofortige Rendern der Tabelle ---
+
+        if (typeof window !== 'undefined' && window.showToast) window.showToast(t ? t('msgDeleted') || "Gelöscht" : "Gelöscht", "success");
         setModalObj(null);
     };
 
@@ -288,6 +303,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         else if (ac === 'mortgage') availableBookingTypes = ['Abzahlung', 'Zinszahlung', 'Schulderhöhung'];
         else if (['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac)) availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
         else if (['pension_cash', 'pension_3a_cash'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
+        else if (['managed_fund', 'pension_3a_managed'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Wertanpassung', 'Gebühr'];
     }
 
     const activeBookingCategories = data.settings?.bookingCategories || defaultBookingCategories || {};
@@ -439,7 +455,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                   </select>
                               </div>
                               <div>
-                                  <label className="block font-bold mb-1 mt-3">{t ? t('budgetRuleCat') : 'Regelwerk'}</label>
+                                  <label className="block font-bold mb-1 mt-3">{t ? t('ruleNeeds') : 'Regelwerk'}</label>
                                   <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.ruleCategory || 'needs'} onChange={e=>setForm({...form, ruleCategory: e.target.value})}>
                                       <option value="needs">{t ? t('ruleNeeds') : 'Bedürfnisse'}</option>
                                       <option value="wants">{t ? t('ruleWants') : 'Wünsche'}</option>
@@ -462,6 +478,8 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                   <option value="pension_fund">{t ? t('acPensionFund') : 'Vorsorge Fonds'}</option>
                                   <option value="pension_3a_cash">{t ? t('acPension3aCash') : '3a Cash'}</option>
                                   <option value="pension_3a_fund">{t ? t('acPension3aFund') : '3a Fonds'}</option>
+                                  <option value="managed_fund">{t ? t('acManagedFund') : 'Verwaltetes Portfolio (Robo-Advisor)'}</option>
+                                  <option value="pension_3a_managed">{t ? t('acPension3aManaged') : '3a Fonds (Gesamtwert)'}</option>
                               </select>
                           </div>
                       )}
@@ -506,7 +524,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           </select>
                       </div>
 
-                      {/* BETRAG: Wird bei Wertanpassung von Wertpapieren ausgeblendet, da die Engine über den Kurs rechnet */}
                       {!(isSecurities && form.type === 'Wertanpassung') && (
                           <div>
                               <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('amount') : 'Betrag'} ({selectedNode?.currency || baseCurrency})</label>
@@ -514,7 +531,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           </div>
                       )}
 
-                      {/* WERTPAPIER-SPEZIFISCHE FELDER (STÜCKE & KURS) */}
                       {isSecurities && (
                           <div className={`grid gap-3 mt-3 ${form.type === 'Wertanpassung' ? 'grid-cols-1 bg-emerald-50/50 dark:bg-emerald-900/20 p-4 border border-emerald-200 dark:border-emerald-800/50 rounded-xl' : 'grid-cols-2'}`}>
                               
@@ -602,13 +618,13 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             
             <div className="flex gap-2 w-full justify-end">
                 <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">
-                    {t ? t('btnCancel') || 'Abbrechen' : 'Abbrechen'}
+                    {t('btnCancel') || 'Abbrechen'}
                 </button>
                 <button 
                     onClick={modalObj.type === 'printAssetBookings' ? handlePrintAssetBookings : handleSave} 
                     className="px-6 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                    {modalObj.type === 'bulkAction' ? <><Icon name="Check" size={18}/> {t ? t('btnExecute') || 'Ausführen' : 'Ausführen'}</> : <><Icon name="Save" size={18}/> {t ? t('btnSave') || 'Speichern' : 'Speichern'}</>}
+                    {modalObj.type === 'bulkAction' ? <><Icon name="Check" size={18}/> {t('btnExecute') || 'Ausführen'}</> : <><Icon name="Save" size={18}/> {t('btnSave') || 'Speichern'}</>}
                 </button>
             </div>
           </div>

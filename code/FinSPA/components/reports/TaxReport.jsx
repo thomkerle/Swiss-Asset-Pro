@@ -18,90 +18,44 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   const year = new Date(dateRange.to).getFullYear();
   const taxDate = `${year}-12-31`;
 
-  const titleText = t ? (t('repTaxTitle') || "Steuerwerte & Vermögensdeklaration") : "Steuerwerte & Vermögensdeklaration";
-  const subText = t ? (t('repTaxSub') || "Stichtagsbezogene Auswertung für die Steuererklärung") : "Stichtagsbezogene Auswertung für die Steuererklärung";
+  const titleText = t ? (t('repTaxTitle') || 'Steuer-Report') : 'Steuer-Report';
+  const subText = t ? (t('repTaxSub') || 'Vermögenswerte für die Steuererklärung') : 'Vermögenswerte für die Steuererklärung';
 
-  const { grandTotal, catCash, catSecurities, catCrypto, catRealEstate, categories } = useMemo(() => {
-      let tTotal = 0;
-      let cCash = 0;
-      let cSecurities = 0;
-      let cCrypto = 0;
-      let cRealEstate = 0;
+  const { taxableAssets, taxFreeAssets, totalWealth, taxableTotal, taxFreeTotal } = useMemo(() => {
+      let tWealth = 0;
+      let tTaxable = 0;
+      let tTaxFree = 0;
+      const taxAssets = [];
+      const freeAssets = [];
 
-      const cats = {
-          cash: { name: t ? t('taxCatCash') || 'Konten & Bargeld' : 'Konten & Bargeld', assets: [], total: 0 },
-          securities: { name: t ? t('taxCatSecurities') || 'Wertschriften & Anlagen' : 'Wertschriften & Anlagen', assets: [], total: 0 },
-          crypto: { name: t ? t('taxCatCrypto') || 'Krypto-Assets' : 'Krypto-Assets', assets: [], total: 0 },
-          realestate: { name: t ? t('taxCatRealEstate') || 'Immobilien & Hypotheken' : 'Immobilien & Hypotheken', assets: [], total: 0 }
-      };
-
-      // KUGELSICHERE EXTRAKTION: Wir suchen uns die Assets selbst aus dem Baum, 
-      // falls sie nicht als fertiges Array ("activeAssets") reinkommen.
-      let assetsToProcess = [];
-      if (Array.isArray(activeAssets) && activeAssets.length > 0) {
-          assetsToProcess = activeAssets;
-      } else if (data && Array.isArray(data.banks)) {
-          const extract = (nodes) => {
-              nodes.forEach(n => {
-                  if (n.type === 'asset' && !n.isArchived) assetsToProcess.push(n);
-                  if (Array.isArray(n.children)) extract(n.children);
-              });
-          };
-          extract(data.banks);
-      }
-
-      assetsToProcess.forEach(a => {
-          if (a.isArchived) return;
-          // Pensionen komplett ignorieren (nicht steuerbar vor Bezug)
-          if (a.assetClass?.includes('pension')) return;
-
-          const val = getAssetValueAtDate(a, taxDate, assetsToProcess);
+      (activeAssets || []).forEach(a => {
+          const val = getAssetValueAtDate(a, taxDate, activeAssets);
           if (val === 0) return;
 
-          tTotal += val;
+          // Säule 3a und Pensionskasse sind in der Schweiz (während Ansparphase) steuerfrei vom Vermögen
+          const isTaxFree = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(a.assetClass);
 
-          let catKey = 'cash';
-          if (['stock', 'fund'].includes(a.assetClass)) catKey = 'securities';
-          if (a.assetClass === 'crypto') catKey = 'crypto';
-          if (['realestate', 'mortgage'].includes(a.assetClass)) catKey = 'realestate';
-
-          cats[catKey].total += val;
-          cats[catKey].assets.push({
-              name: a.name,
-              class: a.assetClass,
-              val: val
-          });
-
-          if (catKey === 'cash') cCash += val;
-          if (catKey === 'securities') cSecurities += val;
-          if (catKey === 'crypto') cCrypto += val;
-          if (catKey === 'realestate') cRealEstate += val;
-      });
-
-      // Sortiere Assets innerhalb der Kategorien
-      Object.keys(cats).forEach(k => {
-          cats[k].assets.sort((a,b) => b.val - a.val);
+          if (isTaxFree) {
+              tTaxFree += val;
+              freeAssets.push({ name: a.name, val, class: a.assetClass });
+          } else {
+              tTaxable += val;
+              tWealth += val; // Nur steuerbares Vermögen zählt ins Total
+              taxAssets.push({ name: a.name, val, class: a.assetClass });
+          }
       });
 
       return { 
-          grandTotal: tTotal, 
-          catCash: cCash, 
-          catSecurities: cSecurities, 
-          catCrypto: cCrypto, 
-          catRealEstate: cRealEstate,
-          categories: cats
+          taxableAssets: taxAssets.sort((a,b) => b.val - a.val), 
+          taxFreeAssets: freeAssets.sort((a,b) => b.val - a.val),
+          totalWealth: tWealth,
+          taxableTotal: tTaxable,
+          taxFreeTotal: tTaxFree
       };
-  }, [activeAssets, data, taxDate, t]);
+  }, [activeAssets, taxDate]);
 
-  const summaryItems = [
-      { id: 'cash', title: t ? t('taxCatCash') || 'Konten & Bargeld' : 'Konten & Bargeld', icon: 'DollarSign', color: 'emerald', value: catCash, desc: t ? t('taxDescCash') || 'Steuerwert der Cash-Bestände' : 'Steuerwert der Cash-Bestände' },
-      { id: 'sec', title: t ? t('taxCatSecurities') || 'Wertschriften & Anlagen' : 'Wertschriften & Anlagen', icon: 'TrendingUp', color: 'blue', value: catSecurities, desc: t ? t('taxDescSecurities') || 'Steuerwert Depotbestände' : 'Steuerwert Depotbestände' },
-      { id: 'crypto', title: t ? t('taxCatCrypto') || 'Krypto-Assets' : 'Krypto-Assets', icon: 'Bitcoin', color: 'purple', value: catCrypto, desc: t ? t('taxDescCrypto') || 'Steuerwert der Wallets' : 'Steuerwert der Wallets' }
-  ];
-
-  if (catRealEstate !== 0) {
-      summaryItems.push({ id: 're', title: t ? t('taxCatRealEstate') || 'Immobilien & Hypotheken' : 'Immobilien & Hypotheken', icon: 'Home', color: 'amber', value: catRealEstate, desc: t ? t('taxDescRealEstate') || 'Steuerwert abzüglich Schulden' : 'Steuerwert abzüglich Schulden' });
-  }
+  const labelTaxable = t ? (t('labelTaxableWealth') || 'Steuerbares Vermögen') : 'Steuerbares Vermögen';
+  const labelTaxFree = t ? (t('labelTaxFreeWealth') || 'Steuerbefreites Vermögen') : 'Steuerbefreites Vermögen';
 
   const loadHtml2Canvas = () => {
     return new Promise((resolve) => {
@@ -114,12 +68,9 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
-        
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
@@ -131,205 +82,230 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             }
         };
 
-        await captureBlock('.kpi-tax-export-block', ''); 
-        
+        // Snapshot KPIs
+        await captureBlock('.dashboard-top-export-block', ''); 
+
+        // Snapshot Charts
         if (chartRef.current) {
-            const chartDiv = chartRef.current.querySelector('.chart-export-block');
-            if (chartDiv) {
-                const canvas = await html2canvas(chartDiv, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: t ? t('taxTitleComposition') || 'Zusammensetzung der Steuerwerte' : 'Zusammensetzung der Steuerwerte', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
+            const containers = chartRef.current.querySelectorAll('.chart-export-block');
+            for (let i = 0; i < containers.length; i++) {
+                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
+                const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
             }
         }
 
-        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+        // Flache Tabellen-Struktur
         const tableHeaders = [
-            capitalize(t ? t('category') || 'Kategorie' : 'Kategorie'), 
-            capitalize(t ? t('colAssetPosition') || 'Asset / Position' : 'Asset / Position'), 
+            t ? t('category') || 'Kategorie' : 'Kategorie',
+            t ? t('name') || 'Anlage / Asset' : 'Anlage / Asset',
             t ? t('taxValue') || 'Steuerwert' : 'Steuerwert'
         ];
         
         const tableBody = [];
         
-        Object.keys(categories).forEach(catKey => {
-            const catData = categories[catKey];
-            if (catData.total !== 0) {
-                tableBody.push([
-                    { text: catData.name.toUpperCase(), bold: true }, 
-                    '', 
-                    { text: fCur(catData.total), bold: true }
-                ]);
-                
-                catData.assets.forEach(a => {
-                    tableBody.push(['', a.name, fCur(a.val)]);
-                });
-                tableBody.push(['', '', '']);
-            }
-        });
+        // Block 1: Steuerbares Vermögen
+        if (taxableAssets.length > 0) {
+            tableBody.push([{ text: labelTaxable.toUpperCase(), bold: true }, '', { text: fCur(taxableTotal), bold: true }]);
+            taxableAssets.forEach(a => {
+                tableBody.push([`   - ${a.class || 'Asset'}`, a.name, fCur(a.val)]);
+            });
+        }
+        
+        // Block 2: Steuerfreies Vermögen
+        if (taxFreeAssets.length > 0) {
+            tableBody.push(['', '', '']);
+            tableBody.push([{ text: labelTaxFree.toUpperCase(), bold: true }, '', { text: fCur(taxFreeTotal), bold: true }]);
+            taxFreeAssets.forEach(a => {
+                tableBody.push([`   - ${a.class || 'Asset'}`, a.name, fCur(a.val)]);
+            });
+        }
+
+        tableBody.push(['', '', '']);
+        tableBody.push([
+            { text: (t ? t('labelTotalTaxable') || 'TOTAL STEUERBAR' : 'TOTAL STEUERBAR').toUpperCase(), bold: true }, 
+            '', 
+            { text: fCur(totalWealth), bold: true }
+        ]);
+
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
 
         await PdfExportEngine.exportReport({
           title: titleText,
-          subtitle: `${subText} | Stichtag: 31.12.${year}`,
-          tableHeaders,
-          tableBody,
-          chartsData,
-          data: data
+          subtitle: `${subText} (Stichtag: 31.12.${year})`,
+          tableHeaders, 
+          tableBody, 
+          chartsData, 
+          data
         });
-      } catch (err) { console.error("[FinSPA] PDF Export Error im TaxReport:", err); }
+      } catch (err) {
+        console.error("[FinSPA] PDF Export Error im TaxReport:", err);
+      }
+    };
+
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 13, 
+                    title: titleText,
+                    subtitle: `${subText} (Stichtag: 31.12.${year})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im TaxReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
     };
 
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
-  }, [categories, year, fCur, t, titleText, subText, data]);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
+  }, [taxableAssets, taxFreeAssets, taxableTotal, taxFreeTotal, totalWealth, taxDate, fCur, t, titleText, subText, data, year, labelTaxable, labelTaxFree]);
 
-  if (grandTotal === 0) {
+  if (!activeAssets || activeAssets.length === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-        <ReportHeader 
-          title={titleText} 
-          subtitle={`${subText} (31.12.${year})`} 
-          isTreeVisible={isTreeVisible} 
-          setIsTreeVisible={setIsTreeVisible} 
-        />
+      <div className="max-w-6xl px-4 md:px-8 pb-12">
+        <ReportHeader title={titleText} subtitle={`${subText} (31.12.${year})`} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
-          <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>{t ? t('noTaxableAssetsFound') || 'Keine steuerbaren Vermögenswerte am gewählten Stichtag gefunden.' : 'Keine steuerbaren Vermögenswerte am gewählten Stichtag gefunden.'}</p>
+          <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
+          <p>{t ? t('noAssetsFound') || 'Keine Assets für den Steuer-Report gefunden.' : 'Keine Assets für den Steuer-Report gefunden.'}</p>
         </div>
       </div>
     );
   }
 
-  const chartLabels = summaryItems.filter(item => item.value !== 0).map(item => item.title);
-  const chartData = summaryItems.filter(item => item.value !== 0).map(item => item.value);
-  const chartColors = summaryItems.filter(item => item.value !== 0).map(item => {
-      if (item.color === 'emerald') return '#10b981';
-      if (item.color === 'blue') return '#3b82f6';
-      if (item.color === 'purple') return '#a855f7';
-      if (item.color === 'amber') return '#f59e0b';
-      return '#64748b';
-  });
+  const taxablePct = (taxableTotal + taxFreeTotal) > 0 ? (taxableTotal / (taxableTotal + taxFreeTotal)) * 100 : 0;
+  const taxFreePct = (taxableTotal + taxFreeTotal) > 0 ? (taxFreeTotal / (taxableTotal + taxFreeTotal)) * 100 : 0;
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-      <ReportHeader 
-        title={titleText} 
-        subtitle={`${subText} (31.12.${year})`} 
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
-      
-      <div className="w-full bg-white dark:bg-transparent">
+    <div className="max-w-7xl px-4 md:px-8 pb-12">
+      <ReportHeader title={titleText} subtitle={`${subText} (31.12.${year})`} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
-          <div className="kpi-tax-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
              
-             {/* MAIN KPI */}
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 xl:col-span-4 flex flex-col md:flex-row justify-between items-center bg-gradient-to-r from-blue-50 to-white dark:from-slate-900 dark:to-slate-900">
-                 <div>
-                     <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                        <Icon name="Landmark" size={14} className="text-blue-500"/>
-                        {t ? t('taxableTotalValue') || 'Steuerbarer Gesamtwert' : 'Steuerbarer Gesamtwert'}
-                     </div>
-                     <div className="text-4xl font-black text-slate-900 dark:text-white">
-                        {fCur(grandTotal)}
-                     </div>
-                 </div>
-                 <div className="mt-4 md:mt-0 bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 px-6 py-3 rounded-xl shadow-sm text-center">
-                     <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t ? t('declarationDate') || 'Deklarations-Stichtag' : 'Deklarations-Stichtag'}</div>
-                     <div className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono mt-1">31.12.{year}</div>
-                 </div>
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Icon name="Landmark" size={14} className="text-blue-500" />
+                    {labelTaxable}
+                </div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
+                    {fCur(taxableTotal)}
+                    <span className="text-sm text-gray-400 font-medium ml-1">({taxablePct.toFixed(1)}%)</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                    {t ? t('descTaxableWealth') || 'Unterliegt der regulären Vermögenssteuer' : 'Unterliegt der regulären Vermögenssteuer'}
+                </div>
              </div>
 
-             {/* SUB KPIs */}
-             {summaryItems.map(item => (
-                 <div key={item.id} className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-${item.color}-500 relative overflow-hidden`}>
-                     <div className="absolute top-0 right-0 p-4 opacity-5">
-                         <Icon name={item.icon} size={64} className={`text-${item.color}-500`} />
-                     </div>
-                     <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10">
-                         <Icon name={item.icon} size={14} className={`text-${item.color}-500`}/>
-                         {item.title}
-                     </div>
-                     <div className="text-2xl font-black text-slate-900 dark:text-white relative z-10">
-                         {fCur(item.value)}
-                     </div>
-                     <div className="text-xs text-gray-400 mt-2 relative z-10 font-medium">
-                         {item.desc}
-                     </div>
-                 </div>
-             ))}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
+                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Icon name="Shield" size={14} className="text-emerald-500" />
+                    {labelTaxFree}
+                </div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
+                    {fCur(taxFreeTotal)}
+                    <span className="text-sm text-gray-400 font-medium ml-1">({taxFreePct.toFixed(1)}%)</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                    {t ? t('descTaxFreeWealth') || 'Säule 3a & PK (Während Ansparphase)' : 'Säule 3a & PK (Während Ansparphase)'}
+                </div>
+             </div>
+             
+             <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-6 rounded-2xl shadow-sm">
+                <div className="text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Icon name="FileText" size={14} />
+                    {t ? t('labelTotalTaxValue') || 'Total Deklarationswert' : 'Total Deklarationswert'}
+                </div>
+                <div className="text-3xl font-black text-blue-800 dark:text-blue-300">
+                    {fCur(totalWealth)}
+                </div>
+                <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-2">
+                    {t ? t('descTotalTaxValue') || 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.' : 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.'}
+                </div>
+             </div>
           </div>
+      </div>
 
-          <p className="text-xs text-slate-500 flex items-center gap-2 mb-6 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-             <Icon name="Info" size={14} className="text-blue-500" />
-             {t ? t('taxDisclaimerPension') || 'Die 3. Säule (3a) und die Pensionskasse (2. Säule) sind in der Regel vom steuerbaren Vermögen ausgenommen und werden hier nicht aufgeführt.' : 'Die 3. Säule (3a) und die Pensionskasse (2. Säule) sind in der Regel vom steuerbaren Vermögen ausgenommen und werden hier nicht aufgeführt.'}
-          </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10" ref={chartRef}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10" ref={chartRef}>
             
-            {/* CHART */}
-            <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title={t ? t('taxTitleDistribution') || 'Steuerwert-Verteilung' : 'Steuerwert-Verteilung'}>
+            <div 
+               className="lg:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8"
+               data-pdf-title={t ? t('titleTaxStructure') || "Steuerliche Struktur" : "Steuerliche Struktur"}
+            >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                    <Icon name="PieChart" className="text-indigo-500" /> {t ? t('taxTitleComposition') || 'Zusammensetzung der Steuerwerte' : 'Zusammensetzung der Steuerwerte'}
+                    <Icon name="PieChart" className="text-blue-500" /> {t ? t('titleTaxStructure') || "Steuerliche Struktur" : "Steuerliche Struktur"}
                 </h3>
-                <div style={{ width: '100%', height: '350px' }}>
+                <div style={{ width: '100%', height: '320px' }}>
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="doughnut"
-                        labels={chartLabels}
+                        labels={[labelTaxable, labelTaxFree]}
                         datasets={[{
-                            label: t ? t('taxValue') || 'Steuerwert' : 'Steuerwert',
-                            data: chartData,
-                            backgroundColor: chartColors,
+                            data: [taxableTotal, taxFreeTotal],
+                            backgroundColor: ['#3b82f6', '#10b981'],
                             valueFormatter: fCur
-                        }]}
+                        }]} 
                         height="100%"
                     />
                 </div>
             </div>
 
-            {/* DETAILS SEITE */}
-            <div className="lg:col-span-7 space-y-5">
-                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2 ml-1">
+            <div className="lg:col-span-7 space-y-6">
+                
+                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <Icon name="List" className="text-slate-500" />
-                    {t ? t('taxDetailedBreakdown') || 'Detaillierte Steueraufstellung nach Kategorie' : 'Detaillierte Steueraufstellung nach Kategorie'}
+                    {t ? t('labelAssetListing') || 'Wertschriften- und Anlagenverzeichnis' : 'Wertschriften- und Anlagenverzeichnis'}
                 </h3>
                 
-                <div className="grid gap-4">
-                    {Object.keys(categories).map((catKey) => {
-                        const cat = categories[catKey];
-                        if (cat.total === 0) return null;
+                <div className="grid gap-6">
+                    {[
+                        { title: labelTaxable, assets: taxableAssets, isTaxable: true },
+                        { title: labelTaxFree, assets: taxFreeAssets, isTaxable: false }
+                    ].map((group, idx) => {
+                        if (group.assets.length === 0) return null;
                         
-                        let iconName = 'DollarSign';
-                        let badgeColor = 'emerald';
-                        if (catKey === 'securities') { iconName = 'TrendingUp'; badgeColor = 'blue'; }
-                        if (catKey === 'crypto') { iconName = 'Bitcoin'; badgeColor = 'purple'; }
-                        if (catKey === 'realestate') { iconName = 'Home'; badgeColor = 'amber'; }
-
                         return (
-                            <div key={catKey} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                {/* Header */}
-                                <div className="p-4 md:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30">
-                                    <div className="flex justify-between items-center">
-                                        <div className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                                            <div className={`p-2 bg-${badgeColor}-100 dark:bg-${badgeColor}-900/30 text-${badgeColor}-600 dark:text-${badgeColor}-400 rounded-lg`}>
-                                                <Icon name={iconName} size={18}/>
-                                            </div>
-                                            {cat.name}
-                                        </div>
-                                        <div className="font-mono text-lg font-black text-slate-800 dark:text-slate-200">
-                                            {fCur(cat.total)}
-                                        </div>
+                            <div key={idx} className={`border rounded-2xl overflow-hidden shadow-sm ${group.isTaxable ? 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-800' : 'bg-gray-50/50 dark:bg-slate-900/50 border-gray-200 dark:border-slate-800 border-dashed'}`}>
+                                <div className={`p-4 border-b flex justify-between items-center ${group.isTaxable ? 'border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30' : 'border-gray-200 dark:border-slate-800 bg-gray-100/50 dark:bg-slate-800/50'}`}>
+                                    <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <Icon name={group.isTaxable ? 'Landmark' : 'Shield'} className={group.isTaxable ? 'text-blue-500' : 'text-emerald-500'} />
+                                        {group.title}
+                                    </div>
+                                    <div className={`font-mono text-base font-black px-2 py-0.5 rounded-lg ${group.isTaxable ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30' : 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-900/30'}`}>
+                                        {fCur(group.assets.reduce((sum, a) => sum + a.val, 0))}
                                     </div>
                                 </div>
                                 
-                                {/* Asset Detail-Liste */}
                                 <div className="p-0">
                                     <table className="w-full text-sm">
-                                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                            {cat.assets.map((a, i) => (
+                                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
+                                            {group.assets.map((a, i) => (
                                                 <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                    <td className="p-3 pl-5 text-gray-700 dark:text-gray-300 w-full">
-                                                        <div className="flex items-center font-medium">
-                                                            <div className={`w-1.5 h-1.5 rounded-full mr-3 bg-${badgeColor}-400`}></div>
+                                                    <td className="p-3 pl-5 text-gray-700 dark:text-gray-200 font-medium">
+                                                        <div className="flex items-center">
+                                                            <div className={`w-1.5 h-1.5 rounded-full mr-3 ${group.isTaxable ? 'bg-blue-400' : 'bg-emerald-400'}`}></div>
                                                             <span>{a.name}</span>
                                                             {a.class && (
                                                                 <span className="ml-2 text-[10px] bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-500 px-1.5 py-0.5 rounded tracking-wider uppercase">
@@ -349,7 +325,7 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                             </div>
                         );
                     })}
-                </div>
+               
             </div>
           </div>
       </div>

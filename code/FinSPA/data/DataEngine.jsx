@@ -13,13 +13,56 @@ const defaultBookingCategories = {
     'Gebühr': ['Depotgebühr', 'Transaktionsgebühr']
 };
 
+// --- Auto-Migration für fehlende Asset-Klassen in alten Speicherständen ---
+const ensureDefaultAssetClasses = (loadedData) => {
+    if (!loadedData) return loadedData;
+    if (!loadedData.settings) loadedData.settings = {};
+    if (!loadedData.settings.assetClasses) loadedData.settings.assetClasses = [];
+
+    const defaultClasses = [
+        { id: 'cash', name: 'Konto', description: 'Liquide Mittel und Girokonten' },
+        { id: 'fund', name: 'Fonds / ETF', description: 'Investmentfonds und passive ETFs' },
+        { id: 'stock', name: 'Aktie', description: 'Direktinvestitionen in Einzelaktien' },
+        { id: 'crypto', name: 'Krypto', description: 'Kryptowährungen wie BTC, ETH' },
+        { id: 'realestate', name: 'Immobilie', description: 'Liegenschaften, Haus, Wohnung' },
+        { id: 'mortgage', name: 'Hypothek', description: 'Hypothekarische Belastungen' },
+        { id: 'pension_cash', name: 'Pensionskasse (2. Säule)', description: 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
+        { id: 'pension_3a_cash', name: '3a Vorsorgekonto', description: 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
+        { id: 'pension_3a_fund', name: '3a Vorsorgefonds', description: 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' },
+        { id: 'managed_fund', name: 'Verwaltetes Vermögen', description: 'Robo-Advisor oder Fonds ohne Einzelkurse (z.B. TrueWealth)' },
+        { id: 'pension_3a_managed', name: '3a Fonds (Gesamtwert)', description: 'Säule 3a Fondslösung über Gesamtwert (z.B. Viac, frankly)' }
+    ];
+
+    defaultClasses.forEach(defClass => {
+        const exists = loadedData.settings.assetClasses.find(c => c.id === defClass.id);
+        if (!exists) {
+            loadedData.settings.assetClasses.push(defClass);
+        }
+    });
+
+    return loadedData;
+};
+
 const initialData = {
-  version: "Beta-0.9.4", lastModified: new Date().toISOString(), 
+  version: "Beta-0.9.6", lastModified: new Date().toISOString(), 
   settings: { 
       baseCurrency: 'CHF', 
       showTaxesForDividends: true, 
       showFeesForSecurities: true,
-      bookingCategories: defaultBookingCategories
+      bookingCategories: defaultBookingCategories,
+      assetClasses: [
+          { id: 'cash', name: 'Konto', description: 'Liquide Mittel und Girokonten' },
+          { id: 'fund', name: 'Fonds / ETF', description: 'Investmentfonds und passive ETFs' },
+          { id: 'stock', name: 'Aktie', description: 'Direktinvestitionen in Einzelaktien' },
+          { id: 'crypto', name: 'Krypto', description: 'Kryptowährungen wie BTC, ETH' },
+          { id: 'realestate', name: 'Immobilie', description: 'Liegenschaften, Haus, Wohnung' },
+          { id: 'mortgage', name: 'Hypothek', description: 'Hypothekarische Belastungen' },
+          { id: 'pension_cash', name: 'Pensionskasse (2. Säule)', description: 'Berufliche Vorsorge (2. Säule) / Pensionsguthaben' },
+          { id: 'pension_3a_cash', name: '3a Vorsorgekonto', description: 'Säule 3a Sparkonto (Vorsorgeguthaben Cash)' },
+          { id: 'pension_3a_fund', name: '3a Vorsorgefonds', description: 'Säule 3a Wertschriftenlösung (Vorsorgeguthaben Fonds)' },
+          { id: 'managed_fund', name: 'Verwaltetes Vermögen', description: 'Robo-Advisor oder Fonds ohne Einzelkurse (z.B. TrueWealth)' },
+          { id: 'pension_3a_managed', name: '3a Fonds (Gesamtwert)', description: 'Säule 3a Fondslösung über Gesamtwert (z.B. Viac, frankly)' }
+      ]
   },
   banks: [],
   budget: { incomeSources: [], expenses: [], subscriptions: [] },
@@ -242,5 +285,6 @@ module.exports = {
     calcExpRegression, 
     formatCurrency,
     getNormalizedBookings,
-    getBookingFlow
+    getBookingFlow,
+    ensureDefaultAssetClasses // <-- Hier ist der neue Export, um die Funktion extern aufzurufen
 };

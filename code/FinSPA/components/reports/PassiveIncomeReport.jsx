@@ -46,7 +46,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
         if (bk.normType !== 'Einzahlung') return false;
         if (!['Dividenden', 'Zinsen', 'Mieteinnahmen'].includes(bk.normCategory)) return false;
 
-        // BUGFIX: Cash-Konto-Doppelzählung strikt ausschließen
         if (bk.normCategory === 'Dividenden' && !isSecurity(bk._assetClass)) {
             return false;
         }
@@ -56,7 +55,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
         const monthStr = bk.date.substring(0, 7);
         const cat = bk.normCategory;
         
-        // KORREKTUR: Nutzt hier direkt bk.assetName für die echte Anzeige des Assets!
         const assetName = bk.assetName || (t ? t('unknown') || 'Unbekannt' : 'Unbekannt');
 
         total += val;
@@ -123,20 +121,19 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
   const repTitle = t ? t('repPassiveTitle') || "Passives Einkommen" : "Passives Einkommen";
   const repSub = t ? t('descCashflowDividends') || "Cashflow durch Dividenden, Zinsen & Mieten" : "Cashflow durch Dividenden, Zinsen & Mieten";
 
-  // --- NEUER PROFESSIONELLER PDF EXPORT (html2canvas) ---
-  useEffect(() => {
-    const loadHtml2Canvas = () => {
-        return new Promise((resolve) => {
-            if (window.html2canvas) return resolve(window.html2canvas);
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-            script.onload = () => resolve(window.html2canvas);
-            document.head.appendChild(script);
-        });
-    };
+  const loadHtml2Canvas = () => {
+    return new Promise((resolve) => {
+        if (window.html2canvas) return resolve(window.html2canvas);
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        script.onload = () => resolve(window.html2canvas);
+        document.head.appendChild(script);
+    });
+  };
 
-    const handlePdfExport = async () => {
-      try {
+  useEffect(() => {
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
@@ -146,30 +143,32 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
             const el = document.querySelector(selector);
             if (el) {
                 const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
             }
         };
 
+        // KPI Dashboard Snapshot
         await captureBlock('.dashboard-top-export-block', ''); 
 
+        // Charts und Top-Assets Snapshot
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
+                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
                 const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0) }); 
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 }); 
             }
         }
 
         const safeT = (key, fallback) => (t && t(key) && t(key) !== key) ? t(key) : fallback;
 
-        const customHeaderRows = [
-            [
-                { text: safeT('colMonth', 'Monat'), style: 'tableHeader', alignment: 'left' },
-                { text: safeT('labelDividends', 'Dividenden'), style: 'tableHeader', alignment: 'right' },
-                { text: safeT('labelInterests', 'Zinsen'), style: 'tableHeader', alignment: 'right' },
-                { text: safeT('labelRents', 'Mieten'), style: 'tableHeader', alignment: 'right' },
-                { text: safeT('labelTotalReturn', 'Gesamtertrag'), style: 'tableHeader', alignment: 'right' }
-            ]
+        // Angepasst für PdfExportEngine Batch-Funktionalität
+        const tableHeaders = [
+            safeT('colMonth', 'Monat'),
+            safeT('labelDividends', 'Dividenden'),
+            safeT('labelInterests', 'Zinsen'),
+            safeT('labelRents', 'Mieten'),
+            safeT('labelTotalReturn', 'Gesamtertrag')
         ];
         
         const tableBody = monthlyDataPoints.slice().reverse().map(d => {
@@ -185,10 +184,19 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
             ];
         });
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: repTitle,
           subtitle: `${repSub} (${dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to})`,
-          customHeaderRows, 
+          tableHeaders, 
           tableBody, 
           chartsData, 
           data
@@ -198,8 +206,37 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 6, 
+                    title: repTitle,
+                    subtitle: `${repSub} (${dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im PassiveIncomeReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, dateRange]);
 
   const chartLabels = monthlyDataPoints.map(d => {
@@ -255,11 +292,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
             <div 
                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
                data-pdf-title={t ? t('titleCashflowComposition') || "Zusammensetzung des Cashflows im Zeitverlauf" : "Zusammensetzung des Cashflows im Zeitverlauf"}
-               data-pdf-legend={JSON.stringify([
-                   { name: t ? t('labelDividends') || 'Dividenden' : 'Dividenden', color: '#10b981' },
-                   { name: t ? t('labelInterests') || 'Zinsen' : 'Zinsen', color: '#3b82f6' },
-                   { name: t ? t('labelRents') || 'Mieten' : 'Mieten', color: '#f59e0b' }
-               ])}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
                     <Icon name="BarChart2" className="text-emerald-500" /> {t ? t('titleCashflowDistribution') || 'Cashflow Verteilung (Zeitverlauf)' : 'Cashflow Verteilung (Zeitverlauf)'}

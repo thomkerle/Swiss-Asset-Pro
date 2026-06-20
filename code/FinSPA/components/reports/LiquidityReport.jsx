@@ -67,8 +67,8 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
@@ -90,10 +90,11 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
                     }
                 });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
             }
         };
 
+        // Snapshot des gesamten KPI- und Chart-Blocks in einem Durchgang
         await captureBlock('.pdf-combined-export-block', ''); 
 
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -107,6 +108,15 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         const tableBody = [];
         liquidAssets.sort((a,b) => b.val - a.val).forEach(a => { tableBody.push([labelLiquid, a.name, fCur(a.val)]); });
         illiquidAssets.sort((a,b) => b.val - a.val).forEach(a => { tableBody.push([labelIlliquid, a.name, fCur(a.val)]); });
+
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
 
         const subtitleText = `${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
 
@@ -123,8 +133,39 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                const subtitleText = `${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
+
+                resolve({
+                    order: 3, 
+                    title: t ? (t('repLiqTitle') || 'Liquiditäts-Analyse') : 'Liquiditäts-Analyse',
+                    subtitle: subtitleText,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im LiquidityReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, targetDate, data, labelLiquid, labelIlliquid]);
 
   const renderMiniBar = (value, max, colorClass) => {

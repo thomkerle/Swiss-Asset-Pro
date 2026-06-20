@@ -72,9 +72,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
@@ -115,9 +113,17 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
           fCur(d.realestate)
         ]);
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         const pdfStartDateStr = new Date(dateRange.from).toLocaleDateString('de-CH');
         const pdfEndDateStr = new Date(dateRange.to).toLocaleDateString('de-CH');
-
         const pdfSubtitle = `${t ? (t('labelPeriod') || 'Zeitraum:') : 'Zeitraum:'} ${pdfStartDateStr} ${t ? (t('wordTo') || 'bis') : 'bis'} ${pdfEndDateStr} | ${t ? (t('labelPerformance') || 'Performance:') : 'Performance:'} ${isPositive ? '+' : ''}${fCur(diff)}`;
 
         await PdfExportEngine.exportReport({
@@ -133,8 +139,41 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                const pdfStartDateStr = new Date(dateRange.from).toLocaleDateString('de-CH');
+                const pdfEndDateStr = new Date(dateRange.to).toLocaleDateString('de-CH');
+                const pdfSubtitle = `${t ? (t('labelPeriod') || 'Zeitraum:') : 'Zeitraum:'} ${pdfStartDateStr} ${t ? (t('wordTo') || 'bis') : 'bis'} ${pdfEndDateStr} | ${t ? (t('labelPerformance') || 'Performance:') : 'Performance:'} ${isPositive ? '+' : ''}${fCur(diff)}`;
+
+                resolve({
+                    order: 4, 
+                    title: t ? (t('repHistTitleLong') || 'Historische Vermögensentwicklung') : 'Historische Vermögensentwicklung',
+                    subtitle: pdfSubtitle,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im HistoryReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [rawData, finalDates, diff, dateRange, fCur, t, data, isPositive]);
 
   const startDateStr = new Date(dateRange.from).toLocaleDateString('de-CH');

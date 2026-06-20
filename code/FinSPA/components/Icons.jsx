@@ -96,7 +96,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         ArrowDown: 'fa-arrow-down',
         CreditCard: 'fa-credit-card',
         Wallet: 'fa-wallet',
-        PiggyBank: 'fa-piggy-bank'
+        PiggyBank: 'fa-piggy-bank',
+
+        // --- NEUE ICONS FÜR EXCEL EXPORT ---
+        Grid: 'fa-table-cells',
+        FileExcel: 'fa-file-excel'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -186,7 +190,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         ArrowDown: 'text-gray-500',
         CreditCard: 'text-slate-500 dark:text-slate-400',
         Wallet: 'text-emerald-500',
-        PiggyBank: 'text-pink-500'
+        PiggyBank: 'text-pink-500',
+
+        // --- EXCEL ICONS DEFAULTS ---
+        Grid: 'text-emerald-600 dark:text-emerald-500',
+        FileExcel: 'text-emerald-600 dark:text-emerald-500'
     };
 
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);

@@ -19,11 +19,11 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   
   const [calcMethod, setCalcMethod] = useState('cumulative');
 
-  const pensionClasses = ['pension_cash', 'pension_3a_cash', 'pension_3a_fund'];
+  const pensionClasses = ['pension_cash', 'pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'];
   const pensionAssets = (activeAssets || []).filter(a => pensionClasses.includes(a.assetClass));
   
   const pillar2Assets = pensionAssets.filter(a => a.assetClass === 'pension_cash');
-  const pillar3Assets = pensionAssets.filter(a => ['pension_3a_cash', 'pension_3a_fund'].includes(a.assetClass));
+  const pillar3Assets = pensionAssets.filter(a => ['pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(a.assetClass));
 
   if (pensionAssets.length === 0) {
     return (
@@ -128,7 +128,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
           const act = getAssetValueAtDate(asset, targetDate, activeAssets);
           
           let pp = act - stats.invested;
-          if (['pension_cash', 'pension_3a_cash'].includes(asset.assetClass)) pp -= stats.yields;
+          if (['pension_cash', 'pension_3a_cash', 'pension_3a_managed'].includes(asset.assetClass)) pp -= stats.yields;
 
           p2Invested += stats.invested;
           p2Yields += stats.yields;
@@ -144,7 +144,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
           const act = getAssetValueAtDate(asset, targetDate, activeAssets);
           
           let pp = act - stats.invested;
-          if (['pension_cash', 'pension_3a_cash'].includes(asset.assetClass)) pp -= stats.yields;
+          if (['pension_cash', 'pension_3a_cash', 'pension_3a_managed'].includes(asset.assetClass)) pp -= stats.yields;
 
           p3Invested += stats.invested;
           p3Yields += stats.yields;
@@ -188,7 +188,8 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   const currentStats = {
       pension_cash: { invested: 0, actual: 0, yields: 0, delta: 0 },
       pension_3a_cash: { invested: 0, actual: 0, yields: 0, delta: 0 },
-      pension_3a_fund: { invested: 0, actual: 0, yields: 0, delta: 0 }
+      pension_3a_fund: { invested: 0, actual: 0, yields: 0, delta: 0 },
+      pension_3a_managed: { invested: 0, actual: 0, yields: 0, delta: 0 }
   };
 
   pensionAssets.forEach(asset => {
@@ -207,19 +208,19 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   const repTitle = t ? t('repPensionTitle') || "Vorsorge & Pensionskasse" : "Vorsorge & Pensionskasse";
   const repSub = t ? t('repPensionSub') || "Rendite-Analyse der 2. und 3. Säule" : "Rendite-Analyse der 2. und 3. Säule";
 
-  useEffect(() => {
-    const loadHtml2Canvas = () => {
-        return new Promise((resolve) => {
-            if (window.html2canvas) return resolve(window.html2canvas);
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-            script.onload = () => resolve(window.html2canvas);
-            document.head.appendChild(script);
-        });
-    };
+  const loadHtml2Canvas = () => {
+    return new Promise((resolve) => {
+        if (window.html2canvas) return resolve(window.html2canvas);
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        script.onload = () => resolve(window.html2canvas);
+        document.head.appendChild(script);
+    });
+  };
 
-    const handlePdfExport = async () => {
-      try {
+  useEffect(() => {
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
@@ -239,57 +240,95 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
+                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
                 const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0) }); 
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
             }
         }
 
-        const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
-
-        const customHeaderRows = [
-            [
-                { text: t ? t('colMonth') || 'Monat' : 'Monat', rowSpan: 2, style: 'tableHeader', alignment: 'left' },
-                { text: t ? t('pillar2') || 'Säule 2' : 'Säule 2', colSpan: 2, style: 'tableHeader', alignment: 'center' },
-                '', 
-                { text: t ? t('pillar3a') || 'Säule 3a' : 'Säule 3a', colSpan: 2, style: 'tableHeader', alignment: 'center' },
-                '', 
-                { text: `${t ? t('overallSummary') || 'Gesamtübersicht' : 'Gesamtübersicht'} (${transCalcMethod})`, colSpan: 5, style: 'tableHeader', alignment: 'center' },
-                '', '', '', '' 
-            ],
-            [
-                '', 
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelYields') || 'Erträge' : 'Erträge', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelTotalReturn') || 'Total Return' : 'Total Return', style: 'tableHeader', alignment: 'right' }
-            ]
+        // Flache Tabellen-Struktur, die von der Batch-Engine perfekt verarbeitet werden kann
+        const tableHeaders = [
+            t ? t('colMonth') || 'Monat' : 'Monat',
+            t ? t('colPill2Inv') || 'Säule 2 (Inv.)' : 'Säule 2 (Inv.)',
+            t ? t('colPill2Val') || 'Säule 2 (Wert)' : 'Säule 2 (Wert)',
+            t ? t('colPill3Inv') || 'Säule 3a (Inv.)' : 'Säule 3a (Inv.)',
+            t ? t('colPill3Val') || 'Säule 3a (Wert)' : 'Säule 3a (Wert)',
+            t ? t('colTotalInv') || 'Total (Inv.)' : 'Total (Inv.)',
+            t ? t('colTotalVal') || 'Total (Wert)' : 'Total (Wert)',
+            t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn',
+            t ? t('labelYields') || 'Erträge' : 'Erträge',
+            t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'
         ];
         
         const tableBody = monthlyDataPoints.slice().reverse().map(d => {
             const dateObj = new Date(d.dateStr);
             const formattedDate = dateObj.toLocaleDateString('de-CH', { month: 'short', year: 'numeric' }); 
             return [
-              formattedDate, fCur(d.p2.invested), fCur(d.p2.actual), fCur(d.p3.invested), fCur(d.p3.actual), fCur(d.total.invested), fCur(d.total.actual),
-              `${d.total.priceProfit > 0 ? '+' : ''}${fCur(d.total.priceProfit)}`, `+${fCur(d.total.yields)}`, `${d.total.roi > 0 ? '+' : ''}${d.total.roi.toFixed(2)} %`
+              formattedDate, 
+              fCur(d.p2.invested), fCur(d.p2.actual), 
+              fCur(d.p3.invested), fCur(d.p3.actual), 
+              fCur(d.total.invested), fCur(d.total.actual),
+              `${d.total.priceProfit > 0 ? '+' : ''}${fCur(d.total.priceProfit)}`, 
+              `+${fCur(d.total.yields)}`, 
+              `${d.total.roi > 0 ? '+' : ''}${d.total.roi.toFixed(2)} %`
             ];
         });
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: `${repTitle} (${transCalcMethod})`,
-          subtitle: repSub, customHeaderRows, tableBody, chartsData, data
+          subtitle: repSub,
+          tableHeaders, 
+          tableBody, 
+          chartsData, 
+          data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im PensionPerformanceReport:", err);
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 10, 
+                    title: `${repTitle} (${transCalcMethod})`,
+                    subtitle: repSub,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im PensionPerformanceReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, calcMethod]);
 
   const chartLabels = monthlyDataPoints.map(d => {
@@ -382,7 +421,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                 if (stats.invested === 0 && stats.actual === 0 && stats.yields === 0) return null;
                 
                 let priceProfit = stats.actual - stats.invested;
-                if (['pension_cash', 'pension_3a_cash'].includes(cls)) {
+                if (['pension_cash', 'pension_3a_cash', 'pension_3a_managed'].includes(cls)) {
                     priceProfit -= stats.yields;
                 }
                 
@@ -390,13 +429,13 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                 const roi = stats.invested > 0 ? (totalProfit / stats.invested) * 100 : 0;
                 const isPos = totalProfit >= 0;
                 
-                // HIER: Korrektur auf titlePensionCash anstatt devPension2
                 const titleMap = { 
                     'pension_cash': t ? t('titlePensionCash') || 'Pensionskasse' : 'Pensionskasse', 
                     'pension_3a_cash': t ? t('titlePension3aCash') || '3a Vorsorgekonto' : '3a Vorsorgekonto', 
-                    'pension_3a_fund': t ? t('titlePension3aFund') || '3a Vorsorgefonds' : '3a Vorsorgefonds' 
+                    'pension_3a_fund': t ? t('titlePension3aFund') || '3a Vorsorgefonds' : '3a Vorsorgefonds',
+                    'pension_3a_managed': t ? t('titlePension3aManaged') || '3a Fondslösung (Gesamtwert)' : '3a Fondslösung (Gesamtwert)'
                 };
-                const iconMap = { 'pension_cash': 'Building', 'pension_3a_cash': 'Lock', 'pension_3a_fund': 'TrendingUp' };
+                const iconMap = { 'pension_cash': 'Building', 'pension_3a_cash': 'Lock', 'pension_3a_fund': 'TrendingUp', 'pension_3a_managed': 'Activity' };
 
                 return (
                     <div key={cls} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex flex-col">
@@ -450,10 +489,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
             <div 
                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
                data-pdf-title={`${t ? t('devPension2') || 'Entwicklung Pensionskasse (2. Säule)' : 'Entwicklung Pensionskasse (2. Säule)'} - ${calcMethod === 'cumulative' ? (t ? t('labelAbsolute') || 'Absolut' : 'Absolut') : (t ? t('labelInterval') || 'Intervall' : 'Intervall')}`}
-               data-pdf-legend={JSON.stringify([
-                   { name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'), color: '#94a3b8' },
-                   { name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert', color: '#3b82f6' }
-               ])}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
                     <Icon name="Building" className="text-blue-500" /> {t ? t('devPension2') || 'Entwicklung Pensionskasse (2. Säule)' : 'Entwicklung Pensionskasse (2. Säule)'}
@@ -488,11 +523,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
             <div 
                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
                data-pdf-title={`${t ? t('devPension3a') || 'Entwicklung Säule 3a' : 'Entwicklung Säule 3a'} - ${calcMethod === 'cumulative' ? (t ? t('labelAbsolute') || 'Absolut' : 'Absolut') : (t ? t('labelInterval') || 'Intervall' : 'Intervall')}`}
-               data-pdf-legend={JSON.stringify([
-                   { name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'), color: '#94a3b8' },
-                   { name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert', color: '#10b981' },
-                   { name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)', color: '#6366f1' }
-               ])}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
                     <Icon name="Lock" className="text-indigo-500" /> {t ? t('devPension3a') || 'Entwicklung Säule 3a' : 'Entwicklung Säule 3a'}

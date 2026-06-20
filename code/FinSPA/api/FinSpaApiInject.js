@@ -21,6 +21,23 @@ window.FinSPA_API = {
     _getTodayStr: function() {
         return new Date().toISOString().split('T')[0];
     },
+    
+    // Zentrale Klassifizierung von Buchungsflüssen (In/Out) - Synchron mit DataEngine
+    _getBookingFlow: function(booking) {
+        let amt = Number(booking.amount || 0);
+        let isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(booking.type);
+        
+        // Sonderfall: Negative Wertanpassung wird als Abfluss/Wertminderung gewertet
+        if (booking.type === 'Wertanpassung' && amt < 0) {
+            isPositive = false;
+            amt = Math.abs(amt);
+        }
+
+        return {
+            isPositive: isPositive,
+            amount: amt
+        };
+    },
 
     // --- Assets & Navigation ---
     getAllAssets: function() {
@@ -77,7 +94,8 @@ window.FinSPA_API = {
         let p = 0;
         if (asset.bookings) {
             const sorted = [...asset.bookings].sort((a,b) => new Date(a.date) - new Date(b.date));
-            const pastBookings = sorted.filter(b => b.date <= targetDate && ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
+            // KORREKTUR: Kein Filter mehr nach Typ, jeder gültige Preis zählt (analog DataEngine)
+            const pastBookings = sorted.filter(b => b.date <= targetDate && Number(b.price) > 0);
             if (pastBookings.length > 0) {
                 p = Number(pastBookings[pastBookings.length - 1].price);
             }
@@ -101,10 +119,10 @@ window.FinSPA_API = {
         if (asset.bookings) {
             asset.bookings.forEach(bk => {
                 if (bk.date > baseDate && bk.date <= targetDate) {
-                    const isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(bk.type);
-                    const isNegative = ['Auszahlung', 'Verkauf', 'Gebühr', 'Zinszahlung', 'Schulderhöhung'].includes(bk.type);
-                    if (isPositive) netBookings += Number(bk.amount);
-                    else if (isNegative) netBookings -= Number(bk.amount);
+                    // KORREKTUR: Nutzung der neuen zentralen getBookingFlow Logik
+                    const flow = this._getBookingFlow(bk);
+                    if (flow.isPositive) netBookings += flow.amount;
+                    else netBookings -= flow.amount;
                 }
             });
         }
@@ -329,7 +347,7 @@ window.FinSPA_API = {
                 tableHeaders: config.tables?.[0]?.headers || [],
                 tableBody: config.tables?.[0]?.rows || [],
                 chartsBase64: chartsBase64,
-		data: window.FinSPA_API._getData()
+        data: window.FinSPA_API._getData()
             });
         }
     }

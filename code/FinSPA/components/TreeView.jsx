@@ -240,7 +240,8 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
             ${isDragOver ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/40 border border-blue-400 border-dashed scale-[1.01] z-10 shadow-sm' : ''}
             ${isBeingDragged ? 'opacity-30 scale-95' : ''}
           `} 
-          onClick={() => { setSelectedNode(node); setActiveReport(null); }}
+          /* BUGFIX: selectedBooking: null zwingt die UI, bei Klick auf den Baum immer das Root-Asset anzuzeigen */
+          onClick={() => { setSelectedNode({ ...node, selectedBooking: null }); setActiveReport(null); }}
         >
           <div className="flex items-center gap-2 truncate min-w-0 flex-1 pr-2">
             {hasChildren ? (

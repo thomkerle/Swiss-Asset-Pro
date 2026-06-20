@@ -82,37 +82,21 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   };
 
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
-        
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
+        const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        const exportKpis = [
-            { 
-                label: t ? t('bestPerformer') || 'Bester Performer' : 'Bester Performer', 
-                value: topWinner ? `${topWinner.valLabel} | ${topWinner.label}` : (t ? t('noGains') || 'Keine Gewinne' : 'Keine Gewinne'), 
-                color: '#10b981' 
-            },
-            { 
-                label: t ? t('weakestItem') || 'Schwächster Posten' : 'Schwächster Posten', 
-                value: topLoser ? `${topLoser.valLabel} | ${topLoser.label}` : (t ? t('noLosses') || 'Keine Verluste' : 'Keine Verluste'), 
-                color: '#e11d48' 
-            },
-            { 
-                label: t ? t('totalGains') || 'Summe Gewinne' : 'Summe Gewinne', 
-                value: `+${fCur(totalGained)}`, 
-                color: '#047857' 
-            },
-            { 
-                label: t ? t('totalLosses') || 'Summe Verluste' : 'Summe Verluste', 
-                value: `-${fCur(totalLost)}`, 
-                color: '#be123c' 
-            }
-        ];
+        // 1. Snapshot des KPI Blocks
+        const kpiBlock = document.querySelector('.kpi-topflow-export-block');
+        if (kpiBlock) {
+            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
+        }
 
+        // 2. Snapshot des Chart Blocks
         if (chartRef.current) {
             const chartDiv = chartRef.current.querySelector('.universal-chart-wrapper > div') || chartRef.current.querySelector('div');
             
@@ -124,7 +108,6 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                 }
             } else {
                 try {
-                    const html2canvas = await loadHtml2Canvas();
                     const chartBlock = document.querySelector('.chart-topflow-export-block');
                     if (chartBlock) {
                         const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
@@ -136,6 +119,7 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
             }
         }
 
+        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
             capitalize(t ? t('labelAsset') || 'Asset' : 'Asset'),
@@ -151,20 +135,59 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
             f.valLabel
         ]);
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: repTitle,
           subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordTo} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
           tableHeaders,
           tableBody,
           chartsData,
-          kpis: exportKpis,
           data: data || activeAssets 
         });
-      } catch (err) { console.error("[FinSPA] PDF Export Error im TopFlowReport:", err); }
+      } catch (err) { 
+          console.error("[FinSPA] PDF Export Error im TopFlowReport:", err); 
+      }
+    };
+
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 14, 
+                    title: repTitle,
+                    subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordTo} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im TopFlowReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
     };
 
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [flows, dateRange, fCur, t, repTitle, repSub, wordTo, data, activeAssets, topWinner, topLoser, totalGained, totalLost]);
 
   if (flows.length === 0) {

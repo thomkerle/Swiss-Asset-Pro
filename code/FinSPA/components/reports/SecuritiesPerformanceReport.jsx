@@ -19,11 +19,12 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   
   const [calcMethod, setCalcMethod] = useState('cumulative');
 
-  const securitiesClasses = ['stock', 'fund'];
+  const securitiesClasses = ['stock', 'fund', 'managed_fund'];
   const securitiesAssets = (activeAssets || []).filter(a => securitiesClasses.includes(a.assetClass));
   
   const stockAssets = securitiesAssets.filter(a => a.assetClass === 'stock');
   const fundAssets = securitiesAssets.filter(a => a.assetClass === 'fund');
+  const managedAssets = securitiesAssets.filter(a => a.assetClass === 'managed_fund');
 
   if (securitiesAssets.length === 0) {
     return (
@@ -36,7 +37,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
         />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>{t ? t('noSecuritiesData') || 'Keine Aktien oder Fonds gefunden.' : 'Keine Aktien oder Fonds gefunden.'}</p>
+          <p>{t ? t('noSecuritiesData') || 'Keine Aktien, Fonds oder verwaltete Vermögen gefunden.' : 'Keine Aktien, Fonds oder verwaltete Vermögen gefunden.'}</p>
         </div>
       </div>
     );
@@ -111,8 +112,9 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   }
 
   let monthlyDataPoints = monthlyDates.map(targetDate => {
-      let stockInvested = 0, stockActual = 0, stockYields = 0, stockDelta = 0;
-      let fundInvested = 0, fundActual = 0, fundYields = 0, fundDelta = 0;
+      let stockInvested = 0, stockActual = 0, stockYields = 0, stockDelta = 0, stockPriceProfit = 0;
+      let fundInvested = 0, fundActual = 0, fundYields = 0, fundDelta = 0, fundPriceProfit = 0;
+      let managedInvested = 0, managedActual = 0, managedYields = 0, managedDelta = 0, managedPriceProfit = 0;
 
       stockAssets.forEach(asset => {
           const stats = calcMethod === 'cumulative' 
@@ -124,6 +126,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
           stockYields += stats.yields;
           stockDelta += stats.delta || 0;
           stockActual += act;
+          stockPriceProfit += (act - stats.invested);
       });
 
       fundAssets.forEach(asset => {
@@ -136,20 +139,38 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
           fundYields += stats.yields;
           fundDelta += stats.delta || 0;
           fundActual += act;
+          fundPriceProfit += (act - stats.invested);
       });
 
-      const totalInvested = stockInvested + fundInvested;
-      const totalActual = stockActual + fundActual;
-      const totalYields = stockYields + fundYields;
-      const totalDelta = stockDelta + fundDelta;
+      managedAssets.forEach(asset => {
+          const stats = calcMethod === 'cumulative' 
+              ? calculateCumulativeStats(asset, targetDate)
+              : calculatePeriodicStats(asset, earliestDate, targetDate);
+          const act = getAssetValueAtDate(asset, targetDate, activeAssets);
+          
+          let pp = act - stats.invested;
+          pp -= stats.yields;
+
+          managedInvested += stats.invested;
+          managedYields += stats.yields;
+          managedDelta += stats.delta || 0;
+          managedActual += act;
+          managedPriceProfit += pp;
+      });
+
+      const totalInvested = stockInvested + fundInvested + managedInvested;
+      const totalActual = stockActual + fundActual + managedActual;
+      const totalYields = stockYields + fundYields + managedYields;
+      const totalDelta = stockDelta + fundDelta + managedDelta;
       
-      const priceProfit = totalActual - totalInvested;
+      const priceProfit = stockPriceProfit + fundPriceProfit + managedPriceProfit;
       const profit = priceProfit + totalYields;
 
       return {
           dateStr: targetDate,
           stocks: { invested: stockInvested, actual: stockActual, yields: stockYields, delta: stockDelta },
           funds: { invested: fundInvested, actual: fundActual, yields: fundYields, delta: fundDelta },
+          managed: { invested: managedInvested, actual: managedActual, yields: managedYields, delta: managedDelta },
           total: {
               invested: totalInvested,
               actual: totalActual,
@@ -172,7 +193,8 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
 
   const currentStats = {
       stock: { invested: 0, actual: 0, yields: 0, delta: 0 },
-      fund: { invested: 0, actual: 0, yields: 0, delta: 0 }
+      fund: { invested: 0, actual: 0, yields: 0, delta: 0 },
+      managed_fund: { invested: 0, actual: 0, yields: 0, delta: 0 }
   };
 
   securitiesAssets.forEach(asset => {
@@ -191,20 +213,18 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   const repTitle = t ? t('repSecuritiesTitle') || "Aktien & Fonds Performance" : "Aktien & Fonds Performance";
   const repSub = t ? t('repSecuritiesSub') || "Rendite-Analyse des freien Markt-Portfolios (ohne Säule 3a)" : "Rendite-Analyse des freien Markt-Portfolios (ohne Säule 3a)";
 
-  // --- HTML2CANVAS DRUCK SYNCHRONISATION ---
-  useEffect(() => {
-    const loadHtml2Canvas = () => {
-        return new Promise((resolve) => {
-            if (window.html2canvas) return resolve(window.html2canvas);
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-            script.onload = () => resolve(window.html2canvas);
-            document.head.appendChild(script);
-        });
-    };
+  const loadHtml2Canvas = () => {
+    return new Promise((resolve) => {
+        if (window.html2canvas) return resolve(window.html2canvas);
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        script.onload = () => resolve(window.html2canvas);
+        document.head.appendChild(script);
+    });
+  };
 
-    const handlePdfExport = async () => {
-      try {
+  useEffect(() => {
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
@@ -223,57 +243,98 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
+                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
                 const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0) }); 
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
             }
         }
 
-        const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
-
-        const customHeaderRows = [
-            [
-                { text: t ? t('colMonth') || 'Monat' : 'Monat', rowSpan: 2, style: 'tableHeader', alignment: 'left' },
-                { text: t ? t('colStocks') || 'Aktien' : 'Aktien', colSpan: 2, style: 'tableHeader', alignment: 'center' },
-                '', 
-                { text: t ? t('colFunds') || 'Fonds / ETFs' : 'Fonds / ETFs', colSpan: 2, style: 'tableHeader', alignment: 'center' },
-                '', 
-                { text: `${t ? t('overallSummary') || 'Gesamtübersicht' : 'Gesamtübersicht'} (${transCalcMethod})`, colSpan: 5, style: 'tableHeader', alignment: 'center' },
-                '', '', '', '' 
-            ],
-            [
-                '', 
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelDividends') || 'Dividenden' : 'Dividenden', style: 'tableHeader', alignment: 'right' },
-                { text: t ? t('labelTotalReturn') || 'Total Return' : 'Total Return', style: 'tableHeader', alignment: 'right' }
-            ]
+        // Flache Tabellen-Struktur für Kompatibilität mit dem PDF Batch-Modus
+        const tableHeaders = [
+            t ? t('colMonth') || 'Monat' : 'Monat',
+            t ? t('colStocksInv') || 'Aktien (Inv.)' : 'Aktien (Inv.)',
+            t ? t('colStocksVal') || 'Aktien (Wert)' : 'Aktien (Wert)',
+            t ? t('colFundsInv') || 'Fonds (Inv.)' : 'Fonds (Inv.)',
+            t ? t('colFundsVal') || 'Fonds (Wert)' : 'Fonds (Wert)',
+            t ? t('colManagedInv') || 'Verwaltet (Inv.)' : 'Verwaltet (Inv.)',
+            t ? t('colManagedVal') || 'Verwaltet (Wert)' : 'Verwaltet (Wert)',
+            t ? t('colTotalInv') || 'Total (Inv.)' : 'Total (Inv.)',
+            t ? t('colTotalVal') || 'Total (Wert)' : 'Total (Wert)',
+            t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn',
+            t ? t('labelDividends') || 'Dividenden' : 'Dividenden',
+            t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'
         ];
         
         const tableBody = monthlyDataPoints.slice().reverse().map(d => {
             const dateObj = new Date(d.dateStr);
             const formattedDate = dateObj.toLocaleDateString('de-CH', { month: 'short', year: 'numeric' }); 
             return [
-              formattedDate, fCur(d.stocks.invested), fCur(d.stocks.actual), fCur(d.funds.invested), fCur(d.funds.actual), fCur(d.total.invested), fCur(d.total.actual),
-              `${d.total.priceProfit > 0 ? '+' : ''}${fCur(d.total.priceProfit)}`, `+${fCur(d.total.yields)}`, `${d.total.roi > 0 ? '+' : ''}${d.total.roi.toFixed(2)} %`
+              formattedDate, 
+              fCur(d.stocks.invested), fCur(d.stocks.actual), 
+              fCur(d.funds.invested), fCur(d.funds.actual), 
+              fCur(d.managed.invested), fCur(d.managed.actual), 
+              fCur(d.total.invested), fCur(d.total.actual),
+              `${d.total.priceProfit > 0 ? '+' : ''}${fCur(d.total.priceProfit)}`, 
+              `+${fCur(d.total.yields)}`, 
+              `${d.total.roi > 0 ? '+' : ''}${d.total.roi.toFixed(2)} %`
             ];
         });
 
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+
         await PdfExportEngine.exportReport({
           title: `${repTitle} (${transCalcMethod})`,
-          subtitle: repSub, customHeaderRows, tableBody, chartsData, data
+          subtitle: repSub, 
+          tableHeaders, 
+          tableBody, 
+          chartsData, 
+          data
         });
       } catch (err) {
         console.error("[FinSPA] PDF Export Error im SecuritiesPerformanceReport:", err);
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 12, 
+                    title: `${repTitle} (${transCalcMethod})`,
+                    subtitle: repSub,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im SecuritiesPerformanceReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, calcMethod]);
 
   const chartLabels = monthlyDataPoints.map(d => {
@@ -284,7 +345,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   });
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12">
+    <div className="max-w-[1400px] px-4 md:px-8 pb-12 mx-auto">
       <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
       <div className="print-hide flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 mb-8 gap-3 shadow-sm">
@@ -359,21 +420,24 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
           </div>
 
           <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200">{t ? t('labelBreakdownByAssetClass') || 'Aufschlüsselung nach Anlageklasse' : 'Aufschlüsselung nach Anlageklasse'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {securitiesClasses.map(cls => {
                 const stats = currentStats[cls];
                 if (stats.invested === 0 && stats.actual === 0 && stats.yields === 0) return null;
                 
-                const priceProfit = stats.actual - stats.invested;
+                let priceProfit = stats.actual - stats.invested;
+                if (cls === 'managed_fund') priceProfit -= stats.yields; 
+
                 const totalProfit = priceProfit + stats.yields;
                 const roi = stats.invested > 0 ? (totalProfit / stats.invested) * 100 : 0;
                 const isPos = totalProfit >= 0;
                 
                 const titleMap = { 
                     'stock': t ? t('acStock') || 'Aktien (Direktinvestments)' : 'Aktien (Direktinvestments)', 
-                    'fund': t ? t('acFund') || 'Fonds / ETFs' : 'Fonds / ETFs'
+                    'fund': t ? t('acFund') || 'Fonds / ETFs' : 'Fonds / ETFs',
+                    'managed_fund': t ? t('acManagedFund') || 'Verwaltetes Vermögen' : 'Verwaltetes Vermögen'
                 };
-                const iconMap = { 'stock': 'TrendingUp', 'fund': 'PieChart' };
+                const iconMap = { 'stock': 'TrendingUp', 'fund': 'PieChart', 'managed_fund': 'Activity' };
 
                 return (
                     <div key={cls} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex flex-col">
@@ -420,7 +484,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
       </div>
 
       {monthlyDataPoints.length > 1 && (
-         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={chartRef}>
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" ref={chartRef}>
             
             <div 
                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
@@ -431,10 +495,10 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                    { name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)', color: '#6366f1' }
                ])}
             >
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="TrendingUp" className="text-blue-500" /> {t ? t('devStocks') || "Entwicklung Aktien" : "Entwicklung Aktien"}
                 </h3>
-                <div style={{ width: '100%', height: '300px' }}>
+                <div style={{ width: '100%', height: '280px' }}>
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
@@ -477,10 +541,10 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                    { name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)', color: '#6366f1' }
                ])}
             >
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
+                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="PieChart" className="text-indigo-500" /> {t ? t('devFunds') || "Entwicklung Fonds / ETFs" : "Entwicklung Fonds / ETFs"}
                 </h3>
-                <div style={{ width: '100%', height: '300px' }}>
+                <div style={{ width: '100%', height: '280px' }}>
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
@@ -514,10 +578,56 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                 </div>
             </div>
 
+            <div 
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+               data-pdf-title={t ? t('devManagedPortfolio') || "Entwicklung Verwaltetes Vermögen" : "Entwicklung Verwaltetes Vermögen"}
+               data-pdf-legend={JSON.stringify([
+                   { name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'), color: '#475569' },
+                   { name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert', color: '#10b981' },
+                   { name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)', color: '#6366f1' }
+               ])}
+            >
+                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                    <Icon name="Activity" className="text-purple-500" /> {t ? t('devManaged') || "Entwicklung Verwaltetes Vermögen" : "Entwicklung Verwaltetes Vermögen"}
+                </h3>
+                <div style={{ width: '100%', height: '280px' }}>
+                    <UniversalChart 
+                        engine={activeChartEngine}
+                        type="line"
+                        showDataLabels={false}
+                        labels={chartLabels}
+                        datasets={[
+                            {
+                                name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
+                                data: monthlyDataPoints.map(d => d.managed.invested),
+                                backgroundColor: '#475569',
+                                valueFormatter: fCur,
+                                label: { show: false }
+                            },
+                            {
+                                name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
+                                data: monthlyDataPoints.map(d => d.managed.actual),
+                                backgroundColor: '#10b981',
+                                valueFormatter: fCur,
+                                label: { show: false }
+                            },
+                            {
+                                name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)',
+                                data: monthlyDataPoints.map(d => d.managed.actual + d.managed.yields),
+                                backgroundColor: '#6366f1',
+                                valueFormatter: fCur,
+                                label: { show: false }
+                            }
+                        ]} 
+                        height="100%"
+                    />
+                </div>
+            </div>
+
          </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm mt-8">
          <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
              {t ? t('monthlyHistoryTotal') || 'Monatliche Historie & Renditen (Total)' : 'Monatliche Historie & Renditen (Total)'}
          </div>
@@ -528,13 +638,19 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                      <th rowSpan="2" className="px-6 py-4 align-middle text-left bg-gray-50/50 dark:bg-slate-900/50">{t ? t('colMonthTarget') || 'Monat / Stichtag' : 'Monat / Stichtag'}</th>
                      <th colSpan="2" className="px-4 py-2 text-center text-blue-600 dark:text-blue-400 bg-blue-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colStocks') || 'Aktien' : 'Aktien'}</th>
                      <th colSpan="2" className="px-4 py-2 text-center text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colFunds') || 'Fonds / ETFs' : 'Fonds / ETFs'}</th>
+                     <th colSpan="2" className="px-4 py-2 text-center text-purple-600 dark:text-purple-400 bg-purple-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('acManagedFund') || 'Verwaltet' : 'Verwaltet'}</th>
                      <th colSpan="5" className="px-4 py-2 text-center text-slate-700 dark:text-slate-300 bg-slate-50/30">{t ? t('colOverallTotal') || 'Gesamtübersicht (Total)' : 'Gesamtübersicht (Total)'}</th>
                   </tr>
                   <tr>
                      <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
                      <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+                     
                      <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
                      <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+                     
+                     <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
+                     <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+
                      <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-400">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
                      <th className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
                      <th className="px-4 py-3 text-right font-medium">{t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn'}</th>
@@ -553,21 +669,26 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
 
                       return (
                           <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                              <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10">
+                              <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10 whitespace-nowrap">
                                   {isCurrentMonth ? `${displayDate} ${t ? t('todayBracket') || '(Heute)' : '(Heute)'}` : displayDate}
                               </td>
                               <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.stocks.invested, 'CHF') : d.stocks.invested}</td>
                               <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.stocks.actual, 'CHF') : d.stocks.actual}</td>
+                              
                               <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.funds.invested, 'CHF') : d.funds.invested}</td>
                               <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.funds.actual, 'CHF') : d.funds.actual}</td>
+                              
+                              <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.managed.invested, 'CHF') : d.managed.invested}</td>
+                              <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.managed.actual, 'CHF') : d.managed.actual}</td>
+
                               <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">{fCur ? fCur(d.total.invested, 'CHF') : d.total.invested}</td>
                               <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur ? fCur(d.total.actual, 'CHF') : d.total.actual}</td>
-                              <td className={`px-4 py-3 text-right font-mono ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              <td className={`px-4 py-3 text-right font-mono whitespace-nowrap ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                  {d.total.priceProfit > 0 ? '+' : ''}{fCur ? fCur(d.total.priceProfit, 'CHF') : d.total.priceProfit} 
                                  <span className="text-[10px] ml-1">({d.total.priceRoi > 0 ? '+' : ''}{d.total.priceRoi.toFixed(1)}%)</span>
                               </td>
-                              <td className="px-4 py-3 text-right font-mono text-blue-600 dark:text-blue-400">+{fCur ? fCur(d.total.yields, 'CHF') : d.total.yields}</td>
-                              <td className={`px-6 py-3 text-right font-bold ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                              <td className="px-4 py-3 text-right font-mono text-blue-600 dark:text-blue-400 whitespace-nowrap">+{fCur ? fCur(d.total.yields, 'CHF') : d.total.yields}</td>
+                              <td className={`px-6 py-3 text-right font-bold whitespace-nowrap ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
                                  {d.total.roi > 0 ? '+' : ''}{d.total.roi.toFixed(2)} %
                               </td>
                           </tr>

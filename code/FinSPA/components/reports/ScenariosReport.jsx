@@ -43,29 +43,30 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
     });
   };
 
-  // Modernisierter PDF Export
   useEffect(() => {
-    const handlePdfExport = async () => {
-      try {
-        if (!PdfExportEngine) return;
+    // Helfer-Funktion für die Datenextraktion
+    const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. KPI Block
         const kpiBlock = document.querySelector('.kpi-scenarios-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
+        // 2. Chart Block
         const chartBlock = document.querySelector('.chart-scenarios-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: t ? t('titleProgressProjection') || 'Fortschritt & Projektion' : 'Fortschritt & Projektion', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
+        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
           capitalize(t ? t('scenarioName') || 'Szenario / Ereignis' : 'Szenario / Ereignis'),
@@ -79,12 +80,24 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           `${sc.impact >= 0 ? '+' : ''}${fCur(sc.impact)}`
         ]);
 
-        tableBody.push(['', '', '']);
+        if (scenarios.length > 0) {
+            tableBody.push(['', '', '']);
+        }
+        
         tableBody.push([
             (t ? t('labelProjectedWealth') || 'TOTAL PROJEKTION' : 'TOTAL PROJEKTION').toUpperCase(), 
             '---', 
             fCur(projectedWealth)
         ]);
+
+        return { chartsData, tableHeaders, tableBody };
+    };
+
+    // --- STANDARD EINZEL-EXPORT ---
+    const handlePdfExport = async () => {
+      try {
+        if (!PdfExportEngine) return;
+        const { chartsData, tableHeaders, tableBody } = await buildReportData();
 
         await PdfExportEngine.exportReport({
           title: titleText,
@@ -99,8 +112,37 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       }
     };
 
+    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
+    const handleBatchExport = (e) => {
+        const exportPromise = new Promise(async (resolve) => {
+            try {
+                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                resolve({
+                    order: 11, // Passende Reihenfolge im Gesamtreport
+                    title: titleText,
+                    subtitle: `${subText} | ${t ? t('labelFireGoal') || 'Ziel' : 'Ziel'}: ${fCur(fireTarget)}`,
+                    tableHeaders,
+                    tableBody,
+                    chartsData
+                });
+            } catch (err) {
+                console.error("[FinSPA] Batch Export Error im ScenariosReport:", err);
+                resolve(null);
+            }
+        });
+
+        if (e.detail && typeof e.detail.registerPromise === 'function') {
+            e.detail.registerPromise(exportPromise);
+        }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport);
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
+    };
   }, [scenarios, projectedWealth, fireTarget, fCur, t, titleText, subText, data]);
 
   return (

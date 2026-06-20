@@ -49,7 +49,6 @@ const buildTableBody = (body) => {
 
       const cellStr = String(rawText || '');
       
-      // KORREKTUR: Erkennt Vorzeichen flexibel vor und nach Währungskennungen (z.B. "CHF -132'843.75")
       const isNumeric = /^[-+−]?\s*(?:CHF|€|\$)?\s*[-+−]?\s*\d[\d\s.,']*\s*(?:CHF|€|\$|%)?\s*$/i.test(cellStr.trim());
       
       let textColor = overrideColor || '#334155';
@@ -117,7 +116,7 @@ const pdfStyles = {
   coverMetaValue: { fontSize: 10, font: 'Roboto', color: '#334155', bold: true },
   kpiLabel: { fontSize: 8, font: 'Roboto', bold: true, color: '#94a3b8', letterSpacing: 1 },
   kpiValue: { fontSize: 12, font: 'Roboto', bold: true, color: '#0f172a', margin: [0, 2, 0, 0] },
-  reportSectionTitle: { fontSize: 18, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 10, 0, 5] },
+  reportSectionTitle: { fontSize: 18, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 20, 0, 5] },
   reportSectionSubtitle: { fontSize: 10, font: 'Roboto', color: '#64748b', margin: [0, 0, 0, 15] },
   chartTitlePdf: { fontSize: 12, font: 'Roboto', bold: true, color: '#1e3a8a', margin: [0, 5, 0, 5] }, 
   tableHeader: { bold: true, fontSize: 7.5, color: '#ffffff', margin: [3, 4, 3, 4] },
@@ -152,6 +151,7 @@ const PdfExportEngine = {
     }
   },
 
+  // --- STANDARD EINZEL-EXPORT ---
   exportReport: async ({ title, subtitle, tableHeaders, customHeaderRows, tableBody, chartsData, chartsBase64, chartBase64, data, kpis }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
@@ -211,7 +211,6 @@ const PdfExportEngine = {
 
       docContent.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 760, y2: 0, lineWidth: 0.5, lineColor: '#cbd5e1' }], margin: [0, 0, 0, 20] });
 
-      // KORREKTUR: Spaltenlayout-Generator für Charts (2 Charts nebeneinander platzieren)
       if (chartsData && chartsData.length > 0) {
           const chartColumns = [];
           
@@ -293,7 +292,6 @@ const PdfExportEngine = {
           styles: pdfStyles, 
           footer: function(currentPage, pageCount) { 
               if (currentPage === 1) return null; 
-              // KORREKTUR: Schriftgröße auf 9 angehoben und Font explizit gesetzt, um Rendering-Verzerrungen zu eliminieren
               return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 9, font: 'Roboto', color: '#94a3b8', margin: [0, 0, 20, 0] }; 
           } 
       };
@@ -305,8 +303,135 @@ const PdfExportEngine = {
     }
   },
 
-  exportAllReports: async ({ mainTitle = "Gesamtauswertung", reports = [], data }) => {
-    alert("Gesamtexport wird vorbereitet...");
+  // --- NEU: BATCH EXPORT (GESAMTREPORT) ---
+  exportCombinedReport: async (mainTitle, reportsDataArray, data) => {
+    try {
+      const initialized = await PdfExportEngine.initLibraries();
+      if (!initialized || !window.pdfMake) throw new Error("PDF-Bibliotheken nicht initialisiert.");
+
+      const now = new Date();
+      const timestampStr = `${now.toLocaleDateString('de-CH')} um ${now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+
+      const ownerName = getOwnerName(data);
+      const pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINSPA PRO').toUpperCase();
+      const pdfSubtitleStr = (data?.settings?.pdfSubtitle || 'ENTERPRISE ASSET MANAGEMENT & REPORTING').toUpperCase();
+
+      // Einheitliches Deckblatt für den Gesamtreport
+      const docContent = [
+        { text: pdfTitleStr, style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
+        { text: pdfSubtitleStr, style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
+        { canvas: [{ type: 'line', x1: 220, y1: 0, x2: 520, y2: 0, lineWidth: 1.5, lineColor: '#3b82f6' }], alignment: 'center' },
+        
+        { text: mainTitle.toUpperCase(), style: 'coverReportTitle', alignment: 'center', margin: [0, 60, 0, 10] },
+        
+        { text: 'ERSTELLT FÜR', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
+        { text: ownerName, style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
+        { text: 'ZEITPUNKT DER GENERIERUNG', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
+        { text: timestampStr, style: 'coverMetaValue', alignment: 'center' },
+        
+        { text: '', pageBreak: 'after' }
+      ];
+
+      // Iteriere durch alle vom Orchestrator gesammelten Reports
+      reportsDataArray.forEach((report, index) => {
+        if (!report) return;
+
+        // Kapitel-Überschrift (Jeder Report beginnt auf einer neuen Seite, außer dem ersten nach dem Deckblatt)
+        docContent.push({
+            text: report.title, 
+            style: 'reportSectionTitle', 
+            pageBreak: index > 0 ? 'before' : undefined
+        });
+
+        if (report.subtitle) {
+          docContent.push({ text: report.subtitle, style: 'reportSectionSubtitle' });
+        }
+
+        // Charts einfügen mit dem gleichen Grid-Layout-System wie beim Einzel-Export
+        if (report.chartsData && report.chartsData.length > 0) {
+            const chartColumns = [];
+            
+            report.chartsData.forEach((chartObj) => {
+                if (chartObj.width === 760 || !chartObj.fit) {
+                    if (chartColumns.length > 0) {
+                        docContent.push({ columns: [...chartColumns], margin: [0, 5, 0, 15] });
+                        chartColumns.length = 0;
+                    }
+                    if (chartObj.title) {
+                        docContent.push({ text: chartObj.title, style: 'chartTitlePdf' });
+                    }
+                    docContent.push({
+                        image: chartObj.image,
+                        width: chartObj.width || 760,
+                        alignment: 'center',
+                        margin: [0, 5, 0, 20]
+                    });
+                } else {
+                    chartColumns.push({
+                        stack: [
+                            { text: chartObj.title, style: 'chartTitlePdf', alignment: 'center', margin: [0, 0, 0, 6] },
+                            { image: chartObj.image, fit: chartObj.fit || [360, 260], alignment: 'center' }
+                        ],
+                        width: '*'
+                    });
+                    
+                    if (chartColumns.length === 2) {
+                        docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+                        chartColumns.length = 0;
+                    }
+                }
+            });
+            
+            if (chartColumns.length > 0) {
+                docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+            }
+        }
+
+        // Tabellen einfügen
+        let tableContent = [];
+        let headerRowCount = 1;
+        let columnCount = 0;
+
+        if (report.tableHeaders && report.tableHeaders.length > 0) {
+            tableContent.push(report.tableHeaders.map(h => ({ text: h, style: 'tableHeader' })));
+            columnCount = report.tableHeaders.length;
+        }
+
+        if (tableContent.length > 0 && report.tableBody && report.tableBody.length > 0) {
+            tableContent.push(...buildTableBody(report.tableBody));
+            const dynamicWidths = Array(columnCount).fill('*');
+
+            docContent.push({
+              style: 'tableStyle',
+              table: { 
+                  headerRows: headerRowCount, 
+                  dontBreakRows: true, 
+                  widths: dynamicWidths, 
+                  body: tableContent 
+              },
+              layout: getTableLayoutConfig(headerRowCount)
+            });
+        }
+      });
+
+      const docDefinition = { 
+          pageSize: 'A4', 
+          pageOrientation: 'landscape', 
+          pageMargins: [20, 30, 20, 30], 
+          content: docContent, 
+          styles: pdfStyles, 
+          footer: function(currentPage, pageCount) { 
+              if (currentPage === 1) return null; 
+              return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 9, font: 'Roboto', color: '#94a3b8', margin: [0, 0, 20, 0] }; 
+          } 
+      };
+
+      window.pdfMake.createPdf(docDefinition).download(`FinSPA_Gesamtreport_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+    } catch (error) {
+      console.error("[FinSPA PDF Engine] Fehler beim Gesamtexport:", error);
+      alert("Fehler beim Erstellen des Gesamtreports: " + error.message);
+    }
   }
 };
 

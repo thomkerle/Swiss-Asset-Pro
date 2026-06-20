@@ -97,8 +97,60 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
       } catch (err) { console.error("[FinSPA] PDF-Export Fehler:", err); }
     };
 
+
+const handleBatchExport = (e) => {
+      // Erstelle ein Promise, das die Daten sammelt und resolve aufruft
+      const exportPromise = new Promise(async (resolve) => {
+        try {
+          const html2canvas = await loadHtml2Canvas();
+          let chartsData = [];
+          const isDark = document.documentElement.classList.contains('dark');
+          const bgColor = isDark ? '#0f172a' : '#ffffff';
+
+          // Genauso wie in deinem normalen PDF-Export die DOM Knoten abgreifen
+          const kpiBlock = document.querySelector('.kpi-export-block');
+          if (kpiBlock) {
+              const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+              chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
+          }
+
+          const chartBlock = document.querySelector('.chart-export-block');
+          if (chartBlock) {
+              const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+              chartsData.push({ title: 'Verteilung', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
+          }
+
+          const tableHeaders = ["Bank / Institut", "Anteil", "Betrag"];
+          const tableBody = allocData.map(d => [d.label, `${((d.value / grandTotal) * 100).toFixed(1)}%`, fCur(d.value)]);
+
+          // WICHTIG: Statt exportReport aufzurufen, geben wir das Objekt zurück!
+          resolve({
+            order: 2, // Lege hier die Reihenfolge für das fertige PDF fest (1, 2, 3...)
+            title: 'Allokation nach Banken',
+            subtitle: `Stichtag: ${new Date(targetDate).toLocaleDateString('de-CH')}`,
+            tableHeaders,
+            tableBody,
+            chartsData
+          });
+        } catch (err) {
+          console.error("Batch Export Fehler Allocation:", err);
+          resolve(null);
+        }
+      });
+
+      // Übergib das Promise an den Orchestrator
+      if (e.detail && typeof e.detail.registerPromise === 'function') {
+        e.detail.registerPromise(exportPromise);
+      }
+    };
+
     window.addEventListener('triggerPdfExport', handlePdfExport);
-    return () => window.removeEventListener('triggerPdfExport', handlePdfExport);
+    window.addEventListener('triggerPdfBatchExport', handleBatchExport); // NEU
+    
+    return () => {
+        window.removeEventListener('triggerPdfExport', handlePdfExport);
+        window.removeEventListener('triggerPdfBatchExport', handleBatchExport); // NEU
+    };
   }, [allocData, grandTotal, targetDate, data, fCur, t]);
 
   if (grandTotal === 0) {
