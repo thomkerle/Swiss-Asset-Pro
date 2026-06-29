@@ -6,8 +6,8 @@
       "title": "Bienvenue & Concept UI",
       "icon": "Info",
       "content": [
-        { "type": "h4", "text": "Bienvenue sur FinSPA" },
-        { "type": "p", "text": "FinSPA est une Single Page Application (SPA) moderne pour la gestion globale de vos actifs et de votre budget." },
+        { "type": "h4", "text": "Bienvenue sur FinBundle" },
+        { "type": "p", "text": "FinBundle est une Single Page Application (SPA) moderne pour la gestion globale de vos actifs et de votre budget." },
         { "type": "h5", "text": "La disposition en 3 colonnes" },
         { "type": "list", "items": [
           "**Arborescence (Gauche) :** Gérez ici vos banques, courtiers, catégories et les actifs qu'ils contiennent.",
@@ -42,7 +42,7 @@
       "icon": "DollarSign",
       "content": [
         { "type": "h4", "text": "La budgétisation simplifiée" },
-        { "type": "p", "text": "FinSPA classe automatiquement vos dépenses selon la **règle 50/30/20** :" },
+        { "type": "p", "text": "FinBundle classe automatiquement vos dépenses selon la **règle 50/30/20** :" },
         { "type": "list", "items": [
           "**Besoins (50%) :** Coûts fixes comme le logement, les impôts, les besoins vitaux.",
           "**Envies (30%) :** Style de vie, loisirs, abonnements.",
@@ -97,7 +97,7 @@
           "**Import Parqet :** Vous pouvez importer des exports CSV directement depuis Parqet. Les données sont migrées automatiquement.",
           "**Scanner de reçus IA :** Téléchargez des relevés PDF ou des factures. L'IA extrait la date, le montant et suggère des catégories."
         ]},
-        { "type": "infoBox", "text": "Confidentialité (Privacy-First) : Avant que les PDF ne soient envoyés aux IA cloud externes (OpenAI, Claude, Gemini), ils passent par un filtre local. FinSPA anonymise tous les IBAN, noms, adresses et numéros de carte." }
+        { "type": "infoBox", "text": "Confidentialité (Privacy-First) : Avant que les PDF ne soient envoyés aux IA cloud externes (OpenAI, Claude, Gemini), ils passent par un filtre local. FinBundle anonymise tous les IBAN, noms, adresses et numéros de carte." }
       ]
     },
     {
@@ -106,7 +106,7 @@
       "icon": "Cpu",
       "content": [
         { "type": "h4", "text": "Intégration d'IA locale (Ollama)" },
-        { "type": "p", "text": "FinSPA propose une interface intégrée avec des grands modèles linguistiques (LLM) locaux via Ollama. Vos données financières ne quittent jamais votre appareil." },
+        { "type": "p", "text": "FinBundle propose une interface intégrée avec des grands modèles linguistiques (LLM) locaux via Ollama. Vos données financières ne quittent jamais votre appareil." },
         { "type": "list", "items": [
           "**Générer des widgets :** Décrivez en langage naturel les graphiques ou tableaux que vous souhaitez voir.",
           "**Interaction dynamique :** L'IA crée des tableaux de bord personnalisés basés sur vos données en direct.",
@@ -143,12 +143,12 @@
       "icon": "Shield",
       "content": [
         { "type": "h4", "text": "Vos données vous appartiennent" },
-        { "type": "p", "text": "FinSPA stocke toutes les données localement dans le navigateur. Deux formats sont disponibles pour les sauvegardes et transferts :" },
+        { "type": "p", "text": "FinBundle stocke toutes les données localement dans le navigateur. Deux formats sont disponibles pour les sauvegardes et transferts :" },
         { "type": "list", "items": [
           "**Texte clair (JSON) :** Format standard, rapide et facile à traiter dans d'autres outils.",
           "**ZIP crypté :** Utilise un cryptage de pointe **AES-256** et nécessite un mot de passe PIN."
         ]},
-        { "type": "infoBox", "text": "Attention : FinSPA ne peut pas récupérer le PIN. Si vous oubliez le mot de passe, les données contenues dans l'archive ZIP sont irrémédiablement perdues." }
+        { "type": "infoBox", "text": "Attention : FinBundle ne peut pas récupérer le PIN. Si vous oubliez le mot de passe, les données contenues dans l'archive ZIP sont irrémédiablement perdues." }
       ]
     },
     {

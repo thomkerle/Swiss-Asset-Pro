@@ -24,31 +24,43 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   let wealthShiftsIn = 0;  
 
   const normBookings = getNormalizedBookings ? getNormalizedBookings(activeAssets) : [];
+  const validBookings = normBookings.filter(bk => bk.date >= dateRange.from && bk.date <= dateRange.to);
 
-  normBookings.filter(bk => bk.date >= dateRange.from && bk.date <= dateRange.to).forEach(bk => {
+  validBookings.forEach(bk => {
       const val = bk._baseValue; 
-      const cat = bk.normCategory || (t ? t('catUncategorized') || 'Unkategorisiert' : 'Unkategorisiert');
-      
-      const isTransfer = cat.toLowerCase().includes('umbuchung') || cat.toLowerCase().includes('transfer');
+      let cat = bk.category || (t ? t('catUncategorized') || 'Unkategorisiert' : 'Unkategorisiert');
 
-      if (bk.normType === 'Auszahlung') { 
-          if (isTransfer) {
+      // Komplett ignorieren (illiquide Bewegungen ohne Cashflow-Relevanz)
+      if (bk.type === 'ignore') return; 
+
+      // GELD KOMMT REIN
+      if (bk.type === 'income') {
+          // Verkäufe gelten als Einnahmen / Kapitalrückfluss und werden sauber umbenannt
+          const isSell = bk.normType === 'Verkauf' || (bk.subCategory || '').toLowerCase() === 'verkauf';
+          if (isSell && (cat === 'Unkategorisiert' || cat === 'Verkauf')) {
+              cat = t ? t('catDivestment') || 'Kapitalrückfluss (Verkauf)' : 'Kapitalrückfluss (Verkauf)';
+          }
+          incomes[cat] = (incomes[cat] || 0) + val;
+          totalIncomes += val;
+      } 
+      // GELD GEHT RAUS
+      else if (bk.type === 'expense') {
+          // Käufe als Investitionen deklarieren
+          const isBuy = bk.normType === 'Kauf' || (bk.subCategory || '').toLowerCase() === 'kauf';
+          if (isBuy && (cat === 'Unkategorisiert' || cat === 'Kauf')) {
+              cat = t ? t('catInvestment') || 'Investitionen (Kauf)' : 'Investitionen (Kauf)';
+          }
+          expenses[cat] = (expenses[cat] || 0) + val; 
+          totalExpenses += val;
+      }
+      // VERMÖGENSVERSCHIEBUNG (Umbuchungen & Dividenden-Gegenbuchungen auf dem Cash-Konto)
+      else if (bk.type === 'shift') {
+          const isExpenseType = ['Auszahlung', 'Kauf', 'Abzahlung'].includes(bk.normType);
+          if (isExpenseType) {
               wealthShiftsOut += val;
           } else {
-              expenses[cat] = (expenses[cat] || 0) + val; 
-              totalExpenses += val;
-          }
-      } else if (bk.normType === 'Einzahlung') {
-          if (isTransfer) {
               wealthShiftsIn += val;
-          } else {
-              incomes[cat] = (incomes[cat] || 0) + val;
-              totalIncomes += val;
           }
-      } else if (['Kauf', 'Abzahlung'].includes(bk.normType)) {
-          wealthShiftsOut += val;
-      } else if (['Verkauf', 'Schulderhöhung'].includes(bk.normType)) {
-          wealthShiftsIn += val;
       }
   });
   
@@ -59,18 +71,8 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   const savingsRate = totalIncomes > 0 ? (cashflow / totalIncomes) * 100 : 0;
 
   const chartColors = [
-      '#4f46e5', // Indigo
-      '#7c3aed', // Violet
-      '#c026d3', // Fuchsia
-      '#e11d48', // Rose
-      '#ea580c', // Orange
-      '#d97706', // Amber
-      '#65a30d', // Lime
-      '#059669', // Emerald
-      '#0d9488', // Teal
-      '#0284c7', // Sky Blue
-      '#2563eb', // Royal Blue
-      '#475569'  // Slate
+      '#4f46e5', '#7c3aed', '#c026d3', '#e11d48', '#ea580c', '#d97706', 
+      '#65a30d', '#059669', '#0d9488', '#0284c7', '#2563eb', '#475569'
   ];
 
   const repTitle = t ? t('repBookAnaTitle') || 'Buchungsanalyse & Cashflow' : 'Buchungsanalyse & Cashflow';
@@ -87,7 +89,6 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -95,14 +96,12 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. KPIs
         const kpiBlock = document.querySelector('.kpi-booking-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
-        // 2. Charts
         const chartBlock = document.querySelector('.chart-booking-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
@@ -113,7 +112,6 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             });
         }
 
-        // 3. Tabellendaten
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
             capitalize(t ? t('category') || 'Kategorie' : 'Kategorie'), 
@@ -136,7 +134,6 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -155,7 +152,6 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -381,20 +377,20 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                                 {t ? t('labelWealthShifts') || 'Vermögensverschiebungen' : 'Vermögensverschiebungen'}
                             </h4>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                {t ? t('descWealthShifts') || 'Investitionen, Amortisationen und Umbuchungen verändern dein Nettovermögen nicht und sind aus dem Cashflow ausgeklammert.' : 'Investitionen, Amortisationen und Umbuchungen verändern dein Nettovermögen nicht und sind aus dem Cashflow ausgeklammert.'}
+                                {t ? t('descWealthShifts') || 'Reine Umbuchungen zwischen Konten verändern dein Nettovermögen nicht und sind aus dem Cashflow ausgeklammert.' : 'Reine Umbuchungen zwischen Konten verändern dein Nettovermögen nicht und sind aus dem Cashflow ausgeklammert.'}
                             </p>
                         </div>
                         <div className="flex gap-4 shrink-0 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm w-full md:w-auto">
                             <div className="text-right flex-1 md:flex-none">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">
-                                    {t ? t('investedShort') || 'Investiert' : 'Investiert'}
+                                    {t ? t('investedShort') || 'Verschoben' : 'Verschoben'}
                                 </div>
                                 <div className="font-mono font-bold text-slate-700 dark:text-slate-300">{fCur(wealthShiftsOut)}</div>
                             </div>
                             <div className="w-px bg-slate-200 dark:bg-slate-700"></div>
                             <div className="text-right flex-1 md:flex-none">
                                 <div className="text-[10px] uppercase font-bold text-slate-400 mb-1">
-                                    {t ? t('liquidatedShort') || 'Liquidiert' : 'Liquidiert'}
+                                    {t ? t('liquidatedShort') || 'Erhalten' : 'Erhalten'}
                                 </div>
                                 <div className="font-mono font-bold text-slate-700 dark:text-slate-300">{fCur(wealthShiftsIn)}</div>
                             </div>

@@ -8,7 +8,9 @@ const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name, size = 16}) 
 const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
-const { getAssetValueAtDate = () => 0 } = DataEngine;
+
+// NEU: Wir importieren auch getAllAssets, um im Notfall die Assets selbst zu laden
+const { getAssetValueAtDate = () => 0, getAllAssets = () => [] } = DataEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
 
 const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
@@ -21,6 +23,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   const titleText = t ? (t('repTaxTitle') || 'Steuer-Report') : 'Steuer-Report';
   const subText = t ? (t('repTaxSub') || 'Vermögenswerte für die Steuererklärung') : 'Vermögenswerte für die Steuererklärung';
 
+  // KUGELSICHERER FALLBACK: Wenn activeAssets nicht übergeben wurde, holen wir sie uns direkt aus "data"
+  const safeAssets = useMemo(() => {
+      if (activeAssets && activeAssets.length > 0) return activeAssets;
+      return getAllAssets(data?.banks || []).filter(a => !a.isArchived);
+  }, [activeAssets, data]);
+
   const { taxableAssets, taxFreeAssets, totalWealth, taxableTotal, taxFreeTotal } = useMemo(() => {
       let tWealth = 0;
       let tTaxable = 0;
@@ -28,8 +36,8 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
       const taxAssets = [];
       const freeAssets = [];
 
-      (activeAssets || []).forEach(a => {
-          const val = getAssetValueAtDate(a, taxDate, activeAssets);
+      (safeAssets || []).forEach(a => {
+          const val = getAssetValueAtDate(a, taxDate, safeAssets);
           if (val === 0) return;
 
           // Säule 3a und Pensionskasse sind in der Schweiz (während Ansparphase) steuerfrei vom Vermögen
@@ -52,7 +60,7 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           taxableTotal: tTaxable,
           taxFreeTotal: tTaxFree
       };
-  }, [activeAssets, taxDate]);
+  }, [safeAssets, taxDate]);
 
   const labelTaxable = t ? (t('labelTaxableWealth') || 'Steuerbares Vermögen') : 'Steuerbares Vermögen';
   const labelTaxFree = t ? (t('labelTaxFreeWealth') || 'Steuerbefreites Vermögen') : 'Steuerbefreites Vermögen';
@@ -183,7 +191,8 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
     };
   }, [taxableAssets, taxFreeAssets, taxableTotal, taxFreeTotal, totalWealth, taxDate, fCur, t, titleText, subText, data, year, labelTaxable, labelTaxFree]);
 
-  if (!activeAssets || activeAssets.length === 0) {
+  // Prüfung jetzt mit safeAssets statt activeAssets
+  if (!safeAssets || safeAssets.length === 0) {
     return (
       <div className="max-w-6xl px-4 md:px-8 pb-12">
         <ReportHeader title={titleText} subtitle={`${subText} (31.12.${year})`} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />

@@ -1,5 +1,5 @@
 const React = require('react');
-const { useEffect, useRef, useState } = React;
+const { useEffect, useRef } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -19,7 +19,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
   const subtitlePrefix = t ? (t('repCatFlowSub') || "Vermögensentwicklung nach Kategorien") : "Vermögensentwicklung nach Kategorien";
   const wordToText = t ? (t('wordTo') || "bis") : "bis";
 
-  // Erweiterte Datenstruktur für Start, Ende, Delta und Asset-Details
   const catDataMap = {};
   let totalStart = 0;
   let totalEnd = 0;
@@ -45,7 +44,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
             totalStart += startVal;
             totalEnd += endVal;
 
-            // Nur Assets speichern, die im Zeitraum einen Wert hatten
             if (startVal !== 0 || endVal !== 0) {
                 catDataMap[catName].assets.push({ 
                     name: n.name, 
@@ -60,21 +58,18 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
      });
   };
   
-  // Die Bank-Namen als Fallback-Kategorie verwenden, wenn nichts anderes definiert ist
   data.banks.forEach(b => traverse(b.children || [], b.name));
   
-  // Umwandeln in Array, leere Kategorien filtern und Assets sortieren
   const catData = Object.values(catDataMap)
     .filter(c => c.start !== 0 || c.end !== 0)
     .map(c => {
-        c.assets.sort((a, b) => b.delta - a.delta); // Innerhalb der Kategorie stärkste Assets zuerst
+        c.assets.sort((a, b) => b.delta - a.delta); 
         return c;
     })
-    .sort((a, b) => b.delta - a.delta); // Stärkste Kategorien zuerst
+    .sort((a, b) => b.delta - a.delta); 
 
   const totalDelta = totalEnd - totalStart;
   const bestCat = catData.length > 0 && catData[0].delta > 0 ? catData[0] : null;
-  const worstCat = catData.length > 0 && catData[catData.length - 1].delta < 0 ? catData[catData.length - 1] : null;
 
   const loadHtml2Canvas = () => {
     return new Promise((resolve) => {
@@ -87,7 +82,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -95,21 +89,18 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. KPI Block
         const kpiBlock = document.querySelector('.kpi-cat-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
-        // 2. Chart Block
         const chartBlock = document.querySelector('.chart-cat-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: t ? t('performanceByCategory') || 'Performance nach Kategorien' : 'Performance nach Kategorien', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
-        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
             capitalize(t ? t('category') || 'Kategorie / Asset' : 'Kategorie / Asset'), 
@@ -121,14 +112,12 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
         const tableBody = [];
         
         catData.forEach(cat => {
-            // Kategorie Header
             tableBody.push([
                 cat.name.toUpperCase(), 
                 fCur(cat.start), 
                 fCur(cat.end), 
                 `${cat.delta >= 0 ? '+' : ''}${fCur(cat.delta)}`
             ]);
-            // Zugehörige Assets
             cat.assets.forEach(a => {
                 tableBody.push([
                     `   - ${a.name}`, 
@@ -145,7 +134,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -162,7 +150,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
       } catch (err) { console.error("[FinSPA] PDF Export Error im CategoryFlowReport:", err); }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -212,7 +199,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
     );
   }
 
-  // Bestimmen der Farben basierend auf Delta (Emerald für positiv, Rose für negativ)
   const chartColors = catData.map(d => d.delta >= 0 ? '#10b981' : '#f43f5e');
 
   return (
@@ -225,11 +211,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
       />
       
       <div className="w-full bg-white dark:bg-transparent">
-
-          {/* KPI DASHBOARD ROW */}
           <div className="kpi-cat-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             
-             {/* KPI 1: Startwert */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Calendar" size={14} className="text-slate-500"/>
@@ -243,7 +225,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             {/* KPI 2: Endwert */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Database" size={14} className="text-blue-500"/>
@@ -257,7 +238,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             {/* KPI 3: Gesamtentwicklung */}
              <div className={`border p-6 rounded-2xl shadow-sm border-b-4 relative overflow-hidden ${
                  totalDelta >= 0 
                     ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/50 border-b-emerald-500' 
@@ -278,7 +258,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             {/* KPI 4: Stärkste Kategorie */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -297,12 +276,9 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                     )}
                 </div>
              </div>
-
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-            
-            {/* CHART SEITE */}
             <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-cat-export-block self-start sticky top-8">
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="BarChart" className="text-indigo-500" /> {t ? t('valueChange') || 'Wertveränderung' : 'Wertveränderung'}
@@ -324,7 +300,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
             </div>
 
-            {/* DETAILS SEITE */}
             <div className="lg:col-span-7 space-y-5">
                 <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2 ml-1">
                     <Icon name="Layers" className="text-slate-500" />
@@ -336,7 +311,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                         const isPositive = cat.delta >= 0;
                         return (
                             <div key={idx} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                {/* Header / Summary der Kategorie */}
                                 <div className="p-4 md:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -362,7 +336,6 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                                     </div>
                                 </div>
                                 
-                                {/* Asset Detail-Liste */}
                                 <div className="p-0">
                                     <table className="w-full text-sm">
                                         <tbody className="divide-y divide-gray-100 dark:divide-slate-800">

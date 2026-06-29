@@ -17,7 +17,7 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
     const [transactions, setTransactions] = useState([]);
     const [selectedAssetId, setSelectedAssetId] = useState('');
     
-    // FIX: Strikte Unterscheidung von Cloud-Modellen (um gpt-oss als lokales Modell zu erkennen)
+    // Strikte Unterscheidung von Cloud-Modellen (um gpt-oss als lokales Modell zu erkennen)
     const isCloudModelFn = (id) => ['gpt-4o', 'gpt-4o-mini', 'gemini-3.5-flash', 'gemini-pro-latest', 'claude-3-5-sonnet-20240620'].includes(id);
     const isOpenAI = (id) => ['gpt-4o', 'gpt-4o-mini'].includes(id);
     const isGemini = (id) => ['gemini-3.5-flash', 'gemini-pro-latest'].includes(id);
@@ -264,7 +264,6 @@ const PdfScanner = ({ setModalObj, data, updateTreeData, selectedNode, setSelect
     const prepareAnalysis = () => {
         if (!extractedPages || extractedPages.length === 0) return;
         
-        // FIX: Nutze die Helper-Funktion für saubere Evaluierung
         const isCloudModel = isCloudModelFn(selectedModel);
         
         if (isCloudModel) {
@@ -482,11 +481,6 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
         const mainAssetName = allAssets.find(a => a.id === selectedAssetId)?.name || 'Zahlungskonto';
 
         txsToSave.forEach(tx => {
-            let finalCategory = tx.category;
-            if (tx.vendor && tx.vendor !== tx.category) {
-                finalCategory = `${tx.category} (${tx.vendor})`;
-            }
-
             if (tx.category === 'Dividenden' && tx.sourceAssetId) {
                 const depotName = allAssets.find(a => a.id === tx.sourceAssetId)?.name || 'Depot';
                 
@@ -495,6 +489,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     date: tx.date || new Date().toISOString().split('T')[0],
                     type: tx.type || 'Einzahlung',
                     subCategory: `Dividende (von ${depotName})`,
+                    comment: tx.vendor || '',
                     amount: Number(tx.amount || 0),
                     bookingExchangeRate: 1
                 });
@@ -505,6 +500,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     date: tx.date || new Date().toISOString().split('T')[0],
                     type: 'Auszahlung',
                     subCategory: `Umbuchung Dividende an ${mainAssetName}`,
+                    comment: tx.vendor || '',
                     amount: Number(tx.amount || 0),
                     bookingExchangeRate: 1
                 });
@@ -513,7 +509,8 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                     id: generateId(),
                     date: tx.date || new Date().toISOString().split('T')[0],
                     type: tx.type || 'Auszahlung',
-                    subCategory: finalCategory,
+                    subCategory: tx.category || 'Sonstiges',
+                    comment: tx.vendor || '',
                     amount: Number(tx.amount || 0),
                     bookingExchangeRate: 1
                 });
@@ -549,11 +546,6 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
         const tx = transactions[index];
         if (tx.isApplied) return;
 
-        if (tx.category === 'Dividenden' && !tx.sourceAssetId) {
-            alert(t ? t('pdfAlertSelectSource') : 'Bitte wähle für die Dividende das Ursprungskonto (Depot) aus.');
-            return;
-        }
-
         const success = saveBookingsToAsset([tx]);
         if (success) {
             const updatedTxs = [...transactions];
@@ -565,12 +557,6 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
     const applyAllTransactions = () => {
         const pendingTxs = transactions.filter(tx => !tx.isApplied);
         if (pendingTxs.length === 0) return;
-
-        const missingSource = pendingTxs.some(tx => tx.category === 'Dividenden' && !tx.sourceAssetId);
-        if (missingSource) {
-            alert(t ? t('pdfAlertSelectSourceAll') : 'Bitte wähle für alle Dividenden das Ursprungskonto aus, bevor du fortfährst.');
-            return;
-        }
 
         const success = saveBookingsToAsset(pendingTxs);
         if (success) {
@@ -905,7 +891,7 @@ You MUST output the final JSON enclosed in markdown code blocks like this:
                                                                                     value={tx.sourceAssetId || ''}
                                                                                     onChange={(e) => handleTransactionChange(idx, 'sourceAssetId', e.target.value)}
                                                                                 >
-                                                                                    <option value="">{t ? t('pdfSelectSource') : '-- Ursprungs-Depot wählen --'}</option>
+                                                                                    <option value="">{t ? t('pdfSelectSource') : '-- Ursprungs-Depot (Optional) --'}</option>
                                                                                     {(data?.banks || []).map(bank => {
                                                                                         const bankAssets = getBankAssets(bank).filter(a => a.id !== selectedAssetId);
                                                                                         if (bankAssets.length === 0) return null;

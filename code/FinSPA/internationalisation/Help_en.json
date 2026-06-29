@@ -6,8 +6,8 @@
       "title": "Welcome & UI Concept",
       "icon": "Info",
       "content": [
-        { "type": "h4", "text": "Welcome to FinSPA" },
-        { "type": "p", "text": "FinSPA is a modern Single Page Application (SPA) for the holistic management of your assets and budget." },
+        { "type": "h4", "text": "Welcome to FinBundle" },
+        { "type": "p", "text": "FinBundle is a modern Single Page Application (SPA) for the holistic management of your assets and budget." },
         { "type": "h5", "text": "The 3-Column Layout" },
         { "type": "list", "items": [
           "**Structure Tree (Left):** Here you manage your banks, brokers, categories, and the assets contained within them.",
@@ -42,7 +42,7 @@
       "icon": "DollarSign",
       "content": [
         { "type": "h4", "text": "Budgeting made easy" },
-        { "type": "p", "text": "FinSPA automatically categorizes your expenses according to the **50/30/20 Rule**:" },
+        { "type": "p", "text": "FinBundle automatically categorizes your expenses according to the **50/30/20 Rule**:" },
         { "type": "list", "items": [
           "**Needs (50%):** Fixed costs like housing, taxes, basic necessities.",
           "**Wants (30%):** Lifestyle, leisure, subscriptions.",
@@ -97,7 +97,7 @@
           "**Parqet Import:** You can import CSV exports directly from Parqet. The data is migrated automatically.",
           "**AI Receipt Scanner:** Upload PDF statements or invoices. The AI extracts the date, amount, and suggests booking categories."
         ]},
-        { "type": "infoBox", "text": "Privacy-First: Before PDFs are sent to external cloud AIs (OpenAI, Claude, Gemini), they pass through a local filter. FinSPA anonymizes all IBANs, names, addresses, and card numbers." }
+        { "type": "infoBox", "text": "Privacy-First: Before PDFs are sent to external cloud AIs (OpenAI, Claude, Gemini), they pass through a local filter. FinBundle anonymizes all IBANs, names, addresses, and card numbers." }
       ]
     },
     {
@@ -106,7 +106,7 @@
       "icon": "Cpu",
       "content": [
         { "type": "h4", "text": "Local AI Integration (Ollama)" },
-        { "type": "p", "text": "FinSPA offers an integrated interface to local Large Language Models (LLMs) via Ollama. Your financial data never leaves your device." },
+        { "type": "p", "text": "FinBundle offers an integrated interface to local Large Language Models (LLMs) via Ollama. Your financial data never leaves your device." },
         { "type": "list", "items": [
           "**Generate Widgets:** Describe in natural language which charts or tables you want to see.",
           "**Dynamic Interaction:** The AI builds custom dashboards based on your live data.",
@@ -143,12 +143,12 @@
       "icon": "Shield",
       "content": [
         { "type": "h4", "text": "Your Data belongs to You" },
-        { "type": "p", "text": "FinSPA stores all data locally in the browser. Two formats are available for backups and file transfers:" },
+        { "type": "p", "text": "FinBundle stores all data locally in the browser. Two formats are available for backups and file transfers:" },
         { "type": "list", "items": [
           "**Plaintext (JSON):** Standard format, fast and easy to process in other tools.",
           "**Encrypted ZIP:** Uses state-of-the-art **AES-256 encryption** and requires a PIN password."
         ]},
-        { "type": "infoBox", "text": "Warning: FinSPA cannot recover the PIN. If you forget the password, the data in the ZIP archive is irretrievably lost." }
+        { "type": "infoBox", "text": "Warning: FinBundle cannot recover the PIN. If you forget the password, the data in the ZIP archive is irretrievably lost." }
       ]
     },
     {

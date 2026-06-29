@@ -39,11 +39,11 @@ const BudgetEditor = safeRequire('./budget/BudgetEditor.jsx') || (() => <div>Bud
 const AssetOverviewReport = safeRequire('./reports/AssetOverviewReport.jsx') || (() => <div>AssetOverviewReport</div>);
 const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport.jsx') || (() => <div>PensionPerformanceReport</div>);
 const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
-const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>{t ? t('errDivCalendarMissing') : 'DividendCalendarReport fehlt'}</div>);const UniversalChart = require('../../api/UniversalChart.jsx');
+const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>{t ? t('errDivCalendarMissing') : 'DividendCalendarReport fehlt'}</div>);
+const UniversalChart = require('../../api/UniversalChart.jsx');
 
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
 
-// Rekursive Komponente für den Data Explorer (ausserhalb um Hooks sauber zu trennen)
 const JsonNode = ({ label, data, depth = 0, t }) => {
     const [isOpen, setIsOpen] = useState(depth < 2);
     const isObject = data !== null && typeof data === 'object';
@@ -103,12 +103,10 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
   
-  // --- ALLE HOOKS AUF OBERSTER EBENE (React Rules of Hooks) ---
   const [isCompactMode, setIsCompactMode] = useState(false);
   const [selectedBookingIds, setSelectedBookingIds] = useState(new Set());
   const [activeTab, setActiveTab] = useState('transactions');
 
-  // Filter & Drag/Drop States
   const [filterQuery, setFilterQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -119,11 +117,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [tempComment, setTempComment] = useState('');
 
-  // Datensicht (Explorer) States
   const [selectedDataPath, setSelectedDataPath] = useState('root');
   const [dataSearch, setDataSearch] = useState('');
 
-  // Zielkonto für Umbuchungen
   const [transferTargetId, setTransferTargetId] = useState('');
 
 const safeT = (key, fallback) => {
@@ -132,7 +128,6 @@ const safeT = (key, fallback) => {
       return (res && res !== key) ? res : fallback;
   };
 
-  // Effekte
   useEffect(() => {
     setSelectedBookingIds(new Set());
     setFilterQuery('');
@@ -145,7 +140,6 @@ const safeT = (key, fallback) => {
     setTransferTargetId('');
   }, [selectedNode?.selectedBooking?.id]);
 
-  // --- HILFSFUNKTIONEN ---
   const applyAutoValuation = (assetNode) => {
       const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetNode.assetClass);
       if (!isSecurities || !assetNode.bookings) return assetNode;
@@ -249,7 +243,6 @@ const safeT = (key, fallback) => {
     });
   };
 
-  // --- ANSICHT: DATENSICHT (DATA EXPLORER) ---
   if (viewMode === 'datensicht') {
     const handleCopy = (payload) => {
         navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
@@ -332,13 +325,11 @@ const safeT = (key, fallback) => {
     );
   }
 
-  // --- ANSICHT: AI COPILOT ---
   if (viewMode === 'ai') {
       const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">{t ? t('errAiDashboardMissing') : 'AiDashboard.jsx fehlt'}</div>);
       return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
   }
 
-  // --- ANSICHT: REPORTS ---
   if (activeReport) {
     const viewContent = () => {
       switch(activeReport) {
@@ -346,7 +337,7 @@ const safeT = (key, fallback) => {
         case 'allocation': return <AllocationReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'liquidity': return <LiquidityReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'history': return <HistoryReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-        case 'tax': return <TaxReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+        case 'tax': return <TaxReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;        
         case 'categoryFlow': return <CategoryFlowReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'waterfall': return <WaterfallReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'passive': return <PassiveIncomeReport activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
@@ -356,7 +347,7 @@ const safeT = (key, fallback) => {
         case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
         case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-	case 'dividendCalendar': return <DividendCalendarReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+	      case 'dividendCalendar': return <DividendCalendarReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         default: return <div className="text-gray-500">{t ? t('reportLoading') : 'Report wird geladen...'}</div>;
       }
     };
@@ -377,7 +368,6 @@ const safeT = (key, fallback) => {
     );
   }
   
-  // NEU: isTreeVisible und setIsTreeVisible werden jetzt weitergereicht!
   if (viewMode === 'budget' && !selectedNode && !activeReport) return <BudgetDashboard data={data} fCur={fCur} t={t} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />;
 
   if (viewMode === 'vermoegen' && !selectedNode && !activeReport) {
@@ -484,7 +474,17 @@ const safeT = (key, fallback) => {
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6 flex flex-col items-center">
                 <h3 className="font-bold text-sm text-gray-700 dark:text-gray-300 self-start mb-6 flex items-center gap-2"><Icon name="PieChart" /> {t ? t('allocByCat') : 'Aufteilung nach Kategorien'}</h3>
                 {chartDataCategories.length > 0 ? (
-                  <UniversalChart engine={activeChartEngine} type="doughnut" height="280px" labels={chartDataCategories.map(d => d.label)} datasets={[{ label: t ? t('totalValue') : 'Gesamtwert', data: chartDataCategories.map(d => d.value) }]} />
+                  <UniversalChart 
+                    engine={activeChartEngine} 
+                    type="doughnut" 
+                    height="280px" 
+                    labels={chartDataCategories.map(d => d.label)} 
+                    datasets={[{ 
+                        label: t ? t('totalValue') : 'Gesamtwert', 
+                        data: chartDataCategories.map(d => d.value),
+                        valueFormatter: (val) => fCur ? fCur(val, 'CHF') : Number(val).toFixed(2)
+                    }]} 
+                  />
                 ) : <div className="text-gray-400 py-12 text-center text-sm">{t ? t('noValuedAssets') : 'Keine bewerteten Assets vorhanden.'}</div>}
               </div>
 
@@ -522,7 +522,6 @@ const safeT = (key, fallback) => {
 
       const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
 
-      // --- DRAG & DROP LOGIK ---
       const handleRowDrop = (draggedId, targetId) => {
           if (draggedId === targetId) return;
 
@@ -560,7 +559,6 @@ const safeT = (key, fallback) => {
           setSelectedNode(applyAutoValuation(updatedNode));
       };
 
-      // --- INLINE EDIT LOGIK ---
       const saveInlineComment = (item) => {
           let updatedNode = { ...selectedNode };
           let isBal = item._isBal;
@@ -584,7 +582,6 @@ const safeT = (key, fallback) => {
           setEditingCommentId(null);
       };
 
-      // --- SPARKLINE DATENBEREITSTELLUNG ---
       let dates = new Set();
       (adjustedNode.bookings || []).forEach(b => dates.add(b.date));
       (adjustedNode.balances || []).forEach(b => dates.add(b.date));
@@ -746,7 +743,6 @@ const safeT = (key, fallback) => {
           setSelectedBookingIds(newSet);
       };
 
-      // --- FILTER LOGIK & SORTIERUNG ---
       const rawItems = [...(adjustedNode.balances || []).map(b=>({...b, _isBal:true})), ...(adjustedNode.bookings || [])];
       let filteredItems = rawItems.filter(item => {
           if (isSecurities) {
@@ -783,7 +779,6 @@ const safeT = (key, fallback) => {
           return dateDiff;
       });
 
-      // Select All Handler
       const isAllSelected = sortedItems.length > 0 && sortedItems.every(i => selectedBookingIds.has(i.id));
       const handleSelectAll = (e) => {
           if (e.target.checked) {
@@ -797,7 +792,6 @@ const safeT = (key, fallback) => {
           }
       };
 
-      // Summen-Berechnung des aktuellen Filters
       let totalInRaw = 0, totalOutRaw = 0, totalInBase = 0, totalOutBase = 0;
       sortedItems.forEach(item => {
           if (!item._isBal && item.type !== 'Wertanpassung') {
@@ -839,7 +833,6 @@ const safeT = (key, fallback) => {
 </div>
           </div>
 
-          {/* REITER / TABS FÜR WERTPAPIERE */}
           {isSecurities && (
             <div className="print-hide flex border-b border-gray-200 dark:border-slate-800 mb-4 gap-2">
               <button onClick={() => setActiveTab('transactions')} className={`flex items-center gap-2 px-4 py-2.5 font-bold text-sm border-b-2 transition-all duration-150 ${activeTab === 'transactions' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
@@ -957,7 +950,6 @@ const safeT = (key, fallback) => {
               </div>
             </div>
 
-            {/* QUICK FILTERS */}
             {showFilters && (
               <div className="print-hide bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 p-4 flex flex-wrap gap-4 items-center text-sm shadow-inner animate-fade-in">
                   <div className="flex items-center gap-2">
@@ -1297,7 +1289,6 @@ if (isSecurities) {
                 </tbody>
               </table>
 
-              {/* DYNAMISCHE SUMMENZEILE FÜR DEN AKTUELLEN FILTER */}
               {sortedItems.length > 0 && (!isSecurities || activeTab === 'transactions') && (
                   <div className="sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 print-hide">
                       <div className="text-sm font-bold text-gray-600 dark:text-gray-300">
@@ -1339,7 +1330,7 @@ if (isSecurities) {
       <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 finspa-scrollbar overflow-auto">
         <div className="text-center text-gray-400">
           <Icon name="PieChart" size={64} className="mx-auto mb-6 opacity-20 text-blue-500" />
-          <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinSPA Pro'}</h2>
+          <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{t ? t('welcomeTitle') : 'Willkommen in FinBundle Pro'}</h2>
           <p>{t ? t('welcomePrompt') : 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.'}</p>
         </div>
       </div>

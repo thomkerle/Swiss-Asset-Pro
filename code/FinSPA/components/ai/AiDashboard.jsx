@@ -145,7 +145,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         navigator.clipboard.writeText(text).catch(err => console.error('Fehler beim Kopieren:', err));
     };
 
- const handleAskAI = async () => {
+    const handleAskAI = async () => {
         if (!prompt.trim() || isLoading) return;
 
         const userMessage = { role: 'user', content: prompt, timestamp: new Date().toISOString() };
@@ -162,7 +162,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         // HIER DEN ALTEN STRING LÖSCHEN UND DURCH DIE FUNKTION ERSETZEN:
         const systemPrompt = getSystemPrompt(schemaInfo, budgetString);
        
-
         try {
             const response = await fetch('http://localhost:11434/api/chat', {
                 method: 'POST',
@@ -209,7 +208,44 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
     const renderIframeWidget = (htmlContent) => {
         // PARAMETERLOSE INJECTED-API
-	const injectedScripts = `
+        const injectedScripts = `
+        <style>
+            /* Basis-Reset für den iFrame */
+            html, body {
+                margin: 0;
+                padding: 10px;
+                box-sizing: border-box;
+                max-width: 100vw;
+                overflow-x: hidden; /* Verhindert horizontales Scrollen */
+                font-family: system-ui, -apple-system, sans-serif;
+            }
+            * { box-sizing: inherit; }
+
+            /* 1. Chart.js (Canvas) Fix */
+            canvas {
+                max-width: 100% !important;
+                max-height: 400px !important; /* Maximale Höhe zwingend vorschreiben */
+                height: auto !important;
+                object-fit: contain;
+            }
+
+            /* 2. Plotly & ECharts Fix */
+            .js-plotly-plot, .plotly-graph-div, div[_echarts_instance_] {
+                max-width: 100% !important;
+                max-height: 400px !important;
+            }
+
+            /* 3. Generische Wrapper, die LLMs gerne erzeugen */
+            .chart-container, #chart, #myChart, .wrapper {
+                position: relative;
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 400px !important;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+        </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -224,8 +260,8 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         ${getFinSpaApiScript()}
 
         <script>
-		window.finspaData = ${JSON.stringify(data).replace(/</g, '\\u003c')};        
-	</script>
+            window.finspaData = ${JSON.stringify(data).replace(/</g, '\\u003c')};        
+        </script>
         `;
 
         let finalHtml = htmlContent;

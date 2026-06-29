@@ -7,7 +7,7 @@
     "version": { "type": "string" },
     "settings": {
       "type": "object",
-      "required": ["bookingCategories"],
+      "required": ["bookingCategories", "assetClasses"],
       "properties": {
         "baseCurrency": { "type": "string" },
         "aiEnabled": { "type": "boolean" },
@@ -42,7 +42,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/node" }
     },
-    "budget": { "type": "object" }
+    "budget": { "type": "object" },
+    "goals": { "type": "object" },
+    "scenarios": { "type": "array" },
+    "aiContext": { "type": "object" }
   },
   "$defs": {
     "node": {
@@ -51,14 +54,27 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "enum": ["bank", "category", "asset"] },
+        "type": { 
+          "enum": ["banks", "bank", "container", "category", "asset"] 
+        },
         "assetClass": { "type": "string" },
         "isLiquid": { "type": "boolean" },
         "currency": { "type": "string" },
         "exchangeRate": { "type": ["string", "number"] },
-        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
-        "balances": { "type": "array" },
-        "bookings": { "type": "array" }
+        "price": { "type": ["string", "number"] },
+        "shares": { "type": ["string", "number"] },
+        "children": { 
+          "type": "array", 
+          "items": { "$ref": "#/$defs/node" } 
+        },
+        "balances": { 
+          "type": "array", 
+          "items": { "type": "object" } 
+        },
+        "bookings": { 
+          "type": "array", 
+          "items": { "type": "object" } 
+        }
       }
     }
   }

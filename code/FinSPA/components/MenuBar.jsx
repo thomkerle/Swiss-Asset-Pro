@@ -291,8 +291,8 @@ const MenuBar = ({
                         throw new Error("ExcelExportEngine.jsx konnte nicht gefunden oder geladen werden.");
                       }
 
-const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
-                      const fileName = `FinSPA_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
+                      const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
+                      const fileName = `FinBundle_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
 
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement('a');
@@ -308,7 +308,7 @@ const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
                         window.showToast(t ? t('msgExportExcelSuccess') || "Excel-Export erfolgreich!" : "Excel-Export erfolgreich!", "success");
                       }
                     } catch (err) {
-                      console.error("[FinSPA] Excel Export Error:", err);
+                      console.error("[FinBundle] Excel Export Error:", err);
                       if (typeof window !== 'undefined' && window.showToast) {
                         window.showToast((t ? t('msgExportExcelError') : "Fehler beim Excel-Export: ") + err.message, "error");
                       } else {
@@ -366,19 +366,19 @@ const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
           <MenuItem title={t ? t('menuHelp') : 'Hilfe'}>
              <MenuSubItem label={t ? t('helpManual') : 'Benutzerhandbuch'} iconName="Info" onClick={() => setModalObj({type: 'help'})} />
              <hr className="border-slate-100 dark:border-slate-800 my-1"/>
-             <MenuSubItem label={t ? t('helpAbout') : 'Über FinSPA'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
+             <MenuSubItem label={t ? t('helpAbout') : 'Über FinBundle'} iconName="Star" onClick={() => setModalObj({type: 'about'})} />
           </MenuItem>
       </div>
 
       {/* 3. ZENTRIERTER TITEL (z-0) */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0">
           <span className="text-sm font-black tracking-[0.2em] uppercase glow-title drop-shadow-md whitespace-nowrap">
-              {Array.from("FinSPA PRO").map((char, index) => (
+              {Array.from("FinBundle PRO").map((char, index) => (
                 <span
                   key={index}
                   className="sparkle-letter"
                   style={{
-                    color: index < 6 ? 'white' : index === 6 ? 'transparent' : '#38bdf8',
+                    color: index < 9 ? 'white' : index === 9 ? 'transparent' : '#38bdf8',
                     animationDelay: `${index * 0.1}s`
                   }}
                 >

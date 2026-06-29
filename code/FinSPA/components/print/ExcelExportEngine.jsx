@@ -60,6 +60,7 @@ const ExcelExportEngine = {
     const emeraldGreen = '10B981';
     const purpleHex = '8B5CF6';
     const headerGray = '334155';   
+    const textDark = '1E293B'; // KUGELSICHER: Standard-Textfarbe 
 
     const mapAssetClass = (key) => {
         const map = {
@@ -67,22 +68,17 @@ const ExcelExportEngine = {
             'stock': getText('exclCatStock', 'Aktien & ETFs'),
             'crypto': getText('exclCatCrypto', 'Kryptowährungen'),
             'fund': getText('exclCatFund', 'Anlagefonds'),
+            'managed_fund': getText('MANAGED_FUND', 'Verwaltetes Vermögen'),
             'pension_cash': getText('exclCatPensionCash', 'Pensionskasse (Cash)'),
             'pension_fund': getText('exclCatPensionFund', 'Pensionskasse (Wertschriften)'),
             'pension_3a_cash': getText('exclCatPension3aCash', 'Säule 3a (Cash)'),
             'pension_3a_fund': getText('exclCatPension3aFund', 'Säule 3a (Wertschriften)'),
+            'pension_3a_managed': getText('PENSION_3A_MANAGED', '3a Fonds (Gesamtwert)'),
             'realestate': getText('exclCatRealEstate', 'Immobilien'),
             'mortgage': getText('exclCatMortgage', 'Hypothek (Schuld)')
         };
         return map[key?.toLowerCase()] || key?.toUpperCase() || getText('exclCatOther', 'SONSTIGE');
     };
-
-    // Dynamische Schlüssel für die Liquidität (übersetzt)
-    const liqCash = getText('exclLiqCash', 'Sofort verfügbar (Cash)');
-    const liqMarket = getText('exclLiqMarket', 'Markt-Liquidität (Aktien/Fonds)');
-    const liqTied = getText('exclLiqTied', 'Gebundene Vorsorge (3a/PK)');
-    const liqIlliquid = getText('exclLiqIlliquid', 'Illiquide (Immo/Sonstige)');
-    const liqDebt = getText('exclLiqDebt', 'Verbindlichkeiten (Hypothek)');
 
     // =========================================================================
     // 1. DATEN-ANALYSE
@@ -95,11 +91,11 @@ const ExcelExportEngine = {
     const performanceTotals = {};
     
     let liquidityTotals = { 
-        [liqCash]: 0, 
-        [liqMarket]: 0,
-        [liqTied]: 0,
-        [liqIlliquid]: 0,
-        [liqDebt]: 0
+        'cash': 0, 
+        'market': 0,
+        'tied': 0,
+        'illiquid': 0,
+        'debt': 0
     };
     
     const allAssetsList = []; 
@@ -117,15 +113,15 @@ const ExcelExportEngine = {
 
                     const rawClass = (node.assetClass || '').toLowerCase();
                     if (rawClass === 'cash') {
-                        liquidityTotals[liqCash] += val;
-                    } else if (['stock', 'fund', 'crypto'].includes(rawClass)) {
-                        liquidityTotals[liqMarket] += val;
+                        liquidityTotals['cash'] += val;
+                    } else if (['stock', 'fund', 'crypto', 'managed_fund'].includes(rawClass)) {
+                        liquidityTotals['market'] += val;
                     } else if (rawClass.includes('pension')) {
-                        liquidityTotals[liqTied] += val;
+                        liquidityTotals['tied'] += val;
                     } else if (rawClass === 'mortgage') {
-                        liquidityTotals[liqDebt] += val;
+                        liquidityTotals['debt'] += val;
                     } else {
-                        liquidityTotals[liqIlliquid] += val;
+                        liquidityTotals['illiquid'] += val;
                     }
 
                     let assetInvested = 0;
@@ -223,6 +219,11 @@ const ExcelExportEngine = {
       row.getCell('value').value = bd.bankTotalValue;
       row.getCell('percent').value = share;
       row.getCell('action').value = { text: getText('exclOpenBank', 'Bank öffnen ➡️'), hyperlink: `#'${safeBankName}'!A1` };
+      
+      // KUGELSICHER: Explizite Zellen-Farben
+      row.getCell('name').font = { color: { argb: textDark }, bold: false };
+      row.getCell('value').font = { color: { argb: textDark }, bold: false };
+      row.getCell('percent').font = { color: { argb: textDark }, bold: false };
       row.getCell('action').font = { color: { argb: '0563C1' }, underline: true };
       
       for(let i=2; i<=5; i++) row.getCell(i).border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } };
@@ -239,7 +240,7 @@ const ExcelExportEngine = {
     const totalRow = wsDashboard.getRow(leftRow);
     totalRow.getCell('name').value = getText('exclPortfolioTotal', 'PORTFOLIO TOTAL');
     totalRow.getCell('value').value = portfolioTotal;
-    totalRow.font = { bold: true, size: 12 };
+    totalRow.font = { bold: true, size: 12, color: { argb: textDark } };
     totalRow.getCell('value').border = { top: { style: 'thin', color: { argb: '000000' } }, bottom: { style: 'double', color: { argb: '000000' } } };
     leftRow += 3; 
 
@@ -265,6 +266,12 @@ const ExcelExportEngine = {
         row.getCell('name').value = aClass;
         row.getCell('value').value = val;
         row.getCell('percent').value = share;
+
+        // KUGELSICHER: Explizite Zellen-Farben
+        row.getCell('name').font = { color: { argb: textDark }, bold: false };
+        row.getCell('value').font = { color: { argb: textDark }, bold: false };
+        row.getCell('percent').font = { color: { argb: textDark }, bold: false };
+
         for(let i=2; i<=4; i++) row.getCell(i).border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } };
         leftRow++;
     });
@@ -295,6 +302,12 @@ const ExcelExportEngine = {
         row.getCell('name2').value = `${asset.name} (${asset.bankName})`;
         row.getCell('val2').value = asset.value;
         row.getCell('perc2').value = share;
+
+        // KUGELSICHER: Explizite Zellen-Farben
+        row.getCell('name2').font = { color: { argb: textDark }, bold: false };
+        row.getCell('val2').font = { color: { argb: textDark }, bold: false };
+        row.getCell('perc2').font = { color: { argb: textDark }, bold: false };
+
         for(let i=7; i<=9; i++) row.getCell(i).border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } };
         rightRow++;
     });
@@ -314,15 +327,33 @@ const ExcelExportEngine = {
     rightRow++;
 
     const liqStartRow = rightRow;
-    Object.keys(liquidityTotals).forEach(liqClass => {
-        const val = liquidityTotals[liqClass];
-        if (val === 0 && !liqClass.includes('Cash')) return;
+    
+    // Mapping mit Fallbacks für garantierte Strings
+    const liqLabels = {
+        'cash': getText('exclLiqCash', 'Sofort verfügbar (Cash)') || 'Sofort verfügbar (Cash)',
+        'market': getText('exclLiqMarket', 'Markt-Liquidität (Aktien/Fonds)') || 'Markt-Liquidität (Aktien/Fonds)',
+        'tied': getText('exclLiqTied', 'Gebundene Vorsorge (3a/PK)') || 'Gebundene Vorsorge (3a/PK)',
+        'illiquid': getText('exclLiqIlliquid', 'Illiquide (Immo/Sonstige)') || 'Illiquide (Immo/Sonstige)',
+        'debt': getText('exclLiqDebt', 'Verbindlichkeiten (Hypothek)') || 'Verbindlichkeiten (Hypothek)'
+    };
+
+    Object.keys(liquidityTotals).forEach(internalKey => {
+        const val = liquidityTotals[internalKey];
+        // Cash ("Giro & Sparkonten") IMMER anzeigen, Rest nur wenn größer als 0
+        if (val === 0 && internalKey !== 'cash') return;
 
         const share = portfolioTotal > 0 ? (val / portfolioTotal) : 0;
         const row = wsDashboard.getRow(rightRow);
-        row.getCell('name2').value = liqClass;
+        
+        row.getCell('name2').value = liqLabels[internalKey];
         row.getCell('val2').value = val;
         row.getCell('perc2').value = share;
+
+        // BOMBENSICHER GEGEN ÜBERSCHNEIDUNGEN: Zwinge jede Zelle einzeln zu schwarzer Schrift!
+        row.getCell('name2').font = { color: { argb: textDark }, bold: false };
+        row.getCell('val2').font = { color: { argb: textDark }, bold: false };
+        row.getCell('perc2').font = { color: { argb: textDark }, bold: false };
+
         for(let i=7; i<=9; i++) row.getCell(i).border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } };
         rightRow++;
     });
@@ -390,6 +421,10 @@ const ExcelExportEngine = {
         const colorProfit = profit >= 0 ? emeraldGreen : 'EF4444';
         row.getCell(6).font = { color: { argb: colorProfit }, bold: true };
         row.getCell(8).font = { color: { argb: colorProfit }, bold: true };
+        
+        row.getCell(2).font = { color: { argb: textDark }, bold: false };
+        row.getCell(3).font = { color: { argb: textDark }, bold: false };
+        row.getCell(4).font = { color: { argb: textDark }, bold: false };
 
         [2, 3, 4, 5, 6, 7, 8, 9].forEach(i => row.getCell(i).border = { bottom: { style: 'thin', color: { argb: 'E2E8F0' } } });
         bottomRow++;
@@ -419,7 +454,7 @@ const ExcelExportEngine = {
     const isPosTotal = totalProfit >= 0;
     const totalColor = isPosTotal ? emeraldGreen : 'EF4444';
     
-    rowTotalPerf.font = { bold: true, size: 12 };
+    rowTotalPerf.font = { bold: true, size: 12, color: { argb: textDark } };
     rowTotalPerf.getCell(6).font = { color: { argb: totalColor }, bold: true };
     rowTotalPerf.getCell(8).font = { color: { argb: totalColor }, bold: true };
     
@@ -496,6 +531,8 @@ const ExcelExportEngine = {
               row.getCell('date').value = specificBankTopAssets[i].name;
               row.getCell('type').value = specificBankTopAssets[i].value;
               row.getCell('type').numFmt = `#,##0.00 "${baseCurrency}"`;
+              row.getCell('date').font = { color: { argb: textDark } };
+              row.getCell('type').font = { color: { argb: textDark } };
           }
           
           if (i < allocKeys.length) {
@@ -508,6 +545,10 @@ const ExcelExportEngine = {
               row.getCell('comment').numFmt = '0.00%';
               row.getCell('amtOrig').value = val;
               row.getCell('amtOrig').numFmt = `#,##0.00 "${baseCurrency}"`;
+              
+              row.getCell('cat').font = { color: { argb: textDark } };
+              row.getCell('comment').font = { color: { argb: textDark } };
+              row.getCell('amtOrig').font = { color: { argb: textDark } };
           }
           dashRow++;
       }
@@ -599,7 +640,7 @@ const ExcelExportEngine = {
                         
                         displayAmtOrig = flow.isPositive ? flow.amount : -flow.amount;
                         fontColorHex = flow.isPositive ? emeraldGreen : 'EF4444';
-                        // Translated Booking Types will be handled if you pass item.type through t() in MenuBar or if they are already in the array
+                        
                         bRow.getCell('type').value = getText(item.type, item.type);
                     }
 

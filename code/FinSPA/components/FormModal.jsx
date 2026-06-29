@@ -1,5 +1,5 @@
 const React = require('react');
-const { useState } = React;
+const { useState, useEffect } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -54,7 +54,100 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         bulkOperation: 'delete'
     });
 
-    // --- NEU: Globale Hilfsfunktion um das UI sofort neu zu zeichnen ---
+    const [suggestedFxRate, setSuggestedFxRate] = useState(null);
+    const [isFetchingFx, setIsFetchingFx] = useState(false);
+
+    // --- Die clevere, ausfallsichere FX-Logik aus dem PropertyEditor ---
+    const fetchHistoricalRate = async (manualTrigger = false) => {
+        const dateToFetch = form.date;
+        const fromCur = selectedNode?.currency;
+        const toCur = baseCurrency;
+
+        if (!isForeignCurrency || !fromCur || fromCur === toCur || !dateToFetch) {
+            setSuggestedFxRate(null);
+            return;
+        }
+
+        setIsFetchingFx(true);
+        let rate = null;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const targetEndpoint = dateToFetch > todayStr ? 'latest' : dateToFetch;
+
+        try {
+            // 1. Versuch: Frankfurter V2 (dev)
+            try {
+                const res = await fetch(`https://api.frankfurter.dev/v1/${targetEndpoint}?base=${fromCur}&symbols=${toCur}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    rate = json.rates[toCur];
+                }
+            } catch (e) { console.warn("Frankfurter V2 failed", e); }
+
+            // 2. Versuch: Fallback auf V1 (app)
+            if (!rate) {
+                try {
+                    const res = await fetch(`https://api.frankfurter.app/${targetEndpoint}?base=${fromCur}&symbols=${toCur}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        rate = json.rates[toCur];
+                    }
+                } catch (e) { console.warn("Frankfurter V1 failed", e); }
+            }
+
+            // 3. Versuch: Fallback auf 'latest', falls historisches Datum (z.B. alter Feiertag) fehlschlägt
+            if (!rate && targetEndpoint !== 'latest') {
+                 try {
+                    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCur}&symbols=${toCur}`);
+                    if (res.ok) {
+                        const json = await res.json();
+                        rate = json.rates[toCur];
+                    }
+                } catch (e) { console.warn("Frankfurter V2 latest fallback failed", e); }
+            }
+
+            // 4. Versuch: Offline Mock Map (Der Retter in der Not)
+            if (!rate) {
+                const mockMap = {
+                    'USD_CHF': 0.89, 'EUR_CHF': 0.95, 'GBP_CHF': 1.13, 'JPY_CHF': 0.0056,
+                    'CHF_USD': 1.12, 'CHF_EUR': 1.05, 'CHF_GBP': 0.88, 'BTC_CHF': 58000, 'ETH_CHF': 3200
+                };
+                rate = mockMap[`${fromCur}_${toCur}`];
+                
+                if (manualTrigger && rate && typeof window !== 'undefined' && window.showToast) {
+                    window.showToast("API blockiert. Verwende Offline-Richtwert.", "warning");
+                }
+            }
+
+            if (rate) {
+                setSuggestedFxRate(rate);
+                if (manualTrigger) {
+                    setForm(prev => ({...prev, bookingExchangeRate: rate}));
+                    if (typeof window !== 'undefined' && window.showToast) {
+                        window.showToast(`Kurs aktualisiert: 1 ${fromCur} = ${rate} ${toCur}`, "success");
+                    }
+                }
+            } else {
+                setSuggestedFxRate(null);
+                if (manualTrigger && typeof window !== 'undefined' && window.showToast) {
+                    window.showToast("Kein Kurs für diese Währung gefunden.", "error");
+                }
+            }
+        } catch (error) {
+            console.error("[FinSPA] FX Error:", error);
+            setSuggestedFxRate(null);
+        } finally {
+            setIsFetchingFx(false);
+        }
+    };
+
+    // Automatischer Fetch im Hintergrund bei Datumsänderung
+    useEffect(() => {
+        const timeoutId = setTimeout(() => fetchHistoricalRate(false), 500);
+        return () => clearTimeout(timeoutId);
+    }, [form.date, selectedNode?.currency, baseCurrency, isForeignCurrency]);
+
+
     const refreshActiveNode = (newBanks) => {
         if (!selectedNode) return;
         const findNode = (nodes) => {
@@ -172,7 +265,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             if (typeof window !== 'undefined' && window.showToast) window.showToast(`${modalObj.selectedIds.length} ${t ? t('msgEntriesEdited') || 'Einträge bearbeitet' : 'Einträge bearbeitet'}`, "success");
             
             updateTreeData(newData);
-            refreshActiveNode(newData.banks); // --- NEU: Erzwingt sofortiges Neuladen bei Bulk-Actions ---
+            refreshActiveNode(newData.banks); 
             setModalObj(null);
             return;
         }
@@ -248,7 +341,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 return copy;
             });
             newData.banks = updateRecursive(newData.banks);
-            refreshActiveNode(newData.banks); // --- NEU: Erzwingt sofortiges Neuladen bei Speichern ---
+            refreshActiveNode(newData.banks); 
         } 
         else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
             const updateRecursive = (nodes) => nodes.map(n => {
@@ -290,7 +383,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         newData.banks = updateRecursive(newData.banks);
         updateTreeData(newData);
         
-        refreshActiveNode(newData.banks); // --- NEU: Der Bug-Fix. Erzwingt das sofortige Rendern der Tabelle ---
+        refreshActiveNode(newData.banks); 
 
         if (typeof window !== 'undefined' && window.showToast) window.showToast(t ? t('msgDeleted') || "Gelöscht" : "Gelöscht", "success");
         setModalObj(null);
@@ -500,7 +593,24 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                       {isForeignCurrency && (
                           <div>
                               <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t ? t('labelExchangeRateDate') : 'Kurs'} ({selectedNode?.currency} -> {baseCurrency})</label>
-                              <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                              <div className="relative">
+                                 <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={t ? t('titleUpdateRate') || "Kurs ermitteln" : "Kurs ermitteln"}>
+                                     <Icon name="RefreshCw" size={14} />
+                                 </button>
+                              </div>
+                              <div className="h-5 flex items-center mt-1">
+                                  {!isFetchingFx && suggestedFxRate !== null && suggestedFxRate !== Number(form.bookingExchangeRate) && (
+                                      <button 
+                                          type="button" 
+                                          onClick={() => setForm({...form, bookingExchangeRate: suggestedFxRate})}
+                                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors"
+                                      >
+                                          <Icon name="Download" size={10} />
+                                          {t ? t('labelFxSuggestion') || 'Vorschlag:' : 'Vorschlag:'} <span className="font-bold">{suggestedFxRate}</span> {t ? t('btnApply') || 'übernehmen' : 'übernehmen'}
+                                      </button>
+                                  )}
+                              </div>
                           </div>
                       )}
                   </>
@@ -601,7 +711,25 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                       {isForeignCurrency && (
                           <div>
                               <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t ? t('labelExchangeRateDate') : 'Wechselkurs'} ({selectedNode?.currency} -> {baseCurrency})</label>
-                              <input type="number" step="0.0001" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                              <div className="relative">
+                                 <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
+                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={t ? t('titleUpdateRate') || "Kurs ermitteln" : "Kurs ermitteln"}>
+                                     <Icon name="RefreshCw" size={14} />
+                                 </button>
+                              </div>
+                              
+                              <div className="h-5 flex items-center mt-1">
+                                  {!isFetchingFx && suggestedFxRate !== null && suggestedFxRate !== Number(form.bookingExchangeRate) && (
+                                      <button 
+                                          type="button" 
+                                          onClick={() => setForm({...form, bookingExchangeRate: suggestedFxRate})}
+                                          className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors"
+                                      >
+                                          <Icon name="Download" size={10} />
+                                          {t ? t('labelFxSuggestion') || 'Vorschlag:' : 'Vorschlag:'} <span className="font-bold">{suggestedFxRate}</span> {t ? t('btnApply') || 'übernehmen' : 'übernehmen'}
+                                      </button>
+                                  )}
+                              </div>
                           </div>
                       )}
                   </>

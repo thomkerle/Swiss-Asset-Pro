@@ -70,7 +70,7 @@ const HelpViewer = ({ setModalObj, lang = 'de', t }) => {
                             <Icon name="BookOpen" size={20} />
                         </div>
                         <h3 className="font-black text-xl tracking-tight text-slate-900 dark:text-white">
-                            {helpData.title} <span className="text-blue-600 font-normal ml-2">FinSPA Pro</span>
+                            {helpData.title} <span className="text-blue-600 font-normal ml-2">FinBundle Pro</span>
                         </h3>
                     </div>
                     <button onClick={() => setModalObj(null)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all">

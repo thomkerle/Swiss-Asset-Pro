@@ -92,36 +92,6 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
     return 'PieChart';
   };
 
-  const formatBarChartLabel = (name) => {
-      if (!name) return '';
-      
-      const breaks = {
-          '3a Vorsorgefonds': '3a\nVorsorge-\nfonds',
-          '3a Vorsorgekonto': '3a\nVorsorge-\nkonto',
-          'Bargeld / Konto': 'Bargeld /\nKonto',
-          'Pensionskasse': 'Pensions-\nkasse',
-          'Vorsorgefonds (alt)': 'Vorsorge-\nfonds\n(alt)',
-          'Fonds / ETFs': 'Fonds /\nETFs'
-      };
-      if (breaks[name]) return breaks[name];
-      
-      const words = name.split(' ');
-      let result = '';
-      let currentLineLen = 0;
-
-      for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          if (currentLineLen + word.length > 8 && currentLineLen > 0) {
-              result += '\n' + word;
-              currentLineLen = word.length;
-          } else {
-              result += (currentLineLen === 0 ? '' : ' ') + word;
-              currentLineLen += (currentLineLen === 0 ? 0 : 1) + word.length;
-          }
-      }
-      return result;
-  };
-
   const sortedClasses = Object.keys(overview).sort((a,b) => overview[b].total - overview[a].total);
 
   const topClass = sortedClasses.length > 0 ? sortedClasses[0] : null;
@@ -139,21 +109,18 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         });
     };
 
-    // Helfer-Funktion, die die Extraktion bündelt (für Einzel- und Batch-Export nutzbar)
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. KPI Block extrahieren
         const kpiBlock = document.querySelector('.kpi-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
-        // 2. Charts extrahieren inkl. der speziellen ECharts-Legenden-Manipulation
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
@@ -174,7 +141,6 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             isDoughnut = true; 
                         }
                         
-                        // Optionen für den Snapshot anpassen
                         chartInstance.setOption({
                             legend: hasLegend ? { 
                                 type: 'plain',
@@ -200,7 +166,6 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             backgroundColor: bgColor
                         });
                         
-                        // Original-Optionen wiederherstellen
                         chartInstance.setOption({
                             legend: hasLegend ? { 
                                 type: 'scroll',
@@ -215,7 +180,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                                 center: ['50%', '50%'], 
                                 radius: isDoughnut ? ['45%', '75%'] : '70%' 
                             }] : undefined,
-                            grid: (!isPie && currentOption.grid) ? { bottom: '18%' } : undefined 
+                            grid: (!isPie && currentOption.grid) ? { bottom: '25%' } : undefined 
                         });
                         
                         chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
@@ -223,13 +188,11 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                     }
                 }
                 
-                // Fallback, falls es kein EChart ist
                 const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
                 chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
             }
         }
 
-        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
         const tableHeaders = [
@@ -260,7 +223,6 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) {
@@ -283,13 +245,12 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
       }
     };
 
-    // --- NEU: BATCH EXPORT FÜR DEN ORCHESTRATOR ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
                 const { chartsData, tableHeaders, tableBody } = await buildReportData();
                 resolve({
-                    order: 1, // Priorität 1 im PDF-Dokument (nach dem Deckblatt)
+                    order: 1,
                     title: repTitle,
                     subtitle: `${repSub} ${new Date(targetDate).toLocaleDateString('de-CH')} | Gesamtvolumen: ${fCur ? fCur(grandTotal) : grandTotal}`,
                     tableHeaders,
@@ -419,7 +380,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                         engine={activeChartEngine}
                         type="bar"
                         height="100%"
-                        labels={sortedClasses.map(ac => formatBarChartLabel(getAcName(ac)))}
+                        labels={sortedClasses.map(ac => getAcName(ac))}
                         datasets={[{
                             label: t ? t('amount') || 'Volumen' : 'Volumen',
                             data: sortedClasses.map(ac => overview[ac].total),
@@ -427,9 +388,14 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             valueFormatter: fCur
                         }]}
                         options={{
+                            grid: {
+                                bottom: '25%' 
+                            },
                             xAxis: {
                                 axisLabel: {
-                                    interval: 0
+                                    interval: 0,
+                                    rotate: 45, 
+                                    margin: 12
                                 }
                             }
                         }}

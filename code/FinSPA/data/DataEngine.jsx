@@ -13,7 +13,6 @@ const defaultBookingCategories = {
     'Gebühr': ['Depotgebühr', 'Transaktionsgebühr']
 };
 
-// --- Auto-Migration für fehlende Asset-Klassen in alten Speicherständen ---
 const ensureDefaultAssetClasses = (loadedData) => {
     if (!loadedData) return loadedData;
     if (!loadedData.settings) loadedData.settings = {};
@@ -70,10 +69,91 @@ const initialData = {
   aiContext: { history: [], apiMessages: [] } 
 };
 
-// --- HILFSFUNKTIONEN FÜR DIE ENGINE ---
-const isSecurity = (assetClass) => ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetClass);
+// KORREKTUR: Die isSecurity Funktion bestimmt NUR, welche Assets über Stückzahl * Kurs bewertet werden.
+// managed_fund und pension_3a_managed wurden hier wieder entfernt, da sie über Saldi berechnet werden.
+const isSecurity = (assetClass) => ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes((assetClass || '').toLowerCase());
+
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
 const getTodayStr = () => new Date().toISOString().split('T')[0];
+
+const isAssetLiquid = (asset) => {
+    if (asset.hasOwnProperty('isLiquid')) return asset.isLiquid;
+    
+    const ac = (asset.assetClass || '').toLowerCase();
+    const name = (asset.name || '').toLowerCase();
+    const isPension = ac.includes('pension') || name.includes('vorsorge') || name.includes('3a');
+    
+    if (['stock', 'fund', 'managed_fund', 'crypto', 'realestate', 'mortgage'].includes(ac)) return false;
+    if (isPension) return false;
+    
+    return true; 
+};
+
+const classifyBooking = (bk, asset) => {
+    const isLiquid = isAssetLiquid(asset);
+    
+    const rawCategory = bk.normCategory || bk.category || bk.subCategory || '';
+    const catLower = rawCategory.toLowerCase();
+    const rawType = String(bk.type || bk.normType || '').toLowerCase();
+    
+    let classification = {
+        type: 'neutral', 
+        category: rawCategory || 'Unkategorisiert',
+        isLiquid: isLiquid
+    };
+
+    // --- 1. PASSIVES EINKOMMEN ---
+
+    // Dividenden (Expliziter Check für die Einkommenskategorisierung)
+    if (['dividende', 'ausschüttung'].includes(rawType) || catLower.includes('dividende')) {
+        const ac = (asset.assetClass || '').toLowerCase();
+        // Hier sind managed_fund und pension_3a_managed korrekt enthalten, da sie Dividenden abwerfen dürfen!
+        const isSecurityAsset = ['stock', 'fund', 'managed_fund', 'pension_fund', 'pension_3a_fund', 'pension_3a_managed'].includes(ac);
+        
+        if (isSecurityAsset || !isLiquid) {
+            classification.type = 'income';
+        } else {
+            classification.type = 'shift'; 
+        }
+        classification.category = 'Dividenden'; 
+        return classification;
+    }
+
+    // Zinsen
+    if (['zinszahlung'].includes(rawType) || catLower.includes('zinsen')) {
+        classification.type = 'income';
+        classification.category = 'Zinsen'; 
+        return classification;
+    }
+
+    // Mieteinnahmen
+    if (catLower.includes('miete')) {
+        classification.type = 'income';
+        classification.category = 'Mieteinnahmen'; 
+        return classification;
+    }
+
+    // --- 2. NORMALER CASHFLOW ---
+
+    if (!isLiquid) {
+        classification.type = 'ignore';
+        return classification;
+    }
+
+    const isTransfer = catLower.includes('umbuchung') || catLower.includes('transfer');
+    if (isTransfer) {
+        classification.type = 'shift';
+        return classification;
+    }
+
+    if (['einzahlung', 'verkauf'].includes(rawType)) {
+        classification.type = 'income';
+    } else if (['auszahlung', 'kauf', 'abzahlung', 'gebühr'].includes(rawType)) {
+        classification.type = 'expense';
+    }
+
+    return classification;
+};
 
 const getAllAssets = (nodes) => {
   let assets = [];
@@ -81,26 +161,24 @@ const getAllAssets = (nodes) => {
   return assets;
 };
 
-// --- Zentrale Stückzahl-Berechnung ---
 const getAssetSharesAtDate = (asset, targetDate) => {
     if (!isSecurity(asset.assetClass)) return 0;
     let sh = 0;
     if (asset.bookings) {
         asset.bookings.forEach(b => {
             if (b.date <= targetDate) {
-                if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
-                if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
+                const bType = String(b.type || '').toLowerCase();
+                if (['kauf', 'einzahlung', 'dividende', 'ausschüttung'].includes(bType) && b.shares) sh += Number(b.shares);
+                if (['verkauf', 'auszahlung'].includes(bType) && b.shares) sh -= Number(b.shares);
             }
         });
     }
     return sh > 0 ? sh : (Number(asset.shares) || 0);
 };
 
-// --- Zentrale Preis-Berechnung (KORRIGIERT FÜR ALLE BUCHUNGSTYPEN) ---
 const getAssetPriceAtDate = (asset, targetDate) => {
     if (!isSecurity(asset.assetClass)) return 1;
     
-    // Für aktuelle Bewertungen hat der manuell gepflegte Global-Preis Vorrang
     if (targetDate >= getTodayStr() && Number(asset.price) > 0) {
         return Number(asset.price);
     }
@@ -108,7 +186,6 @@ const getAssetPriceAtDate = (asset, targetDate) => {
     let p = 0;
     if (asset.bookings) {
         const sorted = [...asset.bookings].sort((a,b) => new Date(a.date) - new Date(b.date));
-        // BUGFIX: Wir filtern nicht mehr nach Typ! Jeder Eintrag mit einem Preis > 0 ist gültig.
         const pastBookings = sorted.filter(b => b.date <= targetDate && Number(b.price) > 0);
         if (pastBookings.length > 0) {
             p = Number(pastBookings[pastBookings.length - 1].price);
@@ -117,14 +194,13 @@ const getAssetPriceAtDate = (asset, targetDate) => {
     return p > 0 ? p : (Number(asset.price) || 0);
 };
 
-// --- Zentrale Klassifizierung von Buchungsflüssen (In/Out) ---
 const getBookingFlow = (booking) => {
     let amt = Number(booking.amount || 0);
-    // Standard-Klassifizierung
-    let isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(booking.type);
+    const type = String(booking.type || '').toLowerCase();
     
-    // Sonderfall: Negative Wertanpassung wird als Abfluss/Wertminderung gewertet
-    if (booking.type === 'Wertanpassung' && amt < 0) {
+    let isPositive = ['einzahlung', 'kauf', 'wertanpassung', 'dividende', 'ausschüttung', 'abzahlung'].includes(type);
+    
+    if (type === 'wertanpassung' && amt < 0) {
         isPositive = false;
         amt = Math.abs(amt);
     }
@@ -135,14 +211,17 @@ const getBookingFlow = (booking) => {
     };
 };
 
-// --- Ermittelt den reinen Asset-Wert (ohne Währungsumrechnung) ---
 const getAssetRawValueAtDate = (asset, targetDate) => {
+    // Wertpapiere (mit Stückzahlen)
     if (isSecurity(asset.assetClass)) {
         const sh = getAssetSharesAtDate(asset, targetDate);
+        if (sh <= 0) return 0;
+        
         const pr = getAssetPriceAtDate(asset, targetDate);
-        if (sh > 0 && pr > 0) return sh * pr;
+        if (pr > 0) return sh * pr;
     }
 
+    // Konten & verwaltete Vermögen (Berechnung über Saldo & Cashflow)
     let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
     let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
     let baseAmount = applicableBalance ? Number(applicableBalance.amount) : 0;
@@ -152,7 +231,6 @@ const getAssetRawValueAtDate = (asset, targetDate) => {
     if (asset.bookings) {
         asset.bookings.forEach(bk => {
             if (bk.date > baseDate && bk.date <= targetDate) {
-                // Zentralisierte In/Out Logik nutzen
                 const flow = getBookingFlow(bk);
                 if (flow.isPositive) netBookings += flow.amount;
                 else netBookings -= flow.amount;
@@ -162,14 +240,11 @@ const getAssetRawValueAtDate = (asset, targetDate) => {
     return baseAmount + netBookings;
 };
 
-// --- Ermittelt den finalen Wert in Basiswährung (CHF) ---
 const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
     const rawValue = getAssetRawValueAtDate(asset, targetDate);
     
-    // Wenn es kein Fremdwährungskonto ist, direkt zurückgeben
     if (!asset.currency || asset.currency === 'CHF') return rawValue;
 
-    // Aktueller Live-Kurs hat Vorrang, wenn wir das "Heute" betrachten
     if (targetDate >= getTodayStr() && asset.exchangeRate) {
         return rawValue * parseRate(asset.exchangeRate);
     }
@@ -187,7 +262,6 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
         });
     }
 
-    // Historischer Fallback-Suchlauf über andere Assets gleicher Währung
     if (!applicableRate || applicableRate === 1) {
         let latestDate = '1970-01-01';
         allAssets.forEach(otherAsset => {
@@ -248,22 +322,13 @@ const getNormalizedBookings = (assets) => {
     let allBookings = [];
     assets.forEach(asset => {
         (asset.bookings || []).forEach(bk => {
-            let nType = bk.type;
-            let nCat = bk.subCategory || '';
-            if (nType === 'Dividende') { nType = 'Einzahlung'; nCat = 'Dividenden'; }
-            if (nType === 'Zinszahlung') { nType = 'Einzahlung'; nCat = 'Zinsen'; }
-            if (nType === 'Gebühr') { nType = 'Auszahlung'; nCat = 'Gebühren'; }
-            if (nCat === 'Ausschüttung') { nCat = 'Dividenden'; }
-
+            const classif = classifyBooking(bk, asset);
+            
             allBookings.push({
                 ...bk,
-                normType: nType,
-                normCategory: nCat,
-                _assetCurrency: asset.currency,
-                _assetExchangeRate: parseRate(asset.exchangeRate || 1),
-                _assetClass: asset.assetClass,
+                ...classif, 
                 _baseValue: Number(bk.amount) * parseRate(asset.exchangeRate || 1),
-                assetName: asset.name 
+                assetName: asset.name
             });
         });
     });
@@ -286,5 +351,5 @@ module.exports = {
     formatCurrency,
     getNormalizedBookings,
     getBookingFlow,
-    ensureDefaultAssetClasses // <-- Hier ist der neue Export, um die Funktion extern aufzurufen
+    ensureDefaultAssetClasses 
 };

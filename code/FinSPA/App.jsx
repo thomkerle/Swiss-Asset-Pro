@@ -38,8 +38,7 @@ window.PdfExportEngine = PdfExportEngine;
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
-// --- EIGENE LOGO KOMPONENTE ---
-const FinSpaLogo = ({ className = "h-24 w-24" }) => (
+const FinBundleLogo = ({ className = "h-24 w-24" }) => (
   <svg viewBox="0 0 100 100" className={`overflow-visible ${className}`}>
     <circle cx="50" cy="50" r="44" stroke="#2563eb" strokeWidth="5" fill="none" className="logo-pulse-circle origin-center" />
     <path d="M 28 62 L 42 72 L 68 42" stroke="#10b981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" className="logo-glow-path" />
@@ -55,7 +54,7 @@ const App = () => {
   const [data, setData] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        const localData = localStorage.getItem('finspa_pro_autosave');
+        const localData = localStorage.getItem('finbundle_pro_autosave') || localStorage.getItem('finspa_pro_autosave');
         if (localData) {
           const parsed = JSON.parse(localData);
           if (parsed && parsed.version) {
@@ -63,7 +62,7 @@ const App = () => {
           }
         }
       } catch (e) {
-        console.error("[FinSPA] Autosave konnte nicht geladen werden:", e);
+        console.error("[FinBundle] Autosave konnte nicht geladen werden:", e);
       }
     }
     return initialData;
@@ -157,7 +156,7 @@ const App = () => {
           };
         }
       } catch (err) {
-        console.error("[FinSPA Core] Fehler beim Laden der externen Kernbibliotheken:", err);
+        console.error("[FinBundle Core] Fehler beim Laden der externen Kernbibliotheken:", err);
       }
     };
 
@@ -168,9 +167,9 @@ const App = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('finspa_pro_autosave', JSON.stringify(data));
+      localStorage.setItem('finbundle_pro_autosave', JSON.stringify(data));
     } catch (e) {
-      console.error("[FinSPA] Fehler beim localStorage-Autosave:", e);
+      console.error("[FinBundle] Fehler beim localStorage-Autosave:", e);
     }
 
     const writeToDisk = async () => {
@@ -183,7 +182,7 @@ const App = () => {
             await writable.close();
           }
         } catch (err) {
-          console.error("[FinSPA] Direktes Dateisichern fehlgeschlagen:", err);
+          console.error("[FinBundle] Direktes Dateisichern fehlgeschlagen:", err);
         }
       }
     };
@@ -213,7 +212,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.6", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.7", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
           });
@@ -225,7 +224,7 @@ const App = () => {
     if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
       try {
         const [handle] = await window.showOpenFilePicker({
-          types: [{ description: 'FinSPA Projekt', accept: { 'application/json': ['.json'], 'application/zip': ['.zip'] } }],
+          types: [{ description: 'FinBundle Projekt', accept: { 'application/json': ['.json'], 'application/zip': ['.zip'] } }],
           multiple: false
         });
         const file = await handle.getFile();
@@ -309,7 +308,7 @@ const App = () => {
                         const bytes = window.CryptoJS.AES.decrypt(encryptedData, pin);
                         const content = bytes.toString(window.CryptoJS.enc.Utf8);
                         
-                        if (!content) throw new Error(t('msgWrongPin') || "Falscher PIN oder beschädigte Datei.");
+                        if (!content) throw new Error(t('msgWrongPin') || "Falscher PIN o. beschädigte Datei.");
                         
                         const imported = JSON.parse(content);
                         if (imported.version) {
@@ -375,14 +374,14 @@ const App = () => {
     if ((saveAs || !targetHandle) && window.showSaveFilePicker) {
         try {
             targetHandle = await window.showSaveFilePicker({
-                suggestedName: targetHandle ? targetHandle.name : `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`,
+                suggestedName: targetHandle ? targetHandle.name : `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`,
                 types: isZip
-                    ? [{ description: 'FinSPA Verschlüsselt', accept: { 'application/zip': ['.zip'] } }]
-                    : [{ description: 'FinSPA Projekt', accept: { 'application/json': ['.json'] } }]
+                    ? [{ description: 'FinBundle Verschlüsselt', accept: { 'application/zip': ['.zip'] } }]
+                    : [{ description: 'FinBundle Projekt', accept: { 'application/json': ['.json'] } }]
             });
         } catch (err) {
             if (err.name !== 'AbortError') {
-                console.error("[FinSPA Diagnose] FilePicker Fehler:", err);
+                console.error("[FinBundle Diagnose] FilePicker Fehler:", err);
                 showToast((t('msgSaveError') || "Fehler beim Dateidialog: ") + err.message, "error");
             }
             return;
@@ -423,12 +422,12 @@ const App = () => {
                 const blob = new Blob([finalContent], { type: isZip ? "application/zip" : "application/json" });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = `FinSPA_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
+                a.download = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
                 a.click();
                 showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
             }
         } catch (error) {
-            console.error("[FinSPA Diagnose] Speicherfehler:", error);
+            console.error("[FinBundle Diagnose] Speicherfehler:", error);
             showToast((t('msgSaveError') || "Fehler beim Speichern: ") + error.message, "error");
         }
     };
@@ -452,7 +451,7 @@ const App = () => {
           const csvStr = CsvEngine.exportCSV(data);
           const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
           const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-          a.download = `FinSPA_Buchungen_${new Date().toISOString().split('T')[0]}.csv`;
+          a.download = `FinBundle_Buchungen_${new Date().toISOString().split('T')[0]}.csv`;
           a.click(); showToast(t('msgCsvSuccess') || 'Export erfolgreich', "success");
        } catch (e) { showToast(t('msgCsvError') || 'Export Fehler', "error"); }
   };
@@ -461,7 +460,7 @@ const App = () => {
     const target = e.target;
     const file = target.files[0];
     if (!file) {
-      console.warn("[FinSPA Diagnose] Keine Datei ausgewählt.");
+      console.warn("[FinBundle Diagnose] Keine Datei ausgewählt.");
       return;
     }
 
@@ -605,14 +604,13 @@ const App = () => {
           return <HelpViewer setModalObj={setModalObj} lang={lang} />;
       }
 
-      // HIER WURDE DAS NEUE LOGO EINGEBAUT
       if (modalObj.type === 'about') return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all">
                   <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                           <Icon name="Info" className="text-blue-500" />
-                          <h3 className="font-bold text-lg">{t('helpAbout') || 'Über FinSPA'}</h3>
+                          <h3 className="font-bold text-lg">{t('helpAbout') || 'Über FinBundle'}</h3>
                       </div>
                       <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
                           <Icon name="X" size={20}/>
@@ -622,13 +620,13 @@ const App = () => {
                   <div className="p-6 text-center space-y-4">
                       <div className="flex justify-center mb-2">
                           <div className="p-2">
-                              <FinSpaLogo className="h-28 w-28 drop-shadow-xl" />
+                              <FinBundleLogo className="h-28 w-28 drop-shadow-xl" />
                           </div>
                       </div>
                       
                       <div>
-                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">FinSPA Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.6</p>
+                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">FinBundle Pro</h2>
+                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.7</p>
                       </div>
                       
                       <hr className="border-gray-200 dark:border-slate-700 my-4" />
@@ -694,23 +692,19 @@ const App = () => {
       />;
   };
 
-  // --- STATUS BAR PRECALCULATIONS ---
   const todayStr = new Date().toISOString().split('T')[0];
   const baseCur = data?.settings?.baseCurrency || 'CHF';
   
-  // 1. Hole alle Assets als flache Liste
   const flatAssets = typeof getAllAssets === 'function' ? getAllAssets(data?.banks || []) : [];
   const allAssetsCount = flatAssets.length;
   const banksCount = data?.banks?.length || 0;
 
-  // 2. Berechne das Totalvermögen direkt hier robust auf Basis der Assets
   const totalWealth = flatAssets.reduce((sum, asset) => {
-      if (asset.isArchived) return sum; // Archivierte Assets in der Totalsumme ignorieren
+      if (asset.isArchived) return sum; 
       const val = typeof getAssetValueAtDate === 'function' ? getAssetValueAtDate(asset, todayStr, flatAssets) : 0;
       return sum + (Number(val) || 0);
   }, 0);
 
-  // 3. NEU: Budget-Berechnungen für die Statusbar
   const getMonthlyBudget = (item) => {
       const amt = Number(item.amount) || 0;
       const freq = String(item.frequency || 'monthly').toLowerCase();
@@ -854,7 +848,6 @@ const App = () => {
       </div>
 
       <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-[11px] md:text-xs text-gray-600 dark:text-gray-400 z-50 select-none">
-          {/* Linke Seite: Status & Speicherung */}
           <div className="flex items-center gap-4 md:gap-6">
               <span className="flex items-center gap-1.5" title={t('titleReadySaveActive') || "System ist bereit & Auto-Save aktiv"}>
                   <span className="relative flex h-2 w-2">
@@ -871,14 +864,12 @@ const App = () => {
               </span>
           </div>
 
-          {/* Mitte: Portfolio Quick Stats */}
           <div className="hidden lg:flex items-center gap-4 opacity-80">
               <span className="flex items-center gap-1" title={t('titleBankCatCount') || "Anzahl Banken / Hauptkategorien"}><Icon name="Shield" size={10} /> {banksCount}</span>
               <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} Assets</span>
               <span className="flex items-center gap-1" title={t('titleBaseCurrency') || "Basiswährung der Anwendung"}><Icon name="Globe" size={10} /> {baseCur}</span>
           </div>
 
-          {/* Rechte Seite: Nettovermögen, Budget & Version */}
           <div className="flex items-center gap-4 md:gap-6">
               {viewMode === 'vermoegen' && (
                   <span className="flex items-center gap-2 bg-gray-200 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200" title={`${t('titleNetWealth') || "Aktuelles Nettovermögen in"} ${baseCur}`}>
@@ -894,7 +885,7 @@ const App = () => {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.6</span>
+              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.7</span>
           </div>
       </div>
 

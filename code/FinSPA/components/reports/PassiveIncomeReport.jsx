@@ -14,12 +14,10 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
 
-  // Interaktiver UI-State für das Top-Assets Dashboard
   const [activeTab, setActiveTab] = useState('all'); 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('desc'); 
 
-  // --- DATEN-AGGREGATION ---
   const { totalPassive, monthlyDataPoints, categoryMap, assetMap, rawMonthsCount } = useMemo(() => {
     let total = 0;
     const mData = {};
@@ -39,22 +37,19 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
     }
 
     const normBookings = getNormalizedBookings ? getNormalizedBookings(activeAssets) : [];
-    const isSecurity = (ac) => ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
-
+    
     normBookings.filter(bk => {
         if (bk.date < dateRange.from || bk.date > dateRange.to) return false;
-        if (bk.normType !== 'Einzahlung') return false;
-        if (!['Dividenden', 'Zinsen', 'Mieteinnahmen'].includes(bk.normCategory)) return false;
-
-        if (bk.normCategory === 'Dividenden' && !isSecurity(bk._assetClass)) {
-            return false;
-        }
-        return true;
+        
+        // Echte Passiv-Einnahmen sind Einnahmen (income) in diesen 3 Kategorien.
+        // Dividenden auf dem Bankkonto (type: 'shift') werden so automatisch ignoriert -> keine Doppelzählung!
+        const isPassiveCat = ['Dividenden', 'Zinsen', 'Mieteinnahmen'].includes(bk.category);
+        return bk.type === 'income' && isPassiveCat;
+        
     }).forEach(bk => {
         const val = bk._baseValue;
         const monthStr = bk.date.substring(0, 7);
-        const cat = bk.normCategory;
-        
+        const cat = bk.category;
         const assetName = bk.assetName || (t ? t('unknown') || 'Unbekannt' : 'Unbekannt');
 
         total += val;
@@ -83,7 +78,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
     };
   }, [activeAssets, dateRange, t]);
 
-  // --- STATISTIKEN & KPI BERECHNUNG ---
   const monthlyAverage = totalPassive / rawMonthsCount;
   const annualizedRunRate = monthlyAverage * 12;
   
@@ -132,7 +126,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -147,10 +140,8 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
             }
         };
 
-        // KPI Dashboard Snapshot
         await captureBlock('.dashboard-top-export-block', ''); 
 
-        // Charts und Top-Assets Snapshot
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
@@ -162,7 +153,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
 
         const safeT = (key, fallback) => (t && t(key) && t(key) !== key) ? t(key) : fallback;
 
-        // Angepasst für PdfExportEngine Batch-Funktionalität
         const tableHeaders = [
             safeT('colMonth', 'Monat'),
             safeT('labelDividends', 'Dividenden'),
@@ -187,7 +177,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -206,7 +195,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -251,7 +239,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
          <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
       </div>
 
-      {/* DASHBOARD BLOCK FÜR EXPORT */}
       <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
@@ -288,7 +275,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
       {totalPassive > 0 ? (
           <div className="space-y-8" ref={chartRef}>
             
-            {/* Chart: Ertragsverlauf */}
             <div 
                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
                data-pdf-title={t ? t('titleCashflowComposition') || "Zusammensetzung des Cashflows im Zeitverlauf" : "Zusammensetzung des Cashflows im Zeitverlauf"}
@@ -329,7 +315,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                 </div>
             </div>
 
-            {/* Interaktives Top-Assets Dashboard */}
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden chart-export-block" data-pdf-title={t ? t('topIncomeSources') || "Top Ertragsquellen" : "Top Ertragsquellen"}>
                 <div className="p-5 border-b border-gray-100 dark:border-slate-800 space-y-4 bg-gray-50/50 dark:bg-slate-800/30">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -425,7 +410,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                 </div>
             </div>
 
-            {/* Monatliche Historie */}
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
                     {t ? t('monthlyHistoryBreakdown') || 'Monatliche Historie & Aufschlüsselung' : 'Monatliche Historie & Aufschlüsselung'}

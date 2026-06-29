@@ -151,7 +151,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
 
   const filteredBanks = useMemo(() => {
     return filterTreeNodes(data?.banks || [], searchQuery);
-  }, [data?.banks, searchQuery]);
+  }, [data?.banks, searchQuery,showArchived]);
 
   const filterBudgetList = (items) => {
     if (!searchQuery) return items;
@@ -182,7 +182,6 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
     const isDragOver = dragOverNodeId === node.id;
     const isBeingDragged = draggedNodeId === node.id;
     
-    // Performante Wertabfrage aus der useMemo-Map
     const nodeValue = nodeValues[node.id] || 0;
     const displayValue = (node.type === 'asset' && isForeignCurrency) 
                          ? DataEngine.getAssetRawValueAtDate(node, today) 
@@ -204,13 +203,12 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
               e.preventDefault(); 
               e.stopPropagation();
               
-              // --- 5. LOGIK: Validiere Drop-Target ---
               const draggedType = nodeTypes[draggedNodeId];
               let isValidDrop = false;
               
               if (draggedType === 'asset' && (node.type === 'bank' || node.type === 'category')) isValidDrop = true;
               else if (draggedType === 'category' && (node.type === 'bank' || node.type === 'category')) isValidDrop = true;
-              else if (draggedType === 'bank' && node.type === 'bank') isValidDrop = true; // Bänke sortieren
+              else if (draggedType === 'bank' && node.type === 'bank') isValidDrop = true; 
               
               if (!isValidDrop) {
                   e.dataTransfer.dropEffect = "none";
@@ -240,7 +238,6 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
             ${isDragOver ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/40 border border-blue-400 border-dashed scale-[1.01] z-10 shadow-sm' : ''}
             ${isBeingDragged ? 'opacity-30 scale-95' : ''}
           `} 
-          /* BUGFIX: selectedBooking: null zwingt die UI, bei Klick auf den Baum immer das Root-Asset anzuzeigen */
           onClick={() => { setSelectedNode({ ...node, selectedBooking: null }); setActiveReport(null); }}
         >
           <div className="flex items-center gap-2 truncate min-w-0 flex-1 pr-2">
@@ -250,8 +247,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
               </div>
             ) : <span className="w-4 shrink-0"></span>}
             <Icon name={iconName} className={`${iconColor} shrink-0`} size={13}/>
-            <span className="truncate pr-1">
-               {/* 3. UX: Highlighting des Suchbegriffs */}
+            <span className="truncate pr-1" title={node.name}>
                <HighlightText text={node.name} highlight={searchQuery} />
             </span>
             
@@ -276,7 +272,6 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
         </div>
         
         {isExpanded && hasChildren && (
-          // 4. UI: Baum-Hilfslinien (border-l) für bessere visuelle Strukturierung
           <div className="border-l border-gray-200 dark:border-slate-700/60 ml-[11px] pl-3 mt-0.5 space-y-0.5 transition-all">
             {node.children.map(child => renderNode(child, depth + 1))}
           </div>
@@ -308,7 +303,9 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
             <div key={item.id} className={`group flex items-center justify-between py-1.5 px-4 cursor-pointer rounded transition-colors ${isSelected ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-semibold' : 'hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300'}`} onClick={() => { setSelectedNode({...item, budgetType: budgetGroupKey}); setActiveReport(null); }}>
               <div className="flex items-center gap-2 truncate min-w-0 pr-2">
                   <span className="shrink-0 text-[13px]">{typeIcon}</span>
-                  <span className="truncate"><HighlightText text={item.name} highlight={searchQuery} /></span>
+                  <span className="truncate" title={item.name}>
+                      <HighlightText text={item.name} highlight={searchQuery} />
+                  </span>
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
@@ -342,7 +339,21 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
           </div>
           
           <div className="flex items-center gap-2">
+
             {(viewMode === 'vermoegen' || viewMode === 'ai') && (
+            <>
+                <div 
+                        className={`cursor-pointer p-1.5 rounded transition-all duration-200 ${
+                            showArchived 
+                            ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400' 
+                            : 'hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400'
+                        }`}
+                        onClick={() => setShowArchived(!showArchived)}
+                        title={showArchived ? 'Archivierte Assets ausblenden' : 'Archivierte Assets anzeigen'}
+                    >
+                        <Icon name={showArchived ? "Archive" : "Inbox"} size={15} />
+                </div>
+
               <div 
                 className="cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-700 p-1.5 rounded transition-colors"
                 onClick={() => setModalObj({ type: 'addBank' })}
@@ -350,6 +361,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
               >
                 <Icon name="Plus" size={15} className="text-blue-600 dark:text-blue-400" />
               </div>
+            </>
             )}
             <Icon 
               name="ChevronLeft" 
