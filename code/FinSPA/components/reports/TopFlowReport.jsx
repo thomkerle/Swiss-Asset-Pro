@@ -82,17 +82,25 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. Snapshot des KPI Blocks
+        // 1. Snapshot des KPI Blocks (abgesichert)
         const kpiBlock = document.querySelector('.kpi-topflow-export-block');
         if (kpiBlock) {
-            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const canvas = await html2canvas(kpiBlock, { 
+                scale: 2, 
+                backgroundColor: bgColor, 
+                useCORS: true, 
+                logging: false,
+                ignoreElements: (element) => {
+                    return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
+                }
+            });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
@@ -104,14 +112,35 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                 const chartInstance = window.echarts.getInstanceByDom(chartDiv);
                 if (chartInstance) {
                     const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                    chartsData.push({ title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', image: imgData, fit: [760, 360] });
+                    // FIX: Breite auf volle Seite setzen, aber mit maximaler Höhe (fit) skalieren!
+                    chartsData.push({ 
+                        title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', 
+                        image: imgData, 
+                        width: 760,
+                        fit: [760, 450] // Verhindert das Wegschneiden bei zu vielen Items
+                    });
                 }
             } else {
                 try {
                     const chartBlock = document.querySelector('.chart-topflow-export-block');
                     if (chartBlock) {
-                        const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                        chartsData.push({ title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', image: canvas.toDataURL('image/png', 1.0), fit: [760, 360] });
+                        const canvas = await html2canvas(chartBlock, { 
+                            scale: 2, 
+                            backgroundColor: bgColor, 
+                            useCORS: true, 
+                            logging: false,
+                            ignoreElements: (element) => {
+                                if (element.classList && element.classList.contains('echarts-tooltip')) return true;
+                                if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
+                                return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT';
+                            }
+                        });
+                        chartsData.push({ 
+                            title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', 
+                            image: canvas.toDataURL('image/png', 1.0), 
+                            width: 760,
+                            fit: [760, 450]
+                        });
                     }
                 } catch (e) {
                     console.warn("Chart-Fallback Fehler:", e);
@@ -138,7 +167,6 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -153,11 +181,10 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
           data: data || activeAssets 
         });
       } catch (err) { 
-          console.error("[FinSPA] PDF Export Error im TopFlowReport:", err); 
+          console.error("[FinBundle Pro] PDF Export Error im TopFlowReport:", err); 
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -171,7 +198,7 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im TopFlowReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error im TopFlowReport:", err);
                 resolve(null);
             }
         });
@@ -193,12 +220,6 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   if (flows.length === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-        <ReportHeader 
-          title={repTitle} 
-          subtitle={`${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordTo} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`} 
-          isTreeVisible={isTreeVisible} 
-          setIsTreeVisible={setIsTreeVisible} 
-        />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Activity" size={32} className="mx-auto mb-3 opacity-50"/>
           <p><span>{t ? t('noFlowsFound') || 'Keine Wertveränderungen im gewählten Zeitraum.' : 'Keine Wertveränderungen im gewählten Zeitraum.'}</span></p>
@@ -209,22 +230,16 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-      <ReportHeader 
-        title={repTitle} 
-        subtitle={`${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} - ${new Date(dateRange.to).toLocaleDateString('de-CH')})`} 
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
 
       <div className="w-full bg-white dark:bg-transparent">
           
           <div className="kpi-topflow-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="TrendingUp" size={14} className="text-emerald-500"/>
-                    <span>{t ? t('bestPerformer') || 'Bester Performer' : 'Bester Performer'}</span>
+                    <span>{String(t ? t('bestPerformer') || 'Bester Performer' : 'Bester Performer').toUpperCase()}</span>
                 </div>
-                <div className="text-xl font-black text-slate-900 dark:text-white truncate" title={topWinner?.label}>
+                <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white break-words pb-1" title={topWinner?.label}>
                     <span>{topWinner ? topWinner.label : '-'}</span>
                 </div>
                 <div className="text-xs font-bold mt-2">
@@ -240,11 +255,11 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
              </div>
 
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="TrendingDown" size={14} className="text-rose-500"/>
-                    <span>{t ? t('weakestItem') || 'Schwächster Posten' : 'Schwächster Posten'}</span>
+                    <span>{String(t ? t('weakestItem') || 'Schwächster Posten' : 'Schwächster Posten').toUpperCase()}</span>
                 </div>
-                <div className="text-xl font-black text-slate-900 dark:text-white truncate" title={topLoser?.label}>
+                <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white break-words pb-1" title={topLoser?.label}>
                     <span>{topLoser ? topLoser.label : '-'}</span>
                 </div>
                 <div className="text-xs font-bold mt-2 flex gap-0.5">
@@ -260,11 +275,11 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                     <Icon name="PlusCircle" size={48} className="text-emerald-600" />
                 </div>
-                <div className="text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10">
+                <div className="text-emerald-800 dark:text-emerald-300 text-xs font-bold tracking-wider mb-2 flex items-center gap-2 relative z-10">
                     <Icon name="Plus" size={14} />
-                    <span>{t ? t('totalGains') || 'Summe Gewinne' : 'Summe Gewinne'}</span>
+                    <span>{String(t ? t('totalGains') || 'Summe Gewinne' : 'Summe Gewinne').toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-emerald-700 dark:text-emerald-400 relative z-10 flex gap-0.5">
+                <div className="text-2xl xl:text-3xl font-black text-emerald-700 dark:text-emerald-400 relative z-10 flex gap-0.5 break-words pb-1">
                     <span>+</span>
                     <span>{fCur(totalGained)}</span>
                 </div>
@@ -274,11 +289,11 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                 <div className="absolute top-0 right-0 p-4 opacity-10">
                     <Icon name="Trash2" size={48} className="text-rose-600" />
                 </div>
-                <div className="text-rose-800 dark:text-rose-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10">
+                <div className="text-rose-800 dark:text-rose-300 text-xs font-bold tracking-wider mb-2 flex items-center gap-2 relative z-10">
                     <Icon name="ArrowUp" size={14} className="transform rotate-180" />
-                    <span>{t ? t('totalLosses') || 'Summe Verluste' : 'Summe Verluste'}</span>
+                    <span>{String(t ? t('totalLosses') || 'Summe Verluste' : 'Summe Verluste').toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-rose-700 dark:text-rose-400 relative z-10 flex gap-0.5">
+                <div className="text-2xl xl:text-3xl font-black text-rose-700 dark:text-rose-400 relative z-10 flex gap-0.5 break-words pb-1">
                     <span>-</span>
                     <span>{fCur(totalLost)}</span>
                 </div>

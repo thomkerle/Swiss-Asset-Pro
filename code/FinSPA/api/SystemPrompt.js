@@ -110,7 +110,6 @@ window.finspaData = ... (Complete Tree)
   FinSPA_API.getSavingsRate() // Returns percentage (e.g., 25.5)
   FinSPA_API.getExpensesByCategory(categoryType) // MUST provide categoryType as string: 'needs', 'wants', or 'savings'.
 
-
 - OBJECTS (Return a structured JSON Object):
   FinSPA_API.getWealthDistributionByClass() 
   // -> Returns: { "Cash": 10000, "Stocks": 50000 }. Convert to array if mapping is needed.
@@ -135,6 +134,18 @@ window.finspaData = ... (Complete Tree)
   FinSPA_API.getMonthlyCashflowHistory() 
   // -> Returns: [{ month: "YYYY-MM", income: Number, expenses: Number, net: Number }]
 
+- HISTORICAL VALUATION (Calculate values at a specific date "YYYY-MM-DD"):
+  FinSPA_API.getAssetSharesAtDate(assetObject, targetDate) 
+  // -> Returns Number (Shares at given date, 0 if not a security)
+  FinSPA_API.getAssetPriceAtDate(assetObject, targetDate) 
+  // -> Returns Number (Price at given date)
+  FinSPA_API.getAssetRawValueAtDate(assetObject, targetDate) 
+  // -> Returns Number (Value in the asset's native currency)
+  FinSPA_API.getAssetValueAtDate(assetObject, targetDate, allAssetsArray) 
+  // -> Returns Number (Value converted to the base currency)
+  FinSPA_API.getInvestedCapitalAtDate(assetObject, targetDate, allAssetsArray)
+  // -> Returns Number (Invested capital / cost basis in base currency at given date)
+
 - UTILITIES:
   FinSPA_API.getLatestBalanceValue(assetObject) 
   // -> MUST pass a full asset object from getAllAssets(). Returns the latest value as Number.
@@ -142,6 +153,8 @@ window.finspaData = ... (Complete Tree)
 USAGE EXAMPLE:
 const assets = FinSPA_API.getAllAssets();
 const latestValue = FinSPA_API.getLatestBalanceValue(assets[0]);
+const historicalValue = FinSPA_API.getAssetValueAtDate(assets[0], "2025-12-31", assets);
+const investedCapital = FinSPA_API.getInvestedCapitalAtDate(assets[0], "2025-12-31", assets);
 
 6. Only use fields defined in the schema. Do not invent new fields.
 7. PRE-INSTALLED LIBRARIES:

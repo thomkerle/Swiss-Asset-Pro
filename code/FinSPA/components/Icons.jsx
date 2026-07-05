@@ -89,8 +89,14 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Database: 'fa-database',
         Landmark: 'fa-landmark',
         Bitcoin: 'fab fa-bitcoin',
+        
+        // --- NEUE REPORT ICONS ---
+        GitMerge: 'fa-code-merge', 
+        ArrowUpRight: 'fa-arrow-up-right-from-square',
+        FastForward: 'fa-forward-fast',
+        Shuffle: 'fa-shuffle',
 
-        // --- NEUE ICONS FÜR DAS BUDGET & NAVIGATION ---
+        // --- ICONS FÜR DAS BUDGET & NAVIGATION ---
         ArrowLeft: 'fa-arrow-left',
         ArrowRight: 'fa-arrow-right',
         ArrowDown: 'fa-arrow-down',
@@ -98,7 +104,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Wallet: 'fa-wallet',
         PiggyBank: 'fa-piggy-bank',
 
-        // --- NEUE ICONS FÜR EXCEL EXPORT ---
+        // --- ICONS FÜR EXCEL EXPORT ---
         Grid: 'fa-table-cells',
         FileExcel: 'fa-file-excel'
     };
@@ -184,7 +190,13 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Landmark: 'text-slate-500',
         Bitcoin: 'text-amber-500',
         
-        // --- NEUE ICONS DEFAULTS ---
+        // --- NEUE REPORT ICONS DEFAULTS ---
+        GitMerge: 'text-amber-500', 
+        ArrowUpRight: 'text-orange-500',
+        FastForward: 'text-violet-500',
+        Shuffle: 'text-pink-500',
+
+        // --- BUDGET ICONS DEFAULTS ---
         ArrowLeft: 'text-gray-500 hover:text-blue-500 transition-colors',
         ArrowRight: 'text-gray-500 hover:text-blue-500 transition-colors',
         ArrowDown: 'text-gray-500',

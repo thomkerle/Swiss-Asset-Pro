@@ -69,8 +69,6 @@ const initialData = {
   aiContext: { history: [], apiMessages: [] } 
 };
 
-// KORREKTUR: Die isSecurity Funktion bestimmt NUR, welche Assets über Stückzahl * Kurs bewertet werden.
-// managed_fund und pension_3a_managed wurden hier wieder entfernt, da sie über Saldi berechnet werden.
 const isSecurity = (assetClass) => ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes((assetClass || '').toLowerCase());
 
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
@@ -102,12 +100,8 @@ const classifyBooking = (bk, asset) => {
         isLiquid: isLiquid
     };
 
-    // --- 1. PASSIVES EINKOMMEN ---
-
-    // Dividenden (Expliziter Check für die Einkommenskategorisierung)
     if (['dividende', 'ausschüttung'].includes(rawType) || catLower.includes('dividende')) {
         const ac = (asset.assetClass || '').toLowerCase();
-        // Hier sind managed_fund und pension_3a_managed korrekt enthalten, da sie Dividenden abwerfen dürfen!
         const isSecurityAsset = ['stock', 'fund', 'managed_fund', 'pension_fund', 'pension_3a_fund', 'pension_3a_managed'].includes(ac);
         
         if (isSecurityAsset || !isLiquid) {
@@ -119,21 +113,17 @@ const classifyBooking = (bk, asset) => {
         return classification;
     }
 
-    // Zinsen
     if (['zinszahlung'].includes(rawType) || catLower.includes('zinsen')) {
         classification.type = 'income';
         classification.category = 'Zinsen'; 
         return classification;
     }
 
-    // Mieteinnahmen
     if (catLower.includes('miete')) {
         classification.type = 'income';
         classification.category = 'Mieteinnahmen'; 
         return classification;
     }
-
-    // --- 2. NORMALER CASHFLOW ---
 
     if (!isLiquid) {
         classification.type = 'ignore';
@@ -212,7 +202,6 @@ const getBookingFlow = (booking) => {
 };
 
 const getAssetRawValueAtDate = (asset, targetDate) => {
-    // Wertpapiere (mit Stückzahlen)
     if (isSecurity(asset.assetClass)) {
         const sh = getAssetSharesAtDate(asset, targetDate);
         if (sh <= 0) return 0;
@@ -221,7 +210,6 @@ const getAssetRawValueAtDate = (asset, targetDate) => {
         if (pr > 0) return sh * pr;
     }
 
-    // Konten & verwaltete Vermögen (Berechnung über Saldo & Cashflow)
     let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
     let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
     let baseAmount = applicableBalance ? Number(applicableBalance.amount) : 0;
@@ -281,6 +269,106 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
     return rawValue * parseRate(applicableRate || 1);
 };
 
+// --- NEUE FUNKTION: Investiertes Kapital berechnen (inkl. FX-Handhabung) ---
+const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
+    let investedRaw = 0;
+    
+    const ac = (asset.assetClass || '').toLowerCase();
+    const isFluctuating = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(ac);
+    
+    if (isFluctuating) {
+        // Salden definieren bei schwankenden Anlagen NICHT das investierte Kapital (nur historische Kostenbasis am Start)
+        let allEntries = [
+            ...(asset.balances || []).map(b => ({...b, _isBal: true})),
+            ...(asset.bookings || [])
+        ].filter(e => e.date <= targetDate).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+        let hasInitialInvested = false;
+
+        allEntries.forEach(bk => {
+            if (bk._isBal) {
+                if (!hasInitialInvested && investedRaw === 0) {
+                     investedRaw = Number(bk.amount || 0);
+                     hasInitialInvested = true;
+                }
+            } else {
+                if (['Kauf', 'Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') {
+                    investedRaw += Number(bk.amount || 0);
+                    hasInitialInvested = true;
+                }
+                if (['Verkauf', 'Auszahlung'].includes(bk.type)) {
+                    investedRaw -= Number(bk.amount || 0);
+                }
+            }
+        });
+    } else {
+        // Klassische Konten (Salden überschreiben alle vorherigen Buchungen)
+        let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+        let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+        let baseDate = '1970-01-01';
+
+        if (applicableBalance) {
+            investedRaw = applicableBalance.amount;
+            baseDate = applicableBalance.date;
+        }
+
+        (asset.bookings || []).forEach(bk => {
+            if (applicableBalance) {
+                if (bk.date > baseDate && bk.date <= targetDate) {
+                    if (['Kauf'].includes(bk.type)) investedRaw += Number(bk.amount);
+                    if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') investedRaw += Number(bk.amount);
+                    if (['Verkauf', 'Auszahlung'].includes(bk.type)) investedRaw -= Number(bk.amount);
+                }
+            } else {
+                if (bk.date <= targetDate) {
+                    if (['Kauf'].includes(bk.type)) investedRaw += Number(bk.amount);
+                    if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') investedRaw += Number(bk.amount);
+                    if (['Verkauf', 'Auszahlung'].includes(bk.type)) investedRaw -= Number(bk.amount);
+                }
+            }
+        });
+    }
+
+    // Wenn Heimatwährung, direkt roh zurückgeben
+    if (!asset.currency || asset.currency === 'CHF') return investedRaw;
+
+    // Wechselkurs-Ermittlung analog zu getAssetValueAtDate
+    if (targetDate >= getTodayStr() && asset.exchangeRate) {
+        return investedRaw * parseRate(asset.exchangeRate);
+    }
+
+    let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+    let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+    let applicableRate = applicableBalance && applicableBalance.bookingExchangeRate ? applicableBalance.bookingExchangeRate : parseRate(asset.exchangeRate);
+    let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+
+    if (asset.bookings) {
+        asset.bookings.forEach(bk => {
+            if (bk.date > baseDate && bk.date <= targetDate) {
+                if (bk.bookingExchangeRate && bk.bookingExchangeRate !== 1) applicableRate = bk.bookingExchangeRate;
+            }
+        });
+    }
+
+    if (!applicableRate || applicableRate === 1) {
+        let latestDate = '1970-01-01';
+        allAssets.forEach(otherAsset => {
+            if (otherAsset.currency === asset.currency) {
+                if (otherAsset.bookings) {
+                    otherAsset.bookings.forEach(b => {
+                        if (b.bookingExchangeRate && b.bookingExchangeRate !== 1 && b.date <= targetDate && b.date > latestDate) {
+                            applicableRate = b.bookingExchangeRate;
+                            latestDate = b.date;
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    return investedRaw * parseRate(applicableRate || 1);
+};
+
 const getTotalWealthAtDate = (assets, date) => assets.reduce((sum, a) => sum + getAssetValueAtDate(a, date, assets), 0);
 
 const generateMonthEnds = (startStr, endStr) => {
@@ -324,10 +412,15 @@ const getNormalizedBookings = (assets) => {
         (asset.bookings || []).forEach(bk => {
             const classif = classifyBooking(bk, asset);
             
+            // KORREKTUR: FX-Rate der Einzelbuchung priorisieren!
+            const bkRate = bk.bookingExchangeRate ? parseRate(bk.bookingExchangeRate) : 0;
+            const assetRate = parseRate(asset.exchangeRate || 1);
+            const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
+            
             allBookings.push({
                 ...bk,
                 ...classif, 
-                _baseValue: Number(bk.amount) * parseRate(asset.exchangeRate || 1),
+                _baseValue: Number(bk.amount || 0) * appliedRate,
                 assetName: asset.name
             });
         });
@@ -344,6 +437,7 @@ module.exports = {
     getAssetPriceAtDate,
     getAssetRawValueAtDate, 
     getAssetValueAtDate, 
+    getInvestedCapitalAtDate, // NEU EXPORTIERT
     getTotalWealthAtDate, 
     generateMonthEnds, 
     calcLinearRegression, 

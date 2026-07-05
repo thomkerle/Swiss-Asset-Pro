@@ -48,6 +48,92 @@ const FinBundleLogo = ({ className = "h-24 w-24" }) => (
   </svg>
 );
 
+const AboutDialog = ({ setModalObj, t }) => {
+    const [activeTab, setActiveTab] = React.useState('about');
+
+    const licenses = [
+        { name: "React / React-DOM", license: "MIT" },
+        { name: "Apache ECharts", license: "Apache 2.0" },
+        { name: "Plotly.js", license: "MIT" },
+        { name: "Chart.js", license: "MIT" },
+        { name: "pdfmake", license: "MIT" },
+        { name: "html2canvas", license: "MIT" },
+        { name: "JSZip", license: "MIT" },
+        { name: "Tailwind CSS", license: "MIT" },
+        { name: "crypto-js", license: "MIT" },
+        { name: "exceljs", license: "MIT" },
+        { name: "Babel", license: "MIT" }
+    ];
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all scale-100">
+                
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                        <Icon name="Info" className="text-blue-500" />
+                        <h3 className="font-bold text-base tracking-tight">{t('helpAbout') || 'Über FinBundle'}</h3>
+                    </div>
+                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                        <Icon name="X" size={20}/>
+                    </button>
+                </div>
+                    
+                {/* Logo Bereich */}
+                <div className="bg-white dark:bg-slate-900 pt-8 pb-4 flex justify-center">
+                    <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
+                        <FinBundleLogo className="h-24 w-24" />
+                    </div>
+                </div>
+                
+                {/* Tab Navigation */}
+                <div className="flex gap-1 px-6 pt-2 mb-2">
+                    <button 
+                        onClick={() => setActiveTab('about')} 
+                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all ${activeTab === 'about' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+                        {t('tabAbout') || 'Über'}
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('licenses')} 
+                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all ${activeTab === 'licenses' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+                        {t('tabLicenses') || 'Lizenzen'}
+                    </button>
+                </div>
+
+                {/* Content Bereich: h-[250px] sorgt für eine geringere Höhe */}
+                <div className="px-6 pb-6 h-[250px] overflow-y-auto custom-scrollbar">
+                    {activeTab === 'about' ? (
+                        <div className="text-center space-y-3 mt-2">
+                            <h2 className="text-xl font-black text-slate-800 dark:text-white">FinBundle Pro</h2>
+                            <p className="text-xs text-blue-500 font-bold bg-blue-50 dark:bg-blue-900/20 py-1 px-3 rounded-full inline-block">Version Beta - 0.9.8</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 px-2">{t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer.'}</p>
+                            <p className="text-[10px] text-gray-400 pt-4 font-medium uppercase tracking-widest">© {new Date().getFullYear()} Thomas Kerle</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            {licenses.map((lib, i) => (
+                                <div key={i} className="flex justify-between py-2 px-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors group">
+                                    <span className="font-bold text-xs text-slate-700 dark:text-slate-300">{lib.name}</span>
+                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-bold">{lib.license}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                
+                {/* Footer Button */}
+                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30">
+                    <button onClick={() => setModalObj(null)} className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-sm">
+                        {t('btnClose') || 'Schließen'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const App = () => {
   const [fileHandle, setFileHandle] = useState(null);
   
@@ -163,7 +249,19 @@ const App = () => {
     initializeCdns();
   }, []);
 
-  useEffect(() => { setIsTreeVisible(!activeReport); }, [activeReport]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Zwei Timeouts stellen sicher, dass sowohl sofortige als auch 
+    // eventuell CSS-animierte Layout-Änderungen sauber abgedeckt werden.
+    const timer1 = setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
+    const timer2 = setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 350);
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [isTreeVisible, activeReport, viewMode]);
 
   useEffect(() => {
     try {
@@ -212,10 +310,9 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.7", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.8", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
-              goals: { fire: { target: 500000, year: 2040 } }, scenarios: []
-          });
+	goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          });
           setSelectedNode(null); setActiveReport(null); showToast(t('msgNewProjectSuccess') || 'Neues Projekt erstellt', "success");
       }
   };
@@ -604,51 +701,9 @@ const App = () => {
           return <HelpViewer setModalObj={setModalObj} lang={lang} />;
       }
 
-      if (modalObj.type === 'about') return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all">
-                  <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                          <Icon name="Info" className="text-blue-500" />
-                          <h3 className="font-bold text-lg">{t('helpAbout') || 'Über FinBundle'}</h3>
-                      </div>
-                      <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
-                          <Icon name="X" size={20}/>
-                      </button>
-                  </div>
-                  
-                  <div className="p-6 text-center space-y-4">
-                      <div className="flex justify-center mb-2">
-                          <div className="p-2">
-                              <FinBundleLogo className="h-28 w-28 drop-shadow-xl" />
-                          </div>
-                      </div>
-                      
-                      <div>
-                          <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">FinBundle Pro</h2>
-                          <p className="text-md font-bold text-blue-600 dark:text-blue-400 mt-1">Version Beta - 0.9.7</p>
-                      </div>
-                      
-                      <hr className="border-gray-200 dark:border-slate-700 my-4" />
-                      
-                      <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                          <p>{t('aboutDesc') || 'Ganzheitliche Finanzplanung.'}</p>
-                      </div>
-
-                      <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 text-xs text-gray-500 dark:text-gray-400">
-                          <p className="font-semibold text-gray-700 dark:text-gray-300">{t('aboutDev') || 'Entwickelt von Thomas Kerle'}</p>
-                          <p>&copy; {new Date().getFullYear()} Thomas Kerle. {t('aboutRights') || 'Alle Rechte vorbehalten.'}</p>
-                      </div>
-                  </div>
-                  
-                  <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-center">
-                      <button onClick={() => setModalObj(null)} className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition-colors">
-                          {t('btnClose') || 'Schließen'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      );		
+      if (modalObj.type === 'about') {
+          return <AboutDialog setModalObj={setModalObj} t={t} />;
+      }
 
       if (modalObj.type === 'deleteNode') {
           const node = modalObj.node;
@@ -885,7 +940,7 @@ const App = () => {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.7</span>
+              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.8</span>
           </div>
       </div>
 

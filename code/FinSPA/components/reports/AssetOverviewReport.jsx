@@ -280,13 +280,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   if (sortedClasses.length === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12">
-        <ReportHeader 
-            title={repTitle} 
-            subtitle={`${repSub} ${new Date(targetDate).toLocaleDateString('de-CH')}`} 
-            isTreeVisible={isTreeVisible} 
-            setIsTreeVisible={setIsTreeVisible} 
-        />
-        <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
+               <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? t('noActiveAssets') || 'Keine aktiven Anlagen gefunden.' : 'Keine aktiven Anlagen gefunden.'}</p>
         </div>
@@ -296,13 +290,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-      <ReportHeader 
-          title={repTitle} 
-          subtitle={`${repSub} ${new Date(targetDate).toLocaleDateString('de-CH')}`} 
-          isTreeVisible={isTreeVisible} 
-          setIsTreeVisible={setIsTreeVisible} 
-      />
-
+     
       <div className="w-full bg-white dark:bg-transparent">
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-1">
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">

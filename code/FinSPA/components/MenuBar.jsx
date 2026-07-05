@@ -25,14 +25,172 @@ const MenuBarLogo = ({ className = "h-5 w-5" }) => (
   </svg>
 );
 
-// --- ECHTE BANK-SPARKLINES ÜBER DATAENGINE ---
+// --- INTERAKTIVE MINI-SPARKLINE (MODERN TRADING APP STYLE) ---
+const MiniSparkline = ({ id, label, history, dates, formatValue }) => {
+  const [hoverIdx, setHoverIdx] = React.useState(null);
+
+  if (!history || history.length === 0 || history.every(v => v === 0)) return null;
+
+  const first = history[0];
+  const last = history[history.length - 1];
+  const overallUp = last >= first;
+
+  // Berechnung der prozentualen Veränderung seit dem ersten Wert (vor 6 Monaten)
+  const pctChange = first !== 0 ? ((last - first) / first) * 100 : 0;
+
+  // Moderne Finanz-App Farben (Trade Republic / Robinhood Style)
+  const colorUp = '#4ade80'; // Neon Grün
+  const colorDown = '#fb7185'; // Neon Pink/Rot
+  const activeColor = overallUp ? colorUp : colorDown;
+
+  const min = Math.min(...history);
+  const max = Math.max(...history);
+  const range = (max - min) || 0.0001; 
+
+  const width = 60; // Leicht schmaler für kompakteren Look
+  const height = 24;
+
+  const ptsObj = history.map((val, i) => {
+      const x = (i / (history.length - 1)) * width;
+      // Kurve vom Rand fernhalten, um Platz für Linie und Dot zu lassen
+      const y = (height - 3) - ((val - min) / range) * (height - 6); 
+      return { x, y, val, date: dates ? dates[i] : '' };
+  });
+
+  const linePath = `M ${ptsObj.map(p => `${p.x},${p.y}`).join(' L ')}`;
+  // Pfad für den Gradient-Fill: Geht von der Kurve nach unten rechts, dann nach unten links und schliesst den Kreis.
+  const areaPath = `${linePath} L ${width},${height} L 0,${height} Z`;
+
+  const handleMouseMove = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const pct = x / rect.width;
+      const MathIdx = Math.round(pct * (history.length - 1));
+      const idx = Math.min(Math.max(MathIdx, 0), history.length - 1);
+      setHoverIdx(idx);
+  };
+
+  const displayVal = hoverIdx !== null ? history[hoverIdx] : last;
+  const isHovered = hoverIdx !== null;
+  const endPoint = ptsObj[ptsObj.length - 1];
+
+  return (
+    // Reduziertes Gap auf gap-1.5 für kompakteren Aufbau
+    <div 
+        className="flex items-center gap-1.5 opacity-95 hover:opacity-100 transition-opacity relative group"
+        onMouseLeave={() => setHoverIdx(null)}
+    >
+      {/* 1. Label auf der linken Seite */}
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+        {label} 
+      </span>
+
+      {/* 2. Graphik in der Mitte */}
+      <svg 
+          width={width} 
+          height={height} 
+          className="overflow-visible cursor-crosshair ml-1 mr-1"
+          onMouseMove={handleMouseMove}
+      >
+        <defs>
+          <linearGradient id={`grad-${id}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={activeColor} stopOpacity="0.5" />
+            <stop offset="100%" stopColor={activeColor} stopOpacity="0.0" />
+          </linearGradient>
+          <filter id={`glow-${id}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Gepunktete Base-Linie */}
+        <line 
+            x1="0" y1={height} 
+            x2={width} y2={height} 
+            stroke="#475569" strokeWidth="1.5" strokeDasharray="1,4" strokeLinecap="round" opacity="0.8" 
+        />
+        
+        {/* Flächenfüllung (Gradient) */}
+        <path 
+            d={areaPath} 
+            fill={`url(#grad-${id})`} 
+            className="pointer-events-none"
+        />
+
+        {/* Die eigentliche Kurve */}
+        <path 
+            d={linePath} 
+            fill="none" 
+            stroke={activeColor} 
+            strokeWidth="1.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="pointer-events-none"
+        />
+
+        {/* Pulsierender Punkt am Ende der Kurve */}
+        {!isHovered && (
+            <circle 
+                cx={endPoint.x} cy={endPoint.y} r="2.5" 
+                fill={activeColor} 
+                filter={`url(#glow-${id})`}
+                className="pointer-events-none animate-pulse" 
+            />
+        )}
+
+        {/* Hover-Punkt und gestrichelte Indikator-Linie */}
+        {isHovered && (
+            <g className="pointer-events-none">
+                <line 
+                    x1={ptsObj[hoverIdx].x} y1={0} 
+                    x2={ptsObj[hoverIdx].x} y2={height} 
+                    stroke="#94a3b8" strokeWidth="1" strokeDasharray="2,2" opacity="0.6" 
+                />
+                <circle 
+                    cx={ptsObj[hoverIdx].x} cy={ptsObj[hoverIdx].y} r="3" 
+                    fill="#0f172a" stroke={activeColor} strokeWidth="1.5" 
+                />
+            </g>
+        )}
+      </svg>
+
+      {/* 3. Wert und Prozent-Veränderung auf der rechten Seite */}
+      <div className="flex flex-col justify-center items-end">
+          <span className="font-mono text-[13px] font-bold text-slate-100 leading-tight tracking-tight">
+              {formatValue(displayVal)}
+          </span>
+          <span className={`text-[9px] font-black px-1.5 py-[2px] rounded flex items-center gap-0.5 mt-0.5 leading-none tracking-wider ${overallUp ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+             <Icon name={overallUp ? "ArrowUpRight" : "ArrowDownRight"} size={10} />
+             {Math.abs(pctChange).toFixed(2)}%
+          </span>
+      </div>
+
+      {/* Tooltip für das exakte Datum beim Hovern */}
+      {isHovered && (
+          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-xl rounded-lg px-2.5 py-1 z-50 pointer-events-none animate-fade-in">
+              <span className="text-[9px] text-slate-300 font-bold uppercase">{ptsObj[hoverIdx].date}</span>
+          </div>
+      )}
+    </div>
+  );
+};
+
+// --- SPARKLINES CONTAINER ---
 const BankSparklines = ({ data }) => {
   const banks = data?.banks || [];
+  const baseCurrency = data?.settings?.baseCurrency || 'CHF';
   
+  const [fxData, setFxData] = React.useState(null);
+  const [fxCurrency, setFxCurrency] = React.useState('EUR');
+
   if (!banks.length || typeof getAllAssets !== 'function') return null;
 
-  const displayBanks = banks.slice(0, 4);
+  const allAssets = React.useMemo(() => getAllAssets(banks), [banks]);
 
+  // 1. Datenpunkte für die Zeitachse ermitteln (letzte 6 Monate)
   const dates = React.useMemo(() => {
     const today = new Date();
     const sixMonthsAgo = new Date();
@@ -45,94 +203,106 @@ const BankSparklines = ({ data }) => {
     return d;
   }, []);
 
-  const allAssets = React.useMemo(() => getAllAssets(banks), [banks]);
+  // 2. Gesamtvermögen Historie berechnen
+  const wealthHistory = React.useMemo(() => {
+    return dates.map(date => 
+      allAssets.reduce((sum, asset) => sum + (getAssetValueAtDate ? getAssetValueAtDate(asset, date, allAssets) : 0), 0)
+    );
+  }, [dates, allAssets]);
+
+  // 3. Fremdwährung automatisch erkennen
+  React.useEffect(() => {
+     const currencies = allAssets.map(a => a.currency).filter(c => c && c !== baseCurrency);
+     const counts = currencies.reduce((acc, c) => { acc[c] = (acc[c]||0)+1; return acc; }, {});
+     const mostCommon = Object.keys(counts).sort((a,b) => counts[b] - counts[a])[0];
+     
+     if (mostCommon) {
+         setFxCurrency(mostCommon);
+     } else if (data?.settings?.exchangeRates) {
+         const available = Object.keys(data.settings.exchangeRates).filter(c => c !== baseCurrency);
+         if (available.length > 0) setFxCurrency(available[0]);
+     }
+  }, [allAssets, baseCurrency, data]);
+
+  // 4. Historie des FX-KURSES über die Frankfurter API
+  React.useEffect(() => {
+    if (!fxCurrency || fxCurrency === baseCurrency) return;
+    
+    const startStr = dates[0];
+    const endStr = dates[dates.length - 1];
+
+    const fetchHistory = async () => {
+      let resData = null;
+
+      // Versuch 1: Frankfurter V2 (dev)
+      try {
+          const res = await fetch(`https://api.frankfurter.dev/v1/${startStr}..${endStr}?base=${fxCurrency}&symbols=${baseCurrency}`);
+          if (res.ok) {
+              resData = await res.json();
+          }
+      } catch(e) { console.warn("[FinBundle] Frankfurter V2 fetch failed", e); }
+
+      // Versuch 2: Frankfurter V1 (app) Fallback
+      if (!resData) {
+          try {
+              const res2 = await fetch(`https://api.frankfurter.app/${startStr}..${endStr}?base=${fxCurrency}&symbols=${baseCurrency}`);
+              if (res2.ok) {
+                  resData = await res2.json();
+              }
+          } catch(e) { console.warn("[FinBundle] Frankfurter V1 fetch failed", e); }
+      }
+
+      // Daten verarbeiten
+      if (resData && resData.rates) {
+          const history = dates.map(d => {
+              let rate = null;
+              let checkDate = new Date(d);
+              // Gehe bis zu 10 Tage zurück, falls Feiertag/Wochenende ist
+              for(let i=0; i<10; i++) { 
+                  const dStr = checkDate.toISOString().split('T')[0];
+                  if (resData.rates[dStr]) {
+                      rate = resData.rates[dStr][baseCurrency];
+                      break;
+                  }
+                  checkDate.setDate(checkDate.getDate() - 1);
+              }
+              return rate || (data?.settings?.exchangeRates?.[fxCurrency] || 1);
+          });
+          setFxData(history);
+      }
+    };
+
+    fetchHistory();
+  }, [fxCurrency, baseCurrency, dates, data]);
+
+  // Fallback, solange die API lädt
+  const finalFxHistory = fxData || dates.map(() => data?.settings?.exchangeRates?.[fxCurrency] || 1);
 
   return (
-    <div className="hidden xl:flex items-center gap-5 px-3 py-1 bg-slate-950/60 border border-slate-800 rounded-full h-7 shadow-inner mr-2 relative z-10" style={{ WebkitAppRegion: 'no-drag' }}>
-      {displayBanks.map(bank => {
-        const bankAssets = getAllAssets([bank]);
-        
-        const history = dates.map(date => 
-          bankAssets.reduce((sum, asset) => sum + (getAssetValueAtDate ? getAssetValueAtDate(asset, date, allAssets) : 0), 0)
-        );
+    // Reduziertes Gap auf gap-4 und Padding auf px-3
+    <div className="hidden xl:flex items-center gap-4 px-3 py-1.5 bg-slate-950/60 border border-slate-800 rounded-full shadow-inner mr-2 relative z-10" style={{ WebkitAppRegion: 'no-drag' }}>
+      
+      {/* Sparkline 1: GESAMTVERMÖGEN */}
+      <MiniSparkline
+        id="total-wealth"
+        label="GESAMT"
+        history={wealthHistory}
+        dates={dates}
+        formatValue={(val) => `${val.toLocaleString('de-CH', { maximumFractionDigits: 0 })} ${baseCurrency}`}
+      />
 
-        if (history.every(v => v === 0)) return null;
+      {/* Trenner */}
+      <div className="w-px h-5 bg-slate-800"></div>
 
-        const first = history[0];
-        const last = history[history.length - 1];
-        
-        const overallUp = last >= first;
-        
-        const curveColor = overallUp ? '#22c55e' : '#ef4444'; 
-        const arrowColor = overallUp ? '#a3e635' : '#fb7185'; 
-        
-        const min = Math.min(...history);
-        const max = Math.max(...history);
-        const range = (max - min) || 1; 
-        
-        const ptsObj = history.map((val, i) => {
-            const x = (i / (history.length - 1)) * 40;
-            const y = 14 - ((val - min) / range) * 12; 
-            return { x, y, val };
-        });
+      {/* Sparkline 2: FX RATE AUS DATAENGINE MIT TEXT-ANZEIGE */}
+      <MiniSparkline
+        id="fx-rate"
+        label={`${fxCurrency}/${baseCurrency}`}
+        history={finalFxHistory}
+        dates={dates}
+        formatValue={(val) => val.toFixed(4)}
+      />
 
-        const pathData = `M ${ptsObj.map(p => `${p.x},${p.y}`).join(' L ')}`;
-
-        return (
-          <div key={bank.id} className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity" title={`${bank.name}: ${last.toLocaleString()} CHF`}>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider max-w-[45px] truncate">
-              {bank.name}
-            </span>
-            <svg width="40" height="16" className="overflow-visible">
-              <defs>
-                <filter id={`3d-${bank.id}`} x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0.5" dy="1.5" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.8" />
-                </filter>
-                
-                <filter id={`glow-${bank.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-
-              <path d="M 0 1 L 0 15 L 40 15" fill="none" stroke="#64748b" strokeWidth="1.2" opacity="0.7" strokeLinecap="square" strokeLinejoin="miter" />
-              
-              <g filter={`url(#3d-${bank.id})`}>
-                {ptsObj.slice(0, -1).map((p1, i) => {
-                  const p2 = ptsObj[i+1];
-                  const isSegUp = p2.val >= p1.val;
-                  const segColor = isSegUp ? '#22c55e' : '#ef4444'; 
-
-                  return (
-                    <line
-                      key={i}
-                      x1={p1.x} y1={p1.y}
-                      x2={p2.x} y2={p2.y}
-                      stroke={segColor}
-                      strokeWidth="2.5" 
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  );
-                })}
-              </g>
-              
-              <path 
-                d={overallUp ? "M -4.5 4.5 L 0 -4.5 L 4.5 4.5 L 0 1.5 Z" : "M -4.5 -4.5 L 0 4.5 L 4.5 -4.5 L 0 -1.5 Z"} 
-                fill={arrowColor} 
-                filter={`url(#glow-${bank.id})`}
-                opacity="0.95"
-              >
-                <animateMotion dur="4.5s" repeatCount="indefinite" path={pathData} calcMode="linear" />
-              </path>
-            </svg>
-          </div>
-        );
-      })}
     </div>
   );
 };
@@ -197,7 +367,7 @@ const MenuBar = ({
 
   return (
     <div 
-      className={`print-hide flex bg-slate-900 text-slate-200 select-none items-center shadow-md border-b border-slate-800/80 relative z-50 h-10 ${isStandalone && isMac ? 'pl-[70px]' : ''}`}
+      className={`print-hide flex bg-slate-900 text-slate-200 select-none items-center shadow-md border-b border-slate-800/80 relative z-50 h-11 ${isStandalone && isMac ? 'pl-[70px]' : ''}`}
       style={{ WebkitAppRegion: isStandalone ? 'drag' : 'auto' }}
     >
       <style>{`
@@ -216,7 +386,7 @@ const MenuBar = ({
         }
       `}</style>
 
-      {/* 1. VERGRÖSSERTES OVERFLOW-LOGO GANZ LINKS */}
+      {/* 1. VERGRÖSSERTES LOGO GANZ LINKS */}
       <div className="w-16 h-full bg-blue-600 flex items-center justify-center z-30 shadow-lg relative shrink-0" style={{ WebkitAppRegion: 'no-drag' }}>
         <MenuBarLogo className="h-14 w-14 absolute top-1/2 -translate-y-1/2 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] pointer-events-none" />
       </div>
@@ -249,24 +419,21 @@ const MenuBar = ({
               )}
             </MenuNestedItem>
             
-            {/* --- ERWEITERTES EXPORT-MENÜ --- */}
             <MenuNestedItem label={t ? t('fileExportTitle') : 'Exportieren'} iconName="Upload">
                 <MenuSubItem label={t ? t('fileExportCsv') : 'Buchungen exportieren'} iconName="List" onClick={handleExportCSV} />
                 <MenuSubItem label={t ? t('filePrintPdf') : 'Als PDF exportieren'} iconName="FileText" onClick={handleExportPDF} />
                 
-                {/* --- NEU: BATCH EXPORT FÜR DEN GESAMTREPORT --- */}
-<MenuSubItem 
-  label={(t && t('fileExportFullPdf') !== 'fileExportFullPdf') ? t('fileExportFullPdf') : 'Gesamtreport als PDF'} 
-  iconName="Layers" 
-  onClick={() => {
-    if (typeof window !== 'undefined' && window.showToast) {
-      window.showToast(t ? t('msgExportFullPdfStarted') || "Generiere Gesamtreport im Hintergrund..." : "Generiere Gesamtreport im Hintergrund...", "info");
-    }
-    window.dispatchEvent(new Event('triggerFullPdfBatch'));
-  }} 
-/>
+                <MenuSubItem 
+                  label={(t && t('fileExportFullPdf') !== 'fileExportFullPdf') ? t('fileExportFullPdf') : 'Gesamtreport als PDF'} 
+                  iconName="Layers" 
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.showToast) {
+                      window.showToast(t ? t('msgExportFullPdfStarted') || "Generiere Gesamtreport im Hintergrund..." : "Generiere Gesamtreport im Hintergrund...", "info");
+                    }
+                    window.dispatchEvent(new Event('triggerFullPdfBatch'));
+                  }} 
+                />
                 
-                {/* --- EXCEL EXPORT --- */}
                 <MenuSubItem 
                   label={t ? t('fileExportExcel') || 'Als Excel (.xlsx) exportieren' : 'Als Excel (.xlsx) exportieren'} 
                   iconName="FileExcel" 
@@ -284,7 +451,7 @@ const MenuBar = ({
                       }
                       if (!ExcelExportEngine) {
                         try { ExcelExportEngine = require('./print/ExcelExportEngine.jsx'); } 
-                        catch(e) { ExcelExportEngine = require('../print/ExcelExportEngine.jsx'); }
+                        catch(err) { ExcelExportEngine = require('../print/ExcelExportEngine.jsx'); }
                       }
 
                       if (!ExcelExportEngine || typeof ExcelExportEngine.exportPortfolio !== 'function') {
@@ -370,7 +537,7 @@ const MenuBar = ({
           </MenuItem>
       </div>
 
-      {/* 3. ZENTRIERTER TITEL (z-0) */}
+      {/* 3. ZENTRIERTER TITEL */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0">
           <span className="text-sm font-black tracking-[0.2em] uppercase glow-title drop-shadow-md whitespace-nowrap">
               {Array.from("FinBundle PRO").map((char, index) => (
@@ -406,16 +573,16 @@ const MenuBar = ({
 
         {isStandalone && !isMac && (
           <div className="flex items-center border-l border-slate-800/60 h-full">
-  <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all" onClick={() => handleWindowAction('minimize')} title={t ? t('titleMinimize') : 'Minimieren'}>
-    <Icon name="Minus" size={15} />
-  </div>
-  <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all" onClick={() => handleWindowAction('maximize')} title={t ? t('titleMaximize') : 'Maximieren/Wiederherstellen'}>
-    <Icon name="Square" size={13} />
-  </div>
-  <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-red-500 transition-all" onClick={() => handleWindowAction('close')} title={t ? t('titleCloseWindow') : 'Schließen'}>
-    <Icon name="X" size={15} />
-  </div>
-</div>
+            <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all" onClick={() => handleWindowAction('minimize')} title={t ? t('titleMinimize') : 'Minimieren'}>
+              <Icon name="Minus" size={15} />
+            </div>
+            <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all" onClick={() => handleWindowAction('maximize')} title={t ? t('titleMaximize') : 'Maximieren/Wiederherstellen'}>
+              <Icon name="Square" size={13} />
+            </div>
+            <div className="px-3.5 h-full flex items-center cursor-pointer text-slate-400 hover:text-white hover:bg-red-500 transition-all" onClick={() => handleWindowAction('close')} title={t ? t('titleCloseWindow') : 'Schließen'}>
+              <Icon name="X" size={15} />
+            </div>
+          </div>
         )}
       </div>
     </div>

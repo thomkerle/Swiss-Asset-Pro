@@ -236,7 +236,6 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12">
       <div className="mb-8 border-b border-gray-200 dark:border-slate-800 pb-6">
-         <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
       </div>
 
       <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">

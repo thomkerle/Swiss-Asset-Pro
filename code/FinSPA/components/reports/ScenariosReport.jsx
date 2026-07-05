@@ -1,5 +1,5 @@
 const React = require('react');
-const { useEffect, useRef } = React;
+const { useEffect, useRef, useState } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -10,15 +10,21 @@ const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.Pd
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart;
 const { getTotalWealthAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 
-const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, setModalObj, fCur, t }) => {
+const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, setModalObj, fCur, t }) => {
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
 
-  // 1. Aktueller Stand
+  // --- LOKALE MODAL STATES ---
+  const [editGoalModal, setEditGoalModal] = useState(false);
+  const [goalTarget, setGoalTarget] = useState(data.goals?.fire?.target || 0);
+  const [goalYear, setGoalYear] = useState(data.goals?.fire?.year || new Date().getFullYear());
+
+  const [scenarioModal, setScenarioModal] = useState(null);
+
+  // 1. Aktueller Stand & Mathematik (abgesichert gegen 0)
   const currentWealth = getTotalWealthAtDate(activeAssets, dateRange.to);
   const fireTarget = data.goals?.fire?.target || 0;
-  const safeFireTarget = Math.max(1, fireTarget); // Verhindert Division durch Null
-  const fireProg = Math.min(100, (currentWealth / safeFireTarget) * 100);
+  const fireProg = fireTarget > 0 ? Math.min(100, (currentWealth / fireTarget) * 100) : 0;
 
   // 2. Szenarien auswerten (Impact-Berechnung)
   const scenarios = data.scenarios || [];
@@ -26,12 +32,52 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   
   // 3. Projizierter Stand (Aktuell + Impact)
   const projectedWealth = currentWealth + totalImpact;
-  const projectedProg = Math.min(100, (projectedWealth / safeFireTarget) * 100);
+  const projectedProg = fireTarget > 0 ? Math.min(100, (projectedWealth / fireTarget) * 100) : 0;
   const isProjectedPositive = totalImpact >= 0;
 
   // Text-Variablen
   const titleText = t ? (t('repScenFireTitle') || "Szenarien & FIRE Ziel") : "Szenarien & FIRE Ziel";
   const subText = t ? (t('repScenFireSub') || "Auswirkungsanalyse und Projektion") : "Auswirkungsanalyse und Projektion";
+
+  // --- DATEN SPEICHERN & LÖSCHEN ---
+  const saveGoal = () => {
+      const valTarget = Number(goalTarget);
+      const valYear = Number(goalYear);
+      if (!isNaN(valTarget) && valTarget >= 0) {
+          const newGoals = {
+              ...data.goals,
+              fire: { ...data.goals?.fire, target: valTarget, year: valYear }
+          };
+          if (updateTreeData) updateTreeData({ goals: newGoals });
+      }
+      setEditGoalModal(false);
+  };
+
+  const saveScenario = () => {
+      const newScenarios = [...scenarios];
+      const scData = {
+          name: scenarioModal.name,
+          date: scenarioModal.date,
+          impact: Number(scenarioModal.impact) || 0
+      };
+      
+      if (scenarioModal.isNew) {
+          newScenarios.push(scData);
+      } else {
+          newScenarios[scenarioModal.index] = scData;
+      }
+      
+      if (updateTreeData) updateTreeData({ scenarios: newScenarios });
+      setScenarioModal(null);
+  };
+
+  const handleDeleteScenario = (index) => {
+      if (window.confirm(t ? t('confirmDeleteScenario') || 'Möchten Sie dieses Szenario wirklich löschen?' : 'Möchten Sie dieses Szenario wirklich löschen?')) {
+          const newScenarios = [...scenarios];
+          newScenarios.splice(index, 1);
+          if (updateTreeData) updateTreeData({ scenarios: newScenarios });
+      }
+  };
 
   const loadHtml2Canvas = () => {
     return new Promise((resolve) => {
@@ -44,7 +90,6 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -52,21 +97,18 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. KPI Block
         const kpiBlock = document.querySelector('.kpi-scenarios-export-block');
         if (kpiBlock) {
             const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
 
-        // 2. Chart Block
         const chartBlock = document.querySelector('.chart-scenarios-export-block');
         if (chartBlock) {
             const canvas = await html2canvas(chartBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
             chartsData.push({ title: t ? t('titleProgressProjection') || 'Fortschritt & Projektion' : 'Fortschritt & Projektion', image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
         }
 
-        // 3. Tabellendaten generieren
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
           capitalize(t ? t('scenarioName') || 'Szenario / Ereignis' : 'Szenario / Ereignis'),
@@ -93,7 +135,6 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -108,17 +149,16 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           data: data
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im ScenariosReport:", err);
+        console.error("[FinBundle Pro] PDF Export Error im ScenariosReport:", err);
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
                 const { chartsData, tableHeaders, tableBody } = await buildReportData();
                 resolve({
-                    order: 11, // Passende Reihenfolge im Gesamtreport
+                    order: 11, 
                     title: titleText,
                     subtitle: `${subText} | ${t ? t('labelFireGoal') || 'Ziel' : 'Ziel'}: ${fCur(fireTarget)}`,
                     tableHeaders,
@@ -126,7 +166,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im ScenariosReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error im ScenariosReport:", err);
                 resolve(null);
             }
         });
@@ -147,13 +187,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
   return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-          <ReportHeader 
-            title={titleText} 
-            subtitle={subText} 
-            isTreeVisible={isTreeVisible} 
-            setIsTreeVisible={setIsTreeVisible} 
-          />
-
+        
           <div className="w-full bg-white dark:bg-transparent">
               
               {/* KPI DASHBOARD ROW */}
@@ -165,7 +199,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         <Icon name="Database" size={14} className="text-slate-500"/>
                         {t ? t('labelStatusQuo') || 'Status Quo' : 'Status Quo'}
                     </div>
-                    <div className="text-2xl font-black text-slate-900 dark:text-white">
+                    <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
                         {fCur(currentWealth)}
                     </div>
                     <div className="text-xs text-gray-400 mt-2">
@@ -182,14 +216,18 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         name="Edit" 
                         size={14}
                         className="absolute top-4 right-4 text-amber-600/50 hover:text-amber-600 dark:text-amber-400/50 dark:hover:text-amber-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity" 
-                        onClick={() => setModalObj({type:'editGoal'})}
+                        onClick={() => {
+                            setGoalTarget(data.goals?.fire?.target || 0);
+                            setGoalYear(data.goals?.fire?.year || new Date().getFullYear());
+                            setEditGoalModal(true);
+                        }}
                         title={t ? t('tooltipEditGoal') || 'Ziel bearbeiten' : 'Ziel bearbeiten'}
                     />
                     <div className="text-amber-800 dark:text-amber-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 relative z-10">
                         <Icon name="Star" size={14} />
                         {t ? t('labelFireGoal') || 'FIRE Ziel' : 'FIRE Ziel'}
                     </div>
-                    <div className="text-2xl font-black text-amber-700 dark:text-amber-400 relative z-10">
+                    <div className="text-2xl font-black text-amber-700 dark:text-amber-400 relative z-10 truncate">
                         {fCur(fireTarget)}
                     </div>
                     <div className="text-xs font-medium mt-2 relative z-10 text-amber-700/70 dark:text-amber-500/70">
@@ -210,7 +248,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         <Icon name={isProjectedPositive ? "TrendingUp" : "TrendingDown"} size={14} />
                         {t ? t('labelTotalImpact') || 'Gesamtauswirkung' : 'Gesamtauswirkung'}
                     </div>
-                    <div className={`text-2xl font-black relative z-10 ${isProjectedPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    <div className={`text-2xl font-black relative z-10 truncate ${isProjectedPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {totalImpact > 0 ? '+' : ''}{fCur(totalImpact)}
                     </div>
                     <div className={`text-xs font-medium mt-2 relative z-10 ${isProjectedPositive ? 'text-emerald-700/70 dark:text-emerald-500/70' : 'text-rose-700/70 dark:text-rose-500/70'}`}>
@@ -227,7 +265,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         <Icon name="Wind" size={14} />
                         {t ? t('labelProjectedWealth') || 'Projektion' : 'Projektion'}
                     </div>
-                    <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 relative z-10">
+                    <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 relative z-10 truncate">
                         {fCur(projectedWealth)}
                     </div>
                     <div className="text-xs font-medium mt-2 relative z-10 text-indigo-700/70 dark:text-indigo-500/70">
@@ -253,7 +291,6 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         </h3>
                         
                         <div className="mt-8 mb-4 relative">
-                            {/* Marker für 100% */}
                             <div className="absolute right-0 top -top-6 bottom-0 border-r-2 border-dashed border-amber-300 dark:border-amber-700/50 z-0"></div>
                             
                             <div className="w-full bg-gray-100 dark:bg-slate-800 h-6 rounded-full overflow-hidden flex relative z-10 shadow-inner">
@@ -322,7 +359,7 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                             </div>
                             <button 
                                 className="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors flex items-center gap-1" 
-                                onClick={() => setModalObj({type:'addScenario'})}
+                                onClick={() => setScenarioModal({ isNew: true, name: '', date: new Date().toISOString().split('T')[0], impact: 0 })}
                             >
                                 <Icon name="Plus" size={12} /> {t ? t('labelBtnNew') || 'Neu' : 'Neu'}
                             </button>
@@ -351,10 +388,24 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                                                             <Icon name="Calendar" size={10}/> {new Date(sc.date).toLocaleDateString('de-CH')}
                                                         </div>
                                                     </td>
-                                                    <td className="p-4 pr-5 text-right align-middle">
+                                                    <td className="p-4 pr-5 text-right align-middle flex items-center justify-end gap-3">
                                                         <span className={`font-mono font-bold px-2 py-1 rounded ${isPos ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20' : 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20'}`}>
                                                             {isPos ? '+' : ''}{fCur(sc.impact)}
                                                         </span>
+                                                        <button 
+                                                            onClick={() => setScenarioModal({ isNew: false, index: i, name: sc.name, date: sc.date, impact: sc.impact })} 
+                                                            className="text-gray-400 hover:text-blue-500 transition-colors"
+                                                            title={t ? t('btnEdit') || 'Bearbeiten' : 'Bearbeiten'}
+                                                        >
+                                                            <Icon name="Edit" size={16} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteScenario(i)} 
+                                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                                            title={t ? t('btnDelete') || 'Löschen' : 'Löschen'}
+                                                        >
+                                                            <Icon name="Trash" size={16} />
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
@@ -388,6 +439,108 @@ const ScenariosReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 background-size: 1rem 1rem;
             }
           `}} />
+
+          {/* MODAL: FIRE Ziel bearbeiten */}
+          {editGoalModal && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                      <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex justify-between items-center">
+                          <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                              <Icon name="Target" className="text-blue-500" />
+                              {t ? t('editFireGoal') || 'FIRE Ziel anpassen' : 'FIRE Ziel anpassen'}
+                          </h3>
+                          <button onClick={() => setEditGoalModal(false)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                              <Icon name="X" size={20}/>
+                          </button>
+                      </div>
+                      <div className="p-6 space-y-5">
+                          <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t ? t('targetAmount') || 'Ziel-Betrag' : 'Ziel-Betrag'}</label>
+                              <input 
+                                  type="number" 
+                                  value={goalTarget} 
+                                  onChange={e => setGoalTarget(e.target.value)} 
+                                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100" 
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t ? t('targetYear') || 'Ziel-Jahr' : 'Ziel-Jahr'}</label>
+                              <input 
+                                  type="number" 
+                                  value={goalYear} 
+                                  onChange={e => setGoalYear(e.target.value)} 
+                                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100" 
+                              />
+                          </div>
+                      </div>
+                      <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex justify-end gap-3">
+                          <button onClick={() => setEditGoalModal(false)} className="px-5 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-xl font-bold transition-colors">
+                              {t ? t('btnCancel') || 'Abbrechen' : 'Abbrechen'}
+                          </button>
+                          <button onClick={saveGoal} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-sm">
+                              {t ? t('btnSave') || 'Speichern' : 'Speichern'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {/* MODAL: Szenario erstellen/bearbeiten */}
+          {scenarioModal && (
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+                      <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex justify-between items-center">
+                          <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                              <Icon name="Activity" className="text-emerald-500" />
+                              {scenarioModal.isNew ? (t ? t('newScenario') || 'Neues Szenario' : 'Neues Szenario') : (t ? t('editScenario') || 'Szenario bearbeiten' : 'Szenario bearbeiten')}
+                          </h3>
+                          <button onClick={() => setScenarioModal(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                              <Icon name="X" size={20}/>
+                          </button>
+                      </div>
+                      <div className="p-6 space-y-5">
+                          <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t ? t('scenarioName') || 'Bezeichnung' : 'Bezeichnung'}</label>
+                              <input 
+                                  type="text" 
+                                  value={scenarioModal.name} 
+                                  onChange={e => setScenarioModal({...scenarioModal, name: e.target.value})} 
+                                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100" 
+                                  placeholder="z.B. Erbschaft oder Hauskauf" 
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t ? t('scenarioDate') || 'Datum / Stichtag' : 'Datum / Stichtag'}</label>
+                              <input 
+                                  type="date" 
+                                  value={scenarioModal.date} 
+                                  onChange={e => setScenarioModal({...scenarioModal, date: e.target.value})} 
+                                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100" 
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t ? t('scenarioImpactAmount') || 'Auswirkung (+ oder -)' : 'Auswirkung (+ oder -)'}</label>
+                              <input 
+                                  type="number" 
+                                  value={scenarioModal.impact} 
+                                  onChange={e => setScenarioModal({...scenarioModal, impact: e.target.value})} 
+                                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-gray-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 dark:text-slate-100 font-mono" 
+                                  placeholder="z.B. 50000 oder -20000" 
+                              />
+                          </div>
+                      </div>
+                      <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex justify-end gap-3">
+                          <button onClick={() => setScenarioModal(null)} className="px-5 py-2.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-200 rounded-xl font-bold transition-colors">
+                              {t ? t('btnCancel') || 'Abbrechen' : 'Abbrechen'}
+                          </button>
+                          <button onClick={saveScenario} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-sm">
+                              {t ? t('btnSave') || 'Speichern' : 'Speichern'}
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
       </div>
   );
 };

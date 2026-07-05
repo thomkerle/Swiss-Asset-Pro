@@ -9,7 +9,6 @@ const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader |
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 
-// NEU: Wir importieren auch getAllAssets, um im Notfall die Assets selbst zu laden
 const { getAssetValueAtDate = () => 0, getAllAssets = () => [] } = DataEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
 
@@ -23,7 +22,6 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   const titleText = t ? (t('repTaxTitle') || 'Steuer-Report') : 'Steuer-Report';
   const subText = t ? (t('repTaxSub') || 'Vermögenswerte für die Steuererklärung') : 'Vermögenswerte für die Steuererklärung';
 
-  // KUGELSICHERER FALLBACK: Wenn activeAssets nicht übergeben wurde, holen wir sie uns direkt aus "data"
   const safeAssets = useMemo(() => {
       if (activeAssets && activeAssets.length > 0) return activeAssets;
       return getAllAssets(data?.banks || []).filter(a => !a.isArchived);
@@ -40,7 +38,6 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           const val = getAssetValueAtDate(a, taxDate, safeAssets);
           if (val === 0) return;
 
-          // Säule 3a und Pensionskasse sind in der Schweiz (während Ansparphase) steuerfrei vom Vermögen
           const isTaxFree = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(a.assetClass);
 
           if (isTaxFree) {
@@ -48,7 +45,7 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
               freeAssets.push({ name: a.name, val, class: a.assetClass });
           } else {
               tTaxable += val;
-              tWealth += val; // Nur steuerbares Vermögen zählt ins Total
+              tWealth += val; 
               taxAssets.push({ name: a.name, val, class: a.assetClass });
           }
       });
@@ -82,24 +79,59 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        const captureBlock = async (selector, titleFallback = '') => {
-            const el = document.querySelector(selector);
-            if (el) {
-                const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) });
-            }
-        };
+        // 1. Snapshot KPIs (Full-Width)
+        const kpiBlock = document.querySelector('.kpi-export-block');
+        if (kpiBlock) {
+            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
+        }
 
-        // Snapshot KPIs
-        await captureBlock('.dashboard-top-export-block', ''); 
-
-        // Snapshot Charts
+        // 2. Snapshot Charts (Moderne Extraktion via QuerySelector All & fit-Attribut)
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
                 const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
+                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div') || containers[i].querySelector('div');
+                
+                if (chartDiv && window.echarts) {
+                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
+                    if (chartInstance) {
+                        const currentOption = chartInstance.getOption();
+                        const hasLegend = currentOption.legend && currentOption.legend.length > 0;
+                        
+                        chartInstance.setOption({
+                            legend: hasLegend ? { 
+                                type: 'plain', bottom: 0, top: 'auto', left: 'center',
+                                icon: 'circle', itemGap: 12, itemWidth: 10, itemHeight: 10,
+                                textStyle: { fontSize: 11 }
+                            } : undefined,
+                            series: [{ center: ['50%', '35%'], radius: ['30%', '55%'] }] 
+                        });
+                        
+                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
+                        
+                        chartInstance.setOption({
+                            legend: hasLegend ? { 
+                                type: 'scroll', bottom: 0, top: 'auto', left: 'center',
+                                icon: 'circle', itemGap: 24, textStyle: { fontSize: 13 }
+                            } : undefined,
+                            series: [{ center: ['50%', '50%'], radius: ['45%', '75%'] }] 
+                        });
+                        
+                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
+                        continue;
+                    }
+                }
+                
+                const canvas = await html2canvas(containers[i], { 
+                    scale: 2, backgroundColor: bgColor, useCORS: true, logging: false,
+                    ignoreElements: (element) => {
+                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
+                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
+                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
+                    }
+                });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] }); 
             }
         }
 
@@ -112,7 +144,6 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
         
         const tableBody = [];
         
-        // Block 1: Steuerbares Vermögen
         if (taxableAssets.length > 0) {
             tableBody.push([{ text: labelTaxable.toUpperCase(), bold: true }, '', { text: fCur(taxableTotal), bold: true }]);
             taxableAssets.forEach(a => {
@@ -120,7 +151,6 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             });
         }
         
-        // Block 2: Steuerfreies Vermögen
         if (taxFreeAssets.length > 0) {
             tableBody.push(['', '', '']);
             tableBody.push([{ text: labelTaxFree.toUpperCase(), bold: true }, '', { text: fCur(taxFreeTotal), bold: true }]);
@@ -139,7 +169,6 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -154,11 +183,10 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           data
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im TaxReport:", err);
+        console.error("[FinBundle Pro] PDF Export Error im TaxReport:", err);
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -172,7 +200,7 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im TaxReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error im TaxReport:", err);
                 resolve(null);
             }
         });
@@ -191,11 +219,9 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
     };
   }, [taxableAssets, taxFreeAssets, taxableTotal, taxFreeTotal, totalWealth, taxDate, fCur, t, titleText, subText, data, year, labelTaxable, labelTaxFree]);
 
-  // Prüfung jetzt mit safeAssets statt activeAssets
   if (!safeAssets || safeAssets.length === 0) {
     return (
       <div className="max-w-6xl px-4 md:px-8 pb-12">
-        <ReportHeader title={titleText} subtitle={`${subText} (31.12.${year})`} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? t('noAssetsFound') || 'Keine Assets für den Steuer-Report gefunden.' : 'Keine Assets für den Steuer-Report gefunden.'}</p>
@@ -209,49 +235,49 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12">
-      <ReportHeader title={titleText} subtitle={`${subText} (31.12.${year})`} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
       <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* KPI EXPORT BLOCK */}
+          <div className="kpi-export-block grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-1">
              
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Landmark" size={14} className="text-blue-500" />
-                    {labelTaxable}
+                    <span>{String(labelTaxable).toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
-                    {fCur(taxableTotal)}
+                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2 break-words">
+                    <span>{fCur(taxableTotal)}</span>
                     <span className="text-sm text-gray-400 font-medium ml-1">({taxablePct.toFixed(1)}%)</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
-                    {t ? t('descTaxableWealth') || 'Unterliegt der regulären Vermögenssteuer' : 'Unterliegt der regulären Vermögenssteuer'}
+                    <span>{t ? t('descTaxableWealth') || 'Unterliegt der regulären Vermögenssteuer' : 'Unterliegt der regulären Vermögenssteuer'}</span>
                 </div>
              </div>
 
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-emerald-500" />
-                    {labelTaxFree}
+                    <span>{String(labelTaxFree).toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
-                    {fCur(taxFreeTotal)}
+                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2 break-words">
+                    <span>{fCur(taxFreeTotal)}</span>
                     <span className="text-sm text-gray-400 font-medium ml-1">({taxFreePct.toFixed(1)}%)</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
-                    {t ? t('descTaxFreeWealth') || 'Säule 3a & PK (Während Ansparphase)' : 'Säule 3a & PK (Während Ansparphase)'}
+                    <span>{t ? t('descTaxFreeWealth') || 'Säule 3a & PK (Während Ansparphase)' : 'Säule 3a & PK (Während Ansparphase)'}</span>
                 </div>
              </div>
              
              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-6 rounded-2xl shadow-sm">
-                <div className="text-blue-700 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <div className="text-blue-700 dark:text-blue-400 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="FileText" size={14} />
-                    {t ? t('labelTotalTaxValue') || 'Total Deklarationswert' : 'Total Deklarationswert'}
+                    <span>{String(t ? t('labelTotalTaxValue') || 'Total Deklarationswert' : 'Total Deklarationswert').toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-blue-800 dark:text-blue-300">
-                    {fCur(totalWealth)}
+                <div className="text-2xl xl:text-3xl font-black text-blue-800 dark:text-blue-300 break-words">
+                    <span>{fCur(totalWealth)}</span>
                 </div>
                 <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-2">
-                    {t ? t('descTotalTaxValue') || 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.' : 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.'}
+                    <span>{t ? t('descTotalTaxValue') || 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.' : 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.'}</span>
                 </div>
              </div>
           </div>

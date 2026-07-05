@@ -1,5 +1,5 @@
 const React = require('react');
-const { useEffect, useRef, useState } = React;
+const { useEffect, useRef, useState, useMemo } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -17,41 +17,57 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
   const [viewTab, setViewTab] = useState('overview');
 
-  let liquidTotal = 0;
-  let illiquidTotal = 0;
-  let pureCashTotal = 0; 
+  // PERFORMANCE FIX: useMemo berechnet die Assets nur neu, wenn sie sich wirklich ändern.
+  // Das verhindert die Endlosschleifen, weswegen wir data wieder sicher ins useEffect packen können.
+  const {
+      liquidAssets, illiquidAssets, liquidTotal, illiquidTotal, pureCashTotal,
+      catCash, catSecurities, catPension, catRealEstate, grandTotal,
+      liquidPercent, illiquidPercent, cashPercentOfLiquid
+  } = useMemo(() => {
+      let lTot = 0, ilTot = 0, pCashTot = 0;
+      let cCash = 0, cSec = 0, cPen = 0, cRE = 0;
+      const lAssets = [];
+      const ilAssets = [];
+      const safeAssets = activeAssets || [];
 
-  let catCash = 0, catSecurities = 0, catPension = 0, catRealEstate = 0;
+      safeAssets.forEach(a => {
+        const val = getAssetValueAtDate(a, targetDate, safeAssets);
+        if (val === 0) return;
 
-  const assets = activeAssets || [];
-  const liquidAssets = [];
-  const illiquidAssets = [];
+        const isIlliquidClass = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'realestate', 'mortgage'].includes(a.assetClass);
+        const isLiquid = a.isLiquid !== undefined ? a.isLiquid : !isIlliquidClass;
+        
+        if (a.assetClass === 'cash') { cCash += val; pCashTot += val; }
+        else if (['stock', 'fund', 'crypto'].includes(a.assetClass)) cSec += val;
+        else if (a.assetClass?.includes('pension')) cPen += val;
+        else if (['realestate', 'mortgage'].includes(a.assetClass)) cRE += val;
 
-  assets.forEach(a => {
-    const val = getAssetValueAtDate(a, targetDate, assets);
-    if (val === 0) return;
+        if (isLiquid) {
+          lTot += val;
+          lAssets.push({ name: a.name, val, class: a.assetClass });
+        } else {
+          ilTot += val;
+          ilAssets.push({ name: a.name, val, class: a.assetClass });
+        }
+      });
 
-    const isIlliquidClass = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'realestate', 'mortgage'].includes(a.assetClass);
-    const isLiquid = a.isLiquid !== undefined ? a.isLiquid : !isIlliquidClass;
-    
-    if (a.assetClass === 'cash') { catCash += val; pureCashTotal += val; }
-    else if (['stock', 'fund', 'crypto'].includes(a.assetClass)) catSecurities += val;
-    else if (a.assetClass?.includes('pension')) catPension += val;
-    else if (['realestate', 'mortgage'].includes(a.assetClass)) catRealEstate += val;
-
-    if (isLiquid) {
-      liquidTotal += val;
-      liquidAssets.push({ name: a.name, val, class: a.assetClass });
-    } else {
-      illiquidTotal += val;
-      illiquidAssets.push({ name: a.name, val, class: a.assetClass });
-    }
-  });
-
-  const grandTotal = liquidTotal + illiquidTotal;
-  const liquidPercent = grandTotal > 0 ? (liquidTotal / grandTotal) * 100 : 0;
-  const illiquidPercent = grandTotal > 0 ? (illiquidTotal / grandTotal) * 100 : 0;
-  const cashPercentOfLiquid = liquidTotal > 0 ? (pureCashTotal / liquidTotal) * 100 : 0;
+      const gTot = lTot + ilTot;
+      return {
+          liquidAssets: lAssets,
+          illiquidAssets: ilAssets,
+          liquidTotal: lTot,
+          illiquidTotal: ilTot,
+          pureCashTotal: pCashTot,
+          catCash: cCash,
+          catSecurities: cSec,
+          catPension: cPen,
+          catRealEstate: cRE,
+          grandTotal: gTot,
+          liquidPercent: gTot > 0 ? (lTot / gTot) * 100 : 0,
+          illiquidPercent: gTot > 0 ? (ilTot / gTot) * 100 : 0,
+          cashPercentOfLiquid: lTot > 0 ? (pCashTot / lTot) * 100 : 0
+      };
+  }, [activeAssets, targetDate]);
 
   const labelLiquid = t ? (t('labelAvailable') || 'Verfügbar (Liquid)') : 'Verfügbar (Liquid)';
   const labelIlliquid = t ? (t('labelTiedUp') || 'Gebunden (Illiquid)') : 'Gebunden (Illiquid)';
@@ -67,7 +83,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -79,7 +94,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
             if (!reportRef.current) return;
             const el = reportRef.current.querySelector(selector);
             if (el) {
-                // Winzige Render-Pause für DOM-Stabilität vor dem Screenshot
                 await new Promise(resolve => setTimeout(resolve, 50));
                 const canvas = await html2canvas(el, { 
                     scale: 2, 
@@ -94,7 +108,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
             }
         };
 
-        // Snapshot des gesamten KPI- und Chart-Blocks in einem Durchgang
         await captureBlock('.pdf-combined-export-block', ''); 
 
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
@@ -112,7 +125,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -126,14 +138,13 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
           tableHeaders,
           tableBody,
           chartsData,
-          data: data
+          data: data // FIX: Direkte Daten-Referenz ohne Umwege
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im LiquidityReport:", err);
+        console.error("[FinBundle Pro] PDF Export Error im LiquidityReport:", err);
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -149,7 +160,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im LiquidityReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error im LiquidityReport:", err);
                 resolve(null);
             }
         });
@@ -166,7 +177,8 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, targetDate, data, labelLiquid, labelIlliquid]);
+  // FIX: data ist nun Teil der Dependency-Liste. Sobald du den Namen änderst, baut sich der EventListener mit dem neuen Namen neu auf!
+  }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, targetDate, labelLiquid, labelIlliquid, data]);
 
   const renderMiniBar = (value, max, colorClass) => {
       const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
@@ -180,12 +192,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   if (grandTotal === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-        <ReportHeader 
-          title={t ? (t('repLiqTitle') || 'Liquiditäts-Analyse') : 'Liquiditäts-Analyse'} 
-          subtitle={`${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`}
-          isTreeVisible={isTreeVisible} 
-          setIsTreeVisible={setIsTreeVisible} 
-        />
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? (t('noAssetsFoundDate') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.') : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}</p>
@@ -196,26 +202,16 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
-      <ReportHeader 
-        title={t ? (t('repLiqTitle') || 'Liquiditäts-Analyse') : 'Liquiditäts-Analyse'} 
-        subtitle={`${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`}
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
-
       {/* GEMEINSAMER UMSCHLAG FÜR PDF EXPORT */}
       <div className="pdf-combined-export-block w-full bg-white dark:bg-transparent">
           
-          {/* KPI DASHBOARD ROW - Abgesichert mit <span> Tags gegen html2canvas Fehler */}
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             
-             {/* KPI 1: Gesamtkapital */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="PieChart" size={14} className="text-blue-500"/>
                     <span>{t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital'}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
                     <span>{fCur(grandTotal)}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2 flex gap-1">
@@ -224,7 +220,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             {/* KPI 2: Verfügbar (Liquid) */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-sky-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -235,7 +230,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{liquidPercent.toFixed(1)}%</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
                     <span>{fCur(liquidTotal)}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -243,7 +238,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             {/* KPI 3: Gebunden (Illiquid) */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -254,7 +248,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{illiquidPercent.toFixed(1)}%</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
                     <span>{fCur(illiquidTotal)}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -262,7 +256,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             {/* KPI 4: Harte Liquidität (Cash) */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between" title={t ? (t('tooltipCashShare') || "Anteil des Cashs am liquiden Vermögen") : "Anteil"}>
                     <span className="flex items-center gap-2">
@@ -274,17 +267,15 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{t ? (t('labelPctOfLiq') || '% d. Liq.') : '% d. Liq.'}</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white">
+                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
                     <span>{fCur(pureCashTotal)}</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
                     <span>{t ? (t('descCashFunds') || 'Sofort verfügbare Geldmittel') : 'Sofort verfügbare Geldmittel'}</span>
                 </div>
              </div>
-
           </div>
 
-          {/* MAIN CHARTS ROW */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block">
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -342,14 +333,12 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
             </div>
           </div>
-
       </div>
 
       <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200">
           {t ? (t('labelBreakdownDetails') || 'Detaillierte Aufschlüsselung') : 'Detaillierte Aufschlüsselung'}
       </h3>
 
-      {/* TOGGLE & DETAILS SECTION */}
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-10">
          <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 p-2 gap-2">
              <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t ? (t('tabTopPositions') || 'Top Positionen') : 'Top Positionen'}</button>
@@ -358,7 +347,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
          <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* LIQUID LIST */}
                 <div>
                     <h4 className="font-extrabold text-lg text-gray-800 dark:text-gray-100 flex items-center gap-3 border-b border-gray-100 dark:border-slate-800 pb-3 mb-4">
                         <div className="p-2 bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 rounded-lg">
@@ -391,7 +379,6 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     </ul>
                 </div>
 
-                {/* ILLIQUID LIST */}
                 <div>
                     <h4 className="font-extrabold text-lg text-gray-800 dark:text-gray-100 flex items-center gap-3 border-b border-gray-100 dark:border-slate-800 pb-3 mb-4">
                         <div className="p-2 bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-500 rounded-lg">

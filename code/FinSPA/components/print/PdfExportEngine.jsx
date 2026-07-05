@@ -16,9 +16,10 @@ const loadScript = (url) => {
 };
 
 const getOwnerName = (data) => {
-    return data?.settings?.userName && data.settings.userName.trim() !== '' 
-        ? data.settings.userName 
-        : 'FinSPA Inhaber'; 
+    const name = data?.settings?.userName || data?.settings?.ownerName || data?.userName || data?.ownerName;
+    return name && String(name).trim() !== '' 
+        ? String(name).trim() 
+        : 'Thomas Kerle'; 
 };
 
 const buildTableBody = (body) => {
@@ -146,12 +147,11 @@ const PdfExportEngine = {
 
       return true;
     } catch (error) {
-      console.error("[FinSPA PDF Engine] Fehler:", error);
+      console.error("[FinBundle Pro PDF Engine] Fehler:", error);
       return false;
     }
   },
 
-  // --- STANDARD EINZEL-EXPORT ---
   exportReport: async ({ title, subtitle, tableHeaders, customHeaderRows, tableBody, chartsData, chartsBase64, chartBase64, data, kpis }) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
@@ -166,7 +166,9 @@ const PdfExportEngine = {
       const hasFocusMetric = safeSubtitle.includes('|');
 
       const ownerName = getOwnerName(data);
-      const pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINSPA PRO').toUpperCase();
+      let pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINBUNDLE PRO').toUpperCase();
+      if (pdfTitleStr === 'FINSPA PRO') pdfTitleStr = 'FINBUNDLE PRO';
+      
       const pdfSubtitleStr = (data?.settings?.pdfSubtitle || 'ENTERPRISE ASSET MANAGEMENT & REPORTING').toUpperCase();
 
       const docContent = [
@@ -193,11 +195,7 @@ const PdfExportEngine = {
               ],
               width: '*'
           }));
-          
-          docContent.push({
-            columns: kpiColumns,
-            margin: [0, 10, 0, 15]
-          });
+          docContent.push({ columns: kpiColumns, margin: [0, 10, 0, 15] });
       } else {
           docContent.push({
             columns: [
@@ -215,19 +213,21 @@ const PdfExportEngine = {
           const chartColumns = [];
           
           chartsData.forEach((chartObj) => {
-              if (chartObj.width === 760 || !chartObj.fit) {
+              // FIX: Nimmt jetzt fullWidth Parameter oder Breite 760 an
+              if (chartObj.width === 760 || chartObj.fullWidth || !chartObj.fit) {
                   if (chartColumns.length > 0) {
-                      docContent.push({ columns: [...chartColumns], margin: [0, 5, 0, 15] });
+                      docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
                       chartColumns.length = 0;
                   }
-                  if (chartObj.title) {
-                      docContent.push({ text: chartObj.title, style: 'chartTitlePdf' });
-                  }
+                  
                   docContent.push({
-                      image: chartObj.image,
-                      width: chartObj.width || 760,
-                      alignment: 'center',
-                      margin: [0, 5, 0, 20]
+                      unbreakable: false, // WICHTIG: Verhindert das Droppen von extrem hohen Charts!
+                      stack: [
+                          ...(chartObj.title ? [{ text: chartObj.title, style: 'chartTitlePdf' }] : []),
+                          chartObj.fit 
+                              ? { image: chartObj.image, fit: chartObj.fit, alignment: 'center', margin: [0, 5, 0, 20] }
+                              : { image: chartObj.image, width: chartObj.width || 760, alignment: 'center', margin: [0, 5, 0, 20] }
+                      ]
                   });
               } else {
                   chartColumns.push({
@@ -239,14 +239,14 @@ const PdfExportEngine = {
                   });
                   
                   if (chartColumns.length === 2) {
-                      docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+                      docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
                       chartColumns.length = 0;
                   }
               }
           });
           
           if (chartColumns.length > 0) {
-              docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+              docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
           }
           
           if (tableBody && tableBody.length > 0) {
@@ -269,27 +269,18 @@ const PdfExportEngine = {
 
       if (tableContent.length > 0 && tableBody && tableBody.length > 0) {
           tableContent.push(...buildTableBody(tableBody));
-          
           const dynamicWidths = Array(columnCount).fill('*');
 
           docContent.push({
             style: 'tableStyle',
-            table: { 
-                headerRows: headerRowCount, 
-                dontBreakRows: true, 
-                widths: dynamicWidths, 
-                body: tableContent 
-            },
+            table: { headerRows: headerRowCount, dontBreakRows: true, widths: dynamicWidths, body: tableContent },
             layout: getTableLayoutConfig(headerRowCount)
           });
       }
 
       const docDefinition = { 
-          pageSize: 'A4', 
-          pageOrientation: 'landscape', 
-          pageMargins: [20, 30, 20, 30], 
-          content: docContent, 
-          styles: pdfStyles, 
+          pageSize: 'A4', pageOrientation: 'landscape', pageMargins: [20, 30, 20, 30], 
+          content: docContent, styles: pdfStyles, 
           footer: function(currentPage, pageCount) { 
               if (currentPage === 1) return null; 
               return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 9, font: 'Roboto', color: '#94a3b8', margin: [0, 0, 20, 0] }; 
@@ -298,12 +289,11 @@ const PdfExportEngine = {
 
       window.pdfMake.createPdf(docDefinition).download(`${title.replace(/\s+/g, '_')}_Report.pdf`);
     } catch (pdfError) {
-      console.error("[FinSPA PDF Engine] Fehler:", pdfError);
+      console.error("[FinBundle Pro PDF Engine] Fehler:", pdfError);
       alert("PDF-Erzeugung abgebrochen: " + pdfError.message);
     }
   },
 
-  // --- NEU: BATCH EXPORT (GESAMTREPORT) ---
   exportCombinedReport: async (mainTitle, reportsDataArray, data) => {
     try {
       const initialized = await PdfExportEngine.initLibraries();
@@ -313,58 +303,47 @@ const PdfExportEngine = {
       const timestampStr = `${now.toLocaleDateString('de-CH')} um ${now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} Uhr`;
 
       const ownerName = getOwnerName(data);
-      const pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINSPA PRO').toUpperCase();
+      let pdfTitleStr = (data?.settings?.pdfCompanyName || 'FINBUNDLE PRO').toUpperCase();
+      if (pdfTitleStr === 'FINSPA PRO') pdfTitleStr = 'FINBUNDLE PRO';
+      
       const pdfSubtitleStr = (data?.settings?.pdfSubtitle || 'ENTERPRISE ASSET MANAGEMENT & REPORTING').toUpperCase();
 
-      // Einheitliches Deckblatt für den Gesamtreport
       const docContent = [
         { text: pdfTitleStr, style: 'coverAppTitle', alignment: 'center', margin: [0, 80, 0, 5] },
         { text: pdfSubtitleStr, style: 'coverAppSubtitle', alignment: 'center', margin: [0, 0, 0, 40] },
         { canvas: [{ type: 'line', x1: 220, y1: 0, x2: 520, y2: 0, lineWidth: 1.5, lineColor: '#3b82f6' }], alignment: 'center' },
-        
         { text: mainTitle.toUpperCase(), style: 'coverReportTitle', alignment: 'center', margin: [0, 60, 0, 10] },
-        
         { text: 'ERSTELLT FÜR', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
         { text: ownerName, style: 'coverMetaValue', alignment: 'center', margin: [0, 0, 0, 20] },
         { text: 'ZEITPUNKT DER GENERIERUNG', style: 'coverMetaLabel', alignment: 'center', margin: [0, 0, 0, 2] },
         { text: timestampStr, style: 'coverMetaValue', alignment: 'center' },
-        
         { text: '', pageBreak: 'after' }
       ];
 
-      // Iteriere durch alle vom Orchestrator gesammelten Reports
       reportsDataArray.forEach((report, index) => {
         if (!report) return;
 
-        // Kapitel-Überschrift (Jeder Report beginnt auf einer neuen Seite, außer dem ersten nach dem Deckblatt)
-        docContent.push({
-            text: report.title, 
-            style: 'reportSectionTitle', 
-            pageBreak: index > 0 ? 'before' : undefined
-        });
+        docContent.push({ text: report.title, style: 'reportSectionTitle', pageBreak: index > 0 ? 'before' : undefined });
+        if (report.subtitle) docContent.push({ text: report.subtitle, style: 'reportSectionSubtitle' });
 
-        if (report.subtitle) {
-          docContent.push({ text: report.subtitle, style: 'reportSectionSubtitle' });
-        }
-
-        // Charts einfügen mit dem gleichen Grid-Layout-System wie beim Einzel-Export
         if (report.chartsData && report.chartsData.length > 0) {
             const chartColumns = [];
             
             report.chartsData.forEach((chartObj) => {
-                if (chartObj.width === 760 || !chartObj.fit) {
+                if (chartObj.width === 760 || chartObj.fullWidth || !chartObj.fit) {
                     if (chartColumns.length > 0) {
-                        docContent.push({ columns: [...chartColumns], margin: [0, 5, 0, 15] });
+                        docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
                         chartColumns.length = 0;
                     }
-                    if (chartObj.title) {
-                        docContent.push({ text: chartObj.title, style: 'chartTitlePdf' });
-                    }
+                    
                     docContent.push({
-                        image: chartObj.image,
-                        width: chartObj.width || 760,
-                        alignment: 'center',
-                        margin: [0, 5, 0, 20]
+                        unbreakable: false, // WICHTIG: Verhindert das Droppen
+                        stack: [
+                            ...(chartObj.title ? [{ text: chartObj.title, style: 'chartTitlePdf' }] : []),
+                            chartObj.fit 
+                                ? { image: chartObj.image, fit: chartObj.fit, alignment: 'center', margin: [0, 5, 0, 20] }
+                                : { image: chartObj.image, width: chartObj.width || 760, alignment: 'center', margin: [0, 5, 0, 20] }
+                        ]
                     });
                 } else {
                     chartColumns.push({
@@ -376,18 +355,17 @@ const PdfExportEngine = {
                     });
                     
                     if (chartColumns.length === 2) {
-                        docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+                        docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
                         chartColumns.length = 0;
                     }
                 }
             });
             
             if (chartColumns.length > 0) {
-                docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15] });
+                docContent.push({ columns: [...chartColumns], columnGap: 24, margin: [0, 5, 0, 15], unbreakable: true });
             }
         }
 
-        // Tabellen einfügen
         let tableContent = [];
         let headerRowCount = 1;
         let columnCount = 0;
@@ -403,33 +381,25 @@ const PdfExportEngine = {
 
             docContent.push({
               style: 'tableStyle',
-              table: { 
-                  headerRows: headerRowCount, 
-                  dontBreakRows: true, 
-                  widths: dynamicWidths, 
-                  body: tableContent 
-              },
+              table: { headerRows: headerRowCount, dontBreakRows: true, widths: dynamicWidths, body: tableContent },
               layout: getTableLayoutConfig(headerRowCount)
             });
         }
       });
 
       const docDefinition = { 
-          pageSize: 'A4', 
-          pageOrientation: 'landscape', 
-          pageMargins: [20, 30, 20, 30], 
-          content: docContent, 
-          styles: pdfStyles, 
+          pageSize: 'A4', pageOrientation: 'landscape', pageMargins: [20, 30, 20, 30], 
+          content: docContent, styles: pdfStyles, 
           footer: function(currentPage, pageCount) { 
               if (currentPage === 1) return null; 
               return { text: `Seite ${currentPage} von ${pageCount}`, alignment: 'right', fontSize: 9, font: 'Roboto', color: '#94a3b8', margin: [0, 0, 20, 0] }; 
           } 
       };
 
-      window.pdfMake.createPdf(docDefinition).download(`FinSPA_Gesamtreport_${new Date().toISOString().split('T')[0]}.pdf`);
+      window.pdfMake.createPdf(docDefinition).download(`FinBundle_Gesamtreport_${new Date().toISOString().split('T')[0]}.pdf`);
       
     } catch (error) {
-      console.error("[FinSPA PDF Engine] Fehler beim Gesamtexport:", error);
+      console.error("[FinBundle Pro PDF Engine] Fehler beim Gesamtexport:", error);
       alert("Fehler beim Erstellen des Gesamtreports: " + error.message);
     }
   }

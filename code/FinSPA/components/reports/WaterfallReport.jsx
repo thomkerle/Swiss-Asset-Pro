@@ -192,12 +192,7 @@ const WaterfallReport = ({ activeAssets, dateRange, isTreeVisible, setIsTreeVisi
 
   return (
    <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-      <ReportHeader 
-        title={repTitle} 
-        subtitle={`${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} - ${new Date(dateRange.to).toLocaleDateString('de-CH')})`} 
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
+  
 
       <div className="w-full bg-white dark:bg-transparent">
           

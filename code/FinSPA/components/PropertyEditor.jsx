@@ -19,7 +19,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       setTransferTargetId('');
   }, [selectedNode?.selectedBooking?.id]);
 
-  // Clevere Hilfsfunktion, die fehlende Übersetzungen abfängt und den sauberen Fallback nutzt
   const safeT = (key, fallback) => {
       if (!t) return fallback;
       const res = t(key);
@@ -40,8 +39,34 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       );
   }
 
-  // --- ZENTRALE RENDER-FUNKTION FÜR ALLE DREI ANSICHTEN ---
   const renderContent = () => {
+      // Zentralisierte Berechnungs-Logik der Ist-Werte aus den historischen Transaktionen
+      const getActualShares = (node) => {
+          if (!node) return 0;
+          let sh = 0;
+          if (node.bookings) {
+              node.bookings.forEach(b => {
+                  if (['Kauf', 'Einzahlung'].includes(b.type) && b.shares) sh += Number(b.shares);
+                  if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
+              });
+          }
+          return sh > 0 ? sh : (node.shares || 0);
+      };
+
+      const getActualPrice = (node) => {
+          if (!node) return 0;
+          let p = 0;
+          if (node.bookings) {
+              const sorted = [...node.bookings].sort((a,b) => new Date(b.date) - new Date(a.date));
+              const lastWithPrice = sorted.find(b => ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
+              if (lastWithPrice) p = Number(lastWithPrice.price);
+          }
+          return p > 0 ? p : (node.price || 0);
+      };
+
+      const actualShares = getActualShares(selectedNode);
+      const actualPrice = getActualPrice(selectedNode);
+
       // 1. BUDGET ANSICHT
       if (selectedNode.budgetType) {
           const handleBudgetPropChange = (key, val) => {
@@ -93,7 +118,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           );
       }
 
-      // 2. BUCHUNGS-ANSICHT
+      // 2. BUCHUNGS-ANSICHT (Innerhalb des Assets ausgewählt)
       if (selectedNode.selectedBooking) {
         const booking = selectedNode.selectedBooking;
         const isBal = booking._isBal;
@@ -106,32 +131,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         
         const ac = selectedNode?.assetClass;
         const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
-
-        const getActualShares = (node) => {
-            if (!node) return 0;
-            let sh = 0;
-            if (node.bookings) {
-                node.bookings.forEach(b => {
-                    if (['Kauf', 'Einzahlung'].includes(b.type) && b.shares) sh += Number(b.shares);
-                    if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
-                });
-            }
-            return sh > 0 ? sh : (node.shares || 0);
-        };
-
-        const getActualPrice = (node) => {
-            if (!node) return 0;
-            let p = 0;
-            if (node.bookings) {
-                const sorted = [...node.bookings].sort((a,b) => new Date(b.date) - new Date(a.date));
-                const lastWithPrice = sorted.find(b => ['Kauf', 'Verkauf', 'Wertanpassung'].includes(b.type) && Number(b.price) > 0);
-                if (lastWithPrice) p = Number(lastWithPrice.price);
-            }
-            return p > 0 ? p : (node.price || 0);
-        };
-
-        const actualShares = getActualShares(selectedNode);
-        const actualPrice = getActualPrice(selectedNode);
 
         const handleBookingPropChange = (keyOrObj, val) => {
           const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
@@ -310,7 +309,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         );
       }
 
-      // 3. ASSET ANSICHT (Hauptansicht)
+      // 3. ASSET ANSICHT (Hauptansicht des selektierten Vermögenswerts)
       const handlePropChange = (keyOrObj, val) => {
           const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
           const updateRecursive = (nodes) => nodes.map(n => {
@@ -322,7 +321,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           setSelectedNode(prev => ({ ...prev, ...changes }));
       };
 
-          const handleQuickFX = async (e) => {
+      const handleQuickFX = async (e) => {
           if (e) e.preventDefault();
           
           const baseCurrency = data?.settings?.baseCurrency || 'CHF';
@@ -337,7 +336,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT('msgFetchingRate', `Kurs ${fromCurrency} zu ${baseCurrency} wird abgerufen...`), "info");
 
               let liveRate = null;
-              
               try {
                   const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCurrency}&symbols=${baseCurrency}`);
                   if (res.ok) {
@@ -417,14 +415,10 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                         'managed_fund': 'acManagedFund', 'pension_3a_managed': 'acPension3aManaged'
                     };
                     
-                    // Dynamischer Abruf der Standardklassen aus der DataEngine
                     const standardClasses = initialData?.settings?.assetClasses || [];
                     const userClasses = data?.settings?.assetClasses || [];
-                    
-                    // Benutzerdefinierte Klassen (falls vorhanden) als Basis nehmen
                     const finalClasses = [...userClasses];
                     
-                    // Fehlende Standardklassen ergänzen
                     standardClasses.forEach(sc => {
                         if (!finalClasses.find(fc => fc.id === sc.id)) {
                             finalClasses.push(sc);
@@ -433,7 +427,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
                     return finalClasses.map(ac => {
                         const tKey = titleMap[ac.id];
-                        const fallbackName = ac.name || ac.fallback; // Rückgriff auf Name für saubere Anzeige
+                        const fallbackName = ac.name || ac.fallback;
                         const displayName = tKey && safeT(tKey, fallbackName) !== tKey 
                                             ? safeT(tKey, fallbackName) 
                                             : fallbackName;
@@ -472,17 +466,21 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                  <div className="grid grid-cols-2 gap-3 items-end">
                    <div className="flex flex-col justify-end h-full">
                      <label className="text-xs text-yellow-800 dark:text-yellow-600/80 font-bold mb-1 block uppercase leading-tight">{safeT('propCurrentShares', 'Aktuelle Stückzahl')}</label>
-                     <input type="number" step="any" className="w-full p-2 border border-yellow-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.shares ?? ''} onChange={e => handlePropChange('shares', e.target.value)} />
+                     <div className="w-full p-2.5 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-mono shadow-inner select-all tabular-nums">
+                         {actualShares.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
+                     </div>
                    </div>
                    <div className="flex flex-col justify-end h-full">
                      <label className="text-xs text-yellow-800 dark:text-yellow-600/80 font-bold mb-1 block uppercase leading-tight">{safeT('propCurrentPrice', 'Aktueller Preis')}</label>
-                     <input type="number" step="any" className="w-full p-2 border border-yellow-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.price ?? ''} onChange={e => handlePropChange('price', e.target.value)} />
+                     <div className="w-full p-2.5 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-mono shadow-inner select-all tabular-nums">
+                         {actualPrice.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                     </div>
                    </div>
                  </div>
               </div>
             )}
             
-{(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'managed_fund') && (
+            {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'managed_fund') && (
               <div className="bg-blue-50 dark:bg-slate-800/50 border border-blue-200 dark:border-slate-600 p-4 rounded-xl space-y-4 mt-4 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
                  <h4 className="font-bold text-xs text-blue-800 dark:text-blue-500 uppercase tracking-wider flex items-center gap-2">
@@ -515,7 +513,8 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     {safeT('descTaxesNotice', 'Eingabe der Gesamtkosten (Quell- + Verrechnungssteuer) zur Netto-Prognose.')}
                  </div>
               </div>
-            )}          </>
+            )}
+          </>
       );
   };
 

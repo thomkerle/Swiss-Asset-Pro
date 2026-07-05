@@ -182,12 +182,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   if (finalDates.length === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-        <ReportHeader 
-          title={t ? (t('repHistTitle') || 'Historischer Verlauf') : 'Historischer Verlauf'} 
-          subtitle={`${t ? (t('repHistSubDev') || 'Entwicklung') : 'Entwicklung'} (${startDateStr} - ${endDateStr})`} 
-          isTreeVisible={isTreeVisible} 
-          setIsTreeVisible={setIsTreeVisible} 
-        />
+       
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? (t('noDataForPeriod') || 'Keine Daten für den gewählten Zeitraum gefunden.') : 'Keine Daten für den gewählten Zeitraum gefunden.'}</p>
@@ -200,12 +195,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
-      <ReportHeader 
-        title={t ? (t('repHistTitleLong') || 'Historische Vermögensentwicklung') : 'Historische Vermögensentwicklung'} 
-        subtitle={`${t ? (t('detailedAnalysis') || 'Detaillierte Analyse') : 'Detaillierte Analyse'} (${startDateStr} ${t ? (t('wordTo') || 'bis') : 'bis'} ${endDateStr})`} 
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
+  
 
       <div className="w-full bg-white dark:bg-transparent">
           {/* KPI DASHBOARD ROW */}

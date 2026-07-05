@@ -20,7 +20,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   if(histData.length < 2) {
       return (
           <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-             <ReportHeader title={t ? t('repSimRegTitle') || 'Zukunftssimulation' : 'Zukunftssimulation'} subtitle={t ? t('repSimRegSubProj') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung'} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
+         
              <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
                 <Icon name="AlertCircle" size={32} className="mx-auto mb-3 opacity-50"/>
                 <p>{t ? t('msgNotEnoughHistory') || 'Nicht genügend Historie vorhanden, um eine verlässliche Projektion zu berechnen.' : 'Nicht genügend Historie vorhanden, um eine verlässliche Projektion zu berechnen.'}</p>
@@ -202,12 +202,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
-      <ReportHeader 
-        title={titleText} 
-        subtitle={subText} 
-        isTreeVisible={isTreeVisible} 
-        setIsTreeVisible={setIsTreeVisible} 
-      />
+
 
       <div className="w-full bg-white dark:bg-transparent">
           

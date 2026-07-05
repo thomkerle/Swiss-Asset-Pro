@@ -28,8 +28,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   if (pensionAssets.length === 0) {
     return (
       <div className="max-w-6xl px-4 md:px-8 pb-12">
-        <ReportHeader title={t ? t('repPensionTitle') || "Vorsorge & Pensionskasse" : "Vorsorge & Pensionskasse"} subtitle={t ? t('repPensionSub') || "Performance der 2. und 3. Säule" : "Performance der 2. und 3. Säule"} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
-        <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
+          <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? t('noPensionData') || 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.' : 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.'}</p>
         </div>
@@ -49,42 +48,23 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   const todayStr = dateRange?.to || new Date().toISOString().split('T')[0];
 
   const calculateCumulativeStats = (asset, targetDate) => {
-      let invested = 0;
-      let yields = 0;
+      const investedInBase = DataEngine.getInvestedCapitalAtDate ? DataEngine.getInvestedCapitalAtDate(asset, targetDate, activeAssets) : 0;
       
-      let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
-      let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
-      let baseDate = '1970-01-01';
-
-      if (applicableBalance) {
-          invested = applicableBalance.amount;
-          baseDate = applicableBalance.date;
-      }
-
+      let yields = 0;
       (asset.bookings || []).forEach(bk => {
           if (bk.date <= targetDate) {
-              if (bk.type === 'Dividende') yields += Number(bk.amount);
-              if (bk.type === 'Einzahlung' && bk.subCategory === 'Zinsen') yields += Number(bk.amount);
-              if (bk.type === 'Zinszahlung' && Number(bk.amount) > 0) yields += Number(bk.amount);
-          }
-
-          if (applicableBalance) {
-              if (bk.date > baseDate && bk.date <= targetDate) {
-                  if (['Kauf'].includes(bk.type)) invested += Number(bk.amount);
-                  if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') invested += Number(bk.amount);
-                  if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
-              }
-          } else {
-              if (bk.date <= targetDate) {
-                  if (['Kauf'].includes(bk.type)) invested += Number(bk.amount);
-                  if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') invested += Number(bk.amount);
-                  if (['Verkauf', 'Auszahlung'].includes(bk.type)) invested -= Number(bk.amount);
-              }
+              if (bk.type === 'Dividende') yields += Number(bk.amount || 0);
+              if (bk.type === 'Einzahlung' && bk.subCategory === 'Zinsen') yields += Number(bk.amount || 0);
+              if (bk.type === 'Zinszahlung' && Number(bk.amount || 0) > 0) yields += Number(bk.amount || 0);
           }
       });
       
-      const rate = applicableBalance?.bookingExchangeRate || asset.exchangeRate || 1;
-      return { invested: invested * rate, yields: yields * rate, delta: invested * rate };
+      const rate = asset.exchangeRate || 1;
+      return { 
+          invested: investedInBase, 
+          yields: yields * rate, 
+          delta: investedInBase 
+      };
   };
 
   const calculatePeriodicStats = (asset, startDate, targetDate) => {
@@ -219,7 +199,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   };
 
   useEffect(() => {
-    // Helfer-Funktion für die Datenextraktion
     const buildReportData = async () => {
         const html2canvas = await loadHtml2Canvas();
         let chartsData = [];
@@ -227,26 +206,50 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. Dashboard erfassen (volle Breite)
         const captureBlock = async (selector, titleFallback = '') => {
             const el = document.querySelector(selector);
             if (el) {
+                await new Promise(resolve => setTimeout(resolve, 50));
                 const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
             }
         };
 
         await captureBlock('.dashboard-top-export-block', ''); 
 
+        // 2. Charts erfassen (mit nativer ECharts Extraction und 2-Spalten-Zwang)
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
                 const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
+                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div') || containers[i].querySelector('div');
+                
+                if (chartDiv && window.echarts) {
+                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
+                    if (chartInstance) {
+                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
+                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
+                        continue;
+                    }
+                }
+                
+                const canvas = await html2canvas(containers[i], { 
+                    scale: 2, 
+                    backgroundColor: bgColor, 
+                    useCORS: true, 
+                    logging: false,
+                    ignoreElements: (element) => {
+                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
+                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
+                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT';
+                    }
+                });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] }); 
             }
         }
 
-        // Flache Tabellen-Struktur, die von der Batch-Engine perfekt verarbeitet werden kann
+        // 3. Tabellendaten generieren
         const tableHeaders = [
             t ? t('colMonth') || 'Monat' : 'Monat',
             t ? t('colPill2Inv') || 'Säule 2 (Inv.)' : 'Säule 2 (Inv.)',
@@ -277,7 +280,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -297,7 +299,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -340,7 +341,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12">
-      <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
       <div className="print-hide flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 mb-8 gap-3 shadow-sm">
          <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
@@ -364,51 +364,58 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
       </div>
 
       <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 p-1">
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">
-                    {calcMethod === 'cumulative' ? (t ? t('netInvestedTotal') || 'Netto Investiert (Total)' : 'Netto Investiert (Total)') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital')}
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2">
+                    <span>{String(calcMethod === 'cumulative' ? (t ? t('netInvestedTotal') || 'Netto Investiert (Total)' : 'Netto Investiert (Total)') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital')).toUpperCase()}</span>
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">
-                    {fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}
+                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white break-words">
+                    <span>{fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}</span>
                 </div>
                 
                 {calcMethod === 'periodic' && (
                     <div className={`text-sm font-bold mt-2 flex items-center gap-1.5 ${latestData.delta >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600'}`}>
                         <Icon name={latestData.delta >= 0 ? "TrendingUp" : "TrendingDown"} size={14} prefix="" /> 
-                        {latestData.delta > 0 ? '+' : ''}{fCur ? fCur(latestData.delta, 'CHF') : latestData.delta} {t ? t('netInflow') || 'Netto-Zufluss' : 'Netto-Zufluss'}
+                        <span>{latestData.delta > 0 ? '+' : ''}{fCur ? fCur(latestData.delta, 'CHF') : latestData.delta} {t ? t('netInflow') || 'Netto-Zufluss' : 'Netto-Zufluss'}</span>
                     </div>
                 )}
                 
                 <div className="text-xs text-gray-400 mt-2">
-                    {calcMethod === 'cumulative' 
+                    <span>{calcMethod === 'cumulative' 
                         ? (t ? t('histDeposits') || 'Historische Einzahlungen' : 'Historische Einzahlungen') 
-                        : `${t ? t('baseValuePlusInflows') || 'Basiswert' : 'Basiswert'} (${new Date(earliestDate).toLocaleDateString('de-CH')}) + ${t ? t('inflows') || 'Zuflüsse' : 'Zuflüsse'}`
-                    }
+                        : `${t ? t('baseValuePlusInflows') || 'Basiswert' : 'Basiswert'} (${new Date(earliestDate).toLocaleDateString('de-CH')}?) + ${t ? t('inflows') || 'Zuflüsse' : 'Zuflüsse'}`
+                    }</span>
                 </div>
              </div>
+             
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('marketValueEnd') || 'Marktwert per Ende' : 'Marktwert per Ende'}</div>
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}</div>
-                <div className="text-xs text-gray-400 mt-2">{t ? t('statusAsOf') || 'Stand per' : 'Stand per'} {new Date(todayStr).toLocaleDateString('de-CH')}</div>
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2">
+                    <span>{String(t ? t('marketValueEnd') || 'Marktwert per Ende' : 'Marktwert per Ende').toUpperCase()}</span>
+                </div>
+                <div className="text-2xl xl:text-3xl font-black text-blue-600 dark:text-blue-400 break-words">
+                    <span>{fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                    <span>{t ? t('statusAsOf') || 'Stand per' : 'Stand per'} {new Date(todayStr).toLocaleDateString('de-CH')}</span>
+                </div>
              </div>
              
              <div className={`border p-6 rounded-2xl shadow-sm ${latestData.priceProfit >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20' : 'bg-red-50 border-red-200 dark:bg-red-900/20'}`}>
-                <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
-                    {t ? t('priceProfitInterval') || 'Kursgewinn im Intervall' : 'Kursgewinn im Intervall'}
+                <div className={`text-xs font-bold tracking-wider mb-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
+                    <span>{String(t ? t('priceProfitInterval') || 'Kursgewinn im Intervall' : 'Kursgewinn im Intervall').toUpperCase()}</span>
                 </div>
-                <div className={`text-2xl font-black flex items-baseline gap-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
-                   {latestData.priceProfit > 0 ? '+' : ''}{fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}
+                <div className={`text-2xl xl:text-3xl font-black flex items-baseline gap-2 break-words ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
+                   <span>{latestData.priceProfit > 0 ? '+' : ''}{fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}</span>
                    <span className="text-sm font-medium opacity-70">({latestData.priceRoi > 0 ? '+' : ''}{latestData.priceRoi.toFixed(2)}%)</span>
                 </div>
              </div>
              
              <div className={`border p-6 rounded-2xl shadow-sm ${latestData.profit >= 0 ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20'}`}>
-                <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                    {t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)'}
+                <div className={`text-xs font-bold tracking-wider mb-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                    <span>{String(t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)').toUpperCase()}</span>
                 </div>
-                <div className={`text-2xl font-black flex items-baseline gap-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                   {latestData.profit > 0 ? '+' : ''}{fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}
+                <div className={`text-2xl xl:text-3xl font-black flex items-baseline gap-2 break-words ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                   <span>{latestData.profit > 0 ? '+' : ''}{fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}</span>
                    <span className="text-sm font-medium opacity-70">({latestData.roi > 0 ? '+' : ''}{latestData.roi.toFixed(2)}%)</span>
                 </div>
              </div>
@@ -564,66 +571,66 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
          </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-         <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
-             {t ? t('monthlyHistoryTotal') || 'Monatliche Historie & Renditen (Total)' : 'Monatliche Historie & Renditen (Total)'}
-         </div>
-         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="w-full text-sm text-left relative">
-               <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
-                  <tr className="border-b border-gray-100 dark:border-slate-800">
-                     <th rowSpan="2" className="px-6 py-4 align-middle text-left bg-gray-50/50 dark:bg-slate-900/50">{t ? t('colMonthTarget') || 'Monat / Stichtag' : 'Monat / Stichtag'}</th>
-                     <th colSpan="2" className="px-4 py-2 text-center text-blue-600 dark:text-blue-400 bg-blue-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar2') || 'Säule 2 (Pension)' : 'Säule 2 (Pension)'}</th>
-                     <th colSpan="2" className="px-4 py-2 text-center text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar3a') || 'Säule 3a (Vorsorge)' : 'Säule 3a (Vorsorge)'}</th>
-                     <th colSpan="5" className="px-4 py-2 text-center text-slate-700 dark:text-slate-300 bg-slate-50/30">{t ? t('colOverallTotal') || 'Gesamtübersicht (Total)' : 'Gesamtübersicht (Total)'}</th>
-                  </tr>
-                  <tr>
-                     <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                     <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                     <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                     <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                     <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-400">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                     <th className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                     <th className="px-4 py-3 text-right font-medium">{t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn'}</th>
-                     <th className="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-medium">{t ? t('labelYields') || 'Erträge' : 'Erträge'}</th>
-                     <th className="px-6 py-3 text-right text-indigo-600 dark:text-indigo-400 font-bold">{t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'}</th>
-                  </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                  {monthlyDataPoints.slice().reverse().map((d, i) => {
-                      const dateObj = new Date(d.dateStr);
-                      const isCurrentMonth = d.dateStr === todayStr;
-                      const monthLabel = dateObj.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
-                      const exactLabel = dateObj.toLocaleDateString('de-CH');
-                      const isLastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() === dateObj.getDate();
-                      const displayDate = isLastDay ? monthLabel : exactLabel;
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
+                 {t ? t('monthlyHistoryTotal') || 'Monatliche Historie & Renditen (Total)' : 'Monatliche Historie & Renditen (Total)'}
+             </div>
+             <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="w-full text-sm text-left relative">
+                   <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
+                      <tr className="border-b border-gray-100 dark:border-slate-800">
+                         <th rowSpan="2" className="px-6 py-4 align-middle text-left bg-gray-50/50 dark:bg-slate-900/50">{t ? t('colMonthTarget') || 'Monat / Stichtag' : 'Monat / Stichtag'}</th>
+                         <th colSpan="2" className="px-4 py-2 text-center text-blue-600 dark:text-blue-400 bg-blue-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar2') || 'Säule 2 (Pension)' : 'Säule 2 (Pension)'}</th>
+                         <th colSpan="2" className="px-4 py-2 text-center text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar3a') || 'Säule 3a (Vorsorge)' : 'Säule 3a (Vorsorge)'}</th>
+                         <th colSpan="5" className="px-4 py-2 text-center text-slate-700 dark:text-slate-300 bg-slate-50/30">{t ? t('colOverallTotal') || 'Gesamtübersicht (Total)' : 'Gesamtübersicht (Total)'}</th>
+                      </tr>
+                      <tr>
+                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
+                         <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
+                         <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+                         <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-400">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
+                         <th className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
+                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn'}</th>
+                         <th className="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-medium">{t ? t('labelYields') || 'Erträge' : 'Erträge'}</th>
+                         <th className="px-6 py-3 text-right text-indigo-600 dark:text-indigo-400 font-bold">{t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'}</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                      {monthlyDataPoints.slice().reverse().map((d, i) => {
+                          const dateObj = new Date(d.dateStr);
+                          const isCurrentMonth = d.dateStr === todayStr;
+                          const monthLabel = dateObj.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+                          const exactLabel = dateObj.toLocaleDateString('de-CH');
+                          const isLastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() === dateObj.getDate();
+                          const displayDate = isLastDay ? monthLabel : exactLabel;
 
-                      return (
-                          <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                              <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10">
-                                  {isCurrentMonth ? `${displayDate} ${t ? t('todayBracket') || '(Heute)' : '(Heute)'}` : displayDate}
-                              </td>
-                              <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p2.invested, 'CHF') : d.p2.invested}</td>
-                              <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p2.actual, 'CHF') : d.p2.actual}</td>
-                              <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p3.invested, 'CHF') : d.p3.invested}</td>
-                              <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p3.actual, 'CHF') : d.p3.actual}</td>
-                              <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">{fCur ? fCur(d.total.invested, 'CHF') : d.total.invested}</td>
-                              <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur ? fCur(d.total.actual, 'CHF') : d.total.actual}</td>
-                              <td className={`px-4 py-3 text-right font-mono ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                 {d.total.priceProfit > 0 ? '+' : ''}{fCur ? fCur(d.total.priceProfit, 'CHF') : d.total.priceProfit} 
-                                 <span className="text-[10px] ml-1">({d.total.priceRoi > 0 ? '+' : ''}{d.total.priceRoi.toFixed(1)}%)</span>
-                              </td>
-                              <td className="px-4 py-3 text-right font-mono text-blue-600 dark:text-blue-400">+{fCur ? fCur(d.total.yields, 'CHF') : d.total.yields}</td>
-                              <td className={`px-6 py-3 text-right font-bold ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                                 {d.total.roi > 0 ? '+' : ''}{d.total.roi.toFixed(2)} %
-                              </td>
-                          </tr>
-                      );
-                  })}
-               </tbody>
-            </table>
-         </div>
-      </div>
+                          return (
+                              <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                                  <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10">
+                                      {isCurrentMonth ? `${displayDate} ${t ? t('todayBracket') || '(Heute)' : '(Heute)'}` : displayDate}
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p2.invested, 'CHF') : d.p2.invested}</td>
+                                  <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p2.actual, 'CHF') : d.p2.actual}</td>
+                                  <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p3.invested, 'CHF') : d.p3.invested}</td>
+                                  <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p3.actual, 'CHF') : d.p3.actual}</td>
+                                  <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">{fCur ? fCur(d.total.invested, 'CHF') : d.total.invested}</td>
+                                  <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur ? fCur(d.total.actual, 'CHF') : d.total.actual}</td>
+                                  <td className={`px-4 py-3 text-right font-mono ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                     {d.total.priceProfit > 0 ? '+' : ''}{fCur ? fCur(d.total.priceProfit, 'CHF') : d.total.priceProfit} 
+                                     <span className="text-[10px] ml-1">({d.total.priceRoi > 0 ? '+' : ''}{d.total.priceRoi.toFixed(1)}%)</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono text-blue-600 dark:text-blue-400">+{fCur ? fCur(d.total.yields, 'CHF') : d.total.yields}</td>
+                                  <td className={`px-6 py-3 text-right font-bold ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                     {d.total.roi > 0 ? '+' : ''}{d.total.roi.toFixed(2)} %
+                                  </td>
+                              </tr>
+                          );
+                      })}
+                   </tbody>
+                </table>
+             </div>
+          </div>
     </div>
   );
 };

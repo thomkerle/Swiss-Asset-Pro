@@ -29,13 +29,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   if (securitiesAssets.length === 0) {
     return (
       <div className="max-w-6xl px-4 md:px-8 pb-12">
-        <ReportHeader 
-            title={t ? t('repSecuritiesTitle') || "Aktien & Fonds Performance" : "Aktien & Fonds Performance"} 
-            subtitle={t ? t('repSecuritiesSub') || "Entwicklung des freien Portfolios" : "Entwicklung des freien Portfolios"} 
-            isTreeVisible={isTreeVisible} 
-            setIsTreeVisible={setIsTreeVisible} 
-        />
-        <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
+          <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{t ? t('noSecuritiesData') || 'Keine Aktien, Fonds oder verwaltete Vermögen gefunden.' : 'Keine Aktien, Fonds oder verwaltete Vermögen gefunden.'}</p>
         </div>
@@ -55,7 +49,7 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
   const todayStr = dateRange?.to || new Date().toISOString().split('T')[0];
 
   const calculateCumulativeStats = (asset, targetDate) => {
-      let totalInvestedCHF = 0;
+      const investedInBase = DataEngine.getInvestedCapitalAtDate ? DataEngine.getInvestedCapitalAtDate(asset, targetDate, activeAssets) : 0;
       let totalDividendsCHF = 0;
 
       const sortedBookings = [...(asset.bookings || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
@@ -66,19 +60,16 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
               const assetRate = parseFloat(String(asset.exchangeRate || '1').replace(',', '.'));
               const rate = (bkRate !== 1 && bkRate !== 0) ? bkRate : assetRate;
               
-              if (['Kauf', 'Einzahlung'].includes(bk.type)) {
-                  totalInvestedCHF += Number(bk.amount) * rate;
-              }
-              if (['Verkauf', 'Auszahlung'].includes(bk.type)) {
-                  totalInvestedCHF -= Number(bk.amount) * rate;
-              }
-              if (bk.type === 'Dividende') {
-                  totalDividendsCHF += Number(bk.amount) * rate;
+              const rawType = String(bk.type || '').toLowerCase();
+              const catStr = String(bk.subCategory || bk.category || '').toLowerCase();
+              
+              if (['dividende', 'ausschüttung'].includes(rawType) || catStr.includes('dividende')) {
+                  totalDividendsCHF += Number(bk.amount || 0) * rate;
               }
           }
       });
       
-      return { invested: totalInvestedCHF, yields: totalDividendsCHF, delta: totalInvestedCHF };
+      return { invested: investedInBase, yields: totalDividendsCHF, delta: investedInBase };
   };
 
   const calculatePeriodicStats = (asset, startDate, targetDate) => {
@@ -230,26 +221,60 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
+        // 1. Dashboard Block (Volle Breite)
         const captureBlock = async (selector, titleFallback = '') => {
             const el = document.querySelector(selector);
             if (el) {
-                const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) });
+                // Kurze DOM-Pause
+                await new Promise(resolve => setTimeout(resolve, 50));
+                const canvas = await html2canvas(el, { 
+                    scale: 2, 
+                    backgroundColor: bgColor, 
+                    useCORS: true, 
+                    logging: false 
+                });
+                // WICHTIG: width: 760 signalisiert der PDF-Engine, dass dies ein Full-Width Block ist
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
             }
         };
 
         await captureBlock('.dashboard-top-export-block', ''); 
 
+        // 2. Charts (Im 2-Spalten Grid)
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
                 const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0) }); 
+                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div') || containers[i].querySelector('div');
+                
+                // Schneller und sauberer ECharts Nativ-Export (verhindert auch den Clipping-Bug)
+                if (chartDiv && window.echarts) {
+                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
+                    if (chartInstance) {
+                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
+                        // WICHTIG: fit: [360, 260] zwingt die PDF Engine in das 2-Spalten-Grid!
+                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
+                        continue;
+                    }
+                }
+                
+                // Fallback via html2canvas (mit Ignore-Filter)
+                const canvas = await html2canvas(containers[i], { 
+                    scale: 2, 
+                    backgroundColor: bgColor, 
+                    useCORS: true, 
+                    logging: false,
+                    ignoreElements: (element) => {
+                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
+                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
+                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT';
+                    }
+                });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] }); 
             }
         }
 
-        // Flache Tabellen-Struktur für Kompatibilität mit dem PDF Batch-Modus
+        // 3. Tabellendaten generieren
         const tableHeaders = [
             t ? t('colMonth') || 'Monat' : 'Monat',
             t ? t('colStocksInv') || 'Aktien (Inv.)' : 'Aktien (Inv.)',
@@ -283,7 +308,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
         return { chartsData, tableHeaders, tableBody };
     };
 
-    // --- STANDARD EINZEL-EXPORT ---
     const handlePdfExport = async () => {
       try {
         if (!PdfExportEngine) return;
@@ -303,7 +327,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
       }
     };
 
-    // --- NEU: BATCH EXPORT (ORCHESTRATOR) ---
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
@@ -346,7 +369,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
 
   return (
     <div className="max-w-[1400px] px-4 md:px-8 pb-12 mx-auto">
-      <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
       <div className="print-hide flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 mb-8 gap-3 shadow-sm">
          <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">

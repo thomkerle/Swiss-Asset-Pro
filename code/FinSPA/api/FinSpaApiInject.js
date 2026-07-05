@@ -13,7 +13,7 @@ window.FinSPA_API = {
 
     // --- Helper (synchron mit DataEngine) ---
     _isSecurity: function(assetClass) {
-        return ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetClass);
+        return ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes((assetClass || '').toLowerCase());
     },
     _parseRate: function(val) {
         return parseFloat(String(val || '1').replace(',', '.'));
@@ -25,10 +25,12 @@ window.FinSPA_API = {
     // Zentrale Klassifizierung von Buchungsflüssen (In/Out) - Synchron mit DataEngine
     _getBookingFlow: function(booking) {
         let amt = Number(booking.amount || 0);
-        let isPositive = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(booking.type);
+        const type = String(booking.type || '').toLowerCase();
+        
+        let isPositive = ['einzahlung', 'kauf', 'wertanpassung', 'dividende', 'ausschüttung', 'abzahlung'].includes(type);
         
         // Sonderfall: Negative Wertanpassung wird als Abfluss/Wertminderung gewertet
-        if (booking.type === 'Wertanpassung' && amt < 0) {
+        if (type === 'wertanpassung' && amt < 0) {
             isPositive = false;
             amt = Math.abs(amt);
         }
@@ -76,8 +78,9 @@ window.FinSPA_API = {
         if (asset.bookings) {
             asset.bookings.forEach(b => {
                 if (b.date <= targetDate) {
-                    if (['Kauf', 'Einzahlung', 'Dividende'].includes(b.type) && b.shares) sh += Number(b.shares);
-                    if (['Verkauf', 'Auszahlung'].includes(b.type) && b.shares) sh -= Number(b.shares);
+                    const bType = String(b.type || '').toLowerCase();
+                    if (['kauf', 'einzahlung', 'dividende', 'ausschüttung'].includes(bType) && b.shares) sh += Number(b.shares);
+                    if (['verkauf', 'auszahlung'].includes(bType) && b.shares) sh -= Number(b.shares);
                 }
             });
         }
@@ -94,7 +97,6 @@ window.FinSPA_API = {
         let p = 0;
         if (asset.bookings) {
             const sorted = [...asset.bookings].sort((a,b) => new Date(a.date) - new Date(b.date));
-            // KORREKTUR: Kein Filter mehr nach Typ, jeder gültige Preis zählt (analog DataEngine)
             const pastBookings = sorted.filter(b => b.date <= targetDate && Number(b.price) > 0);
             if (pastBookings.length > 0) {
                 p = Number(pastBookings[pastBookings.length - 1].price);
@@ -119,7 +121,6 @@ window.FinSPA_API = {
         if (asset.bookings) {
             asset.bookings.forEach(bk => {
                 if (bk.date > baseDate && bk.date <= targetDate) {
-                    // KORREKTUR: Nutzung der neuen zentralen getBookingFlow Logik
                     const flow = this._getBookingFlow(bk);
                     if (flow.isPositive) netBookings += flow.amount;
                     else netBookings -= flow.amount;
@@ -169,6 +170,106 @@ window.FinSPA_API = {
         }
 
         return rawValue * this._parseRate(applicableRate || 1);
+    },
+
+    getInvestedCapitalAtDate: function(asset, targetDate, allAssets) {
+        let investedRaw = 0;
+        
+        const ac = (asset.assetClass || '').toLowerCase();
+        const isFluctuating = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(ac);
+        
+        if (isFluctuating) {
+            let allEntries = [
+                ...(asset.balances || []).map(b => ({...b, _isBal: true})),
+                ...(asset.bookings || [])
+            ].filter(e => e.date <= targetDate).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            let hasInitialInvested = false;
+
+            allEntries.forEach(bk => {
+                if (bk._isBal) {
+                    if (!hasInitialInvested && investedRaw === 0) {
+                         investedRaw = Number(bk.amount || 0);
+                         hasInitialInvested = true;
+                    }
+                } else {
+                    const bkType = String(bk.type).toLowerCase();
+                    if (['kauf', 'einzahlung'].includes(bkType) && String(bk.subCategory || '').toLowerCase() !== 'zinsen') {
+                        investedRaw += Number(bk.amount || 0);
+                        hasInitialInvested = true;
+                    }
+                    if (['verkauf', 'auszahlung'].includes(bkType)) {
+                        investedRaw -= Number(bk.amount || 0);
+                    }
+                }
+            });
+        } else {
+            let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+            let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+            let baseDate = '1970-01-01';
+
+            if (applicableBalance) {
+                investedRaw = applicableBalance.amount;
+                baseDate = applicableBalance.date;
+            }
+
+            (asset.bookings || []).forEach(bk => {
+                const bkType = String(bk.type).toLowerCase();
+                const isKauf = bkType === 'kauf';
+                const isEinzahlung = bkType === 'einzahlung' && String(bk.subCategory || '').toLowerCase() !== 'zinsen';
+                const isAuszahlung = bkType === 'verkauf' || bkType === 'auszahlung';
+
+                if (applicableBalance) {
+                    if (bk.date > baseDate && bk.date <= targetDate) {
+                        if (isKauf || isEinzahlung) investedRaw += Number(bk.amount);
+                        if (isAuszahlung) investedRaw -= Number(bk.amount);
+                    }
+                } else {
+                    if (bk.date <= targetDate) {
+                        if (isKauf || isEinzahlung) investedRaw += Number(bk.amount);
+                        if (isAuszahlung) investedRaw -= Number(bk.amount);
+                    }
+                }
+            });
+        }
+
+        if (!asset.currency || asset.currency === 'CHF') return investedRaw;
+
+        if (targetDate >= this._getTodayStr() && asset.exchangeRate) {
+            return investedRaw * this._parseRate(asset.exchangeRate);
+        }
+
+        let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
+        let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
+        let applicableRate = applicableBalance && applicableBalance.bookingExchangeRate ? applicableBalance.bookingExchangeRate : this._parseRate(asset.exchangeRate);
+        let baseDate = applicableBalance ? applicableBalance.date : '1970-01-01';
+
+        if (asset.bookings) {
+            asset.bookings.forEach(bk => {
+                if (bk.date > baseDate && bk.date <= targetDate) {
+                    if (bk.bookingExchangeRate && bk.bookingExchangeRate !== 1) applicableRate = bk.bookingExchangeRate;
+                }
+            });
+        }
+
+        if (!applicableRate || applicableRate === 1) {
+            let latestDate = '1970-01-01';
+            const searchAssets = allAssets || this.getAllAssets();
+            searchAssets.forEach(otherAsset => {
+                if (otherAsset.currency === asset.currency) {
+                    if (otherAsset.bookings) {
+                        otherAsset.bookings.forEach(b => {
+                            if (b.bookingExchangeRate && b.bookingExchangeRate !== 1 && b.date <= targetDate && b.date > latestDate) {
+                                applicableRate = b.bookingExchangeRate;
+                                latestDate = b.date;
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        return investedRaw * this._parseRate(applicableRate || 1);
     },
 
     // --- Legacy Kompatibilität für die KI ---
@@ -232,21 +333,36 @@ window.FinSPA_API = {
                 ...booking,
                 assetName: asset.name,
                 bankName: asset.bankName,
-                assetClass: asset.assetClass
+                assetClass: asset.assetClass,
+                assetExchangeRate: asset.exchangeRate // Für FX-Fallback
             }))
         );
     },
 
     getTotalFeesPaid: function() {
         return this.getAllBookings()
-            .filter(b => b.type === 'Gebühr')
-            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+            .filter(b => String(b.type || '').toLowerCase() === 'gebühr')
+            .reduce((sum, b) => {
+                const bkRate = this._parseRate(b.bookingExchangeRate || 0);
+                const assetRate = this._parseRate(b.assetExchangeRate || 1);
+                const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
+                return sum + (Number(b.amount || 0) * appliedRate);
+            }, 0);
     },
 
     getTotalDividendsReceived: function() {
         return this.getAllBookings()
-            .filter(b => b.type === 'Einzahlung' && b.subCategory === 'Dividenden')
-            .reduce((sum, b) => sum + (b.amount * (b.bookingExchangeRate || 1)), 0);
+            .filter(b => {
+                const rawType = String(b.type || '').toLowerCase();
+                const catStr = String(b.subCategory || b.category || '').toLowerCase();
+                return ['dividende', 'ausschüttung'].includes(rawType) || catStr.includes('dividende');
+            })
+            .reduce((sum, b) => {
+                const bkRate = this._parseRate(b.bookingExchangeRate || 0);
+                const assetRate = this._parseRate(b.assetExchangeRate || 1);
+                const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
+                return sum + (Number(b.amount || 0) * appliedRate);
+            }, 0);
     },
 
     getMonthlyCashflowHistory: function() {
@@ -256,9 +372,19 @@ window.FinSPA_API = {
             if (!b.date) return;
             const month = b.date.substring(0, 7); 
             if (!cashflowMap[month]) cashflowMap[month] = { month: month, income: 0, expenses: 0, net: 0 };
-            const amount = b.amount * (b.bookingExchangeRate || 1);
-            if (['Einzahlung', 'Dividende', 'Verkauf'].includes(b.type)) cashflowMap[month].income += amount;
-            else if (['Auszahlung', 'Gebühr', 'Kauf', 'Zinszahlung', 'Abzahlung'].includes(b.type)) cashflowMap[month].expenses += amount;
+            
+            const bkRate = this._parseRate(b.bookingExchangeRate || 0);
+            const assetRate = this._parseRate(b.assetExchangeRate || 1);
+            const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
+            
+            const amount = Number(b.amount || 0) * appliedRate;
+            const type = String(b.type || '').toLowerCase();
+            
+            if (['einzahlung', 'dividende', 'ausschüttung', 'verkauf'].includes(type)) {
+                cashflowMap[month].income += amount;
+            } else if (['auszahlung', 'gebühr', 'kauf', 'zinszahlung', 'abzahlung'].includes(type)) {
+                cashflowMap[month].expenses += amount;
+            }
         });
         return Object.keys(cashflowMap).sort().map(m => {
             cashflowMap[m].net = cashflowMap[m].income - cashflowMap[m].expenses;
@@ -271,7 +397,7 @@ window.FinSPA_API = {
         if (!items || !Array.isArray(items)) return 0;
         return items.reduce((sum, item) => {
             const amount = parseFloat(item.amount) || 0;
-            return item.frequency === 'yearly' ? sum + (amount / 12) : sum + amount;
+            return String(item.frequency || '').toLowerCase() === 'yearly' ? sum + (amount / 12) : sum + amount;
         }, 0);
     },
 
@@ -347,7 +473,7 @@ window.FinSPA_API = {
                 tableHeaders: config.tables?.[0]?.headers || [],
                 tableBody: config.tables?.[0]?.rows || [],
                 chartsBase64: chartsBase64,
-        data: window.FinSPA_API._getData()
+                data: window.FinSPA_API._getData()
             });
         }
     }

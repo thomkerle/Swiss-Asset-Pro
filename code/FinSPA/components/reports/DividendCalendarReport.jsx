@@ -264,8 +264,7 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
   if (yieldAssets.length === 0) {
     return (
       <div className="max-w-[1400px] px-4 md:px-8 pb-12 mx-auto">
-        <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
-        <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
+                <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Calendar" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT('noForwardYieldData', 'Es wurden noch keine "Erw. Rendite" Werte in deinen Aktien/Fonds hinterlegt.')}</p>
           <p className="text-xs mt-2 opacity-70">Wähle links im Baum ein Wertpapier aus und trage im Editor unten die Dividenden-Prognose ein.</p>
@@ -276,7 +275,6 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
 
   return (
     <div className="max-w-[1400px] px-4 md:px-8 pb-12 mx-auto animate-fade-in">
-      <ReportHeader title={repTitle} subtitle={repSub} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />
 
       <div className="kpi-dividend-export-block w-full bg-white dark:bg-slate-950">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 p-1">
