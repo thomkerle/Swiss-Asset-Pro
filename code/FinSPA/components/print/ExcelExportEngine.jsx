@@ -1,6 +1,6 @@
 const ExcelExportEngine = {
   /**
-   * Generiert das FinSPA-Logo on-the-fly als Base64 Bild
+   * Generiert das FinBundle Pro-Logo on-the-fly als Base64 Bild
    */
   generateLogoBase64: () => {
     if (typeof document === 'undefined') return null;
@@ -52,7 +52,7 @@ const ExcelExportEngine = {
 
     const ExcelJS = window.ExcelJS;
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'FinSPA Pro';
+    workbook.creator = 'FinBundle Pro';
     workbook.created = new Date();
 
     const baseCurrency = data.settings?.baseCurrency || 'CHF';
@@ -184,7 +184,7 @@ const ExcelExportEngine = {
         wsDashboard.addImage(logoId, { tl: { col: 1, row: 1 }, ext: { width: 90, height: 90 } });
     }
 
-    wsDashboard.getCell('C2').value = 'FinSPA Pro';
+    wsDashboard.getCell('C2').value = 'FinBundle Pro';
     wsDashboard.getCell('C2').font = { size: 24, bold: true, color: { argb: primaryBlue } };
     wsDashboard.getCell('C3').value = getText('exclTitle', 'Portfolio Übersicht & Analyse');
     wsDashboard.getCell('C3').font = { size: 14, italic: true, color: { argb: '64748B' } };
@@ -210,7 +210,9 @@ const ExcelExportEngine = {
     leftRow++;
 
     const bankStartRow = leftRow;
-    bankData.forEach(bd => {
+    data.banks?.forEach(bank => {
+      const bd = bankData.find(b => b.bank.id === bank.id);
+      if (!bd) return;
       const share = portfolioTotal > 0 ? (bd.bankTotalValue / portfolioTotal) : 0;
       const safeBankName = bd.bank.name.substring(0, 30).replace(/[\\/?*[\]]/g, '');
       
@@ -576,7 +578,6 @@ const ExcelExportEngine = {
           tableHeaderRow.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerGray } };
       }
       
-      const frozenRow = dashRow; 
       let bankCurrentRow = dashRow + 1;
 
       const processAssets = (nodes) => {

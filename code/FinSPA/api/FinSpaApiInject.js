@@ -41,6 +41,76 @@ window.FinSPA_API = {
         };
     },
 
+    _isAssetLiquid: function(asset) {
+        if (asset.hasOwnProperty('isLiquid')) return asset.isLiquid;
+        const ac = (asset.assetClass || '').toLowerCase();
+        const name = (asset.name || '').toLowerCase();
+        const isPension = ac.includes('pension') || name.includes('vorsorge') || name.includes('3a');
+        
+        if (['stock', 'fund', 'managed_fund', 'crypto', 'realestate', 'mortgage'].includes(ac)) return false;
+        if (isPension) return false;
+        
+        return true; 
+    },
+
+    _classifyBooking: function(bk, asset) {
+        const isLiquid = this._isAssetLiquid(asset);
+        
+        const rawCategory = bk.normCategory || bk.category || bk.subCategory || '';
+        const catLower = rawCategory.toLowerCase();
+        const rawType = String(bk.type || bk.normType || '').toLowerCase();
+        
+        let classification = {
+            type: 'neutral', 
+            category: rawCategory || 'Unkategorisiert',
+            isLiquid: isLiquid
+        };
+
+        if (['dividende', 'ausschüttung'].includes(rawType) || catLower.includes('dividende')) {
+            const ac = (asset.assetClass || '').toLowerCase();
+            const isSecurityAsset = ['stock', 'fund', 'managed_fund', 'pension_fund', 'pension_3a_fund', 'pension_3a_managed'].includes(ac);
+            
+            if (isSecurityAsset || !isLiquid) {
+                classification.type = 'income';
+            } else {
+                classification.type = 'shift'; 
+            }
+            classification.category = 'Dividenden'; 
+            return classification;
+        }
+
+        if (['zinszahlung'].includes(rawType) || catLower.includes('zinsen')) {
+            classification.type = 'income';
+            classification.category = 'Zinsen'; 
+            return classification;
+        }
+
+        if (catLower.includes('miete')) {
+            classification.type = 'income';
+            classification.category = 'Mieteinnahmen'; 
+            return classification;
+        }
+
+        if (!isLiquid) {
+            classification.type = 'ignore';
+            return classification;
+        }
+
+        const isTransfer = catLower.includes('umbuchung') || catLower.includes('transfer');
+        if (isTransfer) {
+            classification.type = 'shift';
+            return classification;
+        }
+
+        if (['einzahlung', 'verkauf'].includes(rawType)) {
+            classification.type = 'income';
+        } else if (['auszahlung', 'kauf', 'abzahlung', 'gebühr'].includes(rawType)) {
+            classification.type = 'expense';
+        }
+
+        return classification;
+    },
+
     // --- Assets & Navigation ---
     getAllAssets: function() {
         const data = this._getData();
@@ -337,6 +407,29 @@ window.FinSPA_API = {
                 assetExchangeRate: asset.exchangeRate // Für FX-Fallback
             }))
         );
+    },
+
+    getNormalizedBookings: function() {
+        const assets = this.getAllAssets();
+        let allBookings = [];
+        assets.forEach(asset => {
+            (asset.bookings || []).forEach(bk => {
+                const classif = this._classifyBooking(bk, asset);
+                const bkRate = bk.bookingExchangeRate ? this._parseRate(bk.bookingExchangeRate) : 0;
+                const assetRate = this._parseRate(asset.exchangeRate || 1);
+                const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
+                
+                allBookings.push({
+                    ...bk,
+                    ...classif, 
+                    _baseValue: Number(bk.amount || 0) * appliedRate,
+                    assetName: asset.name,
+                    bankName: asset.bankName,
+                    assetClass: asset.assetClass
+                });
+            });
+        });
+        return allBookings;
     },
 
     getTotalFeesPaid: function() {

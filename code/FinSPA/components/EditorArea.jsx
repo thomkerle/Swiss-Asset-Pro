@@ -45,7 +45,6 @@ const ReportHeader = safeRequire('./ReportHeader.jsx') || safeRequire('./ReportH
 
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
 
-// NEU: Globale Übersetzungs-Hilfsfunktion für sauberen Code
 const safeT = (t, key, fallback) => {
     if (!t) return fallback;
     const res = t(key);
@@ -127,13 +126,25 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
     const max = Math.max(...plotData);
     const range = max - min || 1;
     
+    const timestamps = plotDates.map(dateStr => new Date(dateStr).getTime());
+    const minTime = timestamps.length > 0 ? timestamps[0] : 0;
+    const maxTime = timestamps.length > 0 ? timestamps[timestamps.length - 1] : 0;
+    const timeRange = maxTime - minTime || 1; 
+    
     const paddingX = 6;
     const paddingY = 8;
     const width = 160;   
     const height = 56;   
 
     const getCoords = (d, i) => {
-        const x = paddingX + (i / (plotData.length - 1)) * (width - paddingX * 2);
+        let xPct;
+        if (timestamps.length === plotData.length && timeRange > 0) {
+            xPct = (timestamps[i] - minTime) / timeRange;
+        } else {
+            xPct = plotData.length > 1 ? i / (plotData.length - 1) : 0;
+        }
+        
+        const x = paddingX + xPct * (width - paddingX * 2);
         const y = height - paddingY - ((d - min) / range) * (height - paddingY * 2);
         return { x, y };
     };
@@ -150,14 +161,22 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
     const handleMouseMove = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
-        const widthEff = width - paddingX * 2;
-        const pct = (mouseX - paddingX) / widthEff;
-        let idx = Math.round(pct * (plotData.length - 1));
-        if (idx < 0) idx = 0;
-        if (idx > plotData.length - 1) idx = plotData.length - 1;
-        setHoveredIdx(idx);
         
-        const coords = getCoords(plotData[idx], idx);
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        
+        for (let i = 0; i < plotData.length; i++) {
+            const ptX = getCoords(plotData[i], i).x;
+            const diff = Math.abs(mouseX - ptX);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIdx = i;
+            }
+        }
+        
+        setHoveredIdx(closestIdx);
+        
+        const coords = getCoords(plotData[closestIdx], closestIdx);
         setTooltipPos({ x: coords.x, y: coords.y });
     };
 
@@ -234,7 +253,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
     );
 };
 
-const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, modalObj, setModalObj, updateTreeData, fCur, t }) => {
+const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNode, isTreeVisible, setIsTreeVisible, showArchived, dateRange, setDateRange, modalObj, setModalObj, updateTreeData, fCur, t, showToast }) => {
   const allAssets = getAllAssets(data?.banks || []) || [];
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
@@ -497,7 +516,7 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
         case 'topFlow': return <TopFlowReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'bookingAnalysis': return <BookingAnalysisReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'future': return <FutureReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} fCur={fCur} t={t} />;
+     case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} updateTreeData={updateTreeData} fCur={fCur} t={t} />;
         case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
 	    case 'dividendCalendar': return <DividendCalendarReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
@@ -687,6 +706,155 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
 
       const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
       const currentShares = typeof getAssetSharesAtDate === 'function' ? getAssetSharesAtDate(adjustedNode, todayStr) : 0;
+
+      // --- Erweiterte Logik für den Live-API Abruf (inkl. Frankfurter FX-Sync) ---
+// --- Erweiterte Logik für den Live-API Abruf (inkl. ISIN-Auflösung & Frankfurter FX-Sync) ---
+      const handleFetchLivePrice = async () => {
+          const finKeys = data?.settings?.finApiKeys || {};
+          let ticker = adjustedNode.ticker;
+          const isin = adjustedNode.isin; // NEU: ISIN wird ausgelesen
+
+          if (!ticker && !isin) {
+              if (showToast) showToast(safeT(t, 'msgNoTicker', 'Bitte zuerst ein Ticker-Symbol (z.B. AAPL.US) oder eine ISIN eintragen.'), 'warning');
+              return;
+          }
+
+          if (!finKeys.eodhd && !finKeys.alphavantage) {
+              if (showToast) showToast(safeT(t, 'msgNoFinApiKeys', 'Keine API-Keys konfiguriert. Bitte in den Einstellungen hinterlegen.'), 'info');
+              return;
+          }
+
+          if (showToast) showToast(safeT(t, 'msgFetchingPrice', 'Rufe Live-Kurs & Wechselkurs ab...'), 'info');
+
+          let price = 0;
+          let provider = '';
+          let apiDate = new Date().toISOString().split('T')[0];
+
+          try {
+              // 1. ISIN in Ticker auflösen (falls nur ISIN vorhanden)
+              if (!ticker && isin && finKeys.eodhd) {
+                  const searchRes = await fetch(`https://eodhd.com/api/search/${isin}?api_token=${finKeys.eodhd}&fmt=json`);
+                  if (searchRes.ok) {
+                      const searchJson = await searchRes.json();
+                      if (Array.isArray(searchJson) && searchJson.length > 0) {
+                          // Nimmt den ersten Treffer der API (Code + Exchange)
+                          ticker = `${searchJson[0].Code}.${searchJson[0].Exchange}`;
+                          console.log(`[FinSPA] ISIN ${isin} aufgelöst zu Ticker: ${ticker}`);
+                      }
+                  }
+              }
+
+              // Wenn nach der ISIN-Suche immer noch kein Ticker existiert
+              if (!ticker) {
+                  if (showToast) showToast('ISIN konnte nicht aufgelöst werden. Bitte Ticker manuell eintragen.', 'warning');
+                  return;
+              }
+
+              // 2. Börsenkurs abrufen (EODHD oder Alpha Vantage)
+              if (finKeys.eodhd) {
+                  const res = await fetch(`https://eodhd.com/api/eod/${ticker}?api_token=${finKeys.eodhd}&fmt=json`);
+                  
+                  if (res.ok) {
+                      const json = await res.json();
+                      if (Array.isArray(json) && json.length > 0) {
+                          const latestEod = json[json.length - 1];
+                          const eodhdPrice = Number(latestEod.close) || 0;
+                          
+                          if (eodhdPrice > 0) { 
+                              price = eodhdPrice; 
+                              provider = 'EODHD'; 
+                              if (latestEod.date) apiDate = latestEod.date; 
+                          }
+                      } else if (json.error || json.message) {
+                          if (showToast) showToast(`EODHD Meldung: ${json.error || json.message}`, 'warning');
+                      }
+                  }
+              }
+
+              if (!price && finKeys.alphavantage) {
+                  const avTicker = ticker.endsWith('.US') ? ticker.replace('.US', '') : ticker;
+                  const res = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${finKeys.alphavantage}`);
+                  
+                  if (res.ok) {
+                      const json = await res.json();
+                      const quote = json['Global Quote'];
+                      if (quote && quote['05. price']) {
+                          price = Number(quote['05. price']);
+                          provider = 'Alpha Vantage';
+                          if (quote['07. latest trading day']) {
+                              apiDate = quote['07. latest trading day'];
+                          }
+                      }
+                  }
+              }
+          } catch (e) {
+              console.error("API Stock Fetch Error:", e);
+          }
+
+          // 3. Wechselkurs abrufen via Frankfurter API
+          let currentFxRate = parseRate(adjustedNode.exchangeRate) || 1;
+          const fromCurrency = adjustedNode.currency;
+          const baseCurrency = data?.settings?.baseCurrency || 'CHF';
+          
+          if (isForeignCurrency && fromCurrency) {
+              try {
+                  let liveFx = null;
+                  const fxRes = await fetch(`https://api.frankfurter.dev/v1/${apiDate}?base=${fromCurrency}&symbols=${baseCurrency}`);
+                  if (fxRes.ok) {
+                      const fxJson = await fxRes.json();
+                      liveFx = fxJson.rates[baseCurrency];
+                  } else {
+                      const fxRes2 = await fetch(`https://api.frankfurter.app/${apiDate}?base=${fromCurrency}&symbols=${baseCurrency}`);
+                      if (fxRes2.ok) {
+                          const fxJson2 = await fxRes2.json();
+                          liveFx = fxJson2.rates[baseCurrency];
+                      }
+                  }
+                  if (liveFx) currentFxRate = liveFx;
+              } catch (fxErr) {
+                  console.warn("FX Fetch via Frankfurter failed, using fallback/stored rate:", fxErr);
+              }
+          }
+
+          // 4. Buchung und Asset-Kurs aktualisieren
+          if (price > 0) {
+              let updatedNode = { ...selectedNode, exchangeRate: currentFxRate };
+              let bookings = [...(updatedNode.bookings || [])];
+              
+              const existingSyncIdx = bookings.findIndex(b => b.date === apiDate && b.type === 'Wertanpassung' && b.subCategory === 'API Kurs-Sync');
+              
+              const newBooking = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  date: apiDate,
+                  type: 'Wertanpassung',
+                  subCategory: 'API Kurs-Sync',
+                  price: price,
+                  amount: 0,
+                  bookingExchangeRate: currentFxRate,
+                  comment: `#${provider.replace(/\s+/g, '')} EOD-Kurs (FX: 1 ${fromCurrency} = ${currentFxRate} ${baseCurrency})`
+              };
+
+              if (existingSyncIdx >= 0) bookings[existingSyncIdx] = newBooking;
+              else bookings.push(newBooking);
+
+              updatedNode.bookings = bookings;
+              const finalNode = applyAutoValuation(updatedNode);
+
+              const updateRecursive = (nodes) => nodes.map(n => {
+                  if (n.id === selectedNode.id) return finalNode;
+                  if (n.children) return { ...n, children: updateRecursive(n.children) };
+                  return n;
+              });
+              
+              updateTreeData({ banks: updateRecursive(data.banks) });
+              setSelectedNode(finalNode);
+              
+              const fxNotice = isForeignCurrency ? ` | FX: ${currentFxRate}` : '';
+              if (showToast) showToast(safeT(t, 'msgPriceUpdated', `EOD Kurs (${apiDate}) via ${provider} synchronisiert: ${price} ${fromCurrency}${fxNotice}`), 'success');
+          } else {
+              if (showToast) showToast(safeT(t, 'msgPriceFetchFailed', 'Kursabruf fehlgeschlagen. Ticker/ISIN überprüfen oder API-Limit erreicht.'), 'error');
+          }
+      };
 
       const handleRowDrop = (draggedId, targetId) => {
           if (draggedId === targetId) return;
@@ -986,60 +1154,71 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
                 </button>
 
                 {isSecurities && (
-                    <button 
-                        onClick={() => {
-                            let updatedNode = { ...selectedNode };
-                            let bookings = [...(updatedNode.bookings || [])];
-                            let addedCount = 0;
+                    <>
+                        {/* --- NEU: Button für Live-API Abruf --- */}
+                        <button 
+                            onClick={handleFetchLivePrice}
+                            className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 transition-colors shadow-sm"
+                            title={safeT(t, 'titleCloudSync', 'Aktuellen Kurs via Alpha Vantage oder EODHD abrufen')}
+                        >
+                            <Icon name="Cloud" size={16}/> <span className="hidden sm:inline">{safeT(t, 'btnCloudSync', 'Live-Kurs abrufen')}</span>
+                        </button>
+                        
+                        <button 
+                            onClick={() => {
+                                let updatedNode = { ...selectedNode };
+                                let bookings = [...(updatedNode.bookings || [])];
+                                let addedCount = 0;
 
-                            const txWithPrice = bookings.filter(b => 
-                                ['Kauf', 'Verkauf', 'Dividende'].includes(b.type) && Number(b.price) > 0
-                            );
-
-                            txWithPrice.forEach(tx => {
-                                const existingReval = bookings.find(b => 
-                                    b.type === 'Wertanpassung' && b.date === tx.date && !b._isAutoValuation
+                                const txWithPrice = bookings.filter(b => 
+                                    ['Kauf', 'Verkauf', 'Dividende'].includes(b.type) && Number(b.price) > 0
                                 );
 
-                                if (!existingReval) {
-                                    bookings.push({
-                                        id: Math.random().toString(36).substr(2, 9),
-                                        date: tx.date,
-                                        type: 'Wertanpassung',
-                                        subCategory: safeT(t, 'catPriceFromTransaction', 'Kurs aus Transaktion'),
-                                        price: Number(tx.price),
-                                        amount: 0,
-                                        bookingExchangeRate: tx.bookingExchangeRate || updatedNode.exchangeRate || 1
-                                    });
-                                    addedCount++;
-                                }
-                            });
+                                txWithPrice.forEach(tx => {
+                                    const existingReval = bookings.find(b => 
+                                        b.type === 'Wertanpassung' && b.date === tx.date && !b._isAutoValuation
+                                    );
 
-                            updatedNode.bookings = bookings;
-                            const finalNode = applyAutoValuation(updatedNode);
+                                    if (!existingReval) {
+                                        bookings.push({
+                                            id: Math.random().toString(36).substr(2, 9),
+                                            date: tx.date,
+                                            type: 'Wertanpassung',
+                                            subCategory: safeT(t, 'catPriceFromTransaction', 'Kurs aus Transaktion'),
+                                            price: Number(tx.price),
+                                            amount: 0,
+                                            bookingExchangeRate: tx.bookingExchangeRate || updatedNode.exchangeRate || 1
+                                        });
+                                        addedCount++;
+                                    }
+                                });
 
-                            const updateRecursive = (nodes) => nodes.map(n => {
-                                if (n.id === selectedNode.id) return finalNode;
-                                if (n.children) return { ...n, children: updateRecursive(n.children) };
-                                return n;
-                            });
-                            
-                            updateTreeData({ banks: updateRecursive(data.banks) });
-                            setSelectedNode(finalNode);
-                            
-                            if (typeof window !== 'undefined' && window.showToast) {
-                                if (addedCount > 0) {
-                                    window.showToast(safeT(t, 'msgPricesExtracted', "Kurs(e) aus Transaktionen in Marktdaten übernommen."), "success");
-                                } else {
-                                    window.showToast(safeT(t, 'msgMarketValuesUpToDate', "Marktwerte sind bereits auf dem neuesten Stand."), "info");
+                                updatedNode.bookings = bookings;
+                                const finalNode = applyAutoValuation(updatedNode);
+
+                                const updateRecursive = (nodes) => nodes.map(n => {
+                                    if (n.id === selectedNode.id) return finalNode;
+                                    if (n.children) return { ...n, children: updateRecursive(n.children) };
+                                    return n;
+                                });
+                                
+                                updateTreeData({ banks: updateRecursive(data.banks) });
+                                setSelectedNode(finalNode);
+                                
+                                if (typeof window !== 'undefined' && window.showToast) {
+                                    if (addedCount > 0) {
+                                        window.showToast(safeT(t, 'msgPricesExtracted', "Kurs(e) aus Transaktionen in Marktdaten übernommen."), "success");
+                                    } else {
+                                        window.showToast(safeT(t, 'msgMarketValuesUpToDate', "Marktwerte sind bereits auf dem neuesten Stand."), "info");
+                                    }
                                 }
-                            }
-                        }} 
-                        className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300 transition-colors shadow-sm"
-                        title={safeT(t, 'titleSyncMarketValues', 'Extrahiert Kurse aus Transaktionen und ergänzt die Kurshistorie.')}
-                    >
-                        <Icon name="RefreshCw" size={16}/> {safeT(t, 'btnSyncMarketValues', 'Marktwerte synchronisieren')}
-                    </button>
+                            }} 
+                            className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300 transition-colors shadow-sm"
+                            title={safeT(t, 'titleSyncMarketValues', 'Extrahiert Kurse aus Transaktionen und ergänzt die Kurshistorie.')}
+                        >
+                            <Icon name="RefreshCw" size={16}/> <span className="hidden sm:inline">{safeT(t, 'btnSyncMarketValues', 'Lokale Daten synchronisieren')}</span>
+                        </button>
+                    </>
                 )}
               </div>
             </div>

@@ -51,7 +51,9 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         amount: '', subCategory: '', comment: '', shares: '', price: '', fees: '', taxes: '', 
         bookingExchangeRate: isForeignCurrency ? (selectedNode?.exchangeRate || 1) : 1,
         targetAssetId: '',
-        bulkOperation: 'delete'
+        bulkOperation: 'delete',
+        ticker: '', // NEU: Initiale Werte für Ticker/ISIN
+        isin: ''
     });
 
     const [suggestedFxRate, setSuggestedFxRate] = useState(null);
@@ -353,7 +355,8 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                     } else {
                         const ac = form.assetClass || 'cash';
                         const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage', 'pension_3a_managed'].includes(ac);
-                        copy.children.push({ id: generateId(), name: form.name || (t('newAssetName')||'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [] });
+                        // NEU: ticker und isin in das neue Asset übernehmen
+                        copy.children.push({ id: generateId(), name: form.name || (t('newAssetName')||'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [], ticker: form.ticker || '', isin: form.isin || '' });
                     }
                     return copy;
                 }
@@ -574,6 +577,20 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                   <option value="managed_fund">{t ? t('acManagedFund') : 'Verwaltetes Portfolio (Robo-Advisor)'}</option>
                                   <option value="pension_3a_managed">{t ? t('acPension3aManaged') : '3a Fonds (Gesamtwert)'}</option>
                               </select>
+
+                              {/* NEU: Ticker & ISIN Felder im Anlage-Modal */}
+                              {['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(form.assetClass || 'cash') && (
+                                  <div className="grid grid-cols-2 gap-3 mt-3">
+                                      <div>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('ticker') || 'Ticker (API)' : 'Ticker (API)'}</label>
+                                          <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. AAPL.US" value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
+                                      </div>
+                                      <div>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('isin') || 'ISIN' : 'ISIN'}</label>
+                                          <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. CH123456789" value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
+                                      </div>
+                                  </div>
+                              )}
                           </div>
                       )}
                   </>

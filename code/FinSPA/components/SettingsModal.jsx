@@ -27,6 +27,14 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
             };
         }
 
+        // --- NEU: Objekt für API-Keys der Finanz-Datenanbieter initialisieren ---
+        if (!initial.finApiKeys) {
+            initial.finApiKeys = {
+                alphavantage: '',
+                eodhd: ''
+            };
+        }
+
         if (!initial.aiModels) {
             initial.aiModels = [
                 { id: 'qwen2.5-coder:14b', name: 'Qwen 2.5 Coder (14B)' },
@@ -34,7 +42,7 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
             ];
         }
 
-        // --- NEU: Auto-Migration für fehlende Asset-Klassen ---
+        // --- Auto-Migration für fehlende Asset-Klassen ---
         if (!initial.assetClasses) {
             initial.assetClasses = [];
         }
@@ -174,6 +182,17 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         });
     };
 
+    // --- NEU: Setter für Finanz-APIs ---
+    const updateFinApiKey = (provider, value) => {
+        setLocalSettings({
+            ...localSettings,
+            finApiKeys: {
+                ...localSettings.finApiKeys,
+                [provider]: value
+            }
+        });
+    };
+
     const getTranslatedAsset = (asset) => {
         const titleMap = {
             'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
@@ -294,7 +313,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                             
                             <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
 {localSettings.assetClasses.map(asset => {
-    // Mapping für die System-Standardbeschreibungen
     const systemDescMap = {
         'cash': 'descCash', 'fund': 'descFund', 'stock': 'descStock', 'crypto': 'descCrypto',
         'realestate': 'descRealEstate', 'mortgage': 'descMortgage', 
@@ -311,7 +329,6 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         'Säule 3a Fondslösung über Gesamtwert (z.B. Viac, frankly)'
     ];
 
-    // Wenn es ein System-Key ist und die Beschreibung dem harten Default entspricht, live übersetzen
     const displayDesc = (systemKey && (!asset.description || hardcodedDefaults.includes(asset.description))) 
         ? (t(systemKey) || asset.description) 
         : asset.description;
@@ -486,6 +503,42 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                                     <p className="text-xs text-gray-400">
                                         {t('settingsChartEngineDesc') || 'Bestimmt, welche Engine standardmäßig zur Visualisierung der Finanzdaten genutzt wird.'}
                                     </p>
+                                </div>
+                            </div>
+
+                            {/* --- NEU: Externe Finanz-APIs (Marktdaten) --- */}
+                            <div className="border-t border-gray-200 dark:border-slate-700 pt-6">
+                                <h4 className="font-bold mb-2 text-xs text-indigo-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Icon name="Database" size={14} /> {t('labelFinApi') || 'Finanz-APIs (Marktdaten)'}
+                                </h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
+                                    {t('finApiDesc') || 'Hinterlege hier deine API-Schlüssel für externe Kursdaten-Anbieter, um Marktwerte automatisch zu synchronisieren.'}
+                                </p>
+
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border border-gray-200 dark:border-slate-700 rounded-xl">
+                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('keyEodhdApiKey') || 'EODHD API-Key (EOD Historical Data)'}</label>
+                                        <input 
+                                            type="password" 
+                                            value={localSettings.finApiKeys?.eodhd || ''}
+                                            onChange={e => updateFinApiKey('eodhd', e.target.value)}
+                                            placeholder="65a..." 
+                                            className="w-full max-w-lg p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">{t('descEodhdApiKey') || 'Erlaubt den Abruf von weltweiten End-of-Day Kursen via eodhd.com.'}</p>
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 border border-gray-200 dark:border-slate-700 rounded-xl">
+                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{t('keyAlphaVantageApiKey') || 'Alpha Vantage API-Key'}</label>
+                                        <input 
+                                            type="password" 
+                                            value={localSettings.finApiKeys?.alphavantage || ''}
+                                            onChange={e => updateFinApiKey('alphavantage', e.target.value)}
+                                            placeholder="ALPH..." 
+                                            className="w-full max-w-lg p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-1">{t('descAlphaVantageApiKey') || 'Erlaubt den Abruf von Aktienkursen via alphavantage.co (Max 25 Aufrufe/Tag im Free-Tier).'}</p>
+                                    </div>
                                 </div>
                             </div>
 

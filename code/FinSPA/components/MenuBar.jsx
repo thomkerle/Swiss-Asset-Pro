@@ -186,9 +186,10 @@ const BankSparklines = ({ data }) => {
   const [fxData, setFxData] = React.useState(null);
   const [fxCurrency, setFxCurrency] = React.useState('EUR');
 
-  if (!banks.length || typeof getAllAssets !== 'function') return null;
-
-  const allAssets = React.useMemo(() => getAllAssets(banks), [banks]);
+  // Alle Hooks MÜSSEN vor jeglichen "returns" ausgeführt werden!
+  const allAssets = React.useMemo(() => {
+      return (banks.length > 0 && typeof getAllAssets === 'function') ? getAllAssets(banks) : [];
+  }, [banks]);
 
   // 1. Datenpunkte für die Zeitachse ermitteln (letzte 6 Monate)
   const dates = React.useMemo(() => {
@@ -205,6 +206,7 @@ const BankSparklines = ({ data }) => {
 
   // 2. Gesamtvermögen Historie berechnen
   const wealthHistory = React.useMemo(() => {
+    if (!allAssets.length) return [];
     return dates.map(date => 
       allAssets.reduce((sum, asset) => sum + (getAssetValueAtDate ? getAssetValueAtDate(asset, date, allAssets) : 0), 0)
     );
@@ -212,6 +214,7 @@ const BankSparklines = ({ data }) => {
 
   // 3. Fremdwährung automatisch erkennen
   React.useEffect(() => {
+     if (!allAssets.length) return;
      const currencies = allAssets.map(a => a.currency).filter(c => c && c !== baseCurrency);
      const counts = currencies.reduce((acc, c) => { acc[c] = (acc[c]||0)+1; return acc; }, {});
      const mostCommon = Object.keys(counts).sort((a,b) => counts[b] - counts[a])[0];
@@ -226,7 +229,7 @@ const BankSparklines = ({ data }) => {
 
   // 4. Historie des FX-KURSES über die Frankfurter API
   React.useEffect(() => {
-    if (!fxCurrency || fxCurrency === baseCurrency) return;
+    if (!allAssets.length || !fxCurrency || fxCurrency === baseCurrency) return;
     
     const startStr = dates[0];
     const endStr = dates[dates.length - 1];
@@ -273,7 +276,10 @@ const BankSparklines = ({ data }) => {
     };
 
     fetchHistory();
-  }, [fxCurrency, baseCurrency, dates, data]);
+  }, [fxCurrency, baseCurrency, dates, data, allAssets.length]);
+
+  // HIER ERSCHEINT JETZT DAS EARLY RETURN (nach allen Hooks)
+  if (!banks.length || !allAssets.length || typeof getAllAssets !== 'function') return null;
 
   // Fallback, solange die API lädt
   const finalFxHistory = fxData || dates.map(() => data?.settings?.exchangeRates?.[fxCurrency] || 1);

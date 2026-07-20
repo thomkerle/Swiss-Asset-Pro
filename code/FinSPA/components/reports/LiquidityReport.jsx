@@ -206,21 +206,23 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       <div className="pdf-combined-export-block w-full bg-white dark:bg-transparent">
           
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="PieChart" size={14} className="text-blue-500"/>
                     <span>{t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital'}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
-                    <span>{fCur(grandTotal)}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(grandTotal)}>
+                        <span>{fCur(grandTotal)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2 flex gap-1">
+                <div className="text-xs text-gray-400 mt-1 flex gap-1">
                     <span>{t ? (t('statusAsOf') || 'Stichtag:') : 'Stichtag:'}</span> 
                     <span>{new Date(targetDate).toLocaleDateString('de-CH')}</span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-sky-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-sky-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Droplet" size={14} className="text-sky-500"/>
@@ -230,15 +232,17 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{liquidPercent.toFixed(1)}%</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
-                    <span>{fCur(liquidTotal)}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(liquidTotal)}>
+                        <span>{fCur(liquidTotal)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? (t('descLiquidFunds') || 'Flexibel abrufbares Vermögen') : 'Flexibel abrufbares Vermögen'}</span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Lock" size={14} className="text-amber-500"/>
@@ -248,15 +252,17 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{illiquidPercent.toFixed(1)}%</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
-                    <span>{fCur(illiquidTotal)}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(illiquidTotal)}>
+                        <span>{fCur(illiquidTotal)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? (t('descIlliquidFunds') || 'Langfristig gebundenes Kapital') : 'Langfristig gebundenes Kapital'}</span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between" title={t ? (t('tooltipCashShare') || "Anteil des Cashs am liquiden Vermögen") : "Anteil"}>
                     <span className="flex items-center gap-2">
                       <Icon name="DollarSign" size={14} className="text-emerald-500"/>
@@ -267,10 +273,12 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       <span>{t ? (t('labelPctOfLiq') || '% d. Liq.') : '% d. Liq.'}</span>
                     </span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white break-words">
-                    <span>{fCur(pureCashTotal)}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(pureCashTotal)}>
+                        <span>{fCur(pureCashTotal)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? (t('descCashFunds') || 'Sofort verfügbare Geldmittel') : 'Sofort verfügbare Geldmittel'}</span>
                 </div>
              </div>

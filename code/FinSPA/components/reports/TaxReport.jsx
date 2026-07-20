@@ -240,43 +240,52 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
           {/* KPI EXPORT BLOCK */}
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-1">
              
+             {/* 1. Steuerbares Vermögen */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Landmark" size={14} className="text-blue-500" />
                     <span>{String(labelTaxable).toUpperCase()}</span>
                 </div>
-                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2 break-words">
-                    <span>{fCur(taxableTotal)}</span>
-                    <span className="text-sm text-gray-400 font-medium ml-1">({taxablePct.toFixed(1)}%)</span>
+                <div className="w-full">
+                    <div className="font-black text-slate-900 dark:text-white flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur(taxableTotal)}>
+                        <span>{fCur(taxableTotal)}</span>
+                        <span className="text-sm text-gray-400 font-medium shrink-0">({taxablePct.toFixed(1)}%)</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? t('descTaxableWealth') || 'Unterliegt der regulären Vermögenssteuer' : 'Unterliegt der regulären Vermögenssteuer'}</span>
                 </div>
              </div>
 
+             {/* 2. Steuerbefreites Vermögen */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-emerald-500" />
                     <span>{String(labelTaxFree).toUpperCase()}</span>
                 </div>
-                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2 break-words">
-                    <span>{fCur(taxFreeTotal)}</span>
-                    <span className="text-sm text-gray-400 font-medium ml-1">({taxFreePct.toFixed(1)}%)</span>
+                <div className="w-full">
+                    <div className="font-black text-slate-900 dark:text-white flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur(taxFreeTotal)}>
+                        <span>{fCur(taxFreeTotal)}</span>
+                        <span className="text-sm text-gray-400 font-medium shrink-0">({taxFreePct.toFixed(1)}%)</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? t('descTaxFreeWealth') || 'Säule 3a & PK (Während Ansparphase)' : 'Säule 3a & PK (Während Ansparphase)'}</span>
                 </div>
              </div>
              
+             {/* 3. Total Deklarationswert */}
              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-6 rounded-2xl shadow-sm">
                 <div className="text-blue-700 dark:text-blue-400 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="FileText" size={14} />
                     <span>{String(t ? t('labelTotalTaxValue') || 'Total Deklarationswert' : 'Total Deklarationswert').toUpperCase()}</span>
                 </div>
-                <div className="text-2xl xl:text-3xl font-black text-blue-800 dark:text-blue-300 break-words">
-                    <span>{fCur(totalWealth)}</span>
+                <div className="w-full">
+                    <div className="font-black text-blue-800 dark:text-blue-300 flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur(totalWealth)}>
+                        <span>{fCur(totalWealth)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-2">
+                <div className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">
                     <span>{t ? t('descTotalTaxValue') || 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.' : 'Dieser Wert wird im Wertschriftenverzeichnis deklariert.'}</span>
                 </div>
              </div>

@@ -38,6 +38,13 @@ window.PdfExportEngine = PdfExportEngine;
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
+// --- HYBRID ENVIRONMENT CHECK ---
+const Env = {
+    isCapacitor: () => typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform(),
+    isWebView: () => typeof window !== 'undefined' && window.chrome && window.chrome.webview,
+    isWeb: () => typeof window !== 'undefined' && !window.Capacitor?.isNativePlatform() && !(window.chrome && window.chrome.webview)
+};
+
 const FinBundleLogo = ({ className = "h-24 w-24" }) => (
   <svg viewBox="0 0 100 100" className={`overflow-visible ${className}`}>
     <circle cx="50" cy="50" r="44" stroke="#2563eb" strokeWidth="5" fill="none" className="logo-pulse-circle origin-center" />
@@ -57,76 +64,76 @@ const AboutDialog = ({ setModalObj, t }) => {
         { name: "Plotly.js", license: "MIT" },
         { name: "Chart.js", license: "MIT" },
         { name: "pdfmake", license: "MIT" },
-        { name: "html2canvas", license: "MIT" },
-        { name: "JSZip", license: "MIT" },
         { name: "Tailwind CSS", license: "MIT" },
         { name: "crypto-js", license: "MIT" },
         { name: "exceljs", license: "MIT" },
-        { name: "Babel", license: "MIT" }
+        { name: "Capacitor", license: "MIT" }
     ];
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700 overflow-hidden transform transition-all scale-100">
-                
-                {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                        <Icon name="Info" className="text-blue-500" />
-                        <h3 className="font-bold text-base tracking-tight">{t('helpAbout') || 'Über FinBundle'}</h3>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.15)] w-full max-w-md border border-gray-200 dark:border-slate-700/60 overflow-hidden transform transition-all">
+
+                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800/80 dark:to-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl">
+                            <Icon name="Info" className="text-blue-600 dark:text-blue-400" size={18} />
+                        </div>
+                        <h3 className="font-black text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
+                            {t('helpAbout') || 'Über FinBundle'}
+                        </h3>
                     </div>
-                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors">
+                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800">
                         <Icon name="X" size={20}/>
                     </button>
                 </div>
-                    
-                {/* Logo Bereich */}
-                <div className="bg-white dark:bg-slate-900 pt-8 pb-4 flex justify-center">
-                    <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700">
-                        <FinBundleLogo className="h-24 w-24" />
+
+                <div className="relative pt-10 pb-6 flex justify-center bg-white dark:bg-slate-900">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/20 blur-2xl rounded-full pointer-events-none"></div>
+                    <div className="relative p-4 bg-white dark:bg-slate-800/80 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-700/50 backdrop-blur-sm">
+                        <FinBundleLogo className="h-20 w-20" />
                     </div>
                 </div>
-                
-                {/* Tab Navigation */}
-                <div className="flex gap-1 px-6 pt-2 mb-2">
-                    <button 
-                        onClick={() => setActiveTab('about')} 
-                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all ${activeTab === 'about' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+
+                <div className="flex gap-2 px-6 pt-2 mb-3">
+                    <button
+                        onClick={() => setActiveTab('about')}
+                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all duration-200 ${activeTab === 'about' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
                         {t('tabAbout') || 'Über'}
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('licenses')} 
-                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all ${activeTab === 'licenses' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+                    <button
+                        onClick={() => setActiveTab('licenses')}
+                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all duration-200 ${activeTab === 'licenses' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
                         {t('tabLicenses') || 'Lizenzen'}
                     </button>
                 </div>
 
-                {/* Content Bereich: h-[250px] sorgt für eine geringere Höhe */}
-                <div className="px-6 pb-6 h-[250px] overflow-y-auto custom-scrollbar">
+                <div className="px-6 pb-6 h-[220px] overflow-y-auto custom-scrollbar relative">
                     {activeTab === 'about' ? (
-                        <div className="text-center space-y-3 mt-2">
-                            <h2 className="text-xl font-black text-slate-800 dark:text-white">FinBundle Pro</h2>
-                            <p className="text-xs text-blue-500 font-bold bg-blue-50 dark:bg-blue-900/20 py-1 px-3 rounded-full inline-block">Version Beta - 0.9.8</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 px-2">{t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer.'}</p>
-                            <p className="text-[10px] text-gray-400 pt-4 font-medium uppercase tracking-widest">© {new Date().getFullYear()} Thomas Kerle</p>
+                        <div className="text-center space-y-4 mt-2 flex flex-col items-center h-full justify-center">
+                            <div>
+                                <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-blue-600 dark:text-blue-400">Pro</span></h2>
+                                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 py-1 px-3 rounded-full inline-block mt-2 border border-blue-100 dark:border-blue-800/50">
+                                    Version Beta - 0.9.8
+                                </p>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed">
+                                {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop & Tablet.'}
+                            </p>
+                            <div className="pt-4 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-3">© {new Date().getFullYear()} Thomas Kerle</p>
+                            </div>
                         </div>
                     ) : (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5 pr-1">
                             {licenses.map((lib, i) => (
-                                <div key={i} className="flex justify-between py-2 px-3 hover:bg-gray-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors group">
+                                <div key={i} className="flex justify-between items-center py-2.5 px-3 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent dark:hover:border-slate-700">
                                     <span className="font-bold text-xs text-slate-700 dark:text-slate-300">{lib.name}</span>
-                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-bold">{lib.license}</span>
+                                    <span className="text-[10px] bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-mono font-bold shadow-sm border border-gray-100 dark:border-slate-800">{lib.license}</span>
                                 </div>
                             ))}
                         </div>
                     )}
-                </div>
-                
-                {/* Footer Button */}
-                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/30">
-                    <button onClick={() => setModalObj(null)} className="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-sm">
-                        {t('btnClose') || 'Schließen'}
-                    </button>
                 </div>
             </div>
         </div>
@@ -252,8 +259,6 @@ const App = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Zwei Timeouts stellen sicher, dass sowohl sofortige als auch 
-    // eventuell CSS-animierte Layout-Änderungen sauber abgedeckt werden.
     const timer1 = setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 50);
     const timer2 = setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 350);
     
@@ -487,6 +492,15 @@ const App = () => {
 
     const jsonStr = JSON.stringify(data, null, 2);
 
+    const triggerBrowserDownload = (content, zipped) => {
+        const blob = new Blob([content], { type: zipped ? "application/zip" : "application/json" });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${zipped ? 'zip' : 'json'}`;
+        a.click();
+        showToast(zipped ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
+    };
+
     const executeWrite = async (pin) => {
         try {
             let finalContent;
@@ -502,7 +516,31 @@ const App = () => {
                 finalContent = jsonStr;
             }
 
-            if (targetHandle && window.showSaveFilePicker) {
+            if (Env.isCapacitor()) {
+                try {
+                    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+                    const fileName = targetHandle ? targetHandle.name : `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
+                    
+                    let dataToWrite = finalContent;
+                    if (isZip) {
+                       const base64String = btoa(String.fromCharCode.apply(null, finalContent));
+                       dataToWrite = base64String;
+                    }
+
+                    await Filesystem.writeFile({
+                        path: fileName,
+                        data: dataToWrite,
+                        directory: Directory.Documents,
+                        encoding: isZip ? undefined : 'utf8' 
+                    });
+                    
+                    showToast(isZip ? "Projekt verschlüsselt auf Gerät gespeichert" : "Projekt auf Gerät gespeichert", "success");
+                } catch (capErr) {
+                    console.warn("Capacitor Filesystem nicht verfügbar. Nutze Fallback.", capErr);
+                    triggerBrowserDownload(finalContent, isZip);
+                }
+            } 
+            else if (targetHandle && window.showSaveFilePicker) {
                 const opts = { mode: 'readwrite' };
                 if ((await targetHandle.queryPermission(opts)) !== 'granted') {
                     if ((await targetHandle.requestPermission(opts)) !== 'granted') {
@@ -515,13 +553,9 @@ const App = () => {
                 
                 setFileHandle(targetHandle);
                 showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt gespeichert") : (t('msgSaveSuccess2') || "Projekt erfolgreich gespeichert"), "success");
-            } else {
-                const blob = new Blob([finalContent], { type: isZip ? "application/zip" : "application/json" });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
-                a.click();
-                showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
+            } 
+            else {
+                triggerBrowserDownload(finalContent, isZip);
             }
         } catch (error) {
             console.error("[FinBundle Diagnose] Speicherfehler:", error);
@@ -807,7 +841,6 @@ const App = () => {
           background-color: #64748b;
         }
 
-        /* LOGO ANIMATIONS */
         @keyframes pulseCircle {
           0%, 100% { transform: scale(1); stroke: #2563eb; filter: drop-shadow(0 0 2px rgba(37,99,235,0.2)); }
           50% { transform: scale(1.03); stroke: #3b82f6; filter: drop-shadow(0 0 8px rgba(37,99,235,0.6)); }
@@ -886,6 +919,7 @@ const App = () => {
             updateTreeData={updateTreeData} 
             fCur={fCur} 
             t={t} 
+            showToast={showToast} 
           />
         </div>
 

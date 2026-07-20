@@ -131,6 +131,8 @@ window.finspaData = ... (Complete Tree)
   // -> Returns: [{ bankName: String, totalValue: Number }]
   FinSPA_API.getAllBookings() 
   // -> Returns: [{ date: "YYYY-MM-DD", type: String, subCategory: String, amount: Number, bookingExchangeRate: Number, assetName: String, bankName: String, assetClass: String }]
+  FinSPA_API.getNormalizedBookings()
+  // -> Returns: [{ date: "YYYY-MM-DD", type: String, category: String, amount: Number, _baseValue: Number, isLiquid: Boolean, assetName: String, bankName: String, assetClass: String }]
   FinSPA_API.getMonthlyCashflowHistory() 
   // -> Returns: [{ month: "YYYY-MM", income: Number, expenses: Number, net: Number }]
 

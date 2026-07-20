@@ -392,21 +392,23 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
       </div>
 
       <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">
                     {calcMethod === 'cumulative' ? (t ? t('netInvestedTotal') || 'Netto Investiert (Total)' : 'Netto Investiert (Total)') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital')}
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">
-                    {fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}
+                <div className="w-full">
+                    <div className="font-black text-slate-900 dark:text-white flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}>
+                        <span>{fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}</span>
+                    </div>
                 </div>
                 {calcMethod === 'periodic' && (
-                    <div className={`text-sm font-bold mt-2 flex items-center gap-1.5 ${latestData.delta >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600'}`}>
+                    <div className={`text-sm font-bold mt-1 flex items-center gap-1.5 ${latestData.delta >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600'}`}>
                         <Icon name={latestData.delta >= 0 ? "TrendingUp" : "TrendingDown"} size={14} prefix="" /> 
                         {latestData.delta > 0 ? '+' : ''}{fCur ? fCur(latestData.delta, 'CHF') : latestData.delta} {t ? t('netInflow') || 'Netto-Zufluss' : 'Netto-Zufluss'}
                     </div>
                 )}
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-2 truncate">
                     {calcMethod === 'cumulative' 
                         ? (t ? t('descSecuritiesInvested') || 'Summe aller Käufe minus Verkäufe' : 'Summe aller Käufe minus Verkäufe') 
                         : `${t ? t('baseValuePlusInflows') || 'Basiswert' : 'Basiswert'} (${new Date(earliestDate).toLocaleDateString('de-CH')}) + ${t ? t('inflows') || 'Zuflüsse' : 'Zuflüsse'}`
@@ -414,29 +416,41 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                 </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('marketValueEnd') || 'Marktwert per Ende' : 'Marktwert per Ende'}</div>
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}</div>
+                <div className="w-full">
+                    <div className="font-black text-blue-600 dark:text-blue-400 flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}>
+                        <span>{fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}</span>
+                    </div>
+                </div>
                 <div className="text-xs text-gray-400 mt-2">{t ? t('statusAsOf') || 'Stand per' : 'Stand per'} {new Date(todayStr).toLocaleDateString('de-CH')}</div>
              </div>
              
-             <div className={`border p-6 rounded-2xl shadow-sm ${latestData.priceProfit >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20' : 'bg-red-50 border-red-200 dark:bg-red-900/20'}`}>
+             <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.priceProfit >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20' : 'bg-red-50 border-red-200 dark:bg-red-900/20'}`}>
                 <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
                     {t ? t('priceProfitInterval') || 'Kursgewinn im Intervall' : 'Kursgewinn im Intervall'}
                 </div>
-                <div className={`text-2xl font-black flex items-baseline gap-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
-                   {latestData.priceProfit > 0 ? '+' : ''}{fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}
-                   <span className="text-sm font-medium opacity-70">({latestData.priceRoi > 0 ? '+' : ''}{latestData.priceRoi.toFixed(2)}%)</span>
+                <div className="w-full">
+                    <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                       <div className="font-black text-xl md:text-2xl" title={`${latestData.priceProfit > 0 ? '+' : ''}${fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}`}>
+                           {latestData.priceProfit > 0 ? '+' : ''}{fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}
+                       </div>
+                       <span className="text-sm font-medium opacity-70 shrink-0">({latestData.priceRoi > 0 ? '+' : ''}{latestData.priceRoi.toFixed(2)}%)</span>
+                    </div>
                 </div>
              </div>
              
-             <div className={`border p-6 rounded-2xl shadow-sm ${latestData.profit >= 0 ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20'}`}>
+             <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.profit >= 0 ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20'}`}>
                 <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
                     {t ? t('labelTotalReturnDiv') || 'Total Return (inkl. Dividenden)' : 'Total Return (inkl. Dividenden)'}
                 </div>
-                <div className={`text-2xl font-black flex items-baseline gap-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                   {latestData.profit > 0 ? '+' : ''}{fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}
-                   <span className="text-sm font-medium opacity-70">({latestData.roi > 0 ? '+' : ''}{latestData.roi.toFixed(2)}%)</span>
+                <div className="w-full">
+                    <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
+                       <div className="font-black text-xl md:text-2xl" title={`${latestData.profit > 0 ? '+' : ''}${fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}`}>
+                           {latestData.profit > 0 ? '+' : ''}{fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}
+                       </div>
+                       <span className="text-sm font-medium opacity-70 shrink-0">({latestData.roi > 0 ? '+' : ''}{latestData.roi.toFixed(2)}%)</span>
+                    </div>
                 </div>
              </div>
           </div>

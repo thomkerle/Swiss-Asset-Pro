@@ -226,58 +226,70 @@ const buildReportData = async () => {
 {/* KPI DASHBOARD ROW */}
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             {/* 1. Gesamtkapital */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
                     <span>{String(t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital').toUpperCase()}</span>
                 </div>
-                {/* FIX: span Wrapper, break-words und leicht dynamische Größe */}
-                <div className="text-2xl xl:text-3xl font-black text-slate-900 dark:text-white break-words">
-                    <span>{formatCurrency(grandTotal)}</span>
+                {/* Dynamische Skalierung via Container Queries */}
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={formatCurrency(grandTotal)}>
+                        <span>{formatCurrency(grandTotal)}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     <span>{t ? (t('statusAsOf') || 'Stichtag:') : 'Stichtag:'} {new Date(targetDate).toLocaleDateString('de-CH')}</span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
+             {/* 2. Grösste Position */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Building" size={14} className="text-emerald-500"/>
                       {String(t ? (t('topInstitution') || 'Grösste Position') : 'Grösste Position').toUpperCase()}
                     </span>
                 </div>
-                {/* FIX: truncate entfernt! Dafür break-words und pb-1 für die Buchstaben-Unterlängen */}
-                <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white break-words leading-tight pb-1" title={topBank?.label}>
-                    <span>{topBank ? topBank.label : '-'}</span>
+                {/* Dynamische Skalierung via Container Queries */}
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" title={topBank?.label} style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.5rem)' }}>
+                        <span>{topBank ? topBank.label : '-'}</span>
+                    </div>
                 </div>
-                <div className="text-xs font-bold text-gray-500 mt-2">
+                <div className="text-xs font-bold text-gray-500 mt-1 truncate">
                     <span>{topBank ? formatCurrency(topBank.value) : ''} <span className="text-emerald-600 dark:text-emerald-400">({topBankPercent}%)</span></span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500">
+             {/* 3. Diversifikation */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Layers" size={14} className="text-indigo-500"/>
                     <span>{String(t ? (t('diversification') || 'Diversifikation') : 'Diversifikation').toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
-                    <span>{uniqueBanksCount}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.25rem, 12cqw, 1.875rem)' }}>
+                        <span>{uniqueBanksCount}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1 truncate">
                     <span>{t ? (t('connectedInstitutions') || 'Verbundene Banken/Institute') : 'Verbundene Banken/Institute'}</span>
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
+             {/* 4. Verwaltete Assets */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Database" size={14} className="text-amber-500"/>
                     <span>{String(t ? (t('totalAssets') || 'Verwaltete Assets') : 'Verwaltete Assets').toUpperCase()}</span>
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
-                    <span>{totalAssetsCount}</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.25rem, 12cqw, 1.875rem)' }}>
+                        <span>{totalAssetsCount}</span>
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1 truncate">
                     <span>{t ? (t('activePositions') || 'Aktive Anlagepositionen gesamt') : 'Aktive Anlagepositionen gesamt'}</span>
                 </div>
              </div>
@@ -321,16 +333,16 @@ const buildReportData = async () => {
                         return (
                             <div key={idx} className="group bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-md transition-all duration-200">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <div className="text-lg font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2">
-                                            <Icon name="Building" size={16} className="text-gray-400 group-hover:text-blue-500"/>
-                                            {bank.label}
+                                    <div className="min-w-0 pr-4"> {/* Erlaubt dem Text in der Detailansicht, umzubrechen oder abgeschnitten zu werden */}
+                                        <div className="text-lg font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2 truncate" title={bank.label}>
+                                            <Icon name="Building" size={16} className="text-gray-400 group-hover:text-blue-500 shrink-0"/>
+                                            <span className="truncate">{bank.label}</span>
                                         </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-2 mt-1.5 bg-gray-100 dark:bg-slate-800 w-max px-2 py-0.5 rounded">
                                             <Icon name="Database" size={10}/> {bank.assetCount} {t ? (t('assets') || 'Assets') : 'Assets'}
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
+                                    <div className="text-right flex flex-col items-end shrink-0">
                                         <div className="text-lg font-black text-slate-900 dark:text-white font-mono bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg">
                                             {formatCurrency(bank.value)}
                                         </div>

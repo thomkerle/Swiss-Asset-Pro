@@ -200,61 +200,72 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
       <div className="w-full bg-white dark:bg-transparent">
           {/* KPI DASHBOARD ROW */}
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400">
+             
+             {/* 1. Startvermögen */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Calendar" size={14} className="text-slate-500"/>
                     {t ? (t('labelStartWealth') || 'Startvermögen') : 'Startvermögen'}
                  </div>
-                 <div className="text-3xl font-black text-slate-900 dark:text-white">
-                    {fCur(startValue)}
+                 <div className="w-full" style={{ containerType: 'inline-size' }}>
+                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(startValue)}>
+                        {fCur(startValue)}
+                     </div>
                  </div>
-                 <div className="text-xs text-gray-400 mt-2 font-medium">
+                 <div className="text-xs text-gray-400 mt-1 font-medium truncate">
                     {startDateStr}
                  </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             {/* 2. Aktuelles Volumen */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Target" size={14} className="text-blue-500"/>
                     {t ? (t('currentVolume') || 'Aktuelles Volumen') : 'Aktuelles Volumen'}
                  </div>
-                 <div className="text-3xl font-black text-slate-900 dark:text-white">
-                    {fCur(endValue)}
+                 <div className="w-full" style={{ containerType: 'inline-size' }}>
+                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(endValue)}>
+                        {fCur(endValue)}
+                     </div>
                  </div>
-                 <div className="text-xs text-gray-400 mt-2 font-medium">
+                 <div className="text-xs text-gray-400 mt-1 font-medium truncate">
                     {endDateStr}
                  </div>
              </div>
              
-             <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 ${isPositive ? 'border-b-emerald-500' : 'border-b-rose-500'}`}>
+             {/* 3. Performance */}
+             <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 overflow-hidden ${isPositive ? 'border-b-emerald-500' : 'border-b-rose-500'}`}>
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                         <Icon name={isPositive ? 'TrendingUp' : 'TrendingDown'} size={14} className={isPositive ? 'text-emerald-500' : 'text-rose-500'}/>
                         {t ? (t('performanceKPI') || 'Performance') : 'Performance'}
                     </span>
-                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${isPositive ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'}`}>
+                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] shrink-0 ${isPositive ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'}`}>
                         {isPositive ? '+' : ''}{percentChange.toFixed(2)}%
                     </span>
                  </div>
-                 <div className="flex items-baseline gap-2">
-                    <div className={`text-3xl font-black ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                 <div className="w-full" style={{ containerType: 'inline-size' }}>
+                     <div className={`font-black whitespace-nowrap overflow-hidden text-ellipsis pb-1 ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`} style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={`${isPositive ? '+' : ''}${fCur(diff)}`}>
                         {isPositive ? '+' : ''}{fCur(diff)}
-                    </div>
+                     </div>
                  </div>
-                 <div className="mt-2 text-xs text-gray-400 font-medium">
+                 <div className="mt-1 text-xs text-gray-400 font-medium truncate">
                     {t ? (t('valueGrowthOverPeriod') || 'Wertzuwachs im Gesamtzeitraum') : 'Wertzuwachs im Gesamtzeitraum'}
                  </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500">
+             {/* 4. Durchschnittliches Wachstum */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Activity" size={14} className="text-indigo-500"/>
                     {t ? (t('avgMonthlyGrowth') || 'Ø Monatliches Wachstum') : 'Ø Monatliches Wachstum'}
                  </div>
-                 <div className="text-3xl font-black text-slate-900 dark:text-white">
-                    {avgMonthlyGrowth > 0 ? '+' : ''}{fCur(avgMonthlyGrowth)}
+                 <div className="w-full" style={{ containerType: 'inline-size' }}>
+                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={`${avgMonthlyGrowth > 0 ? '+' : ''}${fCur(avgMonthlyGrowth)}`}>
+                        {avgMonthlyGrowth > 0 ? '+' : ''}{fCur(avgMonthlyGrowth)}
+                     </div>
                  </div>
-                 <div className="text-xs text-gray-400 mt-2 font-medium">
+                 <div className="text-xs text-gray-400 mt-1 font-medium truncate">
                     {t ? (t('averageOverMonths_1') || 'Durchschnitt über') : 'Durchschnitt über'} {monthsCount} {t ? (t('averageOverMonths_2') || 'Monate') : 'Monate'}
                  </div>
              </div>

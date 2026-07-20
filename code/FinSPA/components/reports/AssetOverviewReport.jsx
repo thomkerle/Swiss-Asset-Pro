@@ -293,44 +293,55 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
      
       <div className="w-full bg-white dark:bg-transparent">
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             
+             {/* 1. Gesamtvermögen */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
                     {t ? t('totalWealth') || 'Gesamtvermögen' : 'Gesamtvermögen'}
                 </div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white">
-                    {fCur ? fCur(grandTotal) : grandTotal}
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur ? fCur(grandTotal) : grandTotal}>
+                        {fCur ? fCur(grandTotal) : grandTotal}
+                    </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2">
+                <div className="text-xs text-gray-400 mt-1">
                     {t ? t('statusAsOf') || 'Stichtag:' : 'Stichtag:'} {new Date(targetDate).toLocaleDateString('de-CH')}
                 </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+             {/* 2. Stärkste Anlageklasse */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Star" size={14} className="text-emerald-500"/>
                     {t ? t('topAssetClass') || 'Stärkste Anlageklasse' : 'Stärkste Anlageklasse'}
                 </div>
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 pb-1 leading-tight break-words">
-                    {getAcName(topClass)}
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-emerald-600 dark:text-emerald-400 pb-1 leading-tight whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 'clamp(1.125rem, 10cqw, 1.5rem)' }} title={getAcName(topClass)}>
+                        {getAcName(topClass)}
+                    </div>
                 </div>
-                <div className="text-sm font-bold text-gray-500 mt-2">
+                <div className="text-sm font-bold text-gray-500 mt-1 truncate">
                     {fCur ? fCur(topClassVal) : topClassVal} <span className="opacity-70">({topClassPercent}%)</span>
                 </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+             {/* 3. Diversifikation */}
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Layers" size={14} className="text-indigo-500"/>
                     {t ? t('diversification') || 'Diversifikation' : 'Diversifikation'}
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-2">
-                    {totalAssetsCount} <span className="text-sm font-medium text-gray-400 uppercase">Assets</span>
+                <div className="w-full" style={{ containerType: 'inline-size' }}>
+                    <div className="font-black text-slate-900 dark:text-white flex items-baseline gap-2 whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.5rem)' }}>
+                        {totalAssetsCount} <span className="text-sm font-medium text-gray-400 uppercase">Assets</span>
+                    </div>
                 </div>
-                <div className="text-sm font-bold text-indigo-500 dark:text-indigo-400 mt-2">
+                <div className="text-sm font-bold text-indigo-500 dark:text-indigo-400 mt-1 truncate">
                     {t ? t('distributedOver') || 'Verteilt auf' : 'Verteilt auf'} {uniqueBanks.size} {t ? t('banks') || 'Banken/Institute' : 'Banken/Institute'}
                 </div>
              </div>
+
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10" ref={chartRef}>
@@ -428,10 +439,11 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                       <div key={bankName} className="bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-xl p-5 hover:shadow-md transition-shadow duration-200 flex flex-col group">
                         
                         <div className="flex justify-between items-start border-b border-gray-100 dark:border-slate-800 pb-3 mb-4">
-                           <span className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                             <Icon name="Building" size={14} className="text-gray-400"/> {bankName}
+                           <span className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate pr-2">
+                             <Icon name="Building" size={14} className="text-gray-400 shrink-0"/> 
+                             <span className="truncate" title={bankName}>{bankName}</span>
                            </span>
-                           <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg text-sm">
+                           <span className="font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg text-sm shrink-0">
                              {fCur ? fCur(bankData.total) : bankData.total}
                            </span>
                         </div>
@@ -442,10 +454,10 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             .map((asset, idx) => (
                              <li key={idx} className="flex justify-between items-center group/item">
                                <span className="truncate pr-4 font-medium flex items-center gap-2" title={asset.name}>
-                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-600 group-hover/item:bg-blue-400 transition-colors"></span>
-                                  {asset.name}
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-600 group-hover/item:bg-blue-400 transition-colors shrink-0"></span>
+                                  <span className="truncate">{asset.name}</span>
                                </span>
-                               <span className="font-mono text-gray-900 dark:text-gray-300 whitespace-nowrap">{fCur ? fCur(asset.val) : asset.val}</span>
+                               <span className="font-mono text-gray-900 dark:text-gray-300 whitespace-nowrap shrink-0">{fCur ? fCur(asset.val) : asset.val}</span>
                              </li>
                           ))}
                         </ul>

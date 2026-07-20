@@ -458,6 +458,20 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200">{safeT('isLiquid', 'Liquides Mittel')}</span>
             </label>
 
+            {/* NEU: Ticker & ISIN Felder (Werden nur bei passenden Asset-Klassen eingeblendet) */}
+            {['fund', 'stock', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(selectedNode.assetClass) && (
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div>
+                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('ticker', 'Ticker (API)')}</label>
+                      <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
+                  </div>
+                  <div>
+                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('isin', 'ISIN (Optional)')}</label>
+                      <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
+                  </div>
+                </div>
+            )}
+
             {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'crypto' || selectedNode.assetClass === 'pension_fund' || selectedNode.assetClass === 'pension_3a_fund') && (
               <div className="bg-yellow-50 dark:bg-slate-800/50 border border-yellow-200 dark:border-slate-600 p-4 rounded-xl space-y-4 mt-6 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>

@@ -277,36 +277,36 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
     <div className="max-w-[1400px] px-4 md:px-8 pb-12 mx-auto animate-fade-in">
 
       <div className="kpi-dividend-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
                 <div className="text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Calendar" size={14} /> {safeT('labelExpectedNetIncome', 'Erwartetes Netto-Einkommen (12M)')}
                 </div>
-                <div className="text-2xl font-black text-emerald-800 dark:text-emerald-300">
+                <div className="text-xl md:text-2xl font-black text-emerald-800 dark:text-emerald-300 break-words">
                     +{fCur ? fCur(totalAnnual, baseCurrency) : totalAnnual}
                 </div>
                 <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-2">{safeT('labelSumNetPayouts', 'Summe der Netto-Ausschüttungen')}</div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT('labelAvgMonthlyCashflow', 'Ø Monatlicher Cashflow')}</div>
-                <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                <div className="text-xl md:text-2xl font-black text-blue-600 dark:text-blue-400 break-words">
                     {fCur ? fCur(totalAnnual / 12, baseCurrency) : totalAnnual / 12}
                 </div>
                 <div className="text-xs text-gray-400 mt-2">{safeT('labelSmoothingYear', 'Glättung über das gesamte Jahr')}</div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT('labelStrongestMonth', 'Stärkster Monat')}</div>
-                <div className="text-2xl font-black text-slate-800 dark:text-slate-200 flex items-baseline gap-2">
-                   <span className="truncate">{bestMonth.label}</span>
+                <div className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-200 flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1">
+                   <span className="break-words">{bestMonth.label}</span>
                 </div>
                 <div className="text-sm font-bold text-indigo-500 mt-1">{fCur ? fCur(bestMonth.amount, baseCurrency) : bestMonth.amount}</div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-orange-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT('labelTopPayer', 'Top Zahler')}</div>
-                <div className="text-xl font-black text-slate-800 dark:text-slate-200 truncate" title={topPayer.name}>
+                <div className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-200 break-words" title={topPayer.name}>
                    {topPayer.name}
                 </div>
                 <div className="text-sm font-bold text-orange-500 mt-1">{fCur ? fCur(topPayer.amount, baseCurrency) : topPayer.amount} p.a.</div>
