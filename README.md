@@ -79,6 +79,11 @@ Die Nutzung der Software erfolgt **vollständig auf eigene Gefahr**. Der Entwick
 
 Bitte prüfen Sie alle finanzrelevanten und steuerlichen Daten selbst oder ziehen Sie vor wichtigen finanziellen Entscheidungen einen qualifizierten Fachberater hinzu.
 
+Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für die Weiterentwicklung des Produkts beitragen.
+
+https://www.paypal.com/donate/?hosted_button_id=4YUTNC5K4PX2N
+
+
 
 ## Bilder produziert mit Demo_Datensatz.json
 
