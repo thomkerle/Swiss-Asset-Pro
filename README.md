@@ -80,7 +80,7 @@ Die Nutzung der Software erfolgt **vollständig auf eigene Gefahr**. Der Entwick
 Bitte prüfen Sie alle finanzrelevanten und steuerlichen Daten selbst oder ziehen Sie vor wichtigen finanziellen Entscheidungen einen qualifizierten Fachberater hinzu.
 
 
-## Bilder produziert mit Dem_Datensatz
+## Bilder produziert mit Demo_Datensatz.json
 
 ### Bild 1 - Budget Verwaltung
 
