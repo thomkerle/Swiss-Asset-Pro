@@ -106,7 +106,12 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
 
         // --- ICONS FÜR EXCEL EXPORT ---
         Grid: 'fa-table-cells',
-        FileExcel: 'fa-file-excel'
+        FileExcel: 'fa-file-excel',
+
+        // --- HINZUGEFÜGTE ICONS FÜR API LIVE EDITOR ---
+        Play: 'fa-play',
+        Loader: 'fa-spinner', 
+        AlertTriangle: 'fa-triangle-exclamation'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -206,7 +211,12 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
 
         // --- EXCEL ICONS DEFAULTS ---
         Grid: 'text-emerald-600 dark:text-emerald-500',
-        FileExcel: 'text-emerald-600 dark:text-emerald-500'
+        FileExcel: 'text-emerald-600 dark:text-emerald-500',
+
+        // --- HINZUGEFÜGTE DEFAULTS FÜR API LIVE EDITOR ---
+        Play: 'text-indigo-500',
+        Loader: 'text-gray-500',
+        AlertTriangle: 'text-amber-500'
     };
 
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);

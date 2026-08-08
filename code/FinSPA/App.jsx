@@ -114,7 +114,7 @@ const AboutDialog = ({ setModalObj, t }) => {
                             <div>
                                 <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-blue-600 dark:text-blue-400">Pro</span></h2>
                                 <p className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 py-1 px-3 rounded-full inline-block mt-2 border border-blue-100 dark:border-blue-800/50">
-                                    Version Beta - 0.9.8
+                                    Version Beta - 0.9.9
                                 </p>
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed">
@@ -171,6 +171,8 @@ const App = () => {
   const [expandedNodes, setExpandedNodes] = useState({'root': true, 'bank_ubs': true, 'cat_ubs_alltag': true, 'cat_ubs_immo': true, 'broker_ibkr': true});
   const [toasts, setToasts] = useState([]);
   
+  const [lastAutoSave, setLastAutoSave] = useState(new Date());
+
   const [dateRange, setDateRange] = useState({ 
     from: `${new Date().getFullYear() - 1}-01-01`, 
     to: new Date().toISOString().split('T')[0] 
@@ -271,6 +273,7 @@ const App = () => {
   useEffect(() => {
     try {
       localStorage.setItem('finbundle_pro_autosave', JSON.stringify(data));
+      setLastAutoSave(new Date());
     } catch (e) {
       console.error("[FinBundle] Fehler beim localStorage-Autosave:", e);
     }
@@ -283,6 +286,7 @@ const App = () => {
             const writable = await fileHandle.createWritable();
             await writable.write(JSON.stringify(data, null, 2));
             await writable.close();
+            setLastAutoSave(new Date());
           }
         } catch (err) {
           console.error("[FinBundle] Direktes Dateisichern fehlgeschlagen:", err);
@@ -315,7 +319,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.8", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Beta - 0.9.9", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
 	goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          });
           setSelectedNode(null); setActiveReport(null); showToast(t('msgNewProjectSuccess') || 'Neues Projekt erstellt', "success");
@@ -499,6 +503,7 @@ const App = () => {
         a.download = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${zipped ? 'zip' : 'json'}`;
         a.click();
         showToast(zipped ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
+        setLastAutoSave(new Date());
     };
 
     const executeWrite = async (pin) => {
@@ -535,6 +540,7 @@ const App = () => {
                     });
                     
                     showToast(isZip ? "Projekt verschlüsselt auf Gerät gespeichert" : "Projekt auf Gerät gespeichert", "success");
+                    setLastAutoSave(new Date());
                 } catch (capErr) {
                     console.warn("Capacitor Filesystem nicht verfügbar. Nutze Fallback.", capErr);
                     triggerBrowserDownload(finalContent, isZip);
@@ -553,6 +559,7 @@ const App = () => {
                 
                 setFileHandle(targetHandle);
                 showToast(isZip ? (t('msgZipExportSuccess') || "Projekt verschlüsselt gespeichert") : (t('msgSaveSuccess2') || "Projekt erfolgreich gespeichert"), "success");
+                setLastAutoSave(new Date());
             } 
             else {
                 triggerBrowserDownload(finalContent, isZip);
@@ -781,13 +788,13 @@ const App = () => {
       />;
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
   const baseCur = data?.settings?.baseCurrency || 'CHF';
   
   const flatAssets = typeof getAllAssets === 'function' ? getAllAssets(data?.banks || []) : [];
-  const allAssetsCount = flatAssets.length;
+  const allAssetsCount = flatAssets.filter(a => !a.isArchived).length;
   const banksCount = data?.banks?.length || 0;
 
+  const todayStr = new Date().toISOString().split('T')[0];
   const totalWealth = flatAssets.reduce((sum, asset) => {
       if (asset.isArchived) return sum; 
       const val = typeof getAssetValueAtDate === 'function' ? getAssetValueAtDate(asset, todayStr, flatAssets) : 0;
@@ -806,7 +813,7 @@ const App = () => {
   const budgetOut = [...(data?.budget?.expenses || []), ...(data?.budget?.subscriptions || [])].reduce((s, i) => s + getMonthlyBudget(i), 0) || 0;
   const budgetNet = budgetIn - budgetOut;
 
-  const lastModTime = data?.lastModified ? new Date(data.lastModified).toLocaleTimeString(lang === 'de' ? 'de-CH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
+  const lastModTime = lastAutoSave ? lastAutoSave.toLocaleTimeString(lang === 'de' ? 'de-CH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
 
   return (
     <div id="app-container" className="h-screen w-screen flex flex-col font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
@@ -923,7 +930,7 @@ const App = () => {
           />
         </div>
 
-        {!activeReport && selectedNode && (
+{!activeReport && selectedNode && viewMode !== 'liveEditor' && (
           <PropertyEditor 
               data={data} 
               activeReport={activeReport} 
@@ -974,7 +981,7 @@ const App = () => {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.8</span>
+              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.9</span>
           </div>
       </div>
 

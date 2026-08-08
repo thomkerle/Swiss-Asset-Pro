@@ -321,6 +321,8 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
     );
   };
 
+  if (viewMode === 'liveEditor') return null;
+
   return (
     <>
       <style>{`

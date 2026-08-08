@@ -6,14 +6,26 @@
       "title": "Willkommen & UI-Konzept",
       "icon": "Info",
       "content": [
-        { "type": "h4", "text": "Willkommen bei FinBundle" },
-        { "type": "p", "text": "FinBundle PRO ist eine moderne Single Page Application (SPA) zur ganzheitlichen Verwaltung Ihres Vermögens und Budgets." },
-        { "type": "h5", "text": "Das 3-Spalten-Layout" },
-        { "type": "list", "items": [
-          "**Strukturbaum (Links):** Hier verwalten Sie Ihre Banken, Broker, Kategorien und die darin liegenden Assets.",
-          "**Editor & Dashboards (Mitte):** Der zentrale Arbeitsbereich für Auswertungen, Dashboards und Buchungen.",
-          "**Eigenschaftseditor (Rechts):** Stammdaten für das ausgewählte Element bearbeiten."
-        ]}
+        {
+          "type": "h4",
+          "text": "Willkommen bei FinBundle"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle PRO ist eine moderne Single Page Application (SPA) zur ganzheitlichen Verwaltung Ihres Vermögens und Budgets."
+        },
+        {
+          "type": "h5",
+          "text": "Das 3-Spalten-Layout"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Strukturbaum (Links):** Hier verwalten Sie Ihre Banken, Broker, Kategorien und die darin liegenden Assets.",
+            "**Editor & Dashboards (Mitte):** Der zentrale Arbeitsbereich für Auswertungen, Dashboards und Buchungen.",
+            "**Eigenschaftseditor (Rechts):** Stammdaten für das ausgewählte Element bearbeiten."
+          ]
+        }
       ]
     },
     {
@@ -21,9 +33,18 @@
       "title": "Banken & Kategorien",
       "icon": "Shield",
       "content": [
-        { "type": "h4", "text": "Strukturierung Ihres Vermögens" },
-        { "type": "p", "text": "**Banken erfassen:** Auf oberster Ebene im Strukturbaum (Klick auf `+` Icon)." },
-        { "type": "p", "text": "**Kategorien anlegen:** Beliebig tief verschachtelt innerhalb von Banken (Klick auf Ordner-Icon mit Plus)." }
+        {
+          "type": "h4",
+          "text": "Strukturierung Ihres Vermögens"
+        },
+        {
+          "type": "p",
+          "text": "**Banken erfassen:** Auf oberster Ebene im Strukturbaum (Klick auf `+` Icon)."
+        },
+        {
+          "type": "p",
+          "text": "**Kategorien anlegen:** Beliebig tief verschachtelt innerhalb von Banken (Klick auf Ordner-Icon mit Plus)."
+        }
       ]
     },
     {
@@ -31,9 +52,18 @@
       "title": "Konten & Buchungen",
       "icon": "List",
       "content": [
-        { "type": "h4", "text": "Assets & Konten verwalten" },
-        { "type": "p", "text": "**Assets erfassen:** Das tiefste Element im Baum ist immer ein Asset (z.B. Konto, Depot)." },
-        { "type": "p", "text": "**Buchungen:** Erfassen Sie Transaktionen wie Einzahlungen oder Auszahlungen mit detaillierten Unterkategorien (Lohn, Steuern etc.)." }
+        {
+          "type": "h4",
+          "text": "Assets & Konten verwalten"
+        },
+        {
+          "type": "p",
+          "text": "**Assets erfassen:** Das tiefste Element im Baum ist immer ein Asset (z.B. Konto, Depot)."
+        },
+        {
+          "type": "p",
+          "text": "**Buchungen:** Erfassen Sie Transaktionen wie Einzahlungen oder Auszahlungen mit detaillierten Unterkategorien (Lohn, Steuern etc.)."
+        }
       ]
     },
     {
@@ -41,14 +71,26 @@
       "title": "Budget & 50/30/20",
       "icon": "DollarSign",
       "content": [
-        { "type": "h4", "text": "Budgetierung leicht gemacht" },
-        { "type": "p", "text": "FinBundle ordnet Ihre Ausgaben automatisch nach der **50/30/20 Regel**:" },
-        { "type": "list", "items": [
-          "**Needs (50%):** Fixkosten wie Wohnen, Steuern, Grundversorgung.",
-          "**Wants (30%):** Lifestyle, Freizeit, Abonnements.",
-          "**Savings (20%):** Sparen, Investitionen, Säule 3a."
-        ]},
-        { "type": "infoBox", "text": "Im Budget-Editor können Sie auch Kündigungsfristen für Verträge und Abonnements hinterlegen, um Kündigungstermine nicht zu verpassen." }
+        {
+          "type": "h4",
+          "text": "Budgetierung leicht gemacht"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle ordnet Ihre Ausgaben automatisch nach der **50/30/20 Regel**:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Needs (50%):** Fixkosten wie Wohnen, Steuern, Grundversorgung.",
+            "**Wants (30%):** Lifestyle, Freizeit, Abonnements.",
+            "**Savings (20%):** Sparen, Investitionen, Säule 3a."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Im Budget-Editor können Sie auch Kündigungsfristen für Verträge und Abonnements hinterlegen, um Kündigungstermine nicht zu verpassen."
+        }
       ]
     },
     {
@@ -56,10 +98,50 @@
       "title": "Wertpapiere & Depots",
       "icon": "TrendingUp",
       "content": [
-        { "type": "h4", "text": "Handel mit Aktien und Fonds" },
-        { "type": "p", "text": "Legen Sie die Anlageklasse auf Aktie oder Fonds fest. Erfassen Sie Käufe, Verkäufe und Dividenden." },
-        { "type": "p", "text": "Der Dialog fragt automatisch nach Stückzahl, Preis, Gebühren, Steuern und dem tagesaktuellen Wechselkurs." },
-        { "type": "infoBox", "text": "Bei einem Aktiensplit archivieren Sie das alte Asset und erstellen ein neues mit den aktuellen Werten." }
+        {
+          "type": "h4",
+          "text": "Handel mit Aktien und Fonds"
+        },
+        {
+          "type": "p",
+          "text": "Legen Sie die Anlageklasse auf Aktie oder Fonds fest. Erfassen Sie Käufe, Verkäufe und Dividenden."
+        },
+        {
+          "type": "p",
+          "text": "Der Dialog fragt automatisch nach Stückzahl, Preis, Gebühren, Steuern und dem tagesaktuellen Wechselkurs."
+        },
+        {
+          "type": "infoBox",
+          "text": "Bei einem Aktiensplit archivieren Sie das alte Asset und erstellen ein neues mit den aktuellen Werten."
+        }
+      ]
+    },
+    {
+      "id": "live_editor",
+      "title": "API LiveEditor",
+      "icon": "Cloud",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Marktdaten-Zentrale & Bulk-Sync"
+        },
+        {
+          "type": "p",
+          "text": "Der API LiveEditor ermöglicht die parallele Steuerung aller Börsen-Assets (Aktien, Fonds, Krypto)."
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Data Grid:** Übersichtliche Tabelle mit Live-Kursen (Intraday), 6-Monats-Trend (Sparklines) und der Möglichkeit, fehlende Ticker-Symbole direkt zu ergänzen.",
+            "**Bulk-Sync:** Markieren Sie mehrere Assets, um die EOD-Kurse (End of Day) und die zugehörigen Wechselkurse automatisiert in einem Rutsch abzurufen.",
+            "**Fundamentaldaten:** Ein Klick auf das Info-Icon neben dem Ticker blendet Dividendenrenditen, das KGV und Marktkapitalisierungen ein.",
+            "**Chart Vergleiche:** Analysieren Sie historische Kurse (relativ oder absolut) sowie Echtzeit-Intraday-Charts inkl. technischer Indikatoren (SMA, EMA, Bollinger Bänder)."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Voraussetzung: Für den vollautomatischen Abruf von Kursen und Fundamentaldaten muss in den allgemeinen Einstellungen (⚙️) ein gültiger API-Schlüssel für EODHD oder Alpha Vantage hinterlegt sein."
+        }
       ]
     },
     {
@@ -67,12 +149,18 @@
       "title": "Vorsorge (Säule 2 & 3a)",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Berufliche & Gebundene Vorsorge (Schweiz)" },
-        { "type": "list", "items": [
-          "**Pensionskasse (2. Säule):** Das berufliche Pensionsguthaben. Wird als *nicht liquide* markiert.",
-          "**3a Vorsorgekonto:** Gebundenes Cash-Guthaben der privaten Vorsorge.",
-          "**3a Vorsorgefonds:** Erlaubt den Handel und die Verfolgung von Wertschriften der 3. Säule."
-        ]}
+        {
+          "type": "h4",
+          "text": "Berufliche & Gebundene Vorsorge (Schweiz)"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Pensionskasse (2. Säule):** Das berufliche Pensionsguthaben. Wird als *nicht liquide* markiert.",
+            "**3a Vorsorgekonto:** Gebundenes Cash-Guthaben der privaten Vorsorge.",
+            "**3a Vorsorgefonds:** Erlaubt den Handel und die Verfolgung von Wertschriften der 3. Säule."
+          ]
+        }
       ]
     },
     {
@@ -80,11 +168,17 @@
       "title": "Immobilien & Hypotheken",
       "icon": "Home",
       "content": [
-        { "type": "h4", "text": "Verwaltung von Sachwerten" },
-        { "type": "list", "items": [
-          "**Immobilie:** Positiver Wert. Nutzen Sie *Wertanpassung* für Marktwertänderungen.",
-          "**Hypothek:** Als *negativer Stichtags-Saldo* erfasst. Nutzen Sie *Abzahlung* oder *Zinszahlung*."
-        ]}
+        {
+          "type": "h4",
+          "text": "Verwaltung von Sachwerten"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Immobilie:** Positiver Wert. Nutzen Sie *Wertanpassung* für Marktwertänderungen.",
+            "**Hypothek:** Als *negativer Stichtags-Saldo* erfasst. Nutzen Sie *Abzahlung* oder *Zinszahlung*."
+          ]
+        }
       ]
     },
     {
@@ -92,12 +186,21 @@
       "title": "Import & PDF-Scanner",
       "icon": "FileText",
       "content": [
-        { "type": "h4", "text": "Datenübernahme & KI-Erfassung" },
-        { "type": "list", "items": [
-          "**Parqet Import:** Sie können CSV-Exporte direkt aus Parqet importieren. Die Daten werden automatisch migriert.",
-          "**KI Beleg-Scanner:** Laden Sie PDF-Auszüge oder Rechnungen hoch. Die KI extrahiert Datum, Betrag und schlägt Buchungskategorien vor."
-        ]},
-        { "type": "infoBox", "text": "Datenschutz (Privacy-First): Bevor PDFs an externe Cloud-KIs (OpenAI, Claude, Gemini) gesendet werden, durchlaufen sie einen lokalen Filter. FinBundle anonymisiert alle IBANs, Namen, Adressen und Kartennummern." }
+        {
+          "type": "h4",
+          "text": "Datenübernahme & KI-Erfassung"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Parqet Import:** Sie können CSV-Exporte direkt aus Parqet importieren. Die Daten werden automatisch migriert.",
+            "**KI Beleg-Scanner:** Laden Sie PDF-Auszüge oder Rechnungen hoch. Die KI extrahiert Datum, Betrag und schlägt Buchungskategorien vor."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Datenschutz (Privacy-First): Bevor PDFs an externe Cloud-KIs (OpenAI, Claude, Gemini) gesendet werden, durchlaufen sie einen lokalen Filter. FinBundle anonymisiert alle IBANs, Namen, Adressen und Kartennummern."
+        }
       ]
     },
     {
@@ -105,14 +208,26 @@
       "title": "KI Copilot",
       "icon": "Cpu",
       "content": [
-        { "type": "h4", "text": "Lokale KI-Integration (Ollama)" },
-        { "type": "p", "text": "FinBundle bietet eine integrierte Schnittstelle zu lokalen Large Language Models (LLMs) via Ollama. Ihre Finanzdaten verlassen dabei niemals Ihr Gerät." },
-        { "type": "list", "items": [
-          "**Widgets generieren:** Beschreiben Sie in natürlicher Sprache, welche Diagramme oder Tabellen Sie sehen möchten.",
-          "**Dynamische Interaktion:** Die KI baut maßgeschneiderte Dashboards basierend auf Ihren Live-Daten.",
-          "**Aktivierung:** Der KI-Modus muss zunächst in den Einstellungen global aktiviert werden."
-        ]},
-        { "type": "infoBox", "text": "Voraussetzung: Sie müssen Ollama lokal installiert haben und ein kompatibles Modell (z.B. Qwen, Llama 3) über den Port 11434 bereitstellen." }
+        {
+          "type": "h4",
+          "text": "Lokale KI-Integration (Ollama)"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle bietet eine integrierte Schnittstelle zu lokalen Large Language Models (LLMs) via Ollama. Ihre Finanzdaten verlassen dabei niemals Ihr Gerät."
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Widgets generieren:** Beschreiben Sie in natürlicher Sprache, welche Diagramme oder Tabellen Sie sehen möchten.",
+            "**Dynamische Interaktion:** Die KI baut maßgeschneiderte Dashboards basierend auf Ihren Live-Daten.",
+            "**Aktivierung:** Der KI-Modus muss zunächst in den Einstellungen global aktiviert werden."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Voraussetzung: Sie müssen Ollama lokal installiert haben und ein kompatibles Modell (z.B. Qwen, Llama 3) über den Port 11434 bereitstellen."
+        }
       ]
     },
     {
@@ -120,11 +235,17 @@
       "title": "Reports & Dashboards",
       "icon": "PieChart",
       "content": [
-        { "type": "h4", "text": "Umfangreiche Analysen" },
-        { "type": "list", "items": [
-          "**Bestandesreports:** Allokation, Liquiditätsrisiko und Steuerreports.",
-          "**Bewegungsreports:** Cashflows, Buchungsanalysen und Passives Einkommen."
-        ]}
+        {
+          "type": "h4",
+          "text": "Umfangreiche Analysen"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Bestandesreports:** Allokation, Liquiditätsrisiko und Steuerreports.",
+            "**Bewegungsreports:** Cashflows, Buchungsanalysen und Passives Einkommen."
+          ]
+        }
       ]
     },
     {
@@ -132,9 +253,18 @@
       "title": "FIRE & Szenarien",
       "icon": "Target",
       "content": [
-        { "type": "h4", "text": "Finanzielle Unabhängigkeit planen" },
-        { "type": "p", "text": "Im Report **Szenarien & FIRE** können Sie Ihr persönliches FIRE-Ziel (Financial Independence, Retire Early) und das gewünschte Zieljahr festlegen." },
-        { "type": "p", "text": "Erstellen Sie **Zukunftsszenarien** (z.B. Autokauf, Erbschaft, Sabbatical), um präzise zu simulieren, wie sich einmalige Events auf Ihren Zinseszins und Vermögensverlauf auswirken." }
+        {
+          "type": "h4",
+          "text": "Finanzielle Unabhängigkeit planen"
+        },
+        {
+          "type": "p",
+          "text": "Im Report **Szenarien & FIRE** können Sie Ihr persönliches FIRE-Ziel (Financial Independence, Retire Early) und das gewünschte Zieljahr festlegen."
+        },
+        {
+          "type": "p",
+          "text": "Erstellen Sie **Zukunftsszenarien** (z.B. Autokauf, Erbschaft, Sabbatical), um präzise zu simulieren, wie sich einmalige Events auf Ihren Zinseszins und Vermögensverlauf auswirken."
+        }
       ]
     },
     {
@@ -142,13 +272,25 @@
       "title": "Sicherheit & Verschlüsselung",
       "icon": "Shield",
       "content": [
-        { "type": "h4", "text": "Ihre Daten gehören Ihnen" },
-        { "type": "p", "text": "FinBundle speichert alle Daten lokal im Browser. Für Backups und den Dateitransfer stehen zwei Formate zur Verfügung:" },
-        { "type": "list", "items": [
-          "**Klartext (JSON):** Standardformat, schnell und einfach in anderen Tools weiterzuverarbeiten.",
-          "**Verschlüsseltes ZIP:** Nutzt modernste **AES-256 Verschlüsselung** und erfordert ein PIN-Passwort."
-        ]},
-        { "type": "infoBox", "text": "Achtung: FinBundle kann den PIN nicht wiederherstellen. Wenn Sie das Passwort vergessen, sind die Daten im ZIP-Archiv unwiderruflich verloren." }
+        {
+          "type": "h4",
+          "text": "Ihre Daten gehören Ihnen"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle speichert alle Daten lokal im Browser. Für Backups und den Dateitransfer stehen zwei Formate zur Verfügung:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Klartext (JSON):** Standardformat, schnell und einfach in anderen Tools weiterzuverarbeiten.",
+            "**Verschlüsseltes ZIP:** Nutzt modernste **AES-256 Verschlüsselung** und erfordert ein PIN-Passwort."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Achtung: FinBundle kann den PIN nicht wiederherstellen. Wenn Sie das Passwort vergessen, sind die Daten im ZIP-Archiv unwiderruflich verloren."
+        }
       ]
     },
     {
@@ -156,27 +298,99 @@
       "title": "Einstellungen & Daten",
       "icon": "Settings",
       "content": [
-        { "type": "h4", "text": "Konfiguration" },
-        { "type": "p", "text": "**Erweiterbarkeit:** Sie können Basiswährungen, eigene Buchungskategorien und sogar völlig neue Asset-Klassen definieren." },
-        { "type": "p", "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) oder API-Keys für externe Anbieter hinzu." }
+        {
+          "type": "h4",
+          "text": "Konfiguration"
+        },
+        {
+          "type": "p",
+          "text": "**Erweiterbarkeit:** Sie können Basiswährungen, eigene Buchungskategorien und sogar völlig neue Asset-Klassen definieren."
+        },
+        {
+          "type": "p",
+          "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) oder API-Keys für externe Anbieter hinzu."
+        }
       ]
     }
   ],
   "translations": {
-    "menuFile": "Datei", "menuWealth": "Vermögen", "menuBudget": "Budget", "menuViews": "Ansichten", "menuReports": "Reports", "menuData": "Datensicht",
-    "fileNew": "Neu (Leeres Projekt)", "fileOpen": "Öffnen (JSON/ZIP)", "fileSave": "Sichern (JSON/ZIP)", "fileImport": "Importieren (CSV)", "fileExport": "Exportieren", "filePrint": "Drucken", "fileSettings": "Einstellungen",
-    "menuHelp": "Hilfe", "helpManual": "Benutzerhandbuch",
-    "viewWealth": "Vermögensverwaltung", "viewBudget": "Budgetverwaltung", "viewData": "Innere Datenhaltung (JSON)",
-    "repStock": "Bestandesreports", "repFlow": "Bewegungsreports", "repFuture": "Zukunftsreports", "repBudget": "Budgetreports",
-    "repAlloc": "Allokation nach Banken", "repLiq": "Liquiditätsrisiko", "repHist": "Historischer Verlauf", "repTax": "Steuerreport (31.12)",
-    "repCatFlow": "Kategorienfluss", "repWaterfall": "Wasserfallfluss", "repPassive": "Passives Einkommen", "repTopFlow": "Top Flow Assets", "repBookAna": "Buchungsanalyse",
-    "repSimReg": "Simulation & Regression", "repScenFire": "Szenarien & FIRE",
-    "tree": "Strukturbaum", "propEditor": "Eigenschaftseditor", "statusReady": "Bereit", "version": "Version", "dateSelect": "Zeitraum",
-    "btnApply": "Anwenden", "btnCancel": "Abbrechen", "btnSave": "Speichern", "btnAdd": "Hinzufügen", "btnDelete": "Löschen",
-    "assetClass": "Anlageklasse", "currency": "Währung", "exchangeRate": "Wechselkurs", "isLiquid": "Liquides Mittel", "isArchived": "Archiviert",
-    "bookings": "Buchungen", "date": "Datum", "type": "Typ", "category": "Kategorie", "amount": "Betrag", "income": "Einzahlung", "expense": "Auszahlung",
-    "addBank": "Bank hinzufügen", "addCategory": "Kategorie hinzufügen", "addAsset": "Asset hinzufügen", "deleteConfirm": "Wirklich löschen?",
-    "acCash": "Konto", "acFund": "Fonds / ETF", "acStock": "Aktie", "acCrypto": "Krypto", "acRealEstate": "Immobilie", "acMortgage": "Hypothek", "acPensionCash": "Pensionskasse", "acPension3aCash": "3a Vorsorgekonto", "acPension3aFund": "3a Vorsorgefonds",
-    "typeDeposit": "Einzahlung", "typeWithdrawal": "Auszahlung", "typeBuy": "Kauf", "typeSell": "Verkauf", "typeAmortization": "Abzahlung", "typeReval": "Wertanpassung", "typeInterest": "Zinszahlung", "typeDiv": "Dividende", "typeDebtInc": "Schulderhöhung", "typeFee": "Gebühr"
+    "menuFile": "Datei",
+    "menuWealth": "Vermögen",
+    "menuBudget": "Budget",
+    "menuViews": "Ansichten",
+    "menuReports": "Reports",
+    "menuData": "Datensicht",
+    "fileNew": "Neu (Leeres Projekt)",
+    "fileOpen": "Öffnen (JSON/ZIP)",
+    "fileSave": "Sichern (JSON/ZIP)",
+    "fileImport": "Importieren (CSV)",
+    "fileExport": "Exportieren",
+    "filePrint": "Drucken",
+    "fileSettings": "Einstellungen",
+    "menuHelp": "Hilfe",
+    "helpManual": "Benutzerhandbuch",
+    "viewWealth": "Vermögensverwaltung",
+    "viewBudget": "Budgetverwaltung",
+    "viewData": "Innere Datenhaltung (JSON)",
+    "repStock": "Bestandesreports",
+    "repFlow": "Bewegungsreports",
+    "repFuture": "Zukunftsreports",
+    "repBudget": "Budgetreports",
+    "repAlloc": "Allokation nach Banken",
+    "repLiq": "Liquiditätsrisiko",
+    "repHist": "Historischer Verlauf",
+    "repTax": "Steuerreport (31.12)",
+    "repCatFlow": "Kategorienfluss",
+    "repWaterfall": "Wasserfallfluss",
+    "repPassive": "Passives Einkommen",
+    "repTopFlow": "Top Flow Assets",
+    "repBookAna": "Buchungsanalyse",
+    "repSimReg": "Simulation & Regression",
+    "repScenFire": "Szenarien & FIRE",
+    "tree": "Strukturbaum",
+    "propEditor": "Eigenschaftseditor",
+    "statusReady": "Bereit",
+    "version": "Version",
+    "dateSelect": "Zeitraum",
+    "btnApply": "Anwenden",
+    "btnCancel": "Abbrechen",
+    "btnSave": "Speichern",
+    "btnAdd": "Hinzufügen",
+    "btnDelete": "Löschen",
+    "assetClass": "Anlageklasse",
+    "currency": "Währung",
+    "exchangeRate": "Wechselkurs",
+    "isLiquid": "Liquides Mittel",
+    "isArchived": "Archiviert",
+    "bookings": "Buchungen",
+    "date": "Datum",
+    "type": "Typ",
+    "category": "Kategorie",
+    "amount": "Betrag",
+    "income": "Einzahlung",
+    "expense": "Auszahlung",
+    "addBank": "Bank hinzufügen",
+    "addCategory": "Kategorie hinzufügen",
+    "addAsset": "Asset hinzufügen",
+    "deleteConfirm": "Wirklich löschen?",
+    "acCash": "Konto",
+    "acFund": "Fonds / ETF",
+    "acStock": "Aktie",
+    "acCrypto": "Krypto",
+    "acRealEstate": "Immobilie",
+    "acMortgage": "Hypothek",
+    "acPensionCash": "Pensionskasse",
+    "acPension3aCash": "3a Vorsorgekonto",
+    "acPension3aFund": "3a Vorsorgefonds",
+    "typeDeposit": "Einzahlung",
+    "typeWithdrawal": "Auszahlung",
+    "typeBuy": "Kauf",
+    "typeSell": "Verkauf",
+    "typeAmortization": "Abzahlung",
+    "typeReval": "Wertanpassung",
+    "typeInterest": "Zinszahlung",
+    "typeDiv": "Dividende",
+    "typeDebtInc": "Schulderhöhung",
+    "typeFee": "Gebühr"
   }
 }

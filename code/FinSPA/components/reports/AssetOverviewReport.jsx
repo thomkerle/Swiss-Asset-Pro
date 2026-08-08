@@ -30,7 +30,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
     
     if (node.type === 'asset') {
       const val = getAssetValueAtDate(node, targetDate);
-      if (val === 0) return;
+     
       
       const ac = node.assetClass || 'cash';
       

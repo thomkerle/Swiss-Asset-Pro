@@ -6,14 +6,26 @@
       "title": "Welcome & UI Concept",
       "icon": "Info",
       "content": [
-        { "type": "h4", "text": "Welcome to FinBundle" },
-        { "type": "p", "text": "FinBundle is a modern Single Page Application (SPA) for the holistic management of your assets and budget." },
-        { "type": "h5", "text": "The 3-Column Layout" },
-        { "type": "list", "items": [
-          "**Structure Tree (Left):** Here you manage your banks, brokers, categories, and the assets contained within them.",
-          "**Editor & Dashboards (Center):** The central workspace for evaluations, dashboards, and transactions.",
-          "**Property Editor (Right):** Edit master data for the selected element."
-        ]}
+        {
+          "type": "h4",
+          "text": "Welcome to FinBundle"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle is a modern Single Page Application (SPA) for the holistic management of your assets and budget."
+        },
+        {
+          "type": "h5",
+          "text": "The 3-Column Layout"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Structure Tree (Left):** Here you manage your banks, brokers, categories, and the assets contained within them.",
+            "**Editor & Dashboards (Center):** The central workspace for evaluations, dashboards, and transactions.",
+            "**Property Editor (Right):** Edit master data for the selected element."
+          ]
+        }
       ]
     },
     {
@@ -21,9 +33,18 @@
       "title": "Banks & Categories",
       "icon": "Shield",
       "content": [
-        { "type": "h4", "text": "Structuring Your Wealth" },
-        { "type": "p", "text": "**Record Banks:** At the top level in the structure tree (click on the `+` icon)." },
-        { "type": "p", "text": "**Create Categories:** Nested as deep as desired within banks (click on the folder icon with a plus)." }
+        {
+          "type": "h4",
+          "text": "Structuring Your Wealth"
+        },
+        {
+          "type": "p",
+          "text": "**Record Banks:** At the top level in the structure tree (click on the `+` icon)."
+        },
+        {
+          "type": "p",
+          "text": "**Create Categories:** Nested as deep as desired within banks (click on the folder icon with a plus)."
+        }
       ]
     },
     {
@@ -31,9 +52,18 @@
       "title": "Accounts & Transactions",
       "icon": "List",
       "content": [
-        { "type": "h4", "text": "Manage Assets & Accounts" },
-        { "type": "p", "text": "**Record Assets:** The deepest element in the tree is always an asset (e.g., account, portfolio)." },
-        { "type": "p", "text": "**Transactions:** Record transactions such as deposits or withdrawals with detailed subcategories (salary, taxes, etc.)." }
+        {
+          "type": "h4",
+          "text": "Manage Assets & Accounts"
+        },
+        {
+          "type": "p",
+          "text": "**Record Assets:** The deepest element in the tree is always an asset (e.g., account, portfolio)."
+        },
+        {
+          "type": "p",
+          "text": "**Transactions:** Record transactions such as deposits or withdrawals with detailed subcategories (salary, taxes, etc.)."
+        }
       ]
     },
     {
@@ -41,14 +71,26 @@
       "title": "Budget & 50/30/20",
       "icon": "DollarSign",
       "content": [
-        { "type": "h4", "text": "Budgeting made easy" },
-        { "type": "p", "text": "FinBundle automatically categorizes your expenses according to the **50/30/20 Rule**:" },
-        { "type": "list", "items": [
-          "**Needs (50%):** Fixed costs like housing, taxes, basic necessities.",
-          "**Wants (30%):** Lifestyle, leisure, subscriptions.",
-          "**Savings (20%):** Savings, investments, Pillar 3a."
-        ]},
-        { "type": "infoBox", "text": "In the budget editor, you can also store notice periods for contracts and subscriptions so you never miss a cancellation deadline." }
+        {
+          "type": "h4",
+          "text": "Budgeting made easy"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle automatically categorizes your expenses according to the **50/30/20 Rule**:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Needs (50%):** Fixed costs like housing, taxes, basic necessities.",
+            "**Wants (30%):** Lifestyle, leisure, subscriptions.",
+            "**Savings (20%):** Savings, investments, Pillar 3a."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "In the budget editor, you can also store notice periods for contracts and subscriptions so you never miss a cancellation deadline."
+        }
       ]
     },
     {
@@ -56,10 +98,50 @@
       "title": "Securities & Portfolios",
       "icon": "TrendingUp",
       "content": [
-        { "type": "h4", "text": "Trading Stocks and Funds" },
-        { "type": "p", "text": "Set the asset class to stock or fund. Record purchases, sales, and dividends." },
-        { "type": "p", "text": "The dialog automatically asks for quantity, price, fees, taxes, and the current daily exchange rate." },
-        { "type": "infoBox", "text": "In the event of a stock split, archive the old asset and create a new one with the current values." }
+        {
+          "type": "h4",
+          "text": "Trading Stocks and Funds"
+        },
+        {
+          "type": "p",
+          "text": "Set the asset class to stock or fund. Record purchases, sales, and dividends."
+        },
+        {
+          "type": "p",
+          "text": "The dialog automatically asks for quantity, price, fees, taxes, and the current daily exchange rate."
+        },
+        {
+          "type": "infoBox",
+          "text": "In the event of a stock split, archive the old asset and create a new one with the current values."
+        }
+      ]
+    },
+    {
+      "id": "live_editor",
+      "title": "API LiveEditor",
+      "icon": "Cloud",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Market Data Hub & Bulk Sync"
+        },
+        {
+          "type": "p",
+          "text": "The API LiveEditor allows the parallel control of all stock market assets (stocks, funds, crypto)."
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Data Grid:** Clear table with live prices (intraday), 6-month trends (sparklines), and the ability to directly add missing ticker symbols.",
+            "**Bulk Sync:** Select multiple assets to automatically retrieve EOD (End of Day) prices and associated exchange rates in one go.",
+            "**Fundamental Data:** Clicking the info icon next to the ticker displays dividend yields, P/E ratios, and market capitalizations.",
+            "**Chart Comparisons:** Analyze historical prices (relative or absolute) as well as real-time intraday charts incl. technical indicators (SMA, EMA, Bollinger Bands)."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Prerequisite: For fully automated retrieval of prices and fundamental data, a valid API key for EODHD or Alpha Vantage must be entered in the general settings (⚙️)."
+        }
       ]
     },
     {
@@ -67,12 +149,18 @@
       "title": "Pension & Pillar 3a",
       "icon": "Lock",
       "content": [
-        { "type": "h4", "text": "Occupational & Tied Pension (Switzerland)" },
-        { "type": "list", "items": [
-          "**Pension Fund (2nd Pillar):** Your occupational pension wealth. Marked as *illiquid*.",
-          "**3a Pension Account:** Tied cash assets of private provision.",
-          "**3a Pension Portfolio:** Allows the trading and tracking of 3rd pillar funds."
-        ]}
+        {
+          "type": "h4",
+          "text": "Occupational & Tied Pension (Switzerland)"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Pension Fund (2nd Pillar):** Your occupational pension wealth. Marked as *illiquid*.",
+            "**3a Pension Account:** Tied cash assets of private provision.",
+            "**3a Pension Portfolio:** Allows the trading and tracking of 3rd pillar funds."
+          ]
+        }
       ]
     },
     {
@@ -80,11 +168,17 @@
       "title": "Real Estate & Mortgages",
       "icon": "Home",
       "content": [
-        { "type": "h4", "text": "Management of Tangible Assets" },
-        { "type": "list", "items": [
-          "**Real Estate:** Positive value. Use *Value Adjustment* for market value changes.",
-          "**Mortgage:** Recorded as a *negative reporting date balance*. Use *Payoff* or *Interest Payment*."
-        ]}
+        {
+          "type": "h4",
+          "text": "Management of Tangible Assets"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Real Estate:** Positive value. Use *Value Adjustment* for market value changes.",
+            "**Mortgage:** Recorded as a *negative reporting date balance*. Use *Payoff* or *Interest Payment*."
+          ]
+        }
       ]
     },
     {
@@ -92,12 +186,21 @@
       "title": "Import & PDF Scanner",
       "icon": "FileText",
       "content": [
-        { "type": "h4", "text": "Data Transfer & AI Extraction" },
-        { "type": "list", "items": [
-          "**Parqet Import:** You can import CSV exports directly from Parqet. The data is migrated automatically.",
-          "**AI Receipt Scanner:** Upload PDF statements or invoices. The AI extracts the date, amount, and suggests booking categories."
-        ]},
-        { "type": "infoBox", "text": "Privacy-First: Before PDFs are sent to external cloud AIs (OpenAI, Claude, Gemini), they pass through a local filter. FinBundle anonymizes all IBANs, names, addresses, and card numbers." }
+        {
+          "type": "h4",
+          "text": "Data Transfer & AI Extraction"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Parqet Import:** You can import CSV exports directly from Parqet. The data is migrated automatically.",
+            "**AI Receipt Scanner:** Upload PDF statements or invoices. The AI extracts the date, amount, and suggests booking categories."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Privacy-First: Before PDFs are sent to external cloud AIs (OpenAI, Claude, Gemini), they pass through a local filter. FinBundle anonymizes all IBANs, names, addresses, and card numbers."
+        }
       ]
     },
     {
@@ -105,14 +208,26 @@
       "title": "AI Copilot",
       "icon": "Cpu",
       "content": [
-        { "type": "h4", "text": "Local AI Integration (Ollama)" },
-        { "type": "p", "text": "FinBundle offers an integrated interface to local Large Language Models (LLMs) via Ollama. Your financial data never leaves your device." },
-        { "type": "list", "items": [
-          "**Generate Widgets:** Describe in natural language which charts or tables you want to see.",
-          "**Dynamic Interaction:** The AI builds custom dashboards based on your live data.",
-          "**Activation:** The AI mode must first be enabled globally in the settings."
-        ]},
-        { "type": "infoBox", "text": "Prerequisite: You must have Ollama installed locally and host a compatible model (e.g., Qwen, Llama 3) via port 11434." }
+        {
+          "type": "h4",
+          "text": "Local AI Integration (Ollama)"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle offers an integrated interface to local Large Language Models (LLMs) via Ollama. Your financial data never leaves your device."
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Generate Widgets:** Describe in natural language which charts or tables you want to see.",
+            "**Dynamic Interaction:** The AI builds custom dashboards based on your live data.",
+            "**Activation:** The AI mode must first be enabled globally in the settings."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Prerequisite: You must have Ollama installed locally and host a compatible model (e.g., Qwen, Llama 3) via port 11434."
+        }
       ]
     },
     {
@@ -120,11 +235,17 @@
       "title": "Reports & Dashboards",
       "icon": "PieChart",
       "content": [
-        { "type": "h4", "text": "Comprehensive Analyses" },
-        { "type": "list", "items": [
-          "**Inventory Reports:** Allocation, liquidity risk, and tax reports.",
-          "**Movement Reports:** Cash flows, transaction analyses, and passive income."
-        ]}
+        {
+          "type": "h4",
+          "text": "Comprehensive Analyses"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Inventory Reports:** Allocation, liquidity risk, and tax reports.",
+            "**Movement Reports:** Cash flows, transaction analyses, and passive income."
+          ]
+        }
       ]
     },
     {
@@ -132,9 +253,18 @@
       "title": "FIRE & Scenarios",
       "icon": "Target",
       "content": [
-        { "type": "h4", "text": "Planning Financial Independence" },
-        { "type": "p", "text": "In the **Scenarios & FIRE** report, you can set your personal FIRE goal (Financial Independence, Retire Early) and your desired target year." },
-        { "type": "p", "text": "Create **Future Scenarios** (e.g., buying a car, receiving an inheritance, sabbatical) to precisely simulate how one-time events will affect your compound interest and wealth progression." }
+        {
+          "type": "h4",
+          "text": "Planning Financial Independence"
+        },
+        {
+          "type": "p",
+          "text": "In the **Scenarios & FIRE** report, you can set your personal FIRE goal (Financial Independence, Retire Early) and your desired target year."
+        },
+        {
+          "type": "p",
+          "text": "Create **Future Scenarios** (e.g., buying a car, receiving an inheritance, sabbatical) to precisely simulate how one-time events will affect your compound interest and wealth progression."
+        }
       ]
     },
     {
@@ -142,13 +272,25 @@
       "title": "Security & Encryption",
       "icon": "Shield",
       "content": [
-        { "type": "h4", "text": "Your Data belongs to You" },
-        { "type": "p", "text": "FinBundle stores all data locally in the browser. Two formats are available for backups and file transfers:" },
-        { "type": "list", "items": [
-          "**Plaintext (JSON):** Standard format, fast and easy to process in other tools.",
-          "**Encrypted ZIP:** Uses state-of-the-art **AES-256 encryption** and requires a PIN password."
-        ]},
-        { "type": "infoBox", "text": "Warning: FinBundle cannot recover the PIN. If you forget the password, the data in the ZIP archive is irretrievably lost." }
+        {
+          "type": "h4",
+          "text": "Your Data belongs to You"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle stores all data locally in the browser. Two formats are available for backups and file transfers:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Plaintext (JSON):** Standard format, fast and easy to process in other tools.",
+            "**Encrypted ZIP:** Uses state-of-the-art **AES-256 encryption** and requires a PIN password."
+          ]
+        },
+        {
+          "type": "infoBox",
+          "text": "Warning: FinBundle cannot recover the PIN. If you forget the password, the data in the ZIP archive is irretrievably lost."
+        }
       ]
     },
     {
@@ -156,27 +298,99 @@
       "title": "Settings & Data",
       "icon": "Settings",
       "content": [
-        { "type": "h4", "text": "Configuration" },
-        { "type": "p", "text": "**Extensibility:** You can define base currencies, custom transaction categories, and even completely new asset classes." },
-        { "type": "p", "text": "**AI Models:** Add your own Ollama models (strings) or API keys for external providers in the respective tab." }
+        {
+          "type": "h4",
+          "text": "Configuration"
+        },
+        {
+          "type": "p",
+          "text": "**Extensibility:** You can define base currencies, custom transaction categories, and even completely new asset classes."
+        },
+        {
+          "type": "p",
+          "text": "**AI Models:** Add your own Ollama models (strings) or API keys for external providers in the respective tab."
+        }
       ]
     }
   ],
   "translations": {
-    "menuFile": "File", "menuWealth": "Wealth", "menuBudget": "Budget", "menuViews": "Views", "menuReports": "Reports", "menuData": "Data View",
-    "fileNew": "New (Empty Project)", "fileOpen": "Open (JSON/ZIP)", "fileSave": "Save (JSON/ZIP)", "fileImport": "Import (CSV)", "fileExport": "Export", "filePrint": "Print", "fileSettings": "Settings",
-    "menuHelp": "Help", "helpManual": "User Manual",
-    "viewWealth": "Wealth Management", "viewBudget": "Budget Management", "viewData": "Internal Data (JSON)",
-    "repStock": "Inventory Reports", "repFlow": "Movement Reports", "repFuture": "Future Reports", "repBudget": "Budget Reports",
-    "repAlloc": "Allocation by Bank", "repLiq": "Liquidity Risk", "repHist": "Historical History", "repTax": "Tax Report (31.12)",
-    "repCatFlow": "Category Flow", "repWaterfall": "Waterfall Flow", "repPassive": "Passive Income", "repTopFlow": "Top Flow Assets", "repBookAna": "Transaction Analysis",
-    "repSimReg": "Simulation & Regression", "repScenFire": "Scenarios & FIRE",
-    "tree": "Structure Tree", "propEditor": "Property Editor", "statusReady": "Ready", "version": "Version", "dateSelect": "Period",
-    "btnApply": "Apply", "btnCancel": "Cancel", "btnSave": "Save", "btnAdd": "Add", "btnDelete": "Delete",
-    "assetClass": "Asset Class", "currency": "Currency", "exchangeRate": "Exchange Rate", "isLiquid": "Liquid Asset", "isArchived": "Archived",
-    "bookings": "Transactions", "date": "Date", "type": "Type", "category": "Category", "amount": "Amount", "income": "Deposit", "expense": "Withdrawal",
-    "addBank": "Add Bank", "addCategory": "Add Category", "addAsset": "Add Asset", "deleteConfirm": "Really delete?",
-    "acCash": "Account", "acFund": "Fund / ETF", "acStock": "Stock", "acCrypto": "Crypto", "acRealEstate": "Real Estate", "acMortgage": "Mortgage", "acPensionCash": "Pension Fund", "acPension3aCash": "3a Pension Account", "acPension3aFund": "3a Pension Portfolio",
-    "typeDeposit": "Deposit", "typeWithdrawal": "Withdrawal", "typeBuy": "Buy", "typeSell": "Sell", "typeAmortization": "Amortization", "typeReval": "Value Adjustment", "typeInterest": "Interest Payment", "typeDiv": "Dividend", "typeDebtInc": "Debt Increase", "typeFee": "Fee"
+    "menuFile": "File",
+    "menuWealth": "Wealth",
+    "menuBudget": "Budget",
+    "menuViews": "Views",
+    "menuReports": "Reports",
+    "menuData": "Data View",
+    "fileNew": "New (Empty Project)",
+    "fileOpen": "Open (JSON/ZIP)",
+    "fileSave": "Save (JSON/ZIP)",
+    "fileImport": "Import (CSV)",
+    "fileExport": "Export",
+    "filePrint": "Print",
+    "fileSettings": "Settings",
+    "menuHelp": "Help",
+    "helpManual": "User Manual",
+    "viewWealth": "Wealth Management",
+    "viewBudget": "Budget Management",
+    "viewData": "Internal Data (JSON)",
+    "repStock": "Inventory Reports",
+    "repFlow": "Movement Reports",
+    "repFuture": "Future Reports",
+    "repBudget": "Budget Reports",
+    "repAlloc": "Allocation by Bank",
+    "repLiq": "Liquidity Risk",
+    "repHist": "Historical History",
+    "repTax": "Tax Report (31.12)",
+    "repCatFlow": "Category Flow",
+    "repWaterfall": "Waterfall Flow",
+    "repPassive": "Passive Income",
+    "repTopFlow": "Top Flow Assets",
+    "repBookAna": "Transaction Analysis",
+    "repSimReg": "Simulation & Regression",
+    "repScenFire": "Scenarios & FIRE",
+    "tree": "Structure Tree",
+    "propEditor": "Property Editor",
+    "statusReady": "Ready",
+    "version": "Version",
+    "dateSelect": "Period",
+    "btnApply": "Apply",
+    "btnCancel": "Cancel",
+    "btnSave": "Save",
+    "btnAdd": "Add",
+    "btnDelete": "Delete",
+    "assetClass": "Asset Class",
+    "currency": "Currency",
+    "exchangeRate": "Exchange Rate",
+    "isLiquid": "Liquid Asset",
+    "isArchived": "Archived",
+    "bookings": "Transactions",
+    "date": "Date",
+    "type": "Type",
+    "category": "Category",
+    "amount": "Amount",
+    "income": "Deposit",
+    "expense": "Withdrawal",
+    "addBank": "Add Bank",
+    "addCategory": "Add Category",
+    "addAsset": "Add Asset",
+    "deleteConfirm": "Really delete?",
+    "acCash": "Account",
+    "acFund": "Fund / ETF",
+    "acStock": "Stock",
+    "acCrypto": "Crypto",
+    "acRealEstate": "Real Estate",
+    "acMortgage": "Mortgage",
+    "acPensionCash": "Pension Fund",
+    "acPension3aCash": "3a Pension Account",
+    "acPension3aFund": "3a Pension Portfolio",
+    "typeDeposit": "Deposit",
+    "typeWithdrawal": "Withdrawal",
+    "typeBuy": "Buy",
+    "typeSell": "Sell",
+    "typeAmortization": "Amortization",
+    "typeReval": "Value Adjustment",
+    "typeInterest": "Interest Payment",
+    "typeDiv": "Dividend",
+    "typeDebtInc": "Debt Increase",
+    "typeFee": "Fee"
   }
 }

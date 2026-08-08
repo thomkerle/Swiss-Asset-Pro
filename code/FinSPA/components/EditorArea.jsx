@@ -41,6 +41,8 @@ const PensionPerformanceReport = safeRequire('./reports/PensionPerformanceReport
 const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformanceReport.jsx') || (() => <div>SecuritiesPerformanceReport</div>);
 const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>DividendCalendarReport fehlt</div>);
 const UniversalChart = require('../../api/UniversalChart.jsx');
+const ApiSyncEngine = safeRequire('../../api/ApiSyncEngine.jsx') || safeRequire('../api/ApiSyncEngine.jsx') || { fetchAssetPrice: async () => null };
+const ApiLiveEditorDashboard = safeRequire('./ApiLiveEditorDashboard.jsx') || safeRequire('./../ApiLiveEditorDashboard.jsx') || (() => <div className="p-8">ApiLiveEditorDashboard.jsx fehlt</div>);
 const ReportHeader = safeRequire('./ReportHeader.jsx') || safeRequire('./ReportHeader.jsx') || (() => null);
 
 const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
@@ -474,10 +476,26 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     );
   }
 
+
+
+
   if (viewMode === 'ai') {
       const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
       return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
   }
+
+// HINZUFÜGEN UNTERHALB DES BLOCKS "if (viewMode === 'ai') { ... }":
+if (viewMode === 'liveEditor') {
+    return (
+        <ApiLiveEditorDashboard 
+            data={data} 
+            updateTreeData={updateTreeData} 
+            fCur={fCur} 
+            t={t} 
+            showToast={showToast} 
+        />
+    );
+}
 
   if (activeReport) {
     const getReportConfig = (reportId) => {
@@ -707,117 +725,24 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
       const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
       const currentShares = typeof getAssetSharesAtDate === 'function' ? getAssetSharesAtDate(adjustedNode, todayStr) : 0;
 
-      // --- Erweiterte Logik für den Live-API Abruf (inkl. Frankfurter FX-Sync) ---
-// --- Erweiterte Logik für den Live-API Abruf (inkl. ISIN-Auflösung & Frankfurter FX-Sync) ---
+      // --- Erweiterte Logik für den Live-API Abruf (Ausgelagert in ApiSyncEngine) ---
       const handleFetchLivePrice = async () => {
           const finKeys = data?.settings?.finApiKeys || {};
-          let ticker = adjustedNode.ticker;
-          const isin = adjustedNode.isin; // NEU: ISIN wird ausgelesen
 
-          if (!ticker && !isin) {
-              if (showToast) showToast(safeT(t, 'msgNoTicker', 'Bitte zuerst ein Ticker-Symbol (z.B. AAPL.US) oder eine ISIN eintragen.'), 'warning');
-              return;
-          }
+          const result = await ApiSyncEngine.fetchAssetPrice({
+              assetNode: adjustedNode,
+              finKeys,
+              baseCurrency,
+              showToast,
+              safeT,
+              t
+          });
 
-          if (!finKeys.eodhd && !finKeys.alphavantage) {
-              if (showToast) showToast(safeT(t, 'msgNoFinApiKeys', 'Keine API-Keys konfiguriert. Bitte in den Einstellungen hinterlegen.'), 'info');
-              return;
-          }
-
-          if (showToast) showToast(safeT(t, 'msgFetchingPrice', 'Rufe Live-Kurs & Wechselkurs ab...'), 'info');
-
-          let price = 0;
-          let provider = '';
-          let apiDate = new Date().toISOString().split('T')[0];
-
-          try {
-              // 1. ISIN in Ticker auflösen (falls nur ISIN vorhanden)
-              if (!ticker && isin && finKeys.eodhd) {
-                  const searchRes = await fetch(`https://eodhd.com/api/search/${isin}?api_token=${finKeys.eodhd}&fmt=json`);
-                  if (searchRes.ok) {
-                      const searchJson = await searchRes.json();
-                      if (Array.isArray(searchJson) && searchJson.length > 0) {
-                          // Nimmt den ersten Treffer der API (Code + Exchange)
-                          ticker = `${searchJson[0].Code}.${searchJson[0].Exchange}`;
-                          console.log(`[FinSPA] ISIN ${isin} aufgelöst zu Ticker: ${ticker}`);
-                      }
-                  }
-              }
-
-              // Wenn nach der ISIN-Suche immer noch kein Ticker existiert
-              if (!ticker) {
-                  if (showToast) showToast('ISIN konnte nicht aufgelöst werden. Bitte Ticker manuell eintragen.', 'warning');
-                  return;
-              }
-
-              // 2. Börsenkurs abrufen (EODHD oder Alpha Vantage)
-              if (finKeys.eodhd) {
-                  const res = await fetch(`https://eodhd.com/api/eod/${ticker}?api_token=${finKeys.eodhd}&fmt=json`);
-                  
-                  if (res.ok) {
-                      const json = await res.json();
-                      if (Array.isArray(json) && json.length > 0) {
-                          const latestEod = json[json.length - 1];
-                          const eodhdPrice = Number(latestEod.close) || 0;
-                          
-                          if (eodhdPrice > 0) { 
-                              price = eodhdPrice; 
-                              provider = 'EODHD'; 
-                              if (latestEod.date) apiDate = latestEod.date; 
-                          }
-                      } else if (json.error || json.message) {
-                          if (showToast) showToast(`EODHD Meldung: ${json.error || json.message}`, 'warning');
-                      }
-                  }
-              }
-
-              if (!price && finKeys.alphavantage) {
-                  const avTicker = ticker.endsWith('.US') ? ticker.replace('.US', '') : ticker;
-                  const res = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${finKeys.alphavantage}`);
-                  
-                  if (res.ok) {
-                      const json = await res.json();
-                      const quote = json['Global Quote'];
-                      if (quote && quote['05. price']) {
-                          price = Number(quote['05. price']);
-                          provider = 'Alpha Vantage';
-                          if (quote['07. latest trading day']) {
-                              apiDate = quote['07. latest trading day'];
-                          }
-                      }
-                  }
-              }
-          } catch (e) {
-              console.error("API Stock Fetch Error:", e);
-          }
-
-          // 3. Wechselkurs abrufen via Frankfurter API
-          let currentFxRate = parseRate(adjustedNode.exchangeRate) || 1;
-          const fromCurrency = adjustedNode.currency;
-          const baseCurrency = data?.settings?.baseCurrency || 'CHF';
-          
-          if (isForeignCurrency && fromCurrency) {
-              try {
-                  let liveFx = null;
-                  const fxRes = await fetch(`https://api.frankfurter.dev/v1/${apiDate}?base=${fromCurrency}&symbols=${baseCurrency}`);
-                  if (fxRes.ok) {
-                      const fxJson = await fxRes.json();
-                      liveFx = fxJson.rates[baseCurrency];
-                  } else {
-                      const fxRes2 = await fetch(`https://api.frankfurter.app/${apiDate}?base=${fromCurrency}&symbols=${baseCurrency}`);
-                      if (fxRes2.ok) {
-                          const fxJson2 = await fxRes2.json();
-                          liveFx = fxJson2.rates[baseCurrency];
-                      }
-                  }
-                  if (liveFx) currentFxRate = liveFx;
-              } catch (fxErr) {
-                  console.warn("FX Fetch via Frankfurter failed, using fallback/stored rate:", fxErr);
-              }
-          }
-
-          // 4. Buchung und Asset-Kurs aktualisieren
-          if (price > 0) {
+          if (result && result.price > 0) {
+              const { price, provider, apiDate, currentFxRate } = result;
+              const fromCurrency = adjustedNode.currency;
+              const isForeignCurrencyCheck = fromCurrency && fromCurrency !== baseCurrency;
+              
               let updatedNode = { ...selectedNode, exchangeRate: currentFxRate };
               let bookings = [...(updatedNode.bookings || [])];
               
@@ -849,9 +774,9 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
               updateTreeData({ banks: updateRecursive(data.banks) });
               setSelectedNode(finalNode);
               
-              const fxNotice = isForeignCurrency ? ` | FX: ${currentFxRate}` : '';
+              const fxNotice = isForeignCurrencyCheck ? ` | FX: ${currentFxRate}` : '';
               if (showToast) showToast(safeT(t, 'msgPriceUpdated', `EOD Kurs (${apiDate}) via ${provider} synchronisiert: ${price} ${fromCurrency}${fxNotice}`), 'success');
-          } else {
+          } else if (result !== null) {
               if (showToast) showToast(safeT(t, 'msgPriceFetchFailed', 'Kursabruf fehlgeschlagen. Ticker/ISIN überprüfen oder API-Limit erreicht.'), 'error');
           }
       };
@@ -1155,7 +1080,6 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
 
                 {isSecurities && (
                     <>
-                        {/* --- NEU: Button für Live-API Abruf --- */}
                         <button 
                             onClick={handleFetchLivePrice}
                             className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 transition-colors shadow-sm"

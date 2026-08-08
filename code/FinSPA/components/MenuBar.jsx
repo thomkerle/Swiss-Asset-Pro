@@ -26,7 +26,7 @@ const MenuBarLogo = ({ className = "h-5 w-5" }) => (
 );
 
 // --- INTERAKTIVE MINI-SPARKLINE (MODERN TRADING APP STYLE) ---
-const MiniSparkline = ({ id, label, history, dates, formatValue }) => {
+const MiniSparkline = ({ id, label, history, dates, formatValue, t }) => {
   const [hoverIdx, setHoverIdx] = React.useState(null);
 
   if (!history || history.length === 0 || history.every(v => v === 0)) return null;
@@ -179,17 +179,26 @@ const MiniSparkline = ({ id, label, history, dates, formatValue }) => {
 };
 
 // --- SPARKLINES CONTAINER ---
-const BankSparklines = ({ data }) => {
+const BankSparklines = ({ data, t }) => {
   const banks = data?.banks || [];
   const baseCurrency = data?.settings?.baseCurrency || 'CHF';
   
   const [fxData, setFxData] = React.useState(null);
   const [fxCurrency, setFxCurrency] = React.useState('EUR');
+  const [tick, setTick] = React.useState(0);
+
+  // Auto-Update Timer (alle 15 Minuten oder zum Tageswechsel)
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+        setTick(prev => prev + 1);
+    }, 15 * 60 * 1000); 
+    return () => clearInterval(timer);
+  }, []);
 
   // Alle Hooks MÜSSEN vor jeglichen "returns" ausgeführt werden!
   const allAssets = React.useMemo(() => {
       return (banks.length > 0 && typeof getAllAssets === 'function') ? getAllAssets(banks) : [];
-  }, [banks]);
+  }, [banks, tick]);
 
   // 1. Datenpunkte für die Zeitachse ermitteln (letzte 6 Monate)
   const dates = React.useMemo(() => {
@@ -202,7 +211,7 @@ const BankSparklines = ({ data }) => {
     let d = typeof generateMonthEnds === 'function' ? generateMonthEnds(startStr, endStr) : [startStr, endStr];
     if (d[d.length - 1] !== endStr) d.push(endStr);
     return d;
-  }, []);
+  }, [tick]);
 
   // 2. Gesamtvermögen Historie berechnen
   const wealthHistory = React.useMemo(() => {
@@ -210,7 +219,7 @@ const BankSparklines = ({ data }) => {
     return dates.map(date => 
       allAssets.reduce((sum, asset) => sum + (getAssetValueAtDate ? getAssetValueAtDate(asset, date, allAssets) : 0), 0)
     );
-  }, [dates, allAssets]);
+  }, [dates, allAssets, tick]);
 
   // 3. Fremdwährung automatisch erkennen
   React.useEffect(() => {
@@ -276,7 +285,7 @@ const BankSparklines = ({ data }) => {
     };
 
     fetchHistory();
-  }, [fxCurrency, baseCurrency, dates, data, allAssets.length]);
+  }, [fxCurrency, baseCurrency, dates, data, allAssets.length, tick]);
 
   // HIER ERSCHEINT JETZT DAS EARLY RETURN (nach allen Hooks)
   if (!banks.length || !allAssets.length || typeof getAllAssets !== 'function') return null;
@@ -291,10 +300,11 @@ const BankSparklines = ({ data }) => {
       {/* Sparkline 1: GESAMTVERMÖGEN */}
       <MiniSparkline
         id="total-wealth"
-        label="GESAMT"
+        label={t ? t('sparklineTotal') || 'GESAMT' : 'GESAMT'}
         history={wealthHistory}
         dates={dates}
         formatValue={(val) => `${val.toLocaleString('de-CH', { maximumFractionDigits: 0 })} ${baseCurrency}`}
+        t={t}
       />
 
       {/* Trenner */}
@@ -307,6 +317,7 @@ const BankSparklines = ({ data }) => {
         history={finalFxHistory}
         dates={dates}
         formatValue={(val) => val.toFixed(4)}
+        t={t}
       />
 
     </div>
@@ -501,6 +512,16 @@ const MenuBar = ({
           <MenuItem title={t ? t('menuViews') : 'Ansichten'}>
             <MenuSubItem label={t ? t('viewWealth') : 'Vermögensverwaltung'} iconName="Shield" onClick={() => { setViewMode('vermoegen'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'vermoegen' ? '✓' : ''} />
             <MenuSubItem label={t ? t('viewBudget') : 'Budgetverwaltung'} iconName="DollarSign" onClick={() => { setViewMode('budget'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'budget' ? '✓' : ''} />
+
+<hr className="border-slate-100 dark:border-slate-800 my-1"/>
+<MenuSubItem 
+    label={t ? t('viewLiveEditor') : 'API LiveEditor'} 
+    iconName="Cloud" 
+    onClick={() => { setViewMode('liveEditor'); setActiveReport(null); setSelectedNode(null); }} 
+    rightText={viewMode === 'liveEditor' ? '✓' : ''} 
+/>
+
+
             <hr className="border-slate-100 dark:border-slate-800 my-1"/>
             <MenuSubItem label={t ? t('viewData') : 'Datensicht'} iconName="Settings" onClick={() => { setViewMode('datensicht'); setActiveReport(null); }} rightText={viewMode === 'datensicht' ? '✓' : ''} />
 
@@ -564,7 +585,7 @@ const MenuBar = ({
       {/* 4. RECHTER BEREICH */}
       <div className="ml-auto flex items-center h-full relative z-20 bg-slate-900 pl-4" style={{ WebkitAppRegion: 'no-drag' }}>      
          
-         <BankSparklines data={data} />
+         <BankSparklines data={data} t={t} />
 
          <MenuItem title={lang.toUpperCase()}>
           <MenuSubItem label="Deutsch" onClick={() => setLang('de')} rightText={lang === 'de' ? '✓' : ''} />
