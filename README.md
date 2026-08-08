@@ -79,10 +79,11 @@ Die Nutzung der Software erfolgt **vollständig auf eigene Gefahr**. Der Entwick
 
 Bitte prüfen Sie alle finanzrelevanten und steuerlichen Daten selbst oder ziehen Sie vor wichtigen finanziellen Entscheidungen einen qualifizierten Fachberater hinzu.
 
+## Weiterentwicklung des Produkts
+
 Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für die Weiterentwicklung des Produkts beitragen.
 
-https://www.paypal.com/donate/?hosted_button_id=4YUTNC5K4PX2N
-
+[![Spenden mit PayPal](https://www.paypalobjects.com/de_DE/CH/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=ZSNNLBN67AE8J)
 
 
 ## Bilder produziert mit Demo_Datensatz.json
@@ -91,7 +92,7 @@ https://www.paypal.com/donate/?hosted_button_id=4YUTNC5K4PX2N
 
 <img width="2404" height="1176" alt="image" src="https://github.com/user-attachments/assets/ee476a86-c782-4aa1-84b8-131bd22c9ac3" />
 
-(C) 2026 Thomas Kerle
+
 ### Bild 2 - Asset Tracking
 
 <img width="2400" height="1174" alt="Bild 1" src="https://github.com/user-attachments/assets/6035c67b-ba41-476d-b006-6949985075fc" />
