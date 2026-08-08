@@ -1,0 +1,336 @@
+{
+  "version": "1.0.0 RC1",
+  "lastModified": "2026-08-08T12:00:00.000Z",
+  "settings": {
+    "baseCurrency": "CHF",
+    "showTaxesForDividends": true,
+    "showFeesForSecurities": true,
+    "exchangeRates": {
+      "USD": 0.88,
+      "EUR": 0.95
+    }
+  },
+  "banks": [
+    {
+      "id": "bank_demo",
+      "name": "Demo Bank & Broker",
+      "type": "bank",
+      "isArchived": false,
+      "children": [
+        {
+          "id": "cat_liquid",
+          "name": "Tägliche Finanzen",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "ast_giro",
+              "name": "Girokonto",
+              "type": "asset",
+              "assetClass": "cash",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": true,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_giro_1", "date": "2025-12-31", "amount": 25000 }
+              ],
+              "bookings": [
+                { "id": "bk_g1", "date": "2026-01-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g2", "date": "2026-01-28", "type": "Auszahlung", "subCategory": "Wohnen", "amount": 1800 },
+                { "id": "bk_g3", "date": "2026-02-15", "type": "Auszahlung", "subCategory": "Lebensmittel", "amount": 600 },
+                { "id": "bk_g4", "date": "2026-02-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g5", "date": "2026-02-28", "type": "Auszahlung", "subCategory": "Wohnen", "amount": 1800 },
+                { "id": "bk_g6", "date": "2026-03-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g7", "date": "2026-03-28", "type": "Auszahlung", "subCategory": "Wohnen", "amount": 1800 },
+                { "id": "bk_g8", "date": "2026-04-10", "type": "Auszahlung", "subCategory": "Steuern", "amount": 4000 },
+                { "id": "bk_g9", "date": "2026-04-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g10", "date": "2026-05-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g11", "date": "2026-06-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g12", "date": "2026-07-25", "type": "Einzahlung", "subCategory": "Lohn", "amount": 7500 },
+                { "id": "bk_g13", "date": "2026-07-28", "type": "Auszahlung", "subCategory": "Freizeit", "amount": 1200 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cat_stocks",
+          "name": "Aktien & ETFs",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "ast_aapl",
+              "name": "Apple Inc.",
+              "ticker": "AAPL.US",
+              "type": "asset",
+              "assetClass": "stock",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_aapl1", "date": "2026-01-15", "type": "Kauf", "subCategory": "Investition", "shares": 50, "price": 185.00, "amount": 9250, "bookingExchangeRate": 0.86, "fees": 15, "comment": "Erster Einstieg Tech-Portfolio" },
+                { "id": "bk_aapl2", "date": "2026-05-10", "type": "Dividende", "subCategory": "Ausschüttung", "amount": 12.50, "bookingExchangeRate": 0.88 }
+              ]
+            },
+            {
+              "id": "ast_msft",
+              "name": "Microsoft Corp.",
+              "ticker": "MSFT.US",
+              "type": "asset",
+              "assetClass": "stock",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_msft1", "date": "2026-02-10", "type": "Kauf", "subCategory": "Investition", "shares": 30, "price": 405.00, "amount": 12150, "bookingExchangeRate": 0.87, "fees": 15 }
+              ]
+            },
+            {
+              "id": "ast_googl",
+              "name": "Alphabet Inc.",
+              "ticker": "GOOGL.US",
+              "type": "asset",
+              "assetClass": "stock",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_googl1", "date": "2026-03-05", "type": "Kauf", "subCategory": "Investition", "shares": 60, "price": 140.00, "amount": 8400, "bookingExchangeRate": 0.88, "fees": 15 }
+              ]
+            },
+            {
+              "id": "ast_ibm",
+              "name": "IBM",
+              "ticker": "IBM.US",
+              "type": "asset",
+              "assetClass": "stock",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_ibm1", "date": "2026-04-12", "type": "Kauf", "subCategory": "Investition", "shares": 40, "price": 180.00, "amount": 7200, "bookingExchangeRate": 0.89, "fees": 15 }
+              ]
+            },
+            {
+              "id": "ast_orcl",
+              "name": "Oracle Corp.",
+              "ticker": "ORCL.US",
+              "type": "asset",
+              "assetClass": "stock",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_orcl1", "date": "2026-05-20", "type": "Kauf", "subCategory": "Investition", "shares": 80, "price": 115.00, "amount": 9200, "bookingExchangeRate": 0.88, "fees": 15 }
+              ]
+            },
+            {
+              "id": "ast_vwce",
+              "name": "Vanguard FTSE All-World",
+              "ticker": "VWCE.F",
+              "type": "asset",
+              "assetClass": "fund",
+              "currency": "EUR",
+              "exchangeRate": 0.95,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_vwce1", "date": "2025-12-31", "type": "Kauf", "subCategory": "Investition", "shares": 200, "price": 110.00, "amount": 22000, "bookingExchangeRate": 0.94 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cat_crypto",
+          "name": "Digitale Assets",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "ast_btc",
+              "name": "Bitcoin",
+              "ticker": "BTC-USD.CC",
+              "type": "asset",
+              "assetClass": "crypto",
+              "currency": "USD",
+              "exchangeRate": 0.88,
+              "isLiquid": true,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_btc1", "date": "2025-12-31", "type": "Kauf", "subCategory": "Investition", "shares": 0.5, "price": 42000.00, "amount": 21000, "bookingExchangeRate": 0.85 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cat_immo",
+          "name": "Immobilien & Hypotheken",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "ast_haus",
+              "name": "Eigenheim Bern",
+              "type": "asset",
+              "assetClass": "realestate",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_haus_1", "date": "2025-12-31", "amount": 1200000 }
+              ],
+              "bookings": [
+                { "id": "bk_haus1", "date": "2026-06-30", "type": "Wertanpassung", "subCategory": "Marktbewertung", "amount": 25000, "comment": "Schätzung nach Bad-Renovierung" }
+              ]
+            },
+            {
+              "id": "ast_hypo",
+              "name": "Festhypothek 10J",
+              "type": "asset",
+              "assetClass": "mortgage",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_hypo_1", "date": "2025-12-31", "amount": -800000 }
+              ],
+              "bookings": [
+                { "id": "bk_hyp1", "date": "2026-03-31", "type": "Zinszahlung", "subCategory": "Hypothekarzins", "amount": 2400 },
+                { "id": "bk_hyp2", "date": "2026-03-31", "type": "Abzahlung", "subCategory": "Amortisation", "amount": 4000 },
+                { "id": "bk_hyp3", "date": "2026-06-30", "type": "Zinszahlung", "subCategory": "Hypothekarzins", "amount": 2388 },
+                { "id": "bk_hyp4", "date": "2026-06-30", "type": "Abzahlung", "subCategory": "Amortisation", "amount": 4000 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cat_vorsorge",
+          "name": "Berufliche & Private Vorsorge",
+          "type": "category",
+          "isArchived": false,
+          "children": [
+            {
+              "id": "ast_pk",
+              "name": "Pensionskasse",
+              "type": "asset",
+              "assetClass": "pension_cash",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_pk1", "date": "2025-12-31", "amount": 145000 }
+              ],
+              "bookings": [
+                { "id": "bk_pk1", "date": "2026-03-01", "type": "Einzahlung", "subCategory": "Lohnabzug", "amount": 2400, "comment": "Q1 Beiträge" },
+                { "id": "bk_pk2", "date": "2026-06-01", "type": "Einzahlung", "subCategory": "Lohnabzug", "amount": 2400, "comment": "Q2 Beiträge" }
+              ]
+            },
+            {
+              "id": "ast_3a_cash",
+              "name": "Säule 3a Sparkonto",
+              "type": "asset",
+              "assetClass": "pension_3a_cash",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_3ac1", "date": "2025-12-31", "amount": 14000 }
+              ],
+              "bookings": []
+            },
+            {
+              "id": "ast_3a_fund",
+              "name": "Säule 3a CSIF Equity",
+              "ticker": "CH0012345678",
+              "type": "asset",
+              "assetClass": "pension_3a_fund",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "bookings": [
+                { "id": "bk_3af1", "date": "2025-12-31", "type": "Kauf", "subCategory": "Investition", "shares": 100, "price": 150.00, "amount": 15000 },
+                { "id": "bk_3af2", "date": "2026-01-20", "type": "Kauf", "subCategory": "Einzahlung", "shares": 45, "price": 156.80, "amount": 7056, "comment": "Maximalbetrag 2026" }
+              ]
+            },
+            {
+              "id": "ast_3a_viac",
+              "name": "VIAC Global 100",
+              "type": "asset",
+              "assetClass": "pension_3a_managed",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": false,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_viac1", "date": "2025-12-31", "amount": 22000 }
+              ],
+              "bookings": [
+                { "id": "bk_viac1", "date": "2026-06-30", "type": "Wertanpassung", "subCategory": "Marktbewertung", "amount": 1200 }
+              ]
+            },
+            {
+              "id": "ast_robo",
+              "name": "TrueWealth Robo Advisor",
+              "type": "asset",
+              "assetClass": "managed_fund",
+              "currency": "CHF",
+              "exchangeRate": 1,
+              "isLiquid": true,
+              "isArchived": false,
+              "balances": [
+                { "id": "bal_robo1", "date": "2025-12-31", "amount": 35000 }
+              ],
+              "bookings": [
+                { "id": "bk_robo1", "date": "2026-04-15", "type": "Einzahlung", "subCategory": "Investition", "amount": 5000 },
+                { "id": "bk_robo2", "date": "2026-07-31", "type": "Wertanpassung", "subCategory": "Marktbewertung", "amount": 850 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "incomeSources": [
+      { "id": "inc1", "name": "Hauptgehalt", "amount": 7500, "frequency": "monthly" },
+      { "id": "inc2", "name": "Kinderzulagen", "amount": 400, "frequency": "monthly" }
+    ],
+    "expenses": [
+      { "id": "exp1", "name": "Hypothekarzinsen & NK", "amount": 1800, "frequency": "monthly" },
+      { "id": "exp2", "name": "Lebensmittel & Haushalt", "amount": 800, "frequency": "monthly" },
+      { "id": "exp3", "name": "Steuerrückstellungen", "amount": 1200, "frequency": "monthly" },
+      { "id": "exp4", "name": "Krankenkasse", "amount": 750, "frequency": "monthly" },
+      { "id": "exp5", "name": "Mobilität / Auto", "amount": 450, "frequency": "monthly" }
+    ],
+    "subscriptions": [
+      { "id": "sub1", "name": "Netflix", "amount": 19.90, "frequency": "monthly", "noticePeriod": "1 month" },
+      { "id": "sub2", "name": "Fitnessstudio", "amount": 89.00, "frequency": "monthly", "noticePeriod": "3 months" }
+    ]
+  },
+  "goals": {
+    "fire": {
+      "target": 1500000,
+      "year": 2040
+    }
+  },
+  "scenarios": [
+    {
+      "id": "scen_auto",
+      "name": "Kauf neues Auto",
+      "amount": -45000,
+      "year": 2027,
+      "type": "one_time"
+    }
+  ]
+}
