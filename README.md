@@ -58,13 +58,16 @@ Ihre Finanzdaten gehören Ihnen. Punkt.
 
 ## 🚀 Ausführung & Installation
 
-Da FinBundle Pro komplett clientseitig läuft, ist kein komplexes Backend (Node.js/Python/DB) notwendig.
+Da FinBundle Pro komplett clientseitig läuft, ist kein komplexes Backend (Node.js/Python/DB) notwendig. 
 
-**Option 1: FinSPA Loader (Empfohlen)**
+> **⚠️ Wichtiger Hinweis für die Ausführung im Browser:**
+> Da die Anwendung rein lokal und clientseitig ausgeführt wird, greifen die restriktiven Sicherheitsmechanismen moderner Browser (CORS - Cross-Origin Resource Sharing). Um die reibungslose Kommunikation mit externen APIs (z. B. für den Abruf von Live-Kursen) zu ermöglichen, muss CORS für den lokalen Zugriff ungeblockt werden. Am einfachsten lässt sich dies temporär über eine entsprechende Browser-Erweiterung (wie z. B. "Allow CORS: Access-Control-Allow-Origin") lösen.
+
+### Option 1: FinSPA Loader (Empfohlen)
 Nutzen Sie die beiliegende `FinSPA_Loader.html`, um das gepackte Projekt (`FinSPA.zip`) direkt im Browser zu entpacken und auszuführen – komplett offline und ohne Build-Prozess.
 
-**Option 2: Lokaler Development Server**
-1. Repository klonen
+### Option 2: Lokaler Development Server
+1. Repository klonen.
 2. Abhängigkeiten installieren: `npm install`
 3. Entwicklungsserver starten: `npm start`
 4. Im Browser unter `http://localhost:3000` aufrufen.
