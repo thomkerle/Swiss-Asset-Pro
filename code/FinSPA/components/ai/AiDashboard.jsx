@@ -341,7 +341,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         }
     };
 
-    const renderIframeWidget = (htmlContent) => {
+const renderIframeWidget = (htmlContent) => {
         // PARAMETERLOSE INJECTED-API
         const injectedScripts = `
         <style>
@@ -353,6 +353,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                 max-width: 100vw;
                 overflow-x: hidden;
                 font-family: system-ui, -apple-system, sans-serif;
+                background-color: #ffffff; /* WICHTIG: Verhindert schwarze Hintergründe beim PDF-Export */
             }
             * { box-sizing: inherit; }
 
@@ -361,11 +362,13 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                 max-height: 400px !important;
                 height: auto !important;
                 object-fit: contain;
+                background-color: #ffffff;
             }
 
             .js-plotly-plot, .plotly-graph-div, div[_echarts_instance_] {
                 max-width: 100% !important;
                 max-height: 400px !important;
+                background-color: #ffffff;
             }
 
             .chart-container, #chart, #myChart, .wrapper {
@@ -376,6 +379,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                 display: flex;
                 justify-content: center;
                 align-items: center;
+                background-color: #ffffff;
             }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -384,8 +388,33 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script>
             window.PdfExportEngine = window.parent.PdfExportEngine; 
+            
+            // --- FIX FÜR LEERE GRAFIKEN BEIM PDF-EXPORT ---
+            // html2canvas fotografiert den DOM sofort ab. Chart-Animationen müssen daher 
+            // global deaktiviert sein, sonst wird der Chart "leer" (im Frame 0) exportiert.
+            
+            if (window.Chart) {
+                window.Chart.defaults.animation = false;
+                window.Chart.defaults.responsiveAnimationDuration = 0;
+            }
+            
+            if (window.echarts) {
+                const originalInit = window.echarts.init;
+                window.echarts.init = function() {
+                    const chart = originalInit.apply(this, arguments);
+                    const originalSetOption = chart.setOption;
+                    chart.setOption = function(option) {
+                        if (option) {
+                            option.animation = false;
+                        }
+                        return originalSetOption.apply(this, arguments);
+                    };
+                    return chart;
+                };
+            }
         </script>
 
         ${getFinSpaApiScript()}

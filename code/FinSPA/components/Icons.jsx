@@ -3,6 +3,7 @@ const React = require('react');
 const Icon = ({ name, className = "", size = 16, onClick, title }) => {
     // Mapping der Icon-Namen zu FontAwesome Klassen
     const map = {
+        File: 'fa-file', // Neu hinzugefügt
         Printer: 'fa-print', 
         Save: 'fa-save', 
         FilePlus: 'fa-file-circle-plus', 
@@ -116,6 +117,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
 
     // Standardfarben für jedes Icon definieren
     const defaultColors = {
+        File: 'text-gray-500 dark:text-gray-400', // Neu hinzugefügt
         Printer: 'text-gray-500 dark:text-gray-400',
         Save: 'text-blue-500',
         FilePlus: 'text-green-500',

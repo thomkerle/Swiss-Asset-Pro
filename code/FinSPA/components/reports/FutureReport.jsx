@@ -34,23 +34,34 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   
   // Berechnung der durchschnittlichen monatlichen Sparquote/Cashflows anhand der Steigung
   const monthlyCashflow = linReg(1) - linReg(0);
-  const currentWealth = histData[histData.length - 1].y;
   
-  const futureMonths = [0, 3, 12, 36, 60]; 
-  const startX = histData.length - 1; 
-  const futureLabels = [
-      t ? t('labelToday') || 'Heute' : 'Heute', 
-      t ? t('labelIn3Months') || 'In 3 Monaten' : 'In 3 Monaten', 
-      t ? t('labelIn1Year') || 'In 1 Jahr' : 'In 1 Jahr', 
-      t ? t('labelIn3Years') || 'In 3 Jahren' : 'In 3 Jahren', 
-      t ? t('labelIn5Years') || 'In 5 Jahren' : 'In 5 Jahren'
-  ];
+  // Der tatsächliche Ist-Wert als eiserner Anker für alle Kurven
+  const currentWealth = histData[histData.length - 1].y;
+  const reportTodayDate = new Date(dateRange.to || new Date().toISOString().split('T')[0]);
+  
+  // Wir berechnen nun JEDEN Monat für die nächsten 5 Jahre, damit der Chart absolut proportional gezeichnet wird!
+  const futureMonthsFull = Array.from({length: 61}, (_, i) => i); 
+  
+  const chartLabels = futureMonthsFull.map(m => {
+      const d = new Date(reportTodayDate);
+      d.setMonth(d.getMonth() + m);
+      return d.toISOString().split('T')[0];
+  });
   
   // 1. Modell: Stumpf Linear (Ohne Rendite, nur Sparquote)
-  const linD = futureMonths.map(m => {
-     let val = linReg(startX + m);
-     const futureDate = new Date(); futureDate.setMonth(futureDate.getMonth() + m);
-     (data.scenarios || []).forEach(sc => { if (new Date(sc.date) <= futureDate) val += Number(sc.impact); });
+  const linD = futureMonthsFull.map(m => {
+     let val = currentWealth + (monthlyCashflow * m); // FIX: Immer ab dem Ist-Wert starten!
+     
+     const futureDate = new Date(reportTodayDate); 
+     futureDate.setMonth(futureDate.getMonth() + m);
+     
+     (data.scenarios || []).forEach(sc => { 
+         const scDate = new Date(sc.date);
+         // FIX: Nur Szenarien addieren, die strikt NACH heute und in dem betrachteten Zeitraum liegen!
+         if (scDate > reportTodayDate && scDate <= futureDate) {
+             val += Number(sc.impact); 
+         }
+     });
      return val;
   });
 
@@ -66,33 +77,48 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   // 2. Berechnung der verschiedenen Marktrendite-Kurven
   const marketCurves = rates.map(r => ({
       ...r,
-      data: futureMonths.map(m => {
+      data: futureMonthsFull.map(m => {
          let val;
          if (m === 0) {
-             val = currentWealth;
+             val = currentWealth; // FIX: Sicherstellen, dass Startpunkt exakt identisch ist
          } else {
              const q = 1 + (r.rate / 12);
              const compoundInterest = currentWealth * Math.pow(q, m);
              
              // Rentenrechnung: Zinseszins auf die laufenden monatlichen Einzahlungen
-             const savingsGrowth = monthlyCashflow > 0 
-                ? monthlyCashflow * ((Math.pow(q, m) - 1) / (r.rate / 12))
-                : monthlyCashflow * m; 
+             const savingsGrowth = monthlyCashflow * ((Math.pow(q, m) - 1) / (r.rate / 12));
 
              val = compoundInterest + savingsGrowth;
          }
 
-         const futureDate = new Date(); futureDate.setMonth(futureDate.getMonth() + m);
-         (data.scenarios || []).forEach(sc => { if (new Date(sc.date) <= futureDate) val += Number(sc.impact); });
+         const futureDate = new Date(reportTodayDate); 
+         futureDate.setMonth(futureDate.getMonth() + m);
+         
+         (data.scenarios || []).forEach(sc => { 
+             const scDate = new Date(sc.date);
+             if (scDate > reportTodayDate && scDate <= futureDate) {
+                 val += Number(sc.impact); 
+             }
+         });
          return val;
       })
   }));
 
-  // Endwerte nach 5 Jahren (Index 4 im Array) für die Summary-Cards
-  const finalLinear = linD[4] || 0;
-  const finalModerate = marketCurves.find(c => c.rate === 0.03)?.data[4] || 0;
-  const finalOptimistic = marketCurves.find(c => c.rate === 0.07)?.data[4] || 0;
-  const topValue = Math.max(finalLinear, ...marketCurves.map(c => c.data[4]));
+  // Indizes für die Tabelle und Dashboards (0 = Heute, 3 = 3 Mte, 12 = 1 Jahr, 36 = 3 Jahre, 60 = 5 Jahre)
+  const keyIndices = [0, 3, 12, 36, 60];
+  const futureLabelsTable = [
+      t ? t('labelToday') || 'Heute' : 'Heute', 
+      t ? t('labelIn3Months') || 'In 3 Monaten' : 'In 3 Monaten', 
+      t ? t('labelIn1Year') || 'In 1 Jahr' : 'In 1 Jahr', 
+      t ? t('labelIn3Years') || 'In 3 Jahren' : 'In 3 Jahren', 
+      t ? t('labelIn5Years') || 'In 5 Jahren' : 'In 5 Jahren'
+  ];
+
+  // Endwerte nach 5 Jahren (Index 60) für die Summary-Cards
+  const finalLinear = linD[60] || 0;
+  const finalModerate = marketCurves.find(c => c.rate === 0.03)?.data[60] || 0;
+  const finalOptimistic = marketCurves.find(c => c.rate === 0.07)?.data[60] || 0;
+  const topValue = Math.max(finalLinear, ...marketCurves.map(c => c.data[60]));
 
   const titleText = t ? t('repSimRegTitle') || 'Zukunftssimulation' : 'Zukunftssimulation';
   const subText = t ? t('repSimRegSubProj') || 'Projektion der Vermögensentwicklung' : 'Projektion der Vermögensentwicklung';
@@ -139,10 +165,10 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
           ...marketCurves.map(c => c.label)
         ];
 
-        const tableBody = futureLabels.map((label, idx) => {
-            const row = [label, fCur(linD[idx])];
+        const tableBody = keyIndices.map((monthIndex, idx) => {
+            const row = [futureLabelsTable[idx], fCur(linD[monthIndex])];
             marketCurves.forEach(curve => {
-                row.push(fCur(curve.data[idx]));
+                row.push(fCur(curve.data[monthIndex]));
             });
             return row;
         });
@@ -198,7 +224,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [futureLabels, linD, marketCurves, fCur, t, monthlyCashflow, titleText, subText, data]);
+  }, [futureLabelsTable, linD, marketCurves, fCur, t, monthlyCashflow, titleText, subText, data]);
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
@@ -296,7 +322,9 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
-                        labels={futureLabels}
+                        xAxisType="time" 
+                        isTimeSeries={true} 
+                        labels={chartLabels} 
                         datasets={[
                             { 
                                 label: t ? t('labelLinearZero') || 'Linear (0%)' : 'Linear (0%)', 
@@ -372,12 +400,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                                             <span className="font-bold text-orange-500">5% p.a.</span>
                                         </div>
                                         <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.05)?.data[4] / topValue) * 100}%` }}></div>
+                                            <div className="h-full bg-orange-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.05)?.data[60] / topValue) * 100}%` }}></div>
                                         </div>
                                     </td>
                                     <td className="p-4 pr-5 text-right align-middle">
                                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                            {fCur(marketCurves.find(c => c.rate === 0.05)?.data[4])}
+                                            {fCur(marketCurves.find(c => c.rate === 0.05)?.data[60])}
                                         </span>
                                     </td>
                                 </tr>
@@ -407,12 +435,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                                             <span className="font-bold text-emerald-500">2% p.a.</span>
                                         </div>
                                         <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.02)?.data[4] / topValue) * 100}%` }}></div>
+                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.02)?.data[60] / topValue) * 100}%` }}></div>
                                         </div>
                                     </td>
                                     <td className="p-4 pr-5 text-right align-middle">
                                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                            {fCur(marketCurves.find(c => c.rate === 0.02)?.data[4])}
+                                            {fCur(marketCurves.find(c => c.rate === 0.02)?.data[60])}
                                         </span>
                                     </td>
                                 </tr>
@@ -424,12 +452,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                                             <span className="font-bold text-sky-500">1% p.a.</span>
                                         </div>
                                         <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                            <div className="h-full bg-sky-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.01)?.data[4] / topValue) * 100}%` }}></div>
+                                            <div className="h-full bg-sky-500 rounded-full" style={{ width: `${(marketCurves.find(c => c.rate === 0.01)?.data[60] / topValue) * 100}%` }}></div>
                                         </div>
                                     </td>
                                     <td className="p-4 pr-5 text-right align-middle">
                                         <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                                            {fCur(marketCurves.find(c => c.rate === 0.01)?.data[4])}
+                                            {fCur(marketCurves.find(c => c.rate === 0.01)?.data[60])}
                                         </span>
                                     </td>
                                 </tr>

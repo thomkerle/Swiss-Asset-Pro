@@ -135,8 +135,11 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
     
     const paddingX = 6;
     const paddingY = 8;
+    const bottomPadding = 18; 
     const width = 160;   
-    const height = 56;   
+    const height = 70; 
+
+    const chartHeight = height - bottomPadding;
 
     const getCoords = (d, i) => {
         let xPct;
@@ -147,14 +150,14 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
         }
         
         const x = paddingX + xPct * (width - paddingX * 2);
-        const y = height - paddingY - ((d - min) / range) * (height - paddingY * 2);
+        const y = chartHeight - paddingY - ((d - min) / range) * (chartHeight - paddingY * 2);
         return { x, y };
     };
 
     const points = plotData.map((d, i) => `${getCoords(d, i).x},${getCoords(d, i).y}`).join(' L ');
     const firstPt = getCoords(plotData[0], 0);
     const lastPt = getCoords(plotData[plotData.length - 1], plotData.length - 1);
-    const areaPath = `M ${firstPt.x},${height} L ${points} L ${lastPt.x},${height} Z`;
+    const areaPath = `M ${firstPt.x},${chartHeight} L ${points} L ${lastPt.x},${chartHeight} Z`;
 
     const isPositive = plotData[plotData.length - 1] >= plotData[0];
     const strokeColor = isPositive ? '#10b981' : '#ef4444'; 
@@ -200,8 +203,52 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     </defs>
                     
                     <line x1={paddingX} y1={firstPt.y} x2={width - paddingX} y2={firstPt.y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" className="dark:stroke-slate-600" />
-                    <line x1={paddingX} y1={height - 2} x2={width - paddingX} y2={height - 2} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
-                    <line x1={paddingX} y1={paddingY - 4} x2={paddingX} y2={height - 2} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
+                    <line x1={paddingX} y1={chartHeight} x2={width - paddingX} y2={chartHeight} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
+                    <line x1={paddingX} y1={paddingY - 4} x2={paddingX} y2={chartHeight} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
+
+                    {(() => {
+                        const ticks = [];
+                        let lastMonth = -1;
+                        let lastYear = -1;
+                        plotDates.forEach((dateStr, i) => {
+                            if (!dateStr) return;
+                            const [yyyy, mm] = dateStr.split('-');
+                            const year = parseInt(yyyy, 10);
+                            const month = parseInt(mm, 10);
+                            if (month !== lastMonth || year !== lastYear || i === 0) {
+                                ticks.push({ i, year, month, dateStr });
+                                lastMonth = month;
+                                lastYear = year;
+                            }
+                        });
+                        
+                        const renderTicks = [];
+                        let lastX = -50;
+                        ticks.forEach(t => {
+                            const x = getCoords(plotData[t.i], t.i).x;
+                            if (x - lastX > 16) { 
+                                renderTicks.push({ ...t, x });
+                                lastX = x;
+                            }
+                        });
+
+                        const monthNames = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+                        
+                        return renderTicks.map((t, idx) => {
+                            const isJan = t.month === 1;
+                            const showYear = isJan || (idx === 0 && renderTicks.length < 5);
+                            const label = showYear ? `'${t.year.toString().slice(-2)}` : monthNames[t.month - 1];
+                            
+                            return (
+                                <g key={idx}>
+                                    <line x1={t.x} y1={chartHeight} x2={t.x} y2={chartHeight + 3} stroke="#cbd5e1" className="dark:stroke-slate-600" strokeWidth="1" />
+                                    <text x={t.x} y={chartHeight + 12} fontSize={showYear ? "9" : "8"} fontWeight={showYear ? "bold" : "normal"} fill="#94a3b8" className="dark:fill-slate-500" textAnchor="middle">
+                                        {label}
+                                    </text>
+                                </g>
+                            );
+                        });
+                    })()}
 
                     <path d={areaPath} fill={`url(#${gradientId})`} />
                     <path d={`M ${points}`} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -228,7 +275,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                             x1={getCoords(plotData[hoveredIdx], hoveredIdx).x} 
                             y1={paddingY - 4} 
                             x2={getCoords(plotData[hoveredIdx], hoveredIdx).x} 
-                            y2={height - 2} 
+                            y2={chartHeight} 
                             stroke={strokeColor} 
                             strokeWidth="1" 
                             strokeDasharray="2,2"
@@ -476,26 +523,22 @@ const EditorArea = ({ data, viewMode, activeReport, selectedNode, setSelectedNod
     );
   }
 
-
-
-
   if (viewMode === 'ai') {
       const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
       return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
   }
 
-// HINZUFÜGEN UNTERHALB DES BLOCKS "if (viewMode === 'ai') { ... }":
-if (viewMode === 'liveEditor') {
-    return (
-        <ApiLiveEditorDashboard 
-            data={data} 
-            updateTreeData={updateTreeData} 
-            fCur={fCur} 
-            t={t} 
-            showToast={showToast} 
-        />
-    );
-}
+  if (viewMode === 'liveEditor') {
+      return (
+          <ApiLiveEditorDashboard 
+              data={data} 
+              updateTreeData={updateTreeData} 
+              fCur={fCur} 
+              t={t} 
+              showToast={showToast} 
+          />
+      );
+  }
 
   if (activeReport) {
     const getReportConfig = (reportId) => {
@@ -534,7 +577,7 @@ if (viewMode === 'liveEditor') {
         case 'topFlow': return <TopFlowReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'bookingAnalysis': return <BookingAnalysisReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'future': return <FutureReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
-     case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} updateTreeData={updateTreeData} fCur={fCur} t={t} />;
+        case 'scenarios': return <ScenariosReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} setModalObj={setModalObj} updateTreeData={updateTreeData} fCur={fCur} t={t} />;
         case 'pension3a': return <PensionPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
         case 'securities': return <SecuritiesPerformanceReport data={data} activeAssets={activeAssets} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
 	    case 'dividendCalendar': return <DividendCalendarReport data={data} activeAssets={activeAssets} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
@@ -573,8 +616,8 @@ if (viewMode === 'liveEditor') {
   
   if (viewMode === 'budget' && !selectedNode && !activeReport) return <BudgetDashboard data={data} fCur={fCur} t={t} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} />;
 
-  if (viewMode === 'vermoegen' && !selectedNode && !activeReport) {
-      return <AssetOverviewReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
+if (viewMode === 'vermoegen' && !selectedNode && !activeReport) {
+      return <AllocationReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />;
   }
   
   if (selectedNode) {
@@ -618,6 +661,40 @@ if (viewMode === 'liveEditor') {
       const headerIcon = isBank ? "Shield" : "FolderOpen";
       const headerSubtitle = isBank ? safeT(t, 'consWealthOverview', 'Konsolidierte Vermögensübersicht') : safeT(t, 'allocByCatSub', 'Kategorie-Übersicht');
 
+      // ---------------------------------------------------------
+      // SPARKLINE HISTORIE FÜR BANK ODER KATEGORIE GENERIEREN
+      // ---------------------------------------------------------
+      const todayStr = new Date().toISOString().split('T')[0];
+      let datesSet = new Set();
+      const extractDates = (node) => {
+         if (node.type === 'asset') {
+             (node.bookings || []).forEach(b => datesSet.add(b.date));
+             (node.balances || []).forEach(b => datesSet.add(b.date));
+         }
+         if (node.children) node.children.forEach(extractDates);
+      };
+      extractDates(selectedNode);
+      datesSet.add(todayStr);
+      let sortedDates = Array.from(datesSet).sort();
+      
+      if (sortedDates.length === 1) {
+          const d = new Date(sortedDates[0]);
+          d.setMonth(d.getMonth() - 1);
+          sortedDates.unshift(d.toISOString().split('T')[0]);
+      } else if (sortedDates.length === 0) {
+          sortedDates = ['2000-01-01', todayStr];
+      }
+
+      const calcNodeHist = (n, d) => {
+          if (n.type === 'asset') return getAssetValueAtDate(n, d, allAssets);
+          let sum = 0;
+          if (n.children) n.children.forEach(c => sum += calcNodeHist(c, d));
+          return sum;
+      };
+
+      const historyData = sortedDates.map(d => calcNodeHist(selectedNode, d));
+      // ---------------------------------------------------------
+
       return (
         <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-6 mb-6 gap-4">
@@ -629,16 +706,27 @@ if (viewMode === 'liveEditor') {
               </h2>
               <p className="text-gray-500 text-sm mt-1">{headerSubtitle}</p>
             </div>
-            <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0 min-w-[180px]">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">{safeT(t, 'totalValue', 'Gesamtwert')}</span>
-              <span className="text-3xl font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-xl block shadow-sm whitespace-nowrap">
-                {fCur ? fCur(totalBankValue, 'CHF') : totalBankValue}
-              </span>
+            
+            <div className="flex items-end gap-10">
+                {historyData && historyData.length > 1 && (
+                    <Sparkline 
+                        dataSeries={historyData} 
+                        dateSeries={sortedDates} 
+                        title={`${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${data?.settings?.baseCurrency || 'CHF'})`} 
+                    />
+                )}
+                
+                <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0 min-w-[180px]">
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">{safeT(t, 'totalValue', 'Gesamtwert')}</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-xl block shadow-sm whitespace-nowrap">
+                    {fCur ? fCur(totalBankValue, 'CHF') : totalBankValue}
+                  </span>
+                </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-            <div className="xl:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 print:grid-cols-3 xl:grid-cols-3 gap-8 items-start">
+            <div className="print:col-span-2 xl:col-span-2 space-y-6">
               {Object.keys(categoryMap).map(categoryName => {
                 const categoryItems = allBankAssets.filter(a => a.category === categoryName);
                 const categoryTotal = categoryMap[categoryName];
@@ -672,7 +760,7 @@ if (viewMode === 'liveEditor') {
               })}
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 print:col-span-1 print:break-inside-avoid">
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6 flex flex-col items-center">
                 <h3 className="font-bold text-sm text-gray-700 dark:text-gray-300 self-start mb-6 flex items-center gap-2"><Icon name="PieChart" /> {safeT(t, 'allocByCat', 'Aufteilung nach Kategorien')}</h3>
                 {chartDataCategories.length > 0 ? (
@@ -1015,7 +1103,7 @@ if (viewMode === 'liveEditor') {
                </div>
              </div>
 
-             <div className="flex items-end gap-10 print-hide ml-4 h-full pt-2">
+             <div className="flex items-end gap-10 ml-4 h-full pt-2">
                 <Sparkline dataSeries={dataBase} dateSeries={sortedDates} title={isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${baseCurrency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${baseCurrency})`} />
                 {isForeignCurrency && <Sparkline dataSeries={dataRaw} dateSeries={sortedDates} title={isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${adjustedNode.currency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${adjustedNode.currency})`} />}
              </div>

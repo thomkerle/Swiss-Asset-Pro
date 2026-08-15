@@ -221,11 +221,9 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
         const isDark = document.documentElement.classList.contains('dark');
         const bgColor = isDark ? '#0f172a' : '#ffffff';
 
-        // 1. Dashboard Block (Volle Breite)
         const captureBlock = async (selector, titleFallback = '') => {
             const el = document.querySelector(selector);
             if (el) {
-                // Kurze DOM-Pause
                 await new Promise(resolve => setTimeout(resolve, 50));
                 const canvas = await html2canvas(el, { 
                     scale: 2, 
@@ -233,32 +231,27 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                     useCORS: true, 
                     logging: false 
                 });
-                // WICHTIG: width: 760 signalisiert der PDF-Engine, dass dies ein Full-Width Block ist
                 chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
             }
         };
 
         await captureBlock('.dashboard-top-export-block', ''); 
 
-        // 2. Charts (Im 2-Spalten Grid)
         if (chartRef.current) {
             const containers = chartRef.current.querySelectorAll('.chart-export-block');
             for (let i = 0; i < containers.length; i++) {
                 const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
                 const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div') || containers[i].querySelector('div');
                 
-                // Schneller und sauberer ECharts Nativ-Export (verhindert auch den Clipping-Bug)
                 if (chartDiv && window.echarts) {
                     const chartInstance = window.echarts.getInstanceByDom(chartDiv);
                     if (chartInstance) {
                         const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                        // WICHTIG: fit: [360, 260] zwingt die PDF Engine in das 2-Spalten-Grid!
                         chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
                         continue;
                     }
                 }
                 
-                // Fallback via html2canvas (mit Ignore-Filter)
                 const canvas = await html2canvas(containers[i], { 
                     scale: 2, 
                     backgroundColor: bgColor, 
@@ -274,7 +267,6 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
             }
         }
 
-        // 3. Tabellendaten generieren
         const tableHeaders = [
             t ? t('colMonth') || 'Monat' : 'Monat',
             t ? t('colStocksInv') || 'Aktien (Inv.)' : 'Aktien (Inv.)',
@@ -360,11 +352,57 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
     };
   }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, calcMethod]);
 
-  const chartLabels = monthlyDataPoints.map(d => {
+  // --- INTERPOLATION FÜR PROPORTIONALE X-ACHSE ---
+  const interpolateTimeSeries = (points) => {
+    if (!points || points.length < 2) return points;
+    const result = [];
+    
+    const lerpObj = (o1, o2, ratio) => {
+        const out = {};
+        for (const key in o1) {
+            if (typeof o1[key] === 'number' && typeof o2[key] === 'number') {
+                out[key] = o1[key] + (o2[key] - o1[key]) * ratio;
+            } else if (typeof o1[key] === 'object' && o1[key] !== null) {
+                out[key] = lerpObj(o1[key], o2[key], ratio);
+            } else {
+                out[key] = o1[key];
+            }
+        }
+        return out;
+    };
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        
+        // Zwinge das Datum auf UTC, um DST-Sprünge zu vermeiden
+        const t1 = new Date(p1.dateStr + 'T00:00:00Z').getTime();
+        const t2 = new Date(p2.dateStr + 'T00:00:00Z').getTime();
+        const days = Math.round((t2 - t1) / (1000 * 3600 * 24));
+        
+        result.push(p1);
+        
+        // Füge für jeden einzelnen Tag einen interpolierten Datenpunkt ein
+        if (days > 1 && days < 1000) { 
+            for (let d = 1; d < days; d++) {
+                const ratio = d / days;
+                const currentTime = t1 + d * 24 * 3600 * 1000;
+                const interp = lerpObj(p1, p2, ratio);
+                interp.dateStr = new Date(currentTime).toISOString().split('T')[0];
+                interp.isInterpolated = true;
+                result.push(interp);
+            }
+        }
+    }
+    result.push(points[points.length - 1]);
+    return result;
+  };
+
+  const chartDataPoints = interpolateTimeSeries(monthlyDataPoints);
+
+  const chartLabels = chartDataPoints.map(d => {
       const dateObj = new Date(d.dateStr);
-      const isLastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() === dateObj.getDate();
-      if (!isLastDay) return `${('0'+dateObj.getDate()).slice(-2)}.${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
-      return `${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
+      return `${('0'+dateObj.getDate()).slice(-2)}.${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
   });
 
   return (
@@ -538,26 +576,28 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
+                        xAxisType="time"
+                        isTimeSeries={true}
                         showDataLabels={false}
                         labels={chartLabels}
                         datasets={[
                             {
                                 name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: monthlyDataPoints.map(d => d.stocks.invested),
+                                data: chartDataPoints.map(d => d.stocks.invested),
                                 backgroundColor: '#475569', 
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: monthlyDataPoints.map(d => d.stocks.actual),
+                                data: chartDataPoints.map(d => d.stocks.actual),
                                 backgroundColor: '#10b981', 
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)',
-                                data: monthlyDataPoints.map(d => d.stocks.actual + d.stocks.yields),
+                                data: chartDataPoints.map(d => d.stocks.actual + d.stocks.yields),
                                 backgroundColor: '#6366f1',
                                 valueFormatter: fCur,
                                 label: { show: false }
@@ -584,26 +624,28 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
+                        xAxisType="time"
+                        isTimeSeries={true}
                         showDataLabels={false}
                         labels={chartLabels}
                         datasets={[
                             {
                                 name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: monthlyDataPoints.map(d => d.funds.invested),
+                                data: chartDataPoints.map(d => d.funds.invested),
                                 backgroundColor: '#475569',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: monthlyDataPoints.map(d => d.funds.actual),
+                                data: chartDataPoints.map(d => d.funds.actual),
                                 backgroundColor: '#10b981',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)',
-                                data: monthlyDataPoints.map(d => d.funds.actual + d.funds.yields),
+                                data: chartDataPoints.map(d => d.funds.actual + d.funds.yields),
                                 backgroundColor: '#6366f1',
                                 valueFormatter: fCur,
                                 label: { show: false }
@@ -630,26 +672,28 @@ const SecuritiesPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisi
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
+                        xAxisType="time"
+                        isTimeSeries={true}
                         showDataLabels={false}
                         labels={chartLabels}
                         datasets={[
                             {
                                 name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: monthlyDataPoints.map(d => d.managed.invested),
+                                data: chartDataPoints.map(d => d.managed.invested),
                                 backgroundColor: '#475569',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: monthlyDataPoints.map(d => d.managed.actual),
+                                data: chartDataPoints.map(d => d.managed.actual),
                                 backgroundColor: '#10b981',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Div)' : 'Total Return (inkl. Div)',
-                                data: monthlyDataPoints.map(d => d.managed.actual + d.managed.yields),
+                                data: chartDataPoints.map(d => d.managed.actual + d.managed.yields),
                                 backgroundColor: '#6366f1',
                                 valueFormatter: fCur,
                                 label: { show: false }

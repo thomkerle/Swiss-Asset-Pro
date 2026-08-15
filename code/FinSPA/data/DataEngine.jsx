@@ -43,7 +43,7 @@ const ensureDefaultAssetClasses = (loadedData) => {
 };
 
 const initialData = {
-  version: "Beta-0.9.6", lastModified: new Date().toISOString(), 
+  version: "1.0.0 RC1", lastModified: new Date().toISOString(), 
   settings: { 
       baseCurrency: 'CHF', 
       showTaxesForDividends: true, 

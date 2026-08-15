@@ -1,5 +1,5 @@
 const React = require('react');
-const { useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -14,6 +14,18 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
   const targetDate = dateRange?.to || new Date().toISOString().split('T')[0];
+
+  // Theme-Überwachung: Erzwingt einen Re-Render des Charts beim Wechsel Dark/Light
+  const [isDark, setIsDark] = useState(typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false);
+
+  useEffect(() => {
+      if (typeof document === 'undefined') return;
+      const observer = new MutationObserver(() => {
+          setIsDark(document.documentElement.classList.contains('dark'));
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+      return () => observer.disconnect();
+  }, []);
 
   // Sicherer Währungs-Formatter
   const formatCurrency = (val) => fCur ? fCur(val) : val;
@@ -71,88 +83,88 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
         });
     };
 
-const buildReportData = async () => {
-    const html2canvas = await loadHtml2Canvas();
-    let chartsData = [];
-    const isDark = document.documentElement.classList.contains('dark');
-    const bgColor = isDark ? '#0f172a' : '#ffffff';
+    const buildReportData = async () => {
+        const html2canvas = await loadHtml2Canvas();
+        let chartsData = [];
+        const isDarkTheme = document.documentElement.classList.contains('dark');
+        const bgColor = isDarkTheme ? '#0f172a' : '#ffffff';
 
-    // 1. KPI-Block erfassen
-    const kpiBlock = document.querySelector('.kpi-export-block');
-    if (kpiBlock) {
-        const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-        chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
-    }
-
-    // 2. Charts erfassen (mit dem neuen ECharts Fallback-Schutz)
-    if (chartRef.current) {
-        const containers = chartRef.current.querySelectorAll('.chart-export-block');
-        for (let i = 0; i < containers.length; i++) {
-            const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-            const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div');
-            
-            if (chartDiv && window.echarts) {
-                const chartInstance = window.echarts.getInstanceByDom(chartDiv);
-                if (chartInstance) {
-                    const currentOption = chartInstance.getOption();
-                    const hasLegend = currentOption.legend && currentOption.legend.length > 0;
-                    const isPie = currentOption.series && currentOption.series.length > 0 && currentOption.series[0].type === 'pie';
-                    
-                    let isDoughnut = false;
-                    if (isPie && currentOption.series[0].radius) {
-                        isDoughnut = Array.isArray(currentOption.series[0].radius);
-                    } else if (isPie) {
-                        isDoughnut = true; 
-                    }
-                    
-                    chartInstance.setOption({
-                        legend: hasLegend ? { type: 'plain', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } } : undefined,
-                        series: isPie ? [{ center: ['50%', '35%'], radius: isDoughnut ? ['30%', '55%'] : '55%' }] : undefined,
-                        grid: (!isPie && currentOption.grid) ? { bottom: '26%' } : undefined 
-                    });
-                    
-                    const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                    
-                    chartInstance.setOption({
-                        legend: hasLegend ? { type: 'scroll', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 24, textStyle: { fontSize: 13 } } : undefined,
-                        series: isPie ? [{ center: ['50%', '50%'], radius: isDoughnut ? ['45%', '75%'] : '70%' }] : undefined,
-                        grid: (!isPie && currentOption.grid) ? { bottom: '25%' } : undefined 
-                    });
-                    
-                    chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
-                    continue; 
-                }
-            }
-            
-            // html2canvas Fallback mit ECharts Text-Ignore
-            const canvas = await html2canvas(containers[i], { 
-                scale: 2, backgroundColor: bgColor, useCORS: true, logging: false,
-                ignoreElements: (element) => {
-                    if (element.classList && element.classList.contains('echarts-tooltip')) return true;
-                    if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
-                    return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
-                }
-            });
-            chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
+        // 1. KPI-Block erfassen
+        const kpiBlock = document.querySelector('.kpi-export-block');
+        if (kpiBlock) {
+            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
+            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
         }
-    }
 
-    // 3. Tabellendaten für den AllocationReport (KORRIGIERT)
-    const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-    const tableHeaders = [
-      capitalize(t ? (t('bank') || 'Bank / Institut') : 'Bank / Institut'), 
-      t ? (t('share') || 'Anteil') : 'Anteil',
-      capitalize(t ? (t('amount') || 'Betrag') : 'Betrag')
-    ];
-    
-    const tableBody = allocData.map(d => [
-        d.label, 
-        `${((d.value / grandTotal) * 100).toFixed(1)}%`,
-        formatCurrency(d.value)
-    ]);
+        // 2. Charts erfassen (mit dem neuen ECharts Fallback-Schutz)
+        if (chartRef.current) {
+            const containers = chartRef.current.querySelectorAll('.chart-export-block');
+            for (let i = 0; i < containers.length; i++) {
+                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
+                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div');
+                
+                if (chartDiv && window.echarts) {
+                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
+                    if (chartInstance) {
+                        const currentOption = chartInstance.getOption();
+                        const hasLegend = currentOption.legend && currentOption.legend.length > 0;
+                        const isPie = currentOption.series && currentOption.series.length > 0 && currentOption.series[0].type === 'pie';
+                        
+                        let isDoughnut = false;
+                        if (isPie && currentOption.series[0].radius) {
+                            isDoughnut = Array.isArray(currentOption.series[0].radius);
+                        } else if (isPie) {
+                            isDoughnut = true; 
+                        }
+                        
+                        chartInstance.setOption({
+                            legend: hasLegend ? { type: 'plain', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } } : undefined,
+                            series: isPie ? [{ center: ['50%', '35%'], radius: isDoughnut ? ['30%', '55%'] : '55%' }] : undefined,
+                            grid: (!isPie && currentOption.grid) ? { bottom: '26%' } : undefined 
+                        });
+                        
+                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
+                        
+                        chartInstance.setOption({
+                            legend: hasLegend ? { type: 'scroll', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 24, textStyle: { fontSize: 13 } } : undefined,
+                            series: isPie ? [{ center: ['50%', '50%'], radius: isDoughnut ? ['45%', '75%'] : '70%' }] : undefined,
+                            grid: (!isPie && currentOption.grid) ? { bottom: '25%' } : undefined 
+                        });
+                        
+                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
+                        continue; 
+                    }
+                }
+                
+                // html2canvas Fallback mit ECharts Text-Ignore
+                const canvas = await html2canvas(containers[i], { 
+                    scale: 2, backgroundColor: bgColor, useCORS: true, logging: false,
+                    ignoreElements: (element) => {
+                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
+                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
+                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
+                    }
+                });
+                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
+            }
+        }
 
-    return { chartsData, tableHeaders, tableBody };
-};
+        // 3. Tabellendaten für den AllocationReport
+        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+        const tableHeaders = [
+          capitalize(t ? (t('bank') || 'Bank / Institut') : 'Bank / Institut'), 
+          t ? (t('share') || 'Anteil') : 'Anteil',
+          capitalize(t ? (t('amount') || 'Betrag') : 'Betrag')
+        ];
+        
+        const tableBody = allocData.map(d => [
+            d.label, 
+            `${((d.value / grandTotal) * 100).toFixed(1)}%`,
+            formatCurrency(d.value)
+        ]);
+
+        return { chartsData, tableHeaders, tableBody };
+    };
 
     const handlePdfExport = async () => {
       try {
@@ -223,16 +235,13 @@ const buildReportData = async () => {
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
       <div className="w-full bg-white dark:bg-transparent">
           
-{/* KPI DASHBOARD ROW */}
           <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              
-             {/* 1. Gesamtkapital */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
                     <span>{String(t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital').toUpperCase()}</span>
                 </div>
-                {/* Dynamische Skalierung via Container Queries */}
                 <div className="w-full" style={{ containerType: 'inline-size' }}>
                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={formatCurrency(grandTotal)}>
                         <span>{formatCurrency(grandTotal)}</span>
@@ -243,7 +252,6 @@ const buildReportData = async () => {
                 </div>
              </div>
 
-             {/* 2. Grösste Position */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -251,7 +259,6 @@ const buildReportData = async () => {
                       {String(t ? (t('topInstitution') || 'Grösste Position') : 'Grösste Position').toUpperCase()}
                     </span>
                 </div>
-                {/* Dynamische Skalierung via Container Queries */}
                 <div className="w-full" style={{ containerType: 'inline-size' }}>
                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" title={topBank?.label} style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.5rem)' }}>
                         <span>{topBank ? topBank.label : '-'}</span>
@@ -262,7 +269,6 @@ const buildReportData = async () => {
                 </div>
              </div>
 
-             {/* 3. Diversifikation */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Layers" size={14} className="text-indigo-500"/>
@@ -278,7 +284,6 @@ const buildReportData = async () => {
                 </div>
              </div>
 
-             {/* 4. Verwaltete Assets */}
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Database" size={14} className="text-amber-500"/>
@@ -295,9 +300,7 @@ const buildReportData = async () => {
              </div>
           </div>
 
-          {/* HIER WURDE DIE REF GESETZT */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10" ref={chartRef}>
-            {/* CHART SEITE MIT DATA-PDF-TITLE */}
             <div 
                 className="lg:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8"
                 data-pdf-title={t ? (t('distribution') || 'Verteilung') : 'Verteilung'}
@@ -305,14 +308,16 @@ const buildReportData = async () => {
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="PieChart" className="text-indigo-500" /> {t ? (t('distribution') || 'Verteilung') : 'Verteilung'}
                 </h3>
-                <div style={{ width: '100%', height: '350px' }}>
+<div style={{ width: '100%', height: '350px' }}>
                     <UniversalChart
+                        key={`alloc-chart-${isDark ? 'dark' : 'light'}`} 
                         engine={activeChartEngine}
                         type="doughnut"
                         height="100%"
                         labels={allocData.map(d => d.label)}
                         datasets={[{
                             label: t ? (t('allocation') || 'Allokation') : 'Allokation',
+                            // KORREKTUR: UniversalChart erwartet hier ein flaches Array aus Werten, keine Objekte
                             data: allocData.map(d => d.value),
                             valueFormatter: formatCurrency
                         }]}
@@ -320,7 +325,6 @@ const buildReportData = async () => {
                 </div>
             </div>
 
-            {/* DETAILS SEITE */}
             <div className="lg:col-span-7 space-y-5">
                 <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2 ml-1">
                     <Icon name="List" className="text-slate-500" />
@@ -333,7 +337,7 @@ const buildReportData = async () => {
                         return (
                             <div key={idx} className="group bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-md transition-all duration-200">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="min-w-0 pr-4"> {/* Erlaubt dem Text in der Detailansicht, umzubrechen oder abgeschnitten zu werden */}
+                                    <div className="min-w-0 pr-4">
                                         <div className="text-lg font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2 truncate" title={bank.label}>
                                             <Icon name="Building" size={16} className="text-gray-400 group-hover:text-blue-500 shrink-0"/>
                                             <span className="truncate">{bank.label}</span>

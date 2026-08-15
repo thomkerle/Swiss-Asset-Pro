@@ -34,6 +34,8 @@ const PdfScanner = getModule('PdfScanner.jsx', () => safeRequire('./components/p
 const FormModal = getModule('FormModal.jsx', () => safeRequire('./components/FormModal.jsx'));
 const FullPdfOrchestrator = getModule('FullPdfOrchestrator.jsx', () => safeRequire('./components/reports/FullPdfOrchestrator.jsx')) || (() => null);
 const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
+const CsvImportWizard = getModule('CsvImportWizard.jsx', () => safeRequire('./components/CsvImportWizard.jsx'));
+
 window.PdfExportEngine = PdfExportEngine; 
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
@@ -72,66 +74,137 @@ const AboutDialog = ({ setModalObj, t }) => {
 
     return (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-[0_0_40px_rgba(37,99,235,0.15)] w-full max-w-md border border-gray-200 dark:border-slate-700/60 overflow-hidden transform transition-all">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-[0_0_50px_rgba(37,99,235,0.15)] w-full max-w-lg border border-gray-200 dark:border-slate-700/60 overflow-hidden transform transition-all flex flex-col">
 
-                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800/80 dark:to-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                {/* Header */}
+                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800/80 dark:to-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between z-10 relative">
                     <div className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl">
-                            <Icon name="Info" className="text-blue-600 dark:text-blue-400" size={18} />
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl shadow-inner border border-blue-200 dark:border-blue-800/50">
+                            <Icon name="Shield" className="text-blue-600 dark:text-blue-400" size={18} />
                         </div>
                         <h3 className="font-black text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
                             {t('helpAbout') || 'Über FinBundle'}
                         </h3>
                     </div>
-                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-colors p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800">
+                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-all p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 hover:rotate-90">
                         <Icon name="X" size={20}/>
                     </button>
                 </div>
 
-                <div className="relative pt-10 pb-6 flex justify-center bg-white dark:bg-slate-900">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/10 dark:bg-blue-500/20 blur-2xl rounded-full pointer-events-none"></div>
-                    <div className="relative p-4 bg-white dark:bg-slate-800/80 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-700/50 backdrop-blur-sm">
+                {/* Logo Section */}
+                <div className="relative pt-8 pb-5 flex justify-center bg-white dark:bg-slate-900">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/10 dark:bg-emerald-500/10 blur-3xl rounded-full pointer-events-none"></div>
+                    <div className="relative p-5 bg-white dark:bg-slate-800/60 rounded-[2rem] shadow-xl border border-gray-100 dark:border-slate-700/50 backdrop-blur-md">
                         <FinBundleLogo className="h-20 w-20" />
                     </div>
                 </div>
 
-                <div className="flex gap-2 px-6 pt-2 mb-3">
-                    <button
-                        onClick={() => setActiveTab('about')}
-                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all duration-200 ${activeTab === 'about' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
-                        {t('tabAbout') || 'Über'}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('licenses')}
-                        className={`flex-1 py-2.5 font-bold text-xs rounded-xl transition-all duration-200 ${activeTab === 'licenses' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/50 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
-                        {t('tabLicenses') || 'Lizenzen'}
-                    </button>
+                {/* Tabs */}
+                <div className="flex gap-2 px-6 pt-2 mb-3 relative z-10">
+                    {['about', 'licenses', 'legal'].map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-2.5 font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all duration-300 ${activeTab === tab ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100 border border-transparent dark:hover:border-slate-700'}`}>
+                            {tab === 'about' ? (t('tabAbout') || 'Über') : tab === 'licenses' ? (t('tabLicenses') || 'Lizenzen') : (t('tabLegal') || 'Rechtliches')}
+                        </button>
+                    ))}
                 </div>
 
-                <div className="px-6 pb-6 h-[220px] overflow-y-auto custom-scrollbar relative">
-                    {activeTab === 'about' ? (
-                        <div className="text-center space-y-4 mt-2 flex flex-col items-center h-full justify-center">
+                {/* Content Area */}
+                <div className="px-6 pb-6 h-[260px] overflow-y-auto finspa-scrollbar relative z-10">
+                    
+                    {/* Ansicht: Über */}
+                    {activeTab === 'about' && (
+                        <div className="text-center space-y-4 mt-2 flex flex-col items-center h-full justify-center animate-fade-in">
                             <div>
-                                <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-blue-600 dark:text-blue-400">Pro</span></h2>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 py-1 px-3 rounded-full inline-block mt-2 border border-blue-100 dark:border-blue-800/50">
-                                    Version Beta - 0.9.9
+                                <h2 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Pro</span></h2>
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 py-1 px-4 rounded-full inline-block mt-3 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
+                                    Version 1.0.0 RC1
                                 </p>
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed">
-                                {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop & Tablet.'}
+                            <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed mt-2">
+                                {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop & Tablet mit einem konsequenten Privacy-First Ansatz.'}
                             </p>
-                            <div className="pt-4 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-3">© {new Date().getFullYear()} Thomas Kerle</p>
+                            <div className="pt-4 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50 flex flex-col items-center">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">© {new Date().getFullYear()} {t('legalImprintTextName') || 'Thomas Kerle'}</p>
                             </div>
                         </div>
-                    ) : (
-                        <div className="space-y-1.5 pr-1">
+                    )}
+
+                    {/* Ansicht: Lizenzen */}
+                    {activeTab === 'licenses' && (
+                        <div className="space-y-2 pr-1 animate-fade-in">
                             {licenses.map((lib, i) => (
                                 <div key={i} className="flex justify-between items-center py-2.5 px-3 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent dark:hover:border-slate-700">
-                                    <span className="font-bold text-xs text-slate-700 dark:text-slate-300">{lib.name}</span>
+                                    <span className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                        <Icon name="Box" size={12} className="text-gray-400 dark:text-gray-500" />
+                                        {lib.name}
+                                    </span>
                                     <span className="text-[10px] bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-mono font-bold shadow-sm border border-gray-100 dark:border-slate-800">{lib.license}</span>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Ansicht: Rechtliches (Haftungsausschluss & Co.) */}
+                    {activeTab === 'legal' && (
+                        <div className="text-xs text-gray-600 dark:text-gray-300 space-y-4 pr-2 text-justify animate-fade-in leading-relaxed">
+                            
+                            {/* General Disclaimer */}
+                            <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl shadow-sm">
+                                <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 flex items-center gap-2">
+                                    <Icon name="AlertTriangle" size={14} /> {t('legalDisclaimerTitle') || 'Haftungsausschluss / Disclaimer'}
+                                </h4>
+                                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                                    {t('legalDisclaimerIntro') || 'Diese Software stellt explizit keine Finanzberatung dar...'}
+                                </p>
+                            </div>
+                            
+                            {/* Swiss & EU Law */}
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalSwissEuTitle') || 'Schweizerisches & Europäisches Recht'}</h4>
+                                <p className="text-[11px]">
+                                    {t('legalSwissEuText') || 'Die Nutzung von FinBundle Pro erfolgt ausschliesslich auf eigenes Risiko...'}
+                                </p>
+                            </div>
+
+                            {/* US Law */}
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalUsComplianceTitle') || 'US Law Compliance'}</h4>
+                                <p className="text-[10px] font-mono opacity-80 uppercase leading-tight bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800">
+                                    {t('legalUsComplianceText') || 'THE SOFTWARE IS PROVIDED "AS IS"...'}
+                                </p>
+                            </div>
+
+                            {/* Data Privacy & APIs */}
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalDataPrivacyTitle') || 'Datenschutz & Externe APIs'}</h4>
+                                <p className="text-[11px]">
+                                    {t('legalDataPrivacyText1') || 'FinBundle Pro ist als lokale Anwendung konzipiert...'} <br/><br/>
+                                    <strong>{t('legalLiveRatesNote') || 'Hinweis zu Live-Kursen:'}</strong> {t('legalDataPrivacyText2') || 'Um aktuelle Währungskurse...'}
+                                </p>
+                            </div>
+
+                            {/* Market Data */}
+                            <div>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalMarketDataTitle') || 'Marktdaten & Quellen'}</h4>
+                                <p className="text-[11px]">
+                                    {t('legalMarketDataText') || 'Die bereitgestellten Markt- und Wechselkurse stammen von Drittanbietern...'}
+                                </p>
+                            </div>
+
+                            {/* Imprint */}
+                            <div className="pt-4 border-t border-gray-200 dark:border-slate-700/50">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalImprintTitle') || 'Impressum / Kontakt'}</h4>
+                                <p className="text-[11px]">
+                                    {t('legalImprintTextName') || 'Thomas Kerle'}<br/>
+                                    {t('legalImprintTextStreet') || 'Schlossmatten 15'}<br/>
+                                    {t('legalImprintTextCity') || '3150 Schwarzenburg'}<br/>
+                                    {t('legalImprintTextCountry') || 'Schweiz'}<br/>
+                                    {t('legalImprintTextEmail') || 'E-Mail: thomkerle@gmail.com'}
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -139,7 +212,6 @@ const AboutDialog = ({ setModalObj, t }) => {
         </div>
     );
 };
-
 
 const App = () => {
   const [fileHandle, setFileHandle] = useState(null);
@@ -304,7 +376,20 @@ const App = () => {
       setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
-  const handlePrint = () => window.print();
+  // --- FIX: DRUCKEN WURDE FÜR APP-ISOLATION & VORSCHAU OPTIMIERT ---
+  const handlePrint = () => {
+      if (typeof window !== 'undefined') {
+          // Versuchen wir das Print-Event direkt an den Host-Container weiterzugeben
+          if (window.finspaHostAPI && typeof window.finspaHostAPI.send === 'function') {
+              window.finspaHostAPI.send('window-control', 'print');
+          } else if (window.chrome && window.chrome.webview) {
+              window.chrome.webview.postMessage({ command: 'print' });
+          } else {
+              // Standard Browser-Print, wenn keine Host-API gefunden wurde
+              window.print();
+          }
+      }
+  };
 
   const handleExportPDF = () => {
       if (!activeReport) {
@@ -315,16 +400,22 @@ const App = () => {
       window.dispatchEvent(new CustomEvent('triggerPdfExport'));
   };
 
-  const handleNewProject = () => {
+const handleNewProject = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Beta - 0.9.9", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Version 1.0.0 RC1", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
-	goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          });
-          setSelectedNode(null); setActiveReport(null); showToast(t('msgNewProjectSuccess') || 'Neues Projekt erstellt', "success");
+              goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          
+          });
+          // Hier ändern wir den State auf "allocation" und stellen sicher, dass der Modus "vermoegen" aktiv ist
+          setSelectedNode(null); 
+          setActiveReport('allocation'); 
+          setViewMode('vermoegen'); 
+          showToast(t('msgNewProjectSuccess') || 'Neues Projekt erstellt', "success");
       }
   };
+
 
   const handleOpenProject = async (e) => {
     if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
@@ -734,6 +825,10 @@ const App = () => {
           return <PdfScanner setModalObj={setModalObj} data={data} updateTreeData={updateTreeData} selectedNode={selectedNode} setSelectedNode={setSelectedNode} fCur={fCur} t={t} />;
       }
 
+if (modalObj.type === 'csvImport') {
+    return <CsvImportWizard data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} t={t} />;
+}
+
       if (modalObj.type === 'settings') {
           return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
       }
@@ -868,6 +963,29 @@ const App = () => {
         .logo-glow-path { animation: glowPath 2.5s ease-in-out infinite; }
         .logo-float-rect1 { animation: float1 4s ease-in-out infinite; }
         .logo-float-rect2 { animation: float2 3.5s ease-in-out infinite; animation-delay: 0.5s; }
+
+        /* --- FIX: GLOBALE PRINT STYLES FÜR DEN DRUCK-DIALOG --- */
+        @media print {
+          @page { margin: 1cm; }
+          body, html, #app-container, #app-container > div, #printable-editor {
+            height: auto !important;
+            min-height: auto !important;
+            width: 100% !important;
+            overflow: visible !important;
+            display: block !important;
+            position: static !important;
+            background: white !important;
+          }
+          /* Rigoroses Ausblenden alles unerwünschten */
+          .print-hide, .print-hide * {
+            display: none !important;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+        }
       `}</style>
       <MenuBar 
         data={data} 
@@ -930,7 +1048,7 @@ const App = () => {
           />
         </div>
 
-{!activeReport && selectedNode && viewMode !== 'liveEditor' && (
+        {!activeReport && selectedNode && viewMode !== 'liveEditor' && (
           <PropertyEditor 
               data={data} 
               activeReport={activeReport} 
@@ -981,7 +1099,7 @@ const App = () => {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: Beta - 0.9.9</span>
+              <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC1</span>
           </div>
       </div>
 

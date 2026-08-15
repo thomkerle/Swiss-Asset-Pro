@@ -7,7 +7,8 @@ const safeRequire = getRequire();
 const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
 const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
-const { getNormalizedBookings } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
+// FIX: getAllAssets hinzugefügt
+const { getNormalizedBookings, getAllAssets } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
 
 const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
@@ -36,7 +37,9 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
       monthsCount++;
     }
 
-    const normBookings = getNormalizedBookings ? getNormalizedBookings(activeAssets) : [];
+    // FIX: Hole alle Assets aus data.banks, um auch archivierte Positionen in der Historie zu haben
+    const allHistoricalAssets = getAllAssets ? getAllAssets(data?.banks || []) : activeAssets;
+    const normBookings = getNormalizedBookings ? getNormalizedBookings(allHistoricalAssets) : [];
     
     normBookings.filter(bk => {
         if (bk.date < dateRange.from || bk.date > dateRange.to) return false;
@@ -76,7 +79,8 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
         assetMap: aMap,
         rawMonthsCount: Math.max(monthsCount, 1)
     };
-  }, [activeAssets, dateRange, t]);
+  // FIX: data?.banks in Dependency Array hinzugefügt
+  }, [data?.banks, activeAssets, dateRange, t]);
 
   const monthlyAverage = totalPassive / rawMonthsCount;
   const annualizedRunRate = monthlyAverage * 12;

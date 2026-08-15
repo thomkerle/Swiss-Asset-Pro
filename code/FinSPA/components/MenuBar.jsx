@@ -420,12 +420,16 @@ const MenuBar = ({
             <MenuSubItem label={t ? t('fileSave') : 'Speichern'} iconName="Save" onClick={() => handleSaveProject(false)} />
             <MenuSubItem label={t ? t('fileSaveAs') : 'Speichern unter...'} iconName="Copy" onClick={() => handleSaveProject(true)} />
             <hr className="border-slate-100 dark:border-slate-800 my-1"/>
+            
             <MenuNestedItem label={t ? t('fileImport') : 'Importieren'} iconName="Download">
-              <label className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-lg flex items-center gap-3 cursor-pointer transition-colors duration-100" style={{ WebkitAppRegion: 'no-drag' }}>
-                <Icon name="List" size={14} className="w-4"/> 
-                <span className="text-sm font-medium tracking-wide">{t ? t('fileImportStandard') : 'Buchungen importieren'}</span>
-                <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} />
-              </label>
+              {/* --- ÄNDERUNG: Standard-Import durch CSV-Wizard-Modal ersetzt --- */}
+              <MenuSubItem 
+                  label={t ? t('fileImportStandard') : 'Buchungen importieren (CSV Wizard)'} 
+                  iconName="List" 
+                  onClick={() => setModalObj({type: 'csvImport'})} 
+              />
+              {/* --------------------------------------------------------------- */}
+              
               <label className="px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-lg flex items-center gap-3 cursor-pointer transition-colors duration-100" style={{ WebkitAppRegion: 'no-drag' }}>
                 <Icon name="TrendingUp" size={14} className="w-4"/> 
                 <span className="text-sm font-medium tracking-wide">{t ? t('fileImportParqet') : 'Parqet Daten importieren'}</span>
@@ -510,7 +514,7 @@ const MenuBar = ({
           </MenuItem>
 
           <MenuItem title={t ? t('menuViews') : 'Ansichten'}>
-            <MenuSubItem label={t ? t('viewWealth') : 'Vermögensverwaltung'} iconName="Shield" onClick={() => { setViewMode('vermoegen'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'vermoegen' ? '✓' : ''} />
+           <MenuSubItem label={t ? t('viewWealth') : 'Vermögensverwaltung'} iconName="Shield" onClick={() => { setViewMode('vermoegen'); setActiveReport('allocation'); setSelectedNode(null); }} rightText={viewMode === 'vermoegen' ? '✓' : ''} />
             <MenuSubItem label={t ? t('viewBudget') : 'Budgetverwaltung'} iconName="DollarSign" onClick={() => { setViewMode('budget'); setActiveReport(null); setSelectedNode(null); }} rightText={viewMode === 'budget' ? '✓' : ''} />
 
 <hr className="border-slate-100 dark:border-slate-800 my-1"/>
@@ -533,28 +537,28 @@ const MenuBar = ({
             )}
           </MenuItem>
 
-          <MenuItem title={t ? t('menuReports') : 'Reports'}>
+<MenuItem title={t ? t('menuReports') : 'Reports'}>
             <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800/60 rounded text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 mx-1">{t ? t('repStock') : 'Bestandesreports'}</div>
-            <MenuSubItem label={t ? t('repOverview') : "Banken & Kategorien"} iconName="List" onClick={() => setActiveReport('overview')} />
-            <MenuSubItem label={t ? t('repAlloc') : 'Allokation nach Banken'} iconName="PieChart" onClick={() => setActiveReport('allocation')} />
-            <MenuSubItem label={t ? t('repLiq') : 'Liquiditätsrisiko'} iconName="PieChart" onClick={() => setActiveReport('liquidity')} />
-            <MenuSubItem label={t ? t('repHist') : 'Historischer Verlauf'} iconName="TrendingUp" onClick={() => setActiveReport('history')} />
-            <MenuSubItem label={t ? t('repTax') : 'Steuerreport (31.12)'} iconName="List" onClick={() => setActiveReport('tax')} />
-            <MenuSubItem label={t ? t('repPension3a') : 'Säule 3a Performance'} iconName="Lock" onClick={() => setActiveReport('pension3a')} />
-            <MenuSubItem label={t ? t('repSecurities') : 'Aktien & Fonds Performance'} iconName="TrendingUp" onClick={() => setActiveReport('securities')} />
+            <MenuSubItem label={t ? t('repOverview') : "Banken & Kategorien"} iconName="List" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('overview'); }} />
+            <MenuSubItem label={t ? t('repAlloc') : 'Allokation nach Banken'} iconName="PieChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('allocation'); }} />
+            <MenuSubItem label={t ? t('repLiq') : 'Liquiditätsrisiko'} iconName="PieChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('liquidity'); }} />
+            <MenuSubItem label={t ? t('repHist') : 'Historischer Verlauf'} iconName="TrendingUp" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('history'); }} />
+            <MenuSubItem label={t ? t('repTax') : 'Steuerreport (31.12)'} iconName="List" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('tax'); }} />
+            <MenuSubItem label={t ? t('repPension3a') : 'Säule 3a Performance'} iconName="Lock" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('pension3a'); }} />
+            <MenuSubItem label={t ? t('repSecurities') : 'Aktien & Fonds Performance'} iconName="TrendingUp" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('securities'); }} />
             
             <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800/60 rounded text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 mt-2 mx-1">{t ? t('repFlow') : 'Bewegungsreports'}</div>
-            <MenuSubItem label={t ? t('repCatFlow') : 'Kategorienfluss'} iconName="BarChart" onClick={() => setActiveReport('categoryFlow')} />
-            <MenuSubItem label={t ? t('repWaterfall') : 'Wasserfallfluss'} iconName="BarChart" onClick={() => setActiveReport('waterfall')} />
-            <MenuSubItem label={t ? t('repPassive') : 'Passives Einkommen'} iconName="DollarSign" onClick={() => setActiveReport('passive')} />
-            <MenuSubItem label={t ? t('repTopFlow') : 'Top Flow Assets'} iconName="BarChart" onClick={() => setActiveReport('topFlow')} />
-            <MenuSubItem label={t ? t('repBookAna') : 'Buchungsanalyse'} iconName="PieChart" onClick={() => setActiveReport('bookingAnalysis')} />
+            <MenuSubItem label={t ? t('repCatFlow') : 'Kategorienfluss'} iconName="BarChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('categoryFlow'); }} />
+            <MenuSubItem label={t ? t('repWaterfall') : 'Wasserfallfluss'} iconName="BarChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('waterfall'); }} />
+            <MenuSubItem label={t ? t('repPassive') : 'Passives Einkommen'} iconName="DollarSign" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('passive'); }} />
+            <MenuSubItem label={t ? t('repTopFlow') : 'Top Flow Assets'} iconName="BarChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('topFlow'); }} />
+            <MenuSubItem label={t ? t('repBookAna') : 'Buchungsanalyse'} iconName="PieChart" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('bookingAnalysis'); }} />
             
             <div className="px-3 py-1 bg-slate-50 dark:bg-slate-800/60 rounded text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 mt-2 mx-1">{t ? t('repFuture') : 'Zukunftsreports'}</div>
 
-            <MenuSubItem label={t ? t('repDividendCalendar') || 'Dividenden-Kalender' : 'Dividenden-Kalender'} iconName="Calendar" onClick={() => setActiveReport('dividendCalendar')} />
-            <MenuSubItem label={t ? t('repSimReg') : 'Simulation & Regression'} iconName="TrendingUp" onClick={() => setActiveReport('future')} />
-            <MenuSubItem label={t ? t('repScenFire') : 'Szenarien & FIRE'} iconName="Target" onClick={() => setActiveReport('scenarios')} />
+            <MenuSubItem label={t ? t('repDividendCalendar') || 'Dividenden-Kalender' : 'Dividenden-Kalender'} iconName="Calendar" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('dividendCalendar'); }} />
+            <MenuSubItem label={t ? t('repSimReg') : 'Simulation & Regression'} iconName="TrendingUp" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('future'); }} />
+            <MenuSubItem label={t ? t('repScenFire') : 'Szenarien & FIRE'} iconName="Target" onClick={() => { setViewMode('vermoegen'); setSelectedNode(null); setActiveReport('scenarios'); }} />
           </MenuItem>
           
           <MenuItem title={t ? t('menuHelp') : 'Hilfe'}>

@@ -160,16 +160,24 @@ const investedCapital = FinSPA_API.getInvestedCapitalAtDate(assets[0], "2025-12-
 
 6. Only use fields defined in the schema. Do not invent new fields.
 7. PRE-INSTALLED LIBRARIES:
-   The following libraries are globally available: Chart.js (window.Chart), ECharts (window.echarts), Plotly (window.Plotly), PDFMake.
-   DO NOT load external scripts via <script src="...">. Access the global objects directly. Do NOT use html2canvas or jsPDF.
-8. PDF EXPORT: Use EXCLUSIVELY this built-in API on a button click. Provide structured table data. If there is a chart, the API will automatically capture it.
-   window.FinSPA_API.PDF.exportDashboard({ 
-       title: 'My Dashboard Title', 
+   The following libraries are globally available: Chart.js (window.Chart), ECharts (window.echarts), Plotly (window.Plotly).
+   CRITICAL: DO NOT add <script src="..."> for Chart.js or Plotly in your HTML. They are ALREADY injected. Using a script tag breaks the PDF export configuration!
+8. PDF EXPORT: Use EXCLUSIVELY window.PdfExportEngine.exportReport on a button click. Do NOT use FinSPA_API.PDF.
+   CRITICAL FOR CHARTS: The engine does NOT automatically capture canvas charts! You MUST extract the base64 image from the canvas using .toDataURL('image/png', 1.0) and pass it in the 'chartsData' array.
+   Example:
+   const chartImg = document.getElementById('myChartId').toDataURL('image/png', 1.0);
+   window.PdfExportEngine.exportReport({
+       title: 'My Dashboard Title',
        subtitle: 'Optional timeframe or subtitle',
-       tables: [{ 
-           headers: ['Asset', 'Value', 'Performance'], 
-           rows: [['Apple', '150.00 CHF', '+5%'], ['Cash', '5000.00 CHF', '0%']] 
-       }] 
+       kpis: [
+           { label: 'Total Wealth', value: '150,000 CHF', color: '#1e40af' }
+       ],
+       tableHeaders: ['Asset', 'Value', 'Performance'],
+       tableBody: [['Apple', '150.00 CHF', '+5%']],
+       chartsData: [
+           { title: 'Chart Title', image: chartImg, fit: [250, 250] }
+       ],
+       data: window.finspaData
    });
 9. Dashboards must be exportable as a whole.
 10. The resulting HTML will be rendered in an iframe.
@@ -191,7 +199,14 @@ const investedCapital = FinSPA_API.getInvestedCapitalAtDate(assets[0], "2025-12-
         // 2. Build your UI
         // 3. Add PDF listener
         document.getElementById('pdfButton').addEventListener('click', async function() {
-            await FinSPA_API.PDF.exportDashboard({ title: 'Report', tables: [] });
+            // const myChartImg = document.getElementById('myChartCanvas').toDataURL('image/png', 1.0);
+            await window.PdfExportEngine.exportReport({
+                title: 'Report',
+                tableHeaders: [],
+                tableBody: [],
+                // chartsData: [{ title: 'Overview', image: myChartImg, fit: [250, 250] }],
+                data: window.finspaData
+            });
         });
     </script>
 </body>

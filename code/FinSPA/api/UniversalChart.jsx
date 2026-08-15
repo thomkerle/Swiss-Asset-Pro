@@ -171,7 +171,6 @@ const UniversalChart = ({
                             callbacks: {
                                 label: function(context) {
                                     const ds = datasets[context.datasetIndex];
-                                    // FIX: raw für Pie (numerischer Wert), parsed für andere Typen
                                     let val = context.raw !== undefined ? context.raw : context.parsed;
                                     if (typeof val === 'object' && val !== null) {
                                         val = val.y !== undefined ? val.y : val.x;
@@ -229,15 +228,21 @@ const UniversalChart = ({
                     title: { text: title, left: 'center', textStyle: { color: textColor, fontFamily } },
                     tooltip: { 
                         trigger: 'item', 
-                        textStyle: { fontFamily, fontSize: 13 },
-                        // FIX: Eigenes Tooltip-Format für ECharts Pie
+                        // FIX: Einheitliche Tooltip-Stylings für Dark- und Lightmode auch beim Pie/Doughnut Chart hinzugefügt
+                        backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                        borderColor: isDark ? '#334155' : '#e2e8f0', 
+                        borderWidth: 1, 
+                        padding: [12, 16],
+                        textStyle: { color: isDark ? '#cbd5e1' : '#334155', fontSize: 12, fontFamily },
+                        extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;',
                         formatter: function(params) {
                             const val = pieFormatter ? pieFormatter(params.value) : params.value;
-                            return `<div style="display:flex; align-items:center; gap:8px;">
-                                      ${params.marker} <span style="font-weight:bold; color:${isDark ? '#fff' : '#000'}">${params.name}</span>
+                            return `<div style="font-weight:bold; padding-bottom: 6px; border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; margin-bottom: 6px; font-family: ${fontFamily}; color:${isDark ? '#f8fafc' : '#0f172a'};">
+                                      ${params.marker} ${params.name}
                                     </div>
-                                    <div style="margin-top: 4px; padding-left: 20px;">
-                                      ${val} <span style="color: ${isDark ? '#94a3b8' : '#64748b'};">(${params.percent}%)</span>
+                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; font-family: ${fontFamily};">
+                                      <strong style="font-size:13px; color:${isDark ? '#cbd5e1' : '#334155'};">${val}</strong>
+                                      <span style="color: ${isDark ? '#94a3b8' : '#64748b'};">(${params.percent}%)</span>
                                     </div>`;
                         }
                     },
@@ -258,7 +263,6 @@ const UniversalChart = ({
                         label: { 
                             show: resolveShowLabels, 
                             fontFamily,
-                            // FIX: Data-Labels Formatter (falls aktiviert)
                             formatter: function(params) {
                                 const val = pieFormatter ? pieFormatter(params.value) : params.value;
                                 return `${params.name}\n${val}`;
@@ -332,7 +336,7 @@ const UniversalChart = ({
                                             <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${item.color};"></span>
                                             <span style="font-size:12px; color:${isDark ? '#94a3b8' : '#64748b'};">${item.seriesName}:</span>
                                         </div>
-                                        <strong style="font-size:13px;">${formattedVal}</strong>
+                                        <strong style="font-size:13px; color:${isDark ? '#cbd5e1' : '#334155'};">${formattedVal}</strong>
                                     </div>
                                 `;
                             });
@@ -402,7 +406,6 @@ const UniversalChart = ({
 
             if (type === 'pie' || type === 'doughnut') {
                 const ds = datasets[0];
-                // FIX: Formattierte Werte berechnen für Plotly Hover
                 const formattedValues = ds?.data?.map(v => ds.valueFormatter ? ds.valueFormatter(v) : v) || [];
                 
                 data = [{ 
@@ -410,9 +413,9 @@ const UniversalChart = ({
                     labels: labels, 
                     type: 'pie', 
                     hole: type === 'doughnut' ? 0.45 : 0,
-                    text: formattedValues, // Übergeben der formatierten Werte
+                    text: formattedValues, 
                     textinfo: resolveShowLabels ? 'label+percent' : 'none',
-                    hoverinfo: 'label+text+percent', // Zeige Label, unseren Formatter-Text und Plotly-Prozent
+                    hoverinfo: 'label+text+percent', 
                     marker: { colors: Array.isArray(ds?.backgroundColor) ? ds.backgroundColor : defaultColors }
                 }];
             } else {

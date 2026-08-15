@@ -329,11 +329,57 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
     };
   }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, calcMethod]);
 
-  const chartLabels = monthlyDataPoints.map(d => {
+  // --- INTERPOLATION FÜR PROPORTIONALE X-ACHSE ---
+  const interpolateTimeSeries = (points) => {
+    if (!points || points.length < 2) return points;
+    const result = [];
+    
+    const lerpObj = (o1, o2, ratio) => {
+        const out = {};
+        for (const key in o1) {
+            if (typeof o1[key] === 'number' && typeof o2[key] === 'number') {
+                out[key] = o1[key] + (o2[key] - o1[key]) * ratio;
+            } else if (typeof o1[key] === 'object' && o1[key] !== null) {
+                out[key] = lerpObj(o1[key], o2[key], ratio);
+            } else {
+                out[key] = o1[key];
+            }
+        }
+        return out;
+    };
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        
+        // Zwinge das Datum auf UTC, um DST-Sprünge zu vermeiden
+        const t1 = new Date(p1.dateStr + 'T00:00:00Z').getTime();
+        const t2 = new Date(p2.dateStr + 'T00:00:00Z').getTime();
+        const days = Math.round((t2 - t1) / (1000 * 3600 * 24));
+        
+        result.push(p1);
+        
+        // Füge für jeden einzelnen Tag einen interpolierten Datenpunkt ein
+        if (days > 1 && days < 1000) { 
+            for (let d = 1; d < days; d++) {
+                const ratio = d / days;
+                const currentTime = t1 + d * 24 * 3600 * 1000;
+                const interp = lerpObj(p1, p2, ratio);
+                interp.dateStr = new Date(currentTime).toISOString().split('T')[0];
+                interp.isInterpolated = true;
+                result.push(interp);
+            }
+        }
+    }
+    result.push(points[points.length - 1]);
+    return result;
+  };
+
+  const chartDataPoints = interpolateTimeSeries(monthlyDataPoints);
+
+  const chartLabels = chartDataPoints.map(d => {
       const dateObj = new Date(d.dateStr);
-      const isLastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() === dateObj.getDate();
-      if (!isLastDay) return `${('0'+dateObj.getDate()).slice(-2)}.${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
-      return `${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
+      return `${('0'+dateObj.getDate()).slice(-2)}.${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
   });
 
   return (
@@ -513,19 +559,21 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
+                        xAxisType="time"
+                        isTimeSeries={true}
                         showDataLabels={false}
                         labels={chartLabels}
                         datasets={[
                             {
                                 name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: monthlyDataPoints.map(d => d.p2.invested),
+                                data: chartDataPoints.map(d => d.p2.invested),
                                 backgroundColor: '#475569', 
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: monthlyDataPoints.map(d => d.p2.actual),
+                                data: chartDataPoints.map(d => d.p2.actual),
                                 backgroundColor: '#2563eb', 
                                 valueFormatter: fCur,
                                 label: { show: false }
@@ -547,26 +595,28 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                     <UniversalChart 
                         engine={activeChartEngine}
                         type="line"
+                        xAxisType="time"
+                        isTimeSeries={true}
                         showDataLabels={false}
                         labels={chartLabels}
                         datasets={[
                             {
                                 name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: monthlyDataPoints.map(d => d.p3.invested),
+                                data: chartDataPoints.map(d => d.p3.invested),
                                 backgroundColor: '#475569',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: monthlyDataPoints.map(d => d.p3.actual),
+                                data: chartDataPoints.map(d => d.p3.actual),
                                 backgroundColor: '#059669',
                                 valueFormatter: fCur,
                                 label: { show: false }
                             },
                             {
                                 name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)',
-                                data: monthlyDataPoints.map(d => d.p3.actual + d.p3.yields),
+                                data: chartDataPoints.map(d => d.p3.actual + d.p3.yields),
                                 backgroundColor: '#d97706',
                                 valueFormatter: fCur,
                                 label: { show: false }
