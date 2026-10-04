@@ -8,16 +8,52 @@ Im Gegensatz zu klassischen SaaS-Lösungen setzt FinBundle Pro konsequent auf **
 
 ## ✨ Kernfunktionen im Detail
 
+### ⚡ Interaktives Schnellzugriff-Cockpit (Fly-In & Command Center)
+Das integrierte Schnellzugriff-Panel dient als zentraler Produktivitäts-Hub und lässt sich jederzeit über den rechten Bildschirmrand oder den globalen Shortcut (`Strg + K` bzw. `Cmd + K`) aufrufen:
+*   **Spotlight-Command-Bar:** Echtzeit-Filterung über das gesamte Portfolio – findet blitzschnell Konten, Depots, Standardberichte oder interaktive Add-Ins.
+*   **Zuletzt geöffnete Assets:** Direktsprung zu den bevorzugten Konten und Depots inklusive Live-Saldo-Anzeige.
+*   **Intelligenter Asset-Guard:** Schützt vor Fehlbedienungen bei der Buchungserfassung, indem kontextbezogen geprüft wird, ob ein konkretes Asset aktiv ist.
+*   **Direkt-Aktionen:** Ein-Klick-Trigger für PDF-Beleg-Scanner, CSV-Importassistenten, Marktdaten-Synchronisation und den KI-Copilot.
+
+### 📈 Umfassendes Report-Ökosystem (Bestands-, Bewegungs- & Zukunftsreports)
+FinBundle Pro bietet eine breite Palette an nativen Analysen, strukturiert in drei klare Kategorien:
+
+#### 🏛️ Bestandsreports
+*   **Banken & Kategorien:** Konsolidierte Strukturübersicht aller Konten, Depots und Anlageklassen in einer hierarchischen Baumansicht.
+*   **Allokation nach Banken:** Detaillierte prozentuale Verteilung des Vermögens über verschiedene Finanzinstitute und Halteorte.
+*   **Liquiditätsrisiko:** Überwachung frei verfügbarer Mittel versus kurzfristiger Verpflichtungen.
+*   **Historischer Verlauf:** Langfristige Vermögensentwicklung über wählbare Zeiträume inkl. MoM-Veränderungen und All-Time-High (Peak).
+*   **Steuerreport (31.12.):** Stichtagsbezogene Salden- und Bewertungsübersicht zur nahtlosen Übernahme in die Steuererklärung.
+*   **Säule 3a Performance:** Spezifische Performance- und Wertverlaufsanalyse für gebundene Vorsorgekonten und -fonds.
+*   **Aktien & Fonds Performance:** Detailliertes Tracking von Einzeltiteln, Kursgewinnen, Realized Gains und Benchmark-Vergleichen.
+
+#### 🔄 Bewegungsreports
+*   **Kategorienfluss:** Visualisierung von Kapitalflüssen und Vermögensverschiebungen zwischen den Hauptkategorien.
+*   **Wasserfallfluss:** Brückenanalyse zwischen Start- und Endvermögen (trennt echte Marktrenditen von Ein- und Auszahlungen).
+*   **Passives Einkommen:** Erfassung und Prognose von Dividenden, Zinsen und Mieteinnahmen.
+*   **Top Flow Assets:** Identifikation der vermögenswirksamsten Transaktionen und Depot-Treiber.
+*   **Buchungsanalyse:** Granulare Auswertung aller Journal-Einträge nach Typ, Intervall und Kategorien.
+
+#### 🚀 Zukunftsreports
+*   **Dividenden-Kalender:** Monatsgenaue Übersicht erwarteter Ausschüttungen und Zinszahlungen über das gesamte Jahr.
+*   **Simulation & Regression:** Mathematische Trendanalysen und lineare/exponentielle Prognosen zukünftiger Vermögenspfade.
+*   **Szenarien & FIRE:** Modellierung von Zukunftsszenarien (finanzielle Unabhängigkeit, Sabbatical, Entnahmestrategien nach der 4%-Regel).
+
+### 🧩 Modulare Add-In- & Plugin-Architektur
+Ergänzend zu den Standard-Reports verfügt FinBundle Pro über ein erweiterbares Modulsystem:
+*   **Isolierte Sandbox-Umgebung:** Eigene Analysen und Rechenmodelle greifen über eine standardisierte Schnittstelle (`window.FinSPA_API`) auf die Portfoliodaten zu.
+*   **Kachel-Launcher:** Wichtige Spezial-Erweiterungen lassen sich als Schnellstart-Kacheln an den Schnellzugriff anpinnen.
+*   **Offener Import & Export:** Vordefinierte Add-Ins (z. B. für Rentenprognosen, DRIP-Planer, Stresstests oder TER-Gebührenanalysen) lassen sich unkompliziert per JSON-Bundle importieren.
+
 ### 🌐 API LiveEditor & Marktdaten-Zentrale
 Der API LiveEditor ist das Herzstück für alle börsengehandelten Assets (Aktien, Fonds, ETFs, Kryptowährungen).
 *   **Intelligentes Caching:** Um API-Limits zu schonen, werden Real-Time-Kurse, EOD-Daten (End of Day) und Fundamentaldaten lokal zwischengespeichert.
 *   **Bulk-Sync:** Automatisierter Abruf von tagesaktuellen Kursen und zugehörigen Wechselkursen für das gesamte Portfolio in einem Durchgang.
 *   **Fundamentaldaten & Dividenden:** Auf Knopfdruck Anzeige von Dividendenrendite, Ex-Datum, KGV (P/E), EPS, Marktkapitalisierung und 52-Wochen-Hoch/Tief.
-*   **Performance Analyser:** Interaktive historische Charts (relativ/absolut) und Echtzeit-Intraday-Daten inklusive technischer Indikatoren (SMA, EMA, Bollinger Bänder).
 
 ### 📊 Ganzheitliches Portfolio-Tracking
 Egal ob traditionelle oder alternative Anlageklassen – FinBundle Pro aggregiert alles in einer einheitlichen Baumstruktur.
-*   **Schweizer Spezialitäten:** Native Unterstützung für Pensionskassen (2. Säule) und Säule 3a (Konten & Fonds).
+*   **Schweizer Spezialitäten:** Native Unterstützung für Pensionskassen (2. Säule) und Säule 3a (Konten & Fonds) inklusive rechtlicher Schutzmechanismen bei Portfolio-Umschichtungen (Rebalancing ausschliesslich auf frei verfügbarem Anlagevermögen).
 *   **Sachwerte & Immobilien:** Verwaltung von Immobilien (über Marktwertanpassungen) und Hypotheken (als negative Salden inkl. Zins- und Amortisationserfassung).
 *   **Multi-Währung:** Lückenlose Unterstützung von Fremdwährungen mit automatischer und historisch korrekter Umrechnung via Frankfurter API.
 
@@ -27,18 +63,13 @@ Ein integriertes Budget-Dashboard überwacht die laufenden Einnahmen und Ausgabe
 *   **Abo-Manager:** Erfassung von Verträgen und Abonnements inklusive Kündigungsfristen.
 *   **Netto-Cashflow:** Darstellung der monatlichen Überschüsse als Grundlage für weitere Investitionen.
 
-### 📈 Reports, Analysen & FIRE-Simulation
-*   **Waterfall-Analyse:** Visualisiert die Brücke zwischen Start- und Endvermögen und trennt echte Markteffekte (Rendite) von eigenen Einzahlungen (Cashflow).
-*   **Steuerreport:** Stichtagsbezogene Auswertung (z.B. per 31.12.) zur nahtlosen Übernahme in die Steuererklärung.
-*   **Simulation & FIRE:** Definition eines Zieljahres für die finanzielle Unabhängigkeit (Financial Independence, Retire Early) inkl. Berechnung von Zukunftsszenarien (Sabbatical, Autokauf, Erbschaften).
-
 ### 🔒 Privacy-First & Verschlüsselung
 Ihre Finanzdaten gehören Ihnen. Punkt.
 *   **Zero-Knowledge-Architektur:** Speicherung der Daten wahlweise im `localStorage` des Browsers oder im lokalen Dateisystem.
 *   **AES-256 ZIP-Export:** Projekte lassen sich als hochsichere `.zip`-Archive mit PIN-Schutz exportieren (via CryptoJS).
-*   **Offene Daten-Standards:** Import von CSV-Daten (z.B. aus Parqet) und Export der generierten Buchungsjournale nach `.xlsx`.
+*   **Offene Daten-Standards:** Import von CSV-Daten (z.B. aus Parqet) und Export der generierten Buchungsjournale nach `.xlsx` und `.csv`.
 
-### 🤖 Lokale KI-Integration (Ollama)
+### 🤖 Lokale KI-Integration (Ollama / WebLLM)
 *   **KI-Copilot:** Nahtlose Anbindung an lokale Large Language Models (LLMs) via Ollama. Die KI generiert Widgets und analysiert Dashboards, ohne dass Ihre Finanzdaten das Gerät verlassen.
 *   **KI-Belegscanner:** Extrahierung von Datum, Betrag und Kategorie aus PDF-Rechnungen. Vor dem Senden an Cloud-KIs werden sensible Daten (IBAN, Namen) lokal anonymisiert.
 
@@ -47,12 +78,12 @@ Ihre Finanzdaten gehören Ihnen. Punkt.
 ## 🛠️ Tech Stack & Integrationen
 
 *   **Core:** React (JSX), Tailwind CSS
-*   **Visualisierung:** Apache ECharts (`echarts.min.js`), Chart.js
+*   **Visualisierung:** Apache ECharts (`echarts.min.js`), Chart.js, Plotly.js
 *   **APIs (Marktdaten):** EODHD, Alpha Vantage, Frankfurter API
-*   **Daten-Verarbeitung:** pdfMake, html2canvas, ExcelJS
-*   **Security:** CryptoJS, JSZip
-*   **Hybrid Ready:** Vorbereitet für Capacitor und Electron
-*   **i18n:** Volle Mehrsprachigkeit (Deutsch, Englisch, Französisch, Italienisch)
+*   **Daten-Verarbeitung & PDF:** `PdfToolkit.jsx`, pdfMake, html2canvas, ExcelJS
+*   **Security:** CryptoJS, JSZip, Capacitor Filesystem API
+*   **Hybrid Ready:** Vorbereitet für Web, Capacitor und Electron / WebView2
+*   **i18n:** Volle Mehrsprachigkeit über 4 Sprachen (Deutsch, Englisch, Französisch, Italienisch)
 
 ---
 
@@ -82,6 +113,8 @@ Die Nutzung der Software erfolgt **vollständig auf eigene Gefahr**. Der Entwick
 
 Bitte prüfen Sie alle finanzrelevanten und steuerlichen Daten selbst oder ziehen Sie vor wichtigen finanziellen Entscheidungen einen qualifizierten Fachberater hinzu.
 
+---
+
 ## Weiterentwicklung des Produkts
 
 Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für die Weiterentwicklung des Produkts beitragen.
@@ -99,5 +132,12 @@ Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für 
 ### Bild 2 - Asset Tracking
 
 <img width="2400" height="1174" alt="Bild 1" src="https://github.com/user-attachments/assets/6035c67b-ba41-476d-b006-6949985075fc" />
+
+### Bild 3 - Plugin Integration
+
+Die von FinBundle Pro erstellten AI-Abfragen können nahtlos in die Umgebung integriert werden
+
+
+<img width="2364" height="1316" alt="image" src="https://github.com/user-attachments/assets/f01fb519-de9e-4e12-9eeb-09c2b23a54ec" />
 
 
