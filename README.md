@@ -126,10 +126,12 @@ Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für 
 
 ### Bild 1 - Budget Verwaltung
 
+
 <img width="2404" height="1176" alt="image" src="https://github.com/user-attachments/assets/ee476a86-c782-4aa1-84b8-131bd22c9ac3" />
 
 
 ### Bild 2 - Asset Tracking
+
 
 <img width="2400" height="1174" alt="Bild 1" src="https://github.com/user-attachments/assets/6035c67b-ba41-476d-b006-6949985075fc" />
 
@@ -140,4 +142,20 @@ Die von FinBundle Pro erstellten AI-Abfragen können nahtlos in die Umgebung int
 
 <img width="2364" height="1316" alt="image" src="https://github.com/user-attachments/assets/f01fb519-de9e-4e12-9eeb-09c2b23a54ec" />
 
+### Planung nächster Release (Windows)
 
+Der nächste Release Kandidat auf RC_3 ist auf den 26.Oktober 2026 geplant.
+
+Neue Features:
+- Live Plugins Integration von via KI erzeugten Abfragen auf den Datenbestand
+- neue PDF Engine zur Verbesserung der Anzeige von PDF-Exporten
+- verbesserte KI Integration
+- Rechtseitiges Fly-Out zur Schnellnavigation
+
+Korrekturen:
+- Oktober Problem: Der Oktober wird in manchen Reports nicht angezeigt
+- Sprachfixes
+- Berechnungsfixes
+- überarbeites Benutzermanual
+- verbesserte CSV Import Funktion
+- allgemeine Korrekturen
