@@ -65,6 +65,8 @@ const AboutDialog = ({ setModalObj, t }) => {
         { name: "Apache ECharts", license: "Apache 2.0" },
         { name: "Plotly.js", license: "MIT" },
         { name: "Chart.js", license: "MIT" },
+        { name: "chartjs-adapter-date-fns", license: "MIT" },
+        { name: "html2canvas", license: "MIT" },
         { name: "pdfmake", license: "MIT" },
         { name: "Tailwind CSS", license: "MIT" },
         { name: "crypto-js", license: "MIT" },
@@ -120,7 +122,7 @@ const AboutDialog = ({ setModalObj, t }) => {
                             <div>
                                 <h2 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Pro</span></h2>
                                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 py-1 px-4 rounded-full inline-block mt-3 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
-                                    Version 1.0.0 RC1
+                                    Version 1.0.0 RC3
                                 </p>
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed mt-2">
@@ -147,11 +149,9 @@ const AboutDialog = ({ setModalObj, t }) => {
                         </div>
                     )}
 
-                    {/* Ansicht: Rechtliches (Haftungsausschluss & Co.) */}
+                    {/* Ansicht: Rechtliches */}
                     {activeTab === 'legal' && (
                         <div className="text-xs text-gray-600 dark:text-gray-300 space-y-4 pr-2 text-justify animate-fade-in leading-relaxed">
-                            
-                            {/* General Disclaimer */}
                             <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl shadow-sm">
                                 <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 flex items-center gap-2">
                                     <Icon name="AlertTriangle" size={14} /> {t('legalDisclaimerTitle') || 'Haftungsausschluss / Disclaimer'}
@@ -160,24 +160,18 @@ const AboutDialog = ({ setModalObj, t }) => {
                                     {t('legalDisclaimerIntro') || 'Diese Software stellt explizit keine Finanzberatung dar...'}
                                 </p>
                             </div>
-                            
-                            {/* Swiss & EU Law */}
                             <div>
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalSwissEuTitle') || 'Schweizerisches & Europäisches Recht'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalSwissEuText') || 'Die Nutzung von FinBundle Pro erfolgt ausschliesslich auf eigenes Risiko...'}
                                 </p>
                             </div>
-
-                            {/* US Law */}
                             <div>
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalUsComplianceTitle') || 'US Law Compliance'}</h4>
                                 <p className="text-[10px] font-mono opacity-80 uppercase leading-tight bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800">
                                     {t('legalUsComplianceText') || 'THE SOFTWARE IS PROVIDED "AS IS"...'}
                                 </p>
                             </div>
-
-                            {/* Data Privacy & APIs */}
                             <div>
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalDataPrivacyTitle') || 'Datenschutz & Externe APIs'}</h4>
                                 <p className="text-[11px]">
@@ -185,16 +179,12 @@ const AboutDialog = ({ setModalObj, t }) => {
                                     <strong>{t('legalLiveRatesNote') || 'Hinweis zu Live-Kursen:'}</strong> {t('legalDataPrivacyText2') || 'Um aktuelle Währungskurse...'}
                                 </p>
                             </div>
-
-                            {/* Market Data */}
                             <div>
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalMarketDataTitle') || 'Marktdaten & Quellen'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalMarketDataText') || 'Die bereitgestellten Markt- und Wechselkurse stammen von Drittanbietern...'}
                                 </p>
                             </div>
-
-                            {/* Imprint */}
                             <div className="pt-4 border-t border-gray-200 dark:border-slate-700/50">
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalImprintTitle') || 'Impressum / Kontakt'}</h4>
                                 <p className="text-[11px]">
@@ -233,7 +223,7 @@ const App = () => {
     return initialData;
   });
 
-  const [lang, setLang] = useState('de');
+  const [lang, setLang] = useState(() => data?.settings?.language || 'de');
   const [theme, setTheme] = useState('light');
   const [viewMode, setViewMode] = useState('vermoegen');
   const [activeReport, setActiveReport] = useState('allocation');
@@ -250,6 +240,19 @@ const App = () => {
     to: new Date().toISOString().split('T')[0] 
   });
   const [modalObj, setModalObj] = useState(null);
+
+  // Synchronisiert State und Datenstruktur bei Sprachwechsel
+  const handleSetLang = (newLang) => {
+    setLang(newLang);
+    setData(prev => ({
+      ...prev,
+      lastModified: new Date().toISOString(),
+      settings: {
+        ...(prev.settings || {}),
+        language: newLang
+      }
+    }));
+  };
 
   const t = (key) => i18n[lang]?.[key] || i18n['de']?.[key] || key;
   
@@ -285,7 +288,7 @@ const App = () => {
       });
     };
 
-     const initializeCdns = async () => {
+    const initializeCdns = async () => {
       try {
         if (!window.echarts) {
           const tempModule = window.module;
@@ -376,16 +379,13 @@ const App = () => {
       setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
-  // --- FIX: DRUCKEN WURDE FÜR APP-ISOLATION & VORSCHAU OPTIMIERT ---
   const handlePrint = () => {
       if (typeof window !== 'undefined') {
-          // Versuchen wir das Print-Event direkt an den Host-Container weiterzugeben
           if (window.finspaHostAPI && typeof window.finspaHostAPI.send === 'function') {
               window.finspaHostAPI.send('window-control', 'print');
           } else if (window.chrome && window.chrome.webview) {
               window.chrome.webview.postMessage({ command: 'print' });
           } else {
-              // Standard Browser-Print, wenn keine Host-API gefunden wurde
               window.print();
           }
       }
@@ -400,22 +400,20 @@ const App = () => {
       window.dispatchEvent(new CustomEvent('triggerPdfExport'));
   };
 
-const handleNewProject = () => {
+  const handleNewProject = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Version 1.0.0 RC1", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Version 1.0.0 RC3", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          
           });
-          // Hier ändern wir den State auf "allocation" und stellen sicher, dass der Modus "vermoegen" aktiv ist
           setSelectedNode(null); 
           setActiveReport('allocation'); 
           setViewMode('vermoegen'); 
           showToast(t('msgNewProjectSuccess') || 'Neues Projekt erstellt', "success");
       }
   };
-
 
   const handleOpenProject = async (e) => {
     if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
@@ -454,6 +452,7 @@ const handleNewProject = () => {
                             imported.budget = safeBudget;
                             setFileHandle(handle); 
                             setData(ensureDefaultAssetClasses(imported));
+                            if (imported.settings?.language) setLang(imported.settings.language);
                             showToast(t('msgOpenSuccess') || "Erfolgreich geöffnet", "success");
                         }
                     } catch (err) {
@@ -474,6 +473,7 @@ const handleNewProject = () => {
               imported.budget = safeBudget;
               setFileHandle(handle); 
               setData(imported);
+              if (imported.settings?.language) setLang(imported.settings.language);
               showToast(t('msgOpenSuccess') || "Erfolgreich geöffnet", "success");
             }
         }
@@ -517,6 +517,7 @@ const handleNewProject = () => {
                             imported.budget = safeBudget;
                             setFileHandle(null);
                             setData(imported);
+                            if (imported.settings?.language) setLang(imported.settings.language);
                             showToast(t('msgOpenSuccess') || "Erfolgreich geöffnet", "success");
                         } else {
                             throw new Error(t('msgInvalidVersion') || "Ungültige Version.");
@@ -539,6 +540,7 @@ const handleNewProject = () => {
               imported.budget = safeBudget;
               setFileHandle(null);
               setData(imported);
+              if (imported.settings?.language) setLang(imported.settings.language);
               showToast(t('msgOpenSuccess') || "Erfolgreich geöffnet", "success");
             } else {
                 throw new Error(t('msgInvalidVersion') || "Ungültige Version.");
@@ -825,9 +827,9 @@ const handleNewProject = () => {
           return <PdfScanner setModalObj={setModalObj} data={data} updateTreeData={updateTreeData} selectedNode={selectedNode} setSelectedNode={setSelectedNode} fCur={fCur} t={t} />;
       }
 
-if (modalObj.type === 'csvImport') {
-    return <CsvImportWizard data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} t={t} />;
-}
+      if (modalObj.type === 'csvImport') {
+          return <CsvImportWizard data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} t={t} />;
+      }
 
       if (modalObj.type === 'settings') {
           return <SettingsModal data={data} updateTreeData={updateTreeData} setModalObj={setModalObj} showToast={showToast} defaultBookingCategories={defaultBookingCategories} t={t} />;
@@ -964,7 +966,6 @@ if (modalObj.type === 'csvImport') {
         .logo-float-rect1 { animation: float1 4s ease-in-out infinite; }
         .logo-float-rect2 { animation: float2 3.5s ease-in-out infinite; animation-delay: 0.5s; }
 
-        /* --- FIX: GLOBALE PRINT STYLES FÜR DEN DRUCK-DIALOG --- */
         @media print {
           @page { margin: 1cm; }
           body, html, #app-container, #app-container > div, #printable-editor {
@@ -976,7 +977,6 @@ if (modalObj.type === 'csvImport') {
             position: static !important;
             background: white !important;
           }
-          /* Rigoroses Ausblenden alles unerwünschten */
           .print-hide, .print-hide * {
             display: none !important;
           }
@@ -989,15 +989,16 @@ if (modalObj.type === 'csvImport') {
       `}</style>
       <MenuBar 
         data={data} 
+        lang={lang} 
+        setLang={handleSetLang} 
         viewMode={viewMode} 
         setViewMode={setViewMode} 
         setActiveReport={setActiveReport} 
         setSelectedNode={setSelectedNode} 
         theme={theme} 
         setTheme={setTheme} 
-        lang={lang} 
-        setLang={setLang} 
         setModalObj={setModalObj} 
+        updateTreeData={updateTreeData} 
         t={t} 
         handleNewProject={handleNewProject} 
         handleOpenProject={handleOpenProject} 
@@ -1031,8 +1032,11 @@ if (modalObj.type === 'csvImport') {
         <div className="flex-1 relative overflow-auto" id="printable-editor">
           <EditorArea 
             data={data} 
+            lang={lang} 
             viewMode={viewMode} 
+            setViewMode={setViewMode} 
             activeReport={activeReport} 
+            setActiveReport={setActiveReport} 
             selectedNode={selectedNode} 
             setSelectedNode={setSelectedNode} 
             isTreeVisible={isTreeVisible} 
@@ -1099,11 +1103,10 @@ if (modalObj.type === 'csvImport') {
                       </strong>
                   </span>
               )}
-              <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC1</span>
+              <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC3</span>
           </div>
       </div>
 
-     
       <FullPdfOrchestrator 
           data={data} 
           activeAssets={showArchived ? flatAssets : flatAssets.filter(a => !a?.isArchived)}

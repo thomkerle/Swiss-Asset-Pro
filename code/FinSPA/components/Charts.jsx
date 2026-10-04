@@ -1,9 +1,11 @@
 const React = require('react');
 
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
+
 const PieChartSVG = ({ data, fCur, t }) => {
-  if (!data || data.length === 0) return <div className="text-gray-500">{t ? t('chartNoDataAvailable') : 'Keine Daten verfügbar'}</div>;
+  if (!data || data.length === 0) return <div className="text-gray-500">{safeT(t, 'chartNoDataAvailable', 'Keine Daten verfügbar')}</div>;
   const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
-  if (total === 0) return <div className="text-gray-500">{t ? t('chartValuesZeroNegative') : 'Werte sind 0 oder negativ'}</div>;
+  if (total === 0) return <div className="text-gray-500">{safeT(t, 'chartValuesZeroNegative', 'Werte sind 0 oder negativ')}</div>;
   let currentAngle = 0;
   return (
     <div className="flex flex-wrap items-center justify-center gap-8 w-full">
@@ -17,7 +19,7 @@ const PieChartSVG = ({ data, fCur, t }) => {
           const x2 = 50 + 50 * Math.cos((Math.PI * currentAngle) / 180);
           const y2 = 50 + 50 * Math.sin((Math.PI * currentAngle) / 180);
           const largeArc = sliceAngle > 180 ? 1 : 0;
-          return <path key={i} d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`} fill={d.color} stroke="white" strokeWidth="0.5"><title>{d.label}: {fCur(d.value)}</title></path>;
+          return <path key={i} d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`} fill={d.color} stroke="white" strokeWidth="0.5"><title>{d.label}: {fCur ? fCur(d.value) : d.value}</title></path>;
         })}
         <circle cx="50" cy="50" r="25" fill="currentColor" className="text-white dark:text-slate-900" />
       </svg>
@@ -36,7 +38,7 @@ const PieChartSVG = ({ data, fCur, t }) => {
 const LineChartSVG = ({ datasets, labels, height = 300, fCur, t }) => {
   const width = 800, padding = 40;
   const allValues = datasets.flatMap(ds => ds.data);
-  if(allValues.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
+  if(allValues.length === 0) return <div>{safeT(t, 'chartNoData', 'Keine Daten')}</div>;
   const maxValue = Math.max(...allValues, 10) * 1.1;
   const minValue = Math.min(...allValues, 0);
   const range = maxValue - minValue || 1;
@@ -56,7 +58,7 @@ const LineChartSVG = ({ datasets, labels, height = 300, fCur, t }) => {
           return (
             <g key={idx}>
               <polyline fill="none" stroke={ds.color} strokeWidth={ds.dashed ? "2" : "3"} strokeDasharray={ds.dashed ? "8,4" : "none"} points={points} />
-              {ds.data.map((val, i) => <circle key={i} cx={getX(i)} cy={getY(val)} r="4" fill={ds.color}><title>{labels[i]}: {fCur(val)}</title></circle>)}
+              {ds.data.map((val, i) => <circle key={i} cx={getX(i)} cy={getY(val)} r="4" fill={ds.color}><title>{labels[i]}: {fCur ? fCur(val) : val}</title></circle>)}
             </g>
           );
         })}
@@ -76,7 +78,7 @@ const LineChartSVG = ({ datasets, labels, height = 300, fCur, t }) => {
 
 const WaterfallChartSVG = ({ data, fCur, t }) => {
   const width = 800, height = 350, padding = 50;
-  if(!data || data.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
+  if(!data || data.length === 0) return <div>{safeT(t, 'chartNoData', 'Keine Daten')}</div>;
   const maxValue = Math.max(...data.map(d => Math.max(d.start, d.end))) * 1.1;
   const minValue = Math.min(...data.map(d => Math.min(d.start, d.end)), 0);
   const range = maxValue - minValue || 1;
@@ -112,7 +114,7 @@ const WaterfallChartSVG = ({ data, fCur, t }) => {
 
 const BarChartSVG = ({ data, fCur, t }) => {
    const width = 800, height = 300, padding = 40;
-   if(!data || data.length === 0) return <div>{t ? t('chartNoData') : 'Keine Daten'}</div>;
+   if(!data || data.length === 0) return <div>{safeT(t, 'chartNoData', 'Keine Daten')}</div>;
    const absMax = Math.max(...data.map(d => Math.abs(d.value)));
    const maxValue = absMax === 0 ? 10 : absMax * 1.1;
    const getX = (i) => padding + (i * (width - 2 * padding) / data.length);

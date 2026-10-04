@@ -34,13 +34,12 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
   if (activeReport || !selectedNode) {
       return (
           <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex items-center justify-center text-gray-400 shrink-0 text-center">
-              {safeT('propEditor', 'Eigenschaften')} {safeT('propInactive', 'inaktiv.')}
+              {safeT('propEditorInactive', 'Eigenschaften inaktiv.')}
           </div>
       );
   }
 
   const renderContent = () => {
-      // Zentralisierte Berechnungs-Logik der Ist-Werte aus den historischen Transaktionen
       const getActualShares = (node) => {
           if (!node) return 0;
           let sh = 0;
@@ -118,7 +117,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           );
       }
 
-      // 2. BUCHUNGS-ANSICHT (Innerhalb des Assets ausgewählt)
+      // 2. BUCHUNGS-ANSICHT
       if (selectedNode.selectedBooking) {
         const booking = selectedNode.selectedBooking;
         const isBal = booking._isBal;
@@ -236,7 +235,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             
                                          copy.bookings.push({
                                              id: generateId(), date: booking.date, type: isTargetSecurity ? 'Kauf' : 'Einzahlung',
-                                             subCategory: booking.type === 'Dividende' ? 'Dividenden Eingang' : 'Umbuchung Eingang',
+                                             subCategory: booking.type === 'Dividende' ? safeT('divIn', 'Dividenden Eingang') : safeT('transferIn', 'Umbuchung Eingang'),
                                              amount: Number(finalTargetAmount.toFixed(2)), bookingExchangeRate: isTargetForeign ? targetRate : 1
                                          });
                                      }
@@ -269,7 +268,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
                   <div className={['Kauf', 'Verkauf'].includes(booking.type) ? "" : "col-span-2"}>
                     <label className={`block text-xs font-bold mb-1 uppercase leading-tight ${booking.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {booking.type === 'Wertanpassung' ? `${safeT('labelNewMarketPrice', 'Neuer Marktkurs')} (${safeT('labelUntilNow', 'Bisher:')} ${actualPrice})` : safeT('labelMarketPrice', 'Börsenkurs')}
+                        {booking.type === 'Wertanpassung' ? `${safeT('labelNewMarketPrice', 'Neuer Börsenkurs')} (${safeT('labelUntilNow', 'Bisher:')} ${actualPrice})` : safeT('labelMarketPrice', 'Börsenkurs')}
                     </label>
                     <input type="number" step="any" className={`w-full p-2 border rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums ${booking.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} value={booking.price ?? ''} onChange={e => { const pr = e.target.value; const sh = booking.shares || 0; handleBookingPropChange({ price: pr === '' ? undefined : Number(pr), amount: ['Kauf', 'Verkauf'].includes(booking.type) && sh && pr ? Number((sh * pr).toFixed(2)) : (booking.type === 'Wertanpassung' ? 0 : booking.amount) }); }} />
                   </div>
@@ -301,7 +300,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
                   <div>
                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelSetNewComment', 'Kommentar / Tags')}</label>
-                    <input type="text" placeholder={safeT('placeholderNoteTag', "#Steuern2026 oder Notiz...")} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
+                    <input type="text" placeholder={safeT('placeholderTaxExample', "#Steuererklärung2026")} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
                   </div>
                 </>
               )}
@@ -309,7 +308,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         );
       }
 
-      // 3. ASSET ANSICHT (Hauptansicht des selektierten Vermögenswerts)
+      // 3. ASSET ANSICHT
       const handlePropChange = (keyOrObj, val) => {
           const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
           const updateRecursive = (nodes) => nodes.map(n => {
@@ -328,7 +327,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           const fromCurrency = selectedNode.currency;
           
           if (!fromCurrency || fromCurrency === baseCurrency) {
-              if (typeof window !== 'undefined' && window.showToast) window.showToast(`Basiswährung und Asset-Währung sind identisch (${baseCurrency}).`, "info");
+              if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT('msgSameCurrencies', `Basiswährung und Asset-Währung sind identisch (${baseCurrency}).`), "info");
               return;
           }
 
@@ -337,7 +336,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
               let liveRate = null;
               try {
-                  const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCurrency}&symbols=${baseCurrency}`);
+                  const res = await fetch(`https://api.frankfurter.dev/v1/latest?base={fromCurrency}&symbols=${baseCurrency}`);
                   if (res.ok) {
                       const json = await res.json();
                       liveRate = json.rates[baseCurrency];
@@ -361,7 +360,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   };
                   liveRate = mockMap[`${fromCurrency}_${baseCurrency}`];
                   if (liveRate && typeof window !== 'undefined' && window.showToast) {
-                      window.showToast("API blockiert/Krypto. Verwende Offline-Richtwert.", "warning");
+                      window.showToast(safeT('msgApiBlockedOfflineRate', "API blockiert. Verwende Offline-Richtwert."), "warning");
                   }
               }
 
@@ -372,7 +371,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       window.showToast(`${safeT('msgRateUpdated', "Kurs aktualisiert")}: 1 ${fromCurrency} = ${liveRate} ${baseCurrency}`, "success");
                   }
               } else {
-                  throw new Error('Kein Kurs gefunden');
+                  throw new Error(safeT('msgNoRateFound', 'Kein Kurs gefunden'));
               }
           } catch (error) {
               console.error("FX Fetch Error:", error);
@@ -458,7 +457,6 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200">{safeT('isLiquid', 'Liquides Mittel')}</span>
             </label>
 
-            {/* NEU: Ticker & ISIN Felder (Werden nur bei passenden Asset-Klassen eingeblendet) */}
             {['fund', 'stock', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(selectedNode.assetClass) && (
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   <div>

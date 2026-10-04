@@ -1,8 +1,7 @@
 /**
  * @file UniversalChart.jsx
- * @description Einheitlicher Wrapper für Chart.js, ECharts und Plotly.
- * Optimiert für automatische Intervallskalierung, sauberes Hovering, 
- * Achsenbeschriftungen und automatisches Label-Tilting bei großen Werten.
+ * @description Einheitlicher Wrapper für ECharts, Chart.js und Plotly.
+ * Optimiert für kollisionsfreie Achsen, flexible Optionen und PdfToolkit-Exporte.
  */
 
 const React = require('react');
@@ -20,7 +19,11 @@ const UniversalChart = ({
     datasets = [],      
     height = '300px',
     horizontal = false,
-    showDataLabels
+    stacked = false,
+    showDataLabels,
+    options = {},
+    xAxisType = 'category',
+    isTimeSeries = false
 }) => {
     const containerRef = useRef(null);
     const chartInstanceRef = useRef(null);
@@ -55,9 +58,7 @@ const UniversalChart = ({
             if (resolveEngine(engine) === 'plotly' && window.Plotly && containerRef.current.firstChild) {
                 try {
                     window.Plotly.purge(containerRef.current.firstChild);
-                } catch (e) {
-                    console.warn("[FinSPA] Fehler beim Bereinigen der Plotly-Instanz", e);
-                }
+                } catch (e) {}
             }
             containerRef.current.innerHTML = '';
         }
@@ -72,15 +73,15 @@ const UniversalChart = ({
         const lineColor = isDark ? '#334155' : '#f1f5f9';
         const fontFamily = 'system-ui, -apple-system, sans-serif';
         
-        const isStacked = datasets.some(ds => ds.stack);
+        const isStacked = stacked || datasets.some(ds => ds.stack);
         const currentEngine = resolveEngine(engine);
 
         // ----------------------------------------------------------------------
-        // ENGINE: CHART.JS / JCHART
+        // ENGINE: CHART.JS
         // ----------------------------------------------------------------------
         if (currentEngine === 'chartjs') {
             if (!window.Chart) {
-                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-sm">Chart.js Bibliothek nicht gefunden.</div>';
+                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center">Chart.js Bibliothek nicht gefunden.</div>';
                 return;
             }
 
@@ -117,8 +118,6 @@ const UniversalChart = ({
                             borderWidth: isPieOrDoughnut ? 2 : (type === 'line' ? 2 : 1), 
                             fill: type === 'line', 
                             tension: 0,
-                            pointBackgroundColor: borderColor,
-                            pointBorderColor: '#ffffff',
                             pointRadius: 0, 
                             pointHoverRadius: 5 
                         };
@@ -139,8 +138,8 @@ const UniversalChart = ({
                             ticks: { 
                                 color: textColor, 
                                 font: { family: fontFamily },
-                                maxRotation: horizontal ? 35 : undefined,
-                                minRotation: horizontal ? 35 : undefined
+                                maxRotation: 35,
+                                minRotation: 20
                             },
                             stacked: type === 'bar' ? isStacked : false,
                             title: { display: !!xAxisName, text: xAxisName, color: textColor, font: { family: fontFamily, weight: 'bold', size: 12 } }
@@ -160,14 +159,7 @@ const UniversalChart = ({
                             position: 'bottom',
                             labels: { color: textColor, usePointStyle: true, font: { family: fontFamily } } 
                         },
-                        datalabels: { 
-                            display: resolveShowLabels, 
-                            color: textColor,
-                            font: { weight: 'bold', family: fontFamily }
-                        },
                         tooltip: {
-                            bodyFont: { family: fontFamily },
-                            titleFont: { family: fontFamily },
                             callbacks: {
                                 label: function(context) {
                                     const ds = datasets[context.datasetIndex];
@@ -175,13 +167,7 @@ const UniversalChart = ({
                                     if (typeof val === 'object' && val !== null) {
                                         val = val.y !== undefined ? val.y : val.x;
                                     }
-                                    
                                     const formattedVal = ds.valueFormatter ? ds.valueFormatter(val) : val;
-                                    const label = context.label || context.dataset.label || '';
-                                    
-                                    if (isPieOrDoughnut) {
-                                        return ` ${label}: ${formattedVal}`;
-                                    }
                                     return (context.dataset.label || '') + ': ' + formattedVal;
                                 }
                             }
@@ -196,7 +182,7 @@ const UniversalChart = ({
         // ----------------------------------------------------------------------
         else if (currentEngine === 'echarts') {
             if (!window.echarts) {
-                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-sm">ECharts Bibliothek nicht gefunden.</div>';
+                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center">ECharts Bibliothek nicht gefunden.</div>';
                 return;
             }
 
@@ -228,22 +214,14 @@ const UniversalChart = ({
                     title: { text: title, left: 'center', textStyle: { color: textColor, fontFamily } },
                     tooltip: { 
                         trigger: 'item', 
-                        // FIX: Einheitliche Tooltip-Stylings für Dark- und Lightmode auch beim Pie/Doughnut Chart hinzugefügt
                         backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                         borderColor: isDark ? '#334155' : '#e2e8f0', 
                         borderWidth: 1, 
-                        padding: [12, 16],
+                        padding: [10, 14],
                         textStyle: { color: isDark ? '#cbd5e1' : '#334155', fontSize: 12, fontFamily },
-                        extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;',
                         formatter: function(params) {
                             const val = pieFormatter ? pieFormatter(params.value) : params.value;
-                            return `<div style="font-weight:bold; padding-bottom: 6px; border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; margin-bottom: 6px; font-family: ${fontFamily}; color:${isDark ? '#f8fafc' : '#0f172a'};">
-                                      ${params.marker} ${params.name}
-                                    </div>
-                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; font-family: ${fontFamily};">
-                                      <strong style="font-size:13px; color:${isDark ? '#cbd5e1' : '#334155'};">${val}</strong>
-                                      <span style="color: ${isDark ? '#94a3b8' : '#64748b'};">(${params.percent}%)</span>
-                                    </div>`;
+                            return `<b>${params.name}</b><br/>${val} (${params.percent}%)`;
                         }
                     },
                     legend: { 
@@ -251,23 +229,16 @@ const UniversalChart = ({
                         type: 'scroll', 
                         bottom: 0, 
                         icon: 'circle', 
-                        itemWidth: 12,        
-                        itemHeight: 12,
-                        itemGap: 24,          
-                        textStyle: { color: textColor, fontSize: 13, fontWeight: '500', fontFamily } 
+                        itemWidth: 10,        
+                        itemHeight: 10,
+                        itemGap: 16,          
+                        textStyle: { color: textColor, fontSize: 12, fontFamily } 
                     }, 
                     series: [{
                         name: datasets[0]?.label || '',
                         type: 'pie',
                         radius: type === 'doughnut' ? ['45%', '75%'] : '70%',
-                        label: { 
-                            show: resolveShowLabels, 
-                            fontFamily,
-                            formatter: function(params) {
-                                const val = pieFormatter ? pieFormatter(params.value) : params.value;
-                                return `${params.name}\n${val}`;
-                            }
-                        },
+                        label: { show: resolveShowLabels },
                         data: labels.map((lbl, idx) => ({
                             name: lbl,
                             value: datasets[0]?.data[idx] || 0
@@ -275,19 +246,23 @@ const UniversalChart = ({
                     }]
                 };
             } else {
-                const hasNewlines = labels.some(l => typeof l === 'string' && l.includes('\n'));
-                
+                // Ermittlung, ob X-Achsen-Labels geneigt werden müssen
+                const hasLongLabels = labels.some(l => typeof l === 'string' && l.length > 9);
+                const shouldRotateX = (!horizontal && (labels.length > 5 || hasLongLabels));
+                const rotateAngle = shouldRotateX ? 25 : 0;
+                const bottomMargin = shouldRotateX ? 75 : ((xAxisName || horizontal) ? 65 : 45);
+
                 const categoryAxis = { 
                     type: 'category', 
                     name: horizontal ? yAxisName : xAxisName,
                     nameLocation: 'center',
                     nameGap: horizontal ? 60 : 40,
-                    nameTextStyle: { color: textColor, fontFamily, fontSize: 12, fontWeight: 'bold' },
+                    nameTextStyle: { color: textColor, fontFamily, fontSize: 11, fontWeight: 'bold' },
                     data: horizontal ? [...labels].reverse() : labels, 
                     axisLabel: { 
-                        color: textColor, fontWeight: '500', fontSize: 11, fontFamily,
-                        margin: 12, lineHeight: 14, interval: labels.length > 10 ? 'auto' : 0, 
-                        rotate: (!horizontal && labels.length > 6 && !hasNewlines) ? 30 : 0 
+                        color: textColor, fontSize: 11, fontFamily,
+                        margin: 10, interval: 0, 
+                        rotate: rotateAngle
                     },
                     axisTick: { show: false },
                     axisLine: { lineStyle: { color: isDark ? '#475569' : '#cbd5e1' } }
@@ -298,13 +273,10 @@ const UniversalChart = ({
                     scale: type === 'line',
                     name: horizontal ? xAxisName : yAxisName,
                     nameLocation: 'center',
-                    nameGap: horizontal ? 55 : 40, 
-                    nameTextStyle: { color: textColor, fontFamily, fontSize: 12, fontWeight: 'bold' },
+                    nameGap: horizontal ? 50 : 35, 
+                    nameTextStyle: { color: textColor, fontFamily, fontSize: 11, fontWeight: 'bold' },
                     splitLine: { lineStyle: { type: 'dashed', color: lineColor, width: 1 } }, 
-                    axisLabel: { 
-                        color: textColor, fontSize: 11, fontFamily, margin: 12,
-                        rotate: horizontal ? 35 : 0 
-                    },
+                    axisLabel: { color: textColor, fontSize: 11, fontFamily },
                     axisLine: { show: false },
                     axisTick: { show: false }
                 };
@@ -314,43 +286,44 @@ const UniversalChart = ({
                     animation: false, 
                     title: { text: title, textStyle: { color: textColor, fontFamily } },
                     legend: { 
-                        show: true, type: 'scroll', bottom: 0, icon: 'circle', 
-                        itemWidth: 10, itemHeight: 10, itemGap: 24,
-                        textStyle: { color: textColor, fontSize: 12, fontWeight: '500', fontFamily } 
+                        show: true, 
+                        type: 'plain', 
+                        bottom: 0, 
+                        icon: 'circle', 
+                        itemWidth: 10, 
+                        itemHeight: 10, 
+                        itemGap: 16,
+                        textStyle: { color: textColor, fontSize: 11, fontFamily } 
                     },
                     tooltip: { 
                         trigger: 'axis', 
                         backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                        borderColor: isDark ? '#334155' : '#e2e8f0', borderWidth: 1, padding: [12, 16],
+                        borderColor: isDark ? '#334155' : '#e2e8f0', borderWidth: 1, padding: [10, 14],
                         textStyle: { color: isDark ? '#cbd5e1' : '#334155', fontSize: 12, fontFamily },
-                        extraCssText: 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border-radius: 8px;',
-                        axisPointer: { type: 'line', lineStyle: { color: isDark ? '#475569' : '#94a3b8', width: 1, type: 'dashed' } },
                         formatter: (params) => {
-                            let tooltipHtml = `<div style="font-weight:bold; padding-bottom: 6px; border-bottom: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; margin-bottom: 6px; font-family: ${fontFamily};">${params[0].name}</div>`;
+                            let tooltipHtml = `<div style="font-weight:bold; margin-bottom:4px;">${params[0].name}</div>`;
                             params.forEach(item => {
                                 const ds = datasets[item.seriesIndex];
                                 const formattedVal = ds && ds.valueFormatter ? ds.valueFormatter(item.value) : item.value;
-                                tooltipHtml += `
-                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-top:4px; font-family: ${fontFamily};">
-                                        <div style="display:flex; align-items:center; gap:8px;">
-                                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${item.color};"></span>
-                                            <span style="font-size:12px; color:${isDark ? '#94a3b8' : '#64748b'};">${item.seriesName}:</span>
-                                        </div>
-                                        <strong style="font-size:13px; color:${isDark ? '#cbd5e1' : '#334155'};">${formattedVal}</strong>
-                                    </div>
-                                `;
+                                tooltipHtml += `<div><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${item.color};margin-right:6px;"></span>${item.seriesName}: <b>${formattedVal}</b></div>`;
                             });
                             return tooltipHtml;
                         }
                     },
-                    grid: { top: 40, left: 20, right: horizontal ? 60 : 20, bottom: (xAxisName || horizontal) ? 70 : 40, containLabel: true },
+                    grid: { top: 35, left: 15, right: horizontal ? 45 : 15, bottom: bottomMargin, containLabel: true },
                     xAxis: horizontal ? valueAxis : categoryAxis,
                     yAxis: horizontal ? categoryAxis : valueAxis,
                     series: datasets.map((ds, idx) => {
                         let itemColor = chartColors[idx];
+                        const stackGroup = ds.stack || (isStacked ? 'total' : undefined);
                         return {
-                            name: getDsName(ds, idx), type: type, smooth: false, symbol: 'circle', showSymbol: false, symbolSize: 6,
-                            itemStyle: { color: itemColor }, stack: ds.stack, 
+                            name: getDsName(ds, idx), 
+                            type: type, 
+                            smooth: false, 
+                            symbol: 'circle', 
+                            showSymbol: false, 
+                            itemStyle: { color: itemColor }, 
+                            stack: stackGroup, 
                             lineStyle: type === 'line' ? { width: 2 } : undefined, 
                             areaStyle: type === 'line' ? { opacity: 0.1, color: itemColor } : undefined,
                             data: (horizontal ? [...ds.data].reverse() : ds.data).map((val, i) => {
@@ -359,19 +332,29 @@ const UniversalChart = ({
                                     c = horizontal ? [...ds.backgroundColor].reverse()[i] : ds.backgroundColor[i];
                                 }
                                 return {
-                                    value: val, itemStyle: { color: c, borderRadius: horizontal ? [0, 4, 4, 0] : (val >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4]) }
+                                    value: val, 
+                                    itemStyle: { color: c, borderRadius: horizontal ? [0, 3, 3, 0] : (val >= 0 ? [3, 3, 0, 0] : [0, 0, 3, 3]) }
                                 };
                             }),
                             label: {
                                 show: ds.label?.show !== undefined ? ds.label.show : resolveShowLabels, 
                                 position: 'top',
                                 formatter: (params) => ds.valueFormatter ? ds.valueFormatter(params.value) : params.value,
-                                textStyle: { color: textColor, fontSize: 11, fontWeight: 'bold', fontFamily }
+                                textStyle: { color: textColor, fontSize: 10, fontWeight: 'bold' }
                             }
                         };
                     })
                 };
             }
+
+            // Benutzerdefinierte Optionen flexibel zusammenführen
+            if (options && typeof options === 'object') {
+                if (options.grid) Object.assign(option.grid, options.grid);
+                if (options.legend) Object.assign(option.legend, options.legend);
+                if (options.xAxis && option.xAxis) Object.assign(option.xAxis, options.xAxis);
+                if (options.yAxis && option.yAxis) Object.assign(option.yAxis, options.yAxis);
+            }
+
             myChart.setOption(option);
             
             const handleResize = () => myChart.resize();
@@ -384,7 +367,7 @@ const UniversalChart = ({
         // ----------------------------------------------------------------------
         else if (currentEngine === 'plotly') {
             if (!window.Plotly) {
-                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-sm">Plotly.js Bibliothek nicht gefunden.</div>';
+                containerRef.current.innerHTML = '<div class="flex h-full items-center justify-center text-red-500 font-medium text-sm p-4 text-center">Plotly.js Bibliothek nicht gefunden.</div>';
                 return;
             }
 
@@ -396,55 +379,29 @@ const UniversalChart = ({
             let data = [];
             let layout = {
                 title: title, font: { family: fontFamily },
-                margin: { t: 40, b: 60, l: 60, r: 40 }, autosize: true, colorway: defaultColors,
+                margin: { t: 35, b: 55, l: 50, r: 35 }, autosize: true, colorway: defaultColors,
                 barmode: type === 'bar' ? (isStacked ? 'stack' : 'group') : undefined, 
                 paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-                legend: { orientation: 'h', yanchor: 'top', y: -0.2, xanchor: 'center', x: 0.5, font: { color: textColor, family: fontFamily } },
-                xaxis: { type: horizontal ? 'linear' : 'category', title: { text: xAxisName, font: { color: textColor, family: fontFamily, size: 12 } }, tickfont: { color: textColor, family: fontFamily }, gridcolor: lineColor, tickangle: horizontal ? -35 : -30 },
-                yaxis: { type: horizontal ? 'category' : 'linear', title: { text: yAxisName, font: { color: textColor, family: fontFamily, size: 12 } }, tickfont: { color: textColor, family: fontFamily }, gridcolor: lineColor }
+                legend: { orientation: 'h', y: -0.2, x: 0.5, font: { color: textColor } },
+                xaxis: { type: horizontal ? 'linear' : 'category', gridcolor: lineColor, tickfont: { color: textColor } },
+                yaxis: { type: horizontal ? 'category' : 'linear', gridcolor: lineColor, tickfont: { color: textColor } }
             };
 
-            if (type === 'pie' || type === 'doughnut') {
-                const ds = datasets[0];
-                const formattedValues = ds?.data?.map(v => ds.valueFormatter ? ds.valueFormatter(v) : v) || [];
-                
-                data = [{ 
-                    values: ds?.data || [], 
-                    labels: labels, 
-                    type: 'pie', 
-                    hole: type === 'doughnut' ? 0.45 : 0,
-                    text: formattedValues, 
-                    textinfo: resolveShowLabels ? 'label+percent' : 'none',
-                    hoverinfo: 'label+text+percent', 
-                    marker: { colors: Array.isArray(ds?.backgroundColor) ? ds.backgroundColor : defaultColors }
-                }];
-            } else {
-                const plotlyType = type === 'line' ? 'scatter' : 'bar';
-                data = datasets.map((ds, idx) => {
-                    const color = ds.backgroundColor || defaultColors[idx % defaultColors.length];
-                    const formattedText = ds.data.map(v => ds.valueFormatter ? ds.valueFormatter(v) : v);
-                    return {
-                        x: horizontal ? ds.data : labels,
-                        y: horizontal ? labels : ds.data,
-                        orientation: horizontal ? 'h' : 'v',
-                        name: getDsName(ds, idx), 
-                        type: plotlyType,
-                        mode: type === 'line' ? (resolveShowLabels ? 'lines+text' : 'lines') : undefined, 
-                        fill: type === 'line' ? 'tozeroy' : 'none', 
-                        fillcolor: color + '1A', 
-                        text: formattedText, 
-                        hoverinfo: 'name+x+text', 
-                        line: type === 'line' ? { color: color, width: 2, shape: 'linear' } : undefined, 
-                        marker: { color: color, size: 6 }
-                    };
-                });
-            }
+            const plotlyType = type === 'line' ? 'scatter' : 'bar';
+            data = datasets.map((ds, idx) => ({
+                x: horizontal ? ds.data : labels,
+                y: horizontal ? labels : ds.data,
+                orientation: horizontal ? 'h' : 'v',
+                name: getDsName(ds, idx), 
+                type: plotlyType,
+                mode: type === 'line' ? 'lines' : undefined
+            }));
 
             window.Plotly.newPlot(plotlyDiv, data, layout, { responsive: true, displayModeBar: false });
         }
 
         return () => cleanupCharts();
-    }, [engine, type, title, xAxisName, yAxisName, labels, datasets, horizontal, showDataLabels]);
+    }, [engine, type, title, xAxisName, yAxisName, labels, datasets, horizontal, stacked, showDataLabels, options]);
 
     return (
         <div className="universal-chart-wrapper relative w-full flex flex-col items-center justify-center" style={{ height: height }} ref={containerRef} />

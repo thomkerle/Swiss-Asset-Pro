@@ -4,21 +4,22 @@ const { useEffect, useRef, useState, useMemo } = React;
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
-const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
-const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header</div>);
 const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name}) => <span className="text-xs">[{name}]</span>);
-const { getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
+const { getAssetValueAtDate, generateMonthEnds } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
+
+const PdfToolkit = safeRequire('../print/PdfToolkit.jsx') || window.PdfToolkit;
+
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
 const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
   const reportRef = useRef(null);
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
-  const targetDate = dateRange.to;
+  const targetDate = dateRange?.to || new Date().toISOString().split('T')[0];
 
   const [viewTab, setViewTab] = useState('overview');
 
-  // PERFORMANCE FIX: useMemo berechnet die Assets nur neu, wenn sie sich wirklich ändern.
-  // Das verhindert die Endlosschleifen, weswegen wir data wieder sicher ins useEffect packen können.
   const {
       liquidAssets, illiquidAssets, liquidTotal, illiquidTotal, pureCashTotal,
       catCash, catSecurities, catPension, catRealEstate, grandTotal,
@@ -69,76 +70,104 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       };
   }, [activeAssets, targetDate]);
 
-  const labelLiquid = t ? (t('labelAvailable') || 'Verfügbar (Liquid)') : 'Verfügbar (Liquid)';
-  const labelIlliquid = t ? (t('labelTiedUp') || 'Gebunden (Illiquid)') : 'Gebunden (Illiquid)';
+  const { historyLabels, historyHardCash, historyLiquid, historyIlliquid } = useMemo(() => {
+      const fromDate = dateRange?.from || `${new Date().getFullYear()}-01-01`;
+      let dates = generateMonthEnds ? generateMonthEnds(fromDate, targetDate) : [];
+      if (!dates.includes(targetDate)) dates.push(targetDate);
+      dates = [...new Set(dates)].sort();
 
-  const loadHtml2Canvas = () => {
-    return new Promise((resolve) => {
-        if (window.html2canvas) return resolve(window.html2canvas);
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        script.onload = () => resolve(window.html2canvas);
-        document.head.appendChild(script);
-    });
-  };
+      const safeAssets = activeAssets || [];
+      const hardCashArr = [];
+      const liquidArr = [];
+      const illiquidArr = [];
+
+      dates.forEach(d => {
+          let dHard = 0;
+          let dLiq = 0;
+          let dIlliq = 0;
+
+          safeAssets.forEach(a => {
+              const val = getAssetValueAtDate(a, d, safeAssets);
+              if (val === 0) return;
+
+              const isIlliquidClass = ['pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'realestate', 'mortgage'].includes(a.assetClass);
+              const isLiquid = a.isLiquid !== undefined ? a.isLiquid : !isIlliquidClass;
+
+              if (a.assetClass === 'cash') dHard += val;
+              if (isLiquid) dLiq += val;
+              else dIlliq += val;
+          });
+
+          hardCashArr.push(dHard);
+          liquidArr.push(dLiq);
+          illiquidArr.push(dIlliq);
+      });
+
+      const labels = dates.map(d => {
+          const parts = d.split('-');
+          return `${parts[2]}.${parts[1]}.${parts[0].slice(-2)}`;
+      });
+
+      return {
+          historyLabels: labels,
+          historyHardCash: hardCashArr,
+          historyLiquid: liquidArr,
+          historyIlliquid: illiquidArr
+      };
+  }, [activeAssets, dateRange, targetDate]);
+
+  const labelLiquid = safeT(t, 'labelAvailable', 'Verfügbar (Liquide)');
+  const labelIlliquid = safeT(t, 'labelTiedUp', 'Gebunden (Illiquide)');
+  const labelHard = safeT(t, 'labelHardLiquidity', 'Harte Liquidität (Cash)');
 
   useEffect(() => {
     const buildReportData = async () => {
-        const html2canvas = await loadHtml2Canvas();
-        let chartsData = [];
-        
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#0f172a' : '#ffffff';
-
-        const captureBlock = async (selector, titleFallback = '') => {
-            if (!reportRef.current) return;
-            const el = reportRef.current.querySelector(selector);
-            if (el) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-                const canvas = await html2canvas(el, { 
-                    scale: 2, 
-                    backgroundColor: bgColor, 
-                    useCORS: true, 
-                    logging: false,
-                    ignoreElements: (element) => {
-                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
-                    }
-                });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
-            }
-        };
-
-        await captureBlock('.pdf-combined-export-block', ''); 
-
-        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-
         const tableHeaders = [
-          capitalize(t ? (t('labelLiqType') || 'Kategorie') : 'Kategorie'), 
-          capitalize(t ? (t('name') || 'Anlage / Asset') : 'Anlage / Asset'),
-          capitalize(t ? (t('amount') || 'Wert') : 'Wert')
+          safeT(t, 'labelLiqType', 'Liquiditäts-Typ'), 
+          safeT(t, 'name', 'Anlage / Asset'),
+          safeT(t, 'amount', 'Betrag')
         ];
         
         const tableBody = [];
-        liquidAssets.sort((a,b) => b.val - a.val).forEach(a => { tableBody.push([labelLiquid, a.name, fCur(a.val)]); });
-        illiquidAssets.sort((a,b) => b.val - a.val).forEach(a => { tableBody.push([labelIlliquid, a.name, fCur(a.val)]); });
+        liquidAssets.sort((a,b) => b.val - a.val).forEach(a => { 
+            tableBody.push([labelLiquid, a.name, fCur(a.val)]); 
+        });
+        
+        illiquidAssets.sort((a,b) => b.val - a.val).forEach(a => { 
+            tableBody.push([labelIlliquid, a.name, fCur(a.val)]); 
+        });
 
-        return { chartsData, tableHeaders, tableBody };
+        const kpis = [
+            { label: safeT(t, 'totalWealth', 'Gesamtkapital'), value: fCur(grandTotal), sub: `${safeT(t, 'statusAsOf', 'Stichtag:')} ${new Date(targetDate).toLocaleDateString('de-CH')}`, color: '#3b82f6' },
+            { label: labelLiquid, value: fCur(liquidTotal), sub: safeT(t, 'descSharePercent', '{pct}% Anteil').replace('{pct}', liquidPercent.toFixed(1)), color: '#0ea5e9' },
+            { label: labelIlliquid, value: fCur(illiquidTotal), sub: safeT(t, 'descSharePercent', '{pct}% Anteil').replace('{pct}', illiquidPercent.toFixed(1)), color: '#f59e0b' },
+            { label: safeT(t, 'labelHardLiquidity', 'Harte Liquidität'), value: fCur(pureCashTotal), sub: `${cashPercentOfLiquid.toFixed(0)}${safeT(t, 'labelPctOfLiq', '% d. Liq.')}`, color: '#10b981' }
+        ];
+
+        let chartsData = [];
+        if (PdfToolkit && typeof PdfToolkit.captureCharts === 'function') {
+             chartsData = await PdfToolkit.captureCharts(reportRef.current, document.documentElement.classList.contains('dark'));
+        }
+
+        return { chartsData, tableHeaders, tableBody, kpis };
     };
 
     const handlePdfExport = async () => {
       try {
-        if (!PdfExportEngine) return;
-        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+        if (!PdfToolkit) return;
+        const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
+        const subtitleText = `${safeT(t, 'repLiqSubTied', 'Verfügbare vs. gebundene Mittel per')} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
 
-        const subtitleText = `${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
-
-        await PdfExportEngine.exportReport({
-          title: t ? (t('repLiqTitle') || 'Liquiditäts-Analyse') : 'Liquiditäts-Analyse',
+        await PdfToolkit.exportReport({
+          title: safeT(t, 'repLiqTitle', 'Liquiditätsrisiko'),
           subtitle: subtitleText,
           tableHeaders,
           tableBody,
+          colWidthsPct: [0.26, 0.50, 0.24],
+          colAligns: ['left', 'left', 'right'],
+          kpis,
           chartsData,
-          data: data // FIX: Direkte Daten-Referenz ohne Umwege
+          data
         });
       } catch (err) {
         console.error("[FinBundle Pro] PDF Export Error im LiquidityReport:", err);
@@ -148,19 +177,22 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
-                const { chartsData, tableHeaders, tableBody } = await buildReportData();
-                const subtitleText = `${t ? (t('repLiqSubTied') || 'Verfügbare vs. gebundene Mittel per') : 'Verfügbare vs. gebundene Mittel per'} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
+                const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
+                const subtitleText = `${safeT(t, 'repLiqSubTied', 'Verfügbare vs. gebundene Mittel per')} ${new Date(targetDate).toLocaleDateString('de-CH')}`;
 
                 resolve({
                     order: 3, 
-                    title: t ? (t('repLiqTitle') || 'Liquiditäts-Analyse') : 'Liquiditäts-Analyse',
+                    title: safeT(t, 'repLiqTitle', 'Liquiditätsrisiko'),
                     subtitle: subtitleText,
                     tableHeaders,
                     tableBody,
+                    colWidthsPct: [0.26, 0.50, 0.24],
+                    colAligns: ['left', 'left', 'right'],
+                    kpis,
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinBundle Pro] Batch Export Error im LiquidityReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error:", err);
                 resolve(null);
             }
         });
@@ -177,8 +209,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  // FIX: data ist nun Teil der Dependency-Liste. Sobald du den Namen änderst, baut sich der EventListener mit dem neuen Namen neu auf!
-  }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, targetDate, labelLiquid, labelIlliquid, data]);
+  }, [liquidAssets, illiquidAssets, grandTotal, fCur, t, targetDate, labelLiquid, labelIlliquid, data, liquidPercent, illiquidPercent, pureCashTotal, cashPercentOfLiquid]);
 
   const renderMiniBar = (value, max, colorClass) => {
       const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
@@ -194,7 +225,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>{t ? (t('noAssetsFoundDate') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.') : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}</p>
+          <p>{safeT(t, 'noAssetsFoundDate', 'Keine Vermögenswerte zum gewählten Stichtag gefunden.')}</p>
         </div>
       </div>
     );
@@ -202,14 +233,14 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
   return (
     <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
-      {/* GEMEINSAMER UMSCHLAG FÜR PDF EXPORT */}
+      
       <div className="pdf-combined-export-block w-full bg-white dark:bg-transparent">
           
-          <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="PieChart" size={14} className="text-blue-500"/>
-                    <span>{t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital'}</span>
+                    <span>{safeT(t, 'totalWealth', 'Gesamtkapital')}</span>
                 </div>
                 <div className="w-full" style={{ containerType: 'inline-size' }}>
                     <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={fCur(grandTotal)}>
@@ -217,7 +248,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-1 flex gap-1">
-                    <span>{t ? (t('statusAsOf') || 'Stichtag:') : 'Stichtag:'}</span> 
+                    <span>{safeT(t, 'statusAsOf', 'Stichtag:')}</span> 
                     <span>{new Date(targetDate).toLocaleDateString('de-CH')}</span>
                 </div>
              </div>
@@ -238,7 +269,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
-                    <span>{t ? (t('descLiquidFunds') || 'Flexibel abrufbares Vermögen') : 'Flexibel abrufbares Vermögen'}</span>
+                    <span>{safeT(t, 'descLiquidFunds', 'Flexibel abrufbares Vermögen')}</span>
                 </div>
              </div>
 
@@ -258,19 +289,19 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
-                    <span>{t ? (t('descIlliquidFunds') || 'Langfristig gebundenes Kapital') : 'Langfristig gebundenes Kapital'}</span>
+                    <span>{safeT(t, 'descIlliquidFunds', 'Langfristig gebundenes Kapital')}</span>
                 </div>
              </div>
 
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between" title={t ? (t('tooltipCashShare') || "Anteil des Cashs am liquiden Vermögen") : "Anteil"}>
+                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="DollarSign" size={14} className="text-emerald-500"/>
-                      <span>{t ? (t('labelHardLiquidity') || 'Harte Liquidität') : 'Harte Liquidität'}</span>
+                      <span>{safeT(t, 'labelHardLiquidity', 'Harte Liquidität')}</span>
                     </span>
                     <span className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded font-bold text-[10px] flex gap-0.5">
                       <span>{cashPercentOfLiquid.toFixed(0)}</span>
-                      <span>{t ? (t('labelPctOfLiq') || '% d. Liq.') : '% d. Liq.'}</span>
+                      <span>{safeT(t, 'labelPctOfLiq', '% d. Liq.')}</span>
                     </span>
                 </div>
                 <div className="w-full" style={{ containerType: 'inline-size' }}>
@@ -279,17 +310,18 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     </div>
                 </div>
                 <div className="text-xs text-gray-400 mt-1">
-                    <span>{t ? (t('descCashFunds') || 'Sofort verfügbare Geldmittel') : 'Sofort verfügbare Geldmittel'}</span>
+                    <span>{safeT(t, 'descCashFunds', 'Sofort verfügbare Geldmittel')}</span>
                 </div>
              </div>
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block">
+            
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleStructureOverview', 'Struktur-Übersicht')}>
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                    <Icon name="PieChart" className="text-indigo-500"/> <span>{t ? (t('titleStructureOverview') || 'Struktur-Übersicht') : 'Struktur-Übersicht'}</span>
+                    <Icon name="PieChart" className="text-indigo-500"/> <span>{safeT(t, 'titleStructureOverview', 'Struktur-Übersicht')}</span>
                 </h3>
-                <div style={{ width: '100%', height: '300px' }}>
+                <div style={{ width: '100%', height: '320px' }}>
                   <UniversalChart
                     engine={activeChartEngine}
                     type="doughnut"
@@ -304,53 +336,51 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block flex flex-col">
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleLiqHistory', 'Historischer Liquiditätsverlauf')}>
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                    <Icon name="BarChart2" className="text-blue-500"/> <span>{t ? (t('titleCompByClass') || 'Zusammensetzung nach Klassen') : 'Zusammensetzung nach Klassen'}</span>
+                    <Icon name="TrendingUp" className="text-blue-500"/> <span>{safeT(t, 'titleLiqHistory', 'Historischer Liquiditätsverlauf')}</span>
                 </h3>
-                
-                <div className="flex-1 space-y-6 flex flex-col justify-center px-2">
-                    <div>
-                        <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
-                            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span>{t ? (t('catCashAccounts') || 'Cash & Konten') : 'Cash & Konten'}</span></span>
-                            <span className="text-slate-900 dark:text-white"><span>{fCur(catCash)}</span></span>
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(catCash/grandTotal)*100}%` }}></div></div>
-                    </div>
-                    <div>
-                        <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
-                            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div><span>{t ? (t('catSecuritiesCrypto') || 'Wertpapiere & Krypto') : 'Wertpapiere & Krypto'}</span></span>
-                            <span className="text-slate-900 dark:text-white"><span>{fCur(catSecurities)}</span></span>
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${(catSecurities/grandTotal)*100}%` }}></div></div>
-                    </div>
-                    <div>
-                        <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
-                            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div><span>{t ? (t('catPensionProvident') || 'Vorsorge (Pensionskasse, 3a)') : 'Vorsorge (Pensionskasse, 3a)'}</span></span>
-                            <span className="text-slate-900 dark:text-white"><span>{fCur(catPension)}</span></span>
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: `${(catPension/grandTotal)*100}%` }}></div></div>
-                    </div>
-                    <div>
-                        <div className="flex justify-between text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">
-                            <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500"></div><span>{t ? (t('catRealEstateNet') || 'Immobilien (Netto)') : 'Immobilien (Netto)'}</span></span>
-                            <span className="text-slate-900 dark:text-white"><span>{fCur(catRealEstate)}</span></span>
-                        </div>
-                        <div className="w-full h-2.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-amber-500 rounded-full" style={{ width: `${(catRealEstate/grandTotal)*100}%` }}></div></div>
-                    </div>
+                <div style={{ width: '100%', height: '320px' }}>
+                  <UniversalChart
+                    engine={activeChartEngine}
+                    type="line"
+                    height="100%"
+                    labels={historyLabels}
+                    datasets={[
+                      {
+                        label: labelHard,
+                        data: historyHardCash,
+                        backgroundColor: '#10b981',
+                        valueFormatter: fCur
+                      },
+                      {
+                        label: labelLiquid,
+                        data: historyLiquid,
+                        backgroundColor: '#0ea5e9',
+                        valueFormatter: fCur
+                      },
+                      {
+                        label: labelIlliquid,
+                        data: historyIlliquid,
+                        backgroundColor: '#f59e0b',
+                        valueFormatter: fCur
+                      }
+                    ]}
+                  />
                 </div>
             </div>
+
           </div>
       </div>
 
       <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200">
-          {t ? (t('labelBreakdownDetails') || 'Detaillierte Aufschlüsselung') : 'Detaillierte Aufschlüsselung'}
+          {safeT(t, 'labelBreakdownDetails', 'Detaillierte Aufschlüsselung')}
       </h3>
 
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-10">
          <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 p-2 gap-2">
-             <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t ? (t('tabTopPositions') || 'Top Positionen') : 'Top Positionen'}</button>
-             <button onClick={() => setViewTab('details')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewTab === 'details' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{t ? (t('tabAllAssets') || 'Alle Assets anzeigen') : 'Alle Assets anzeigen'}</button>
+             <button onClick={() => setViewTab('overview')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{safeT(t, 'tabTopPositions', 'Top Positionen')}</button>
+             <button onClick={() => setViewTab('details')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${viewTab === 'details' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>{safeT(t, 'tabAllAssets', 'Alle Assets anzeigen')}</button>
          </div>
 
          <div className="p-6">
@@ -379,9 +409,9 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         ))}
                         {viewTab === 'overview' && liquidAssets.length > 5 && (
                             <div className="text-xs text-center text-gray-400 pt-3 pb-1 italic font-medium flex justify-center gap-1">
-                                <span>{t ? (t('textAnd') || '... und') : '... und'}</span> 
+                                <span>{safeT(t, 'textAnd', '... und')}</span> 
                                 <span>{liquidAssets.length - 5}</span> 
-                                <span>{t ? (t('textMore') || 'weitere') : 'weitere'}</span>
+                                <span>{safeT(t, 'textMore', 'weitere')}</span>
                             </div>
                         )}
                     </ul>
@@ -411,9 +441,9 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         ))}
                         {viewTab === 'overview' && illiquidAssets.length > 5 && (
                             <div className="text-xs text-center text-gray-400 pt-3 pb-1 italic font-medium flex justify-center gap-1">
-                                <span>{t ? (t('textAnd') || '... und') : '... und'}</span> 
+                                <span>{safeT(t, 'textAnd', '... und')}</span> 
                                 <span>{illiquidAssets.length - 5}</span> 
-                                <span>{t ? (t('textMore') || 'weitere') : 'weitere'}</span>
+                                <span>{safeT(t, 'textMore', 'weitere')}</span>
                             </div>
                         )}
                     </ul>

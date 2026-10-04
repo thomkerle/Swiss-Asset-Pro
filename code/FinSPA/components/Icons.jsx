@@ -112,7 +112,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         // --- HINZUGEFÜGTE ICONS FÜR API LIVE EDITOR ---
         Play: 'fa-play',
         Loader: 'fa-spinner', 
-        AlertTriangle: 'fa-triangle-exclamation'
+        AlertTriangle: 'fa-triangle-exclamation',
+
+	Bookmark: 'fa-bookmark',
+    	Pin: 'fa-thumbtack',
+    	ExternalLink: 'fa-arrow-up-right-from-square'
     };
 
     // Standardfarben für jedes Icon definieren
@@ -218,7 +222,11 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         // --- HINZUGEFÜGTE DEFAULTS FÜR API LIVE EDITOR ---
         Play: 'text-indigo-500',
         Loader: 'text-gray-500',
-        AlertTriangle: 'text-amber-500'
+        AlertTriangle: 'text-amber-500',
+
+	Bookmark: 'text-amber-500',
+    	Pin: 'text-amber-500',
+    	ExternalLink: 'text-blue-500 dark:text-blue-400'
     };
 
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);

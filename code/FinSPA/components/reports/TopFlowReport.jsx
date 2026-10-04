@@ -6,55 +6,96 @@ const safeRequire = getRequire();
 
 const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name, size = 16}) => <span style={{fontSize: size}}>[{name}]</span>);
 const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
-const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
-const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
+const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules?.['data/DataEngine.jsx']?.exports || window.DataEngine || {};
 const { getAssetValueAtDate = () => 0 } = DataEngine;
 
+const PdfToolkit = safeRequire('../print/PdfToolkit.jsx') || window.PdfToolkit;
+
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
+
 const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
-  const chartRef = useRef(null);
-  const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || 'echarts';
+  const reportRef = useRef(null);
+  const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
 
-  const [showAllChartItems, setShowAllChartItems] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const repTitle = t ? t('repTopFlowTitle') || "Top Gewinner & Verlierer" : "Top Gewinner & Verlierer";
-  const repSub = t ? t('repTopFlowSub') || "Absolute Wertveränderung pro Asset" : "Absolute Wertveränderung pro Asset";
-  const wordTo = t ? t('wordTo') || "bis" : "bis";
+  const repTitle = safeT(t, 'repTopFlowTitle', "Top Gewinner & Verlierer");
+  const repSub = safeT(t, 'repTopFlowSub', "Absolute und relative Wertveränderung je Asset");
 
-  const formatLabel = (name) => {
-      if (!name) return 'Unbenannt';
-      if (name.length > 25) return name.substring(0, 22) + '...';
-      return name;
+  const getAcName = (ac) => {
+    const map = { 
+      cash: safeT(t, 'acCashLong', 'Konto / Liquidität'), 
+      fund: safeT(t, 'acFundLong', 'Fonds / ETFs'), 
+      stock: safeT(t, 'acStockLong', 'Aktie'), 
+      crypto: safeT(t, 'acCryptoLong', 'Krypto'), 
+      realestate: safeT(t, 'acRealEstateLong', 'Immobilie'), 
+      mortgage: safeT(t, 'acMortgageLong', 'Hypothek'), 
+      pension_cash: safeT(t, 'acPensionCashLong', 'Pensionskasse'), 
+      pension_3a_cash: safeT(t, 'acPension3aCashLong', '3a Sparkonto'), 
+      pension_3a_fund: safeT(t, 'acPension3aFundLong', '3a Fonds'),
+      pension_3a_managed: safeT(t, 'acPension3aManagedLong', '3a Verwaltet'),
+      managed_fund: safeT(t, 'acManagedFundLong', 'Verwaltetes Depot')
+    };
+    return map[ac] || ac || safeT(t, 'acOtherLong', 'Sonstige');
   };
 
-  const { flows, winners, losers, topWinner, topLoser, totalGained, totalLost } = useMemo(() => {
+  const { 
+    flows, 
+    winners, 
+    losers, 
+    topWinner, 
+    topLoser, 
+    totalGained, 
+    totalLost,
+    netFlow,
+    profitFactor,
+    classFlows
+  } = useMemo(() => {
       let tGained = 0;
       let tLost = 0;
+      const classMap = {};
 
       let calcFlows = (activeAssets || []).map(a => {
           const s = getAssetValueAtDate(a, dateRange?.from || '2000-01-01');
           const e = getAssetValueAtDate(a, dateRange?.to || new Date().toISOString().split('T')[0]);
           const diff = e - s;
+          const pct = s > 0 ? (diff / s) * 100 : (e > 0 ? 100 : 0);
           
           if (diff > 0) tGained += diff;
           if (diff < 0) tLost += Math.abs(diff);
 
+          const ac = a.assetClass || 'cash';
+          classMap[ac] = (classMap[ac] || 0) + diff;
+
           return { 
-              label: a.name || 'Unbenannt', 
+              name: a.name || safeT(t, 'unknown', 'Unbenannt'), 
               class: a.assetClass,
               start: s,
               end: e,
-              value: diff, 
-              valLabel: `${diff > 0 ? '+' : ''}${fCur ? fCur(diff) : diff}`, 
+              diff: diff,
+              pct: pct,
               isPos: diff >= 0 
           };
       });
       
-      calcFlows = calcFlows.filter(f => Math.abs(f.value) > 0.01).sort((a,b) => b.value - a.value);
+      calcFlows = calcFlows.filter(f => Math.abs(f.diff) > 0.01).sort((a,b) => b.diff - a.diff);
 
       const win = calcFlows.filter(f => f.isPos);
       const lose = calcFlows.filter(f => !f.isPos);
-      
+      const net = tGained - tLost;
+      const pf = tLost > 0 ? (tGained / tLost) : (tGained > 0 ? 99.9 : 0);
+
+      const cFlowsArray = Object.keys(classMap)
+          .map(ac => ({
+              classKey: ac,
+              label: getAcName(ac),
+              value: classMap[ac]
+          }))
+          .filter(c => Math.abs(c.value) > 0.01)
+          .sort((a, b) => b.value - a.value);
+
       return {
           flows: calcFlows,
           winners: win,
@@ -62,123 +103,84 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
           topWinner: win.length > 0 ? win[0] : null,
           topLoser: lose.length > 0 ? lose[lose.length - 1] : null,
           totalGained: tGained,
-          totalLost: tLost
+          totalLost: tLost,
+          netFlow: net,
+          profitFactor: pf,
+          classFlows: cFlowsArray
       };
-  }, [activeAssets, dateRange, fCur]);
+  }, [activeAssets, dateRange, t]);
 
-  const chartFlows = useMemo(() => {
-      if (showAllChartItems || flows.length <= 10) return flows;
-      return [...flows.slice(0, 5), ...flows.slice(-5)];
-  }, [flows, showAllChartItems]);
+  const topSplitFlows = useMemo(() => {
+      const topWins = winners.slice(0, 5);
+      const topLoses = losers.slice(-5);
+      return [...topWins, ...topLoses];
+  }, [winners, losers]);
 
-  const loadHtml2Canvas = () => {
-    return new Promise((resolve) => {
-        if (window.html2canvas) return resolve(window.html2canvas);
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        script.onload = () => resolve(window.html2canvas);
-        document.head.appendChild(script);
-    });
-  };
+  const filteredList = useMemo(() => {
+      let list = flows;
+      if (activeTab === 'winners') list = winners;
+      if (activeTab === 'losers') list = losers;
+
+      if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          list = list.filter(f => f.name.toLowerCase().includes(q) || getAcName(f.class).toLowerCase().includes(q));
+      }
+      return list;
+  }, [flows, winners, losers, activeTab, searchQuery]);
 
   useEffect(() => {
     const buildReportData = async () => {
-        const html2canvas = await loadHtml2Canvas();
+        const startDateStr = new Date(dateRange.from).toLocaleDateString('de-CH');
+        const endDateStr = new Date(dateRange.to).toLocaleDateString('de-CH');
+
+        const kpis = [
+            { label: safeT(t, 'kpiTopPerformerGain', 'Top Performer (Gewinn)'), value: topWinner ? topWinner.name : '-', sub: topWinner ? `+${fCur(topWinner.diff)} (+${topWinner.pct.toFixed(1)}%)` : '-', color: '#10b981' },
+            { label: safeT(t, 'kpiWeakestPosition', 'Schwächster Posten'), value: topLoser ? topLoser.name : '-', sub: topLoser ? `${fCur(topLoser.diff)} (${topLoser.pct.toFixed(1)}%)` : '-', color: '#ef4444' },
+            { label: safeT(t, 'kpiSumGainsVsLosses', 'Summe Gewinne vs. Verluste'), value: `+${fCur(totalGained)}`, sub: safeT(t, 'descLossesSub', 'Verluste: -{val}').replace('{val}', fCur(totalLost)), color: '#3b82f6' },
+            { label: safeT(t, 'kpiNetFlowChange', 'Netto-Saldo (Wertveränderung)'), value: `${netFlow >= 0 ? '+' : ''}${fCur(netFlow)}`, sub: safeT(t, 'descProfitFactorShort', 'PF: {pf}').replace('{pf}', profitFactor.toFixed(2)), color: netFlow >= 0 ? '#10b981' : '#f59e0b' }
+        ];
+
         let chartsData = [];
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#0f172a' : '#ffffff';
-
-        // 1. Snapshot des KPI Blocks (abgesichert)
-        const kpiBlock = document.querySelector('.kpi-topflow-export-block');
-        if (kpiBlock) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-            const canvas = await html2canvas(kpiBlock, { 
-                scale: 2, 
-                backgroundColor: bgColor, 
-                useCORS: true, 
-                logging: false,
-                ignoreElements: (element) => {
-                    return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
-                }
-            });
-            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
+        if (PdfToolkit && typeof PdfToolkit.captureCharts === 'function') {
+             chartsData = await PdfToolkit.captureCharts(reportRef.current, document.documentElement.classList.contains('dark'));
         }
 
-        // 2. Snapshot des Chart Blocks
-        if (chartRef.current) {
-            const chartDiv = chartRef.current.querySelector('.universal-chart-wrapper > div') || chartRef.current.querySelector('div');
-            
-            if (chartDiv && window.echarts) {
-                const chartInstance = window.echarts.getInstanceByDom(chartDiv);
-                if (chartInstance) {
-                    const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                    // FIX: Breite auf volle Seite setzen, aber mit maximaler Höhe (fit) skalieren!
-                    chartsData.push({ 
-                        title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', 
-                        image: imgData, 
-                        width: 760,
-                        fit: [760, 450] // Verhindert das Wegschneiden bei zu vielen Items
-                    });
-                }
-            } else {
-                try {
-                    const chartBlock = document.querySelector('.chart-topflow-export-block');
-                    if (chartBlock) {
-                        const canvas = await html2canvas(chartBlock, { 
-                            scale: 2, 
-                            backgroundColor: bgColor, 
-                            useCORS: true, 
-                            logging: false,
-                            ignoreElements: (element) => {
-                                if (element.classList && element.classList.contains('echarts-tooltip')) return true;
-                                if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
-                                return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT';
-                            }
-                        });
-                        chartsData.push({ 
-                            title: t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung', 
-                            image: canvas.toDataURL('image/png', 1.0), 
-                            width: 760,
-                            fit: [760, 450]
-                        });
-                    }
-                } catch (e) {
-                    console.warn("Chart-Fallback Fehler:", e);
-                }
-            }
-        }
-
-        // 3. Tabellendaten generieren
-        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
-            capitalize(t ? t('labelAsset') || 'Asset' : 'Asset'),
-            t ? t('startValue') || 'Startwert' : 'Startwert',
-            t ? t('endValue') || 'Endwert' : 'Endwert',
-            capitalize(t ? t('change') || 'Veränderung' : 'Veränderung')
+            safeT(t, 'colAssetPosition', 'Anlage / Asset'),
+            safeT(t, 'category', 'Kategorie'),
+            safeT(t, 'startValue', 'Startwert'),
+            safeT(t, 'endValue', 'Endwert'),
+            safeT(t, 'colChangeCurrency', 'Delta (CHF)').replace('{cur}', 'CHF'),
+            safeT(t, 'kpiSavingsRate', 'Performance (%)')
         ];
 
         const tableBody = flows.map(f => [
-            f.label, 
+            f.name,
+            getAcName(f.class),
             fCur(f.start),
             fCur(f.end),
-            f.valLabel
+            `${f.diff >= 0 ? '+' : ''}${fCur(f.diff)}`,
+            `${f.pct >= 0 ? '+' : ''}${f.pct.toFixed(2)} %`
         ]);
 
-        return { chartsData, tableHeaders, tableBody };
+        return { chartsData, tableHeaders, tableBody, kpis };
     };
 
     const handlePdfExport = async () => {
       try {
-        if (!PdfExportEngine) return;
-        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+        if (!PdfToolkit) return;
+        const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
 
-        await PdfExportEngine.exportReport({
+        await PdfToolkit.exportReport({
           title: repTitle,
-          subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordTo} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
+          subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${safeT(t, 'wordTo', 'bis')} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
           tableHeaders,
           tableBody,
+          colWidthsPct: [0.30, 0.18, 0.13, 0.13, 0.13, 0.13],
+          colAligns: ['left', 'left', 'right', 'right', 'right', 'right'],
+          kpis,
           chartsData,
-          data: data || activeAssets 
+          data
         });
       } catch (err) { 
           console.error("[FinBundle Pro] PDF Export Error im TopFlowReport:", err); 
@@ -188,13 +190,16 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
-                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
                 resolve({
                     order: 14, 
                     title: repTitle,
-                    subtitle: `${repSub} (${new Date(dateRange.from).toLocaleDateString('de-CH')} ${wordTo} ${new Date(dateRange.to).toLocaleDateString('de-CH')})`,
+                    subtitle: `${new Date(dateRange.from).toLocaleDateString('de-CH')} ${safeT(t, 'wordTo', 'bis')} ${new Date(dateRange.to).toLocaleDateString('de-CH')}`,
                     tableHeaders,
                     tableBody,
+                    colWidthsPct: [0.30, 0.18, 0.13, 0.13, 0.13, 0.13],
+                    colAligns: ['left', 'left', 'right', 'right', 'right', 'right'],
+                    kpis,
                     chartsData
                 });
             } catch (err) {
@@ -215,218 +220,238 @@ const TopFlowReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [flows, dateRange, fCur, t, repTitle, repSub, wordTo, data, activeAssets, topWinner, topLoser, totalGained, totalLost]);
+  }, [flows, dateRange, fCur, t, repTitle, repSub, data, topWinner, topLoser, totalGained, totalLost, netFlow, profitFactor]);
 
   if (flows.length === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Activity" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p><span>{t ? t('noFlowsFound') || 'Keine Wertveränderungen im gewählten Zeitraum.' : 'Keine Wertveränderungen im gewählten Zeitraum.'}</span></p>
+          <p>{safeT(t, 'msgNoMovementsFoundPeriod', 'Keine messbaren Wertveränderungen im gewählten Zeitraum gefunden.')}</p>
         </div>
       </div>
     );
   }
 
+  const baseCur = data?.settings?.baseCurrency || 'CHF';
+  const topWinnersChartTitle = safeT(t, 'titleTopWinnersVsLosersChart', 'Top Gewinner & Verlierer ({cur})').replace('{cur}', baseCur);
+  const topWinnersPdfTitle = safeT(t, 'titleTopWinnersVsLosersPdf', 'Top Gewinner vs. Verlierer ({cur})').replace('{cur}', baseCur);
+
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
 
-      <div className="w-full bg-white dark:bg-transparent">
-          
-          <div className="kpi-topflow-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
-                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
-                    <Icon name="TrendingUp" size={14} className="text-emerald-500"/>
-                    <span>{String(t ? t('bestPerformer') || 'Bester Performer' : 'Bester Performer').toUpperCase()}</span>
-                </div>
-                <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white break-words pb-1" title={topWinner?.label}>
-                    <span>{topWinner ? topWinner.label : '-'}</span>
-                </div>
-                <div className="text-xs font-bold mt-2">
-                    {topWinner ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 flex gap-0.5">
-                            <span>+</span>
-                            <span>{fCur(topWinner.value)}</span>
-                        </span>
-                    ) : (
-                        <span className="text-gray-400"><span>{t ? t('noGains') || 'Keine Gewinne' : 'Keine Gewinne'}</span></span>
-                    )}
-                </div>
-             </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+         
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Icon name="TrendingUp" size={14} className="text-emerald-500"/>
+                {safeT(t, 'labelTopPerformerHeader', 'TOP PERFORMER')}
+            </div>
+            <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white truncate" title={topWinner?.name}>
+                {topWinner ? topWinner.name : '-'}
+            </div>
+            <div className="text-xs font-bold mt-2 truncate">
+                {topWinner ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                        +{fCur(topWinner.diff)} <span className="opacity-75 font-normal">(+{topWinner.pct.toFixed(1)}%)</span>
+                    </span>
+                ) : (
+                    <span className="text-gray-400">{safeT(t, 'noGains', 'Keine Gewinner')}</span>
+                )}
+            </div>
+         </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-500">
-                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
-                    <Icon name="TrendingDown" size={14} className="text-rose-500"/>
-                    <span>{String(t ? t('weakestItem') || 'Schwächster Posten' : 'Schwächster Posten').toUpperCase()}</span>
-                </div>
-                <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white break-words pb-1" title={topLoser?.label}>
-                    <span>{topLoser ? topLoser.label : '-'}</span>
-                </div>
-                <div className="text-xs font-bold mt-2 flex gap-0.5">
-                    {topLoser ? (
-                        <span className="text-rose-600 dark:text-rose-400"><span>{fCur(topLoser.value)}</span></span>
-                    ) : (
-                        <span className="text-gray-400"><span>{t ? t('noLosses') || 'Keine Verluste' : 'Keine Verluste'}</span></span>
-                    )}
-                </div>
-             </div>
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-500 overflow-hidden">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Icon name="TrendingDown" size={14} className="text-rose-500"/>
+                {safeT(t, 'labelWeakestPositionHeader', 'SCHWÄCHSTER POSTEN')}
+            </div>
+            <div className="text-xl xl:text-2xl font-black text-slate-900 dark:text-white truncate" title={topLoser?.name}>
+                {topLoser ? topLoser.name : '-'}
+            </div>
+            <div className="text-xs font-bold mt-2 truncate">
+                {topLoser ? (
+                    <span className="text-rose-600 dark:text-rose-400">
+                        {fCur(topLoser.diff)} <span className="opacity-75 font-normal">({topLoser.pct.toFixed(1)}%)</span>
+                    </span>
+                ) : (
+                    <span className="text-gray-400">{safeT(t, 'noLosses', 'Keine Verluste')}</span>
+                )}
+            </div>
+         </div>
 
-             <div className="bg-emerald-50 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-600 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Icon name="PlusCircle" size={48} className="text-emerald-600" />
-                </div>
-                <div className="text-emerald-800 dark:text-emerald-300 text-xs font-bold tracking-wider mb-2 flex items-center gap-2 relative z-10">
-                    <Icon name="Plus" size={14} />
-                    <span>{String(t ? t('totalGains') || 'Summe Gewinne' : 'Summe Gewinne').toUpperCase()}</span>
-                </div>
-                <div className="text-2xl xl:text-3xl font-black text-emerald-700 dark:text-emerald-400 relative z-10 flex gap-0.5 break-words pb-1">
-                    <span>+</span>
-                    <span>{fCur(totalGained)}</span>
-                </div>
-             </div>
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Icon name="Activity" size={14} className="text-blue-500" />
+                {safeT(t, 'labelGainLossSumHeader', 'GEWINN- / VERLUSTSUMME')}
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+                +{fCur(totalGained)}
+            </div>
+            <div className="text-xs text-rose-600 dark:text-rose-400 mt-2 font-medium">
+                {safeT(t, 'descLossesSub', 'Verluste: -{val}').replace('{val}', fCur(totalLost))}
+            </div>
+         </div>
 
-             <div className="bg-rose-50 dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-600 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Icon name="Trash2" size={48} className="text-rose-600" />
-                </div>
-                <div className="text-rose-800 dark:text-rose-300 text-xs font-bold tracking-wider mb-2 flex items-center gap-2 relative z-10">
-                    <Icon name="ArrowUp" size={14} className="transform rotate-180" />
-                    <span>{String(t ? t('totalLosses') || 'Summe Verluste' : 'Summe Verluste').toUpperCase()}</span>
-                </div>
-                <div className="text-2xl xl:text-3xl font-black text-rose-700 dark:text-rose-400 relative z-10 flex gap-0.5 break-words pb-1">
-                    <span>-</span>
-                    <span>{fCur(totalLost)}</span>
-                </div>
-             </div>
+         <div className={`p-6 border rounded-2xl shadow-sm border-b-4 overflow-hidden ${
+             netFlow >= 0 
+                ? 'bg-emerald-50/50 dark:bg-slate-900 border-emerald-200 dark:border-emerald-800/50 border-b-emerald-500' 
+                : 'bg-rose-50/50 dark:bg-slate-900 border-rose-200 dark:border-rose-800/50 border-b-rose-500'
+         }`}>
+            <div className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between text-slate-600 dark:text-slate-400">
+                <span className="flex items-center gap-2">
+                    <Icon name={netFlow >= 0 ? "CheckCircle" : "AlertTriangle"} size={14} className={netFlow >= 0 ? "text-emerald-500" : "text-rose-500"} />
+                    <span>{safeT(t, 'labelNetBalanceHeader', 'NETTO-SALDO')}</span>
+                </span>
+                <span className="text-[10px] font-bold bg-white dark:bg-slate-800 px-2 py-0.5 rounded shadow-xs">
+                    {safeT(t, 'descProfitFactorShort', 'PF: {pf}').replace('{pf}', profitFactor.toFixed(2))}
+                </span>
+            </div>
+            <div className={`text-2xl font-black truncate ${netFlow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {netFlow >= 0 ? '+' : ''}{fCur(netFlow)}
+            </div>
+            <div className="text-xs text-gray-400 mt-2 truncate">
+                {safeT(t, 'descProfitFactorLong', 'Profit Factor: {pf} (Gewinne/Verluste)').replace('{pf}', profitFactor.toFixed(2))}
+            </div>
+         </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+        
+        <div 
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" 
+            data-pdf-title={topWinnersPdfTitle}
+        >
+            <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                <Icon name="BarChart" className="text-blue-500" /> {topWinnersChartTitle}
+            </h3>
+            <div style={{ width: '100%', height: '340px' }}>
+                <UniversalChart 
+                    engine={activeChartEngine}
+                    type="bar"
+                    horizontal={true}
+                    labels={topSplitFlows.map(f => f.name.length > 22 ? f.name.substring(0, 20) + '...' : f.name)}
+                    datasets={[{
+                        label: safeT(t, 'valueChange', 'Wertveränderung'),
+                        data: topSplitFlows.map(f => f.diff),
+                        backgroundColor: topSplitFlows.map(f => f.isPos ? '#10b981' : '#ef4444'),
+                        valueFormatter: (val) => `${val > 0 ? '+' : ''}${fCur(val)}`
+                    }]}
+                    height="100%" 
+                />
+            </div>
+        </div>
+
+        <div 
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" 
+            data-pdf-title={safeT(t, 'titleClassFlowsPdf', 'Wertveränderung nach Anlageklassen')}
+        >
+            <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                <Icon name="Layers" className="text-indigo-500" /> {safeT(t, 'titleClassFlowsChart', 'Wertveränderung nach Anlageklasse')}
+            </h3>
+            <div style={{ width: '100%', height: '340px' }}>
+                <UniversalChart 
+                    engine={activeChartEngine}
+                    type="bar"
+                    horizontal={true}
+                    labels={classFlows.map(c => c.label)}
+                    datasets={[{
+                        label: safeT(t, 'labelClassBalance', 'Klassen-Saldo'),
+                        data: classFlows.map(c => c.value),
+                        backgroundColor: classFlows.map(c => c.value >= 0 ? '#3b82f6' : '#f59e0b'),
+                        valueFormatter: (val) => `${val > 0 ? '+' : ''}${fCur(val)}`
+                    }]}
+                    height="100%" 
+                />
+            </div>
+        </div>
+
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              
+              <div className="flex items-center gap-2">
+                  <Icon name="List" className="text-slate-500" />
+                  <span className="font-bold text-lg text-slate-800 dark:text-slate-200">
+                      {safeT(t, 'titleAssetFlowsCount', `Asset-Bewegungen (${filteredList.length} von ${flows.length})`).replace('{filtered}', filteredList.length).replace('{total}', flows.length)}
+                  </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex bg-gray-200/60 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
+                      <button 
+                          onClick={() => setActiveTab('all')} 
+                          className={`px-3 py-1.5 rounded-md transition-all ${activeTab === 'all' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-bold' : 'text-gray-500'}`}
+                      >
+                          {safeT(t, 'tabAll', 'Alle')} ({flows.length})
+                      </button>
+                      <button 
+                          onClick={() => setActiveTab('winners')} 
+                          className={`px-3 py-1.5 rounded-md transition-all ${activeTab === 'winners' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold' : 'text-gray-500'}`}
+                      >
+                          {safeT(t, 'topWinners', 'Gewinner')} ({winners.length})
+                      </button>
+                      <button 
+                          onClick={() => setActiveTab('losers')} 
+                          className={`px-3 py-1.5 rounded-md transition-all ${activeTab === 'losers' ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm font-bold' : 'text-gray-500'}`}
+                      >
+                          {safeT(t, 'topLosers', 'Verlierer')} ({losers.length})
+                      </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-48">
+                      <input 
+                          type="text" 
+                          placeholder={safeT(t, 'placeholderFilterAsset', 'Asset filtern...')} 
+                          value={searchQuery} 
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="w-full py-1.5 pl-7 pr-3 text-xs border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 outline-none focus:border-blue-500 text-slate-800 dark:text-slate-200"
+                      />
+                      <div className="absolute left-2 top-2 text-gray-400">
+                          <Icon name="Search" size={12} />
+                      </div>
+                  </div>
+              </div>
+
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
-            
-            <div className={`lg:col-span-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-topflow-export-block self-start transition-all duration-300 ${showAllChartItems ? '' : 'sticky top-8'}`}>
-                <h3 className="font-bold text-lg mb-6 flex items-center justify-between text-slate-800 dark:text-slate-200">
-                    <span className="flex items-center gap-2">
-                        <Icon name="BarChart" className="text-blue-500" /> <span>{t ? t('overviewValueChange') || 'Übersicht Wertveränderung' : 'Übersicht Wertveränderung'}</span>
-                    </span>
-                    
-                    {flows.length > 10 && (
-                        <button 
-                            onClick={() => setShowAllChartItems(!showAllChartItems)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors focus:outline-none ${
-                                showAllChartItems 
-                                ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50' 
-                                : 'bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300'
-                            }`}
-                        >
-                            {showAllChartItems ? (
-                                <><Icon name="ChevronUp" size={14} /> <span>{t ? t('reduceToTop10') || 'Auf Top 10 reduzieren' : 'Auf Top 10 reduzieren'}</span></>
-                            ) : (
-                                <><Icon name="ChevronDown" size={14} /> <span>{t ? t('btnShowAll') || 'Alle' : 'Alle'} {flows.length} {t ? t('btnShowAllSuffix') || 'anzeigen' : 'anzeigen'}</span></>
-                            )}
-                        </button>
-                    )}
-                </h3>
-                
-                <div ref={chartRef} style={{ width: '100%', height: `${Math.max(450, chartFlows.length * 40)}px` }}>
-                    <UniversalChart 
-                        engine={activeChartEngine}
-                        type="bar"
-                        horizontal={true}
-                        xAxisName={t ? t('change') || 'Veränderung' : 'Veränderung'}
-                        labels={chartFlows.map((f, i) => formatLabel(f.label) + '\u200B'.repeat(i))}
-                        datasets={[{
-                            label: t ? t('change') || 'Veränderung' : 'Veränderung',
-                            data: chartFlows.map(f => f.value),
-                            backgroundColor: chartFlows.map(f => f.isPos ? '#10b981' : '#f43f5e'),
-                            valueFormatter: (val) => `${val > 0 ? '+' : ''}${fCur(val)}`
-                        }]}
-                        height="100%" 
-                    />
-                </div>
-            </div>
-
-            <div className="lg:col-span-6 space-y-6">
-                
-                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div className="bg-emerald-50/50 dark:bg-slate-800/50 p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
-                        <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <Icon name="TrendingUp" className="text-emerald-500" />
-                            <span>{t ? t('topWinners') || 'Top Gewinner' : 'Top Gewinner'}</span>
-                        </div>
-                        <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full font-bold flex gap-1">
-                            <span>{winners.length}</span>
-                            <span>{t ? t('assets') || 'Assets' : 'Assets'}</span>
-                        </span>
-                    </div>
-                    <div className="p-0">
-                        {winners.length > 0 ? (
-                            <table className="w-full text-sm">
-                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                    {winners.map((f, i) => (
-                                        <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                                            <td className="p-3 pl-5 text-gray-700 dark:text-gray-200">
-                                                <div className="font-medium"><span>{f.label}</span></div>
-                                                <div className="text-xs text-gray-400 mt-0.5 flex gap-2">
-                                                    <span>{fCur(f.start)}</span> 
-                                                    <span className="text-gray-300 dark:text-gray-600">→</span> 
-                                                    <span>{fCur(f.end)}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-3 pr-5 text-right align-middle">
-                                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded">
-                                                    <span>{f.valLabel}</span>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="p-6 text-center text-gray-400 text-sm"><span>{t ? t('noWinnersPeriod') || 'Keine Gewinner in dieser Periode.' : 'Keine Gewinner in dieser Periode.'}</span></div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div className="bg-rose-50/50 dark:bg-slate-800/50 p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
-                        <div className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <Icon name="TrendingDown" className="text-rose-500" />
-                            <span>{t ? t('topLosers') || 'Verlierer' : 'Verlierer'}</span>
-                        </div>
-                        <span className="text-xs bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-full font-bold flex gap-1">
-                            <span>{losers.length}</span>
-                            <span>{t ? t('assets') || 'Assets' : 'Assets'}</span>
-                        </span>
-                    </div>
-                    <div className="p-0">
-                        {losers.length > 0 ? (
-                            <table className="w-full text-sm">
-                                <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                    {losers.map((f, i) => (
-                                        <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                                            <td className="p-3 pl-5 text-gray-700 dark:text-gray-200">
-                                                <div className="font-medium"><span>{f.label}</span></div>
-                                                <div className="text-xs text-gray-400 mt-0.5 flex gap-2">
-                                                    <span>{fCur(f.start)}</span> 
-                                                    <span className="text-gray-300 dark:text-gray-600">→</span> 
-                                                    <span>{fCur(f.end)}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-3 pr-5 text-right align-middle">
-                                                <span className="font-mono font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded">
-                                                    <span>{f.valLabel}</span>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="p-6 text-center text-gray-400 text-sm"><span>{t ? t('noLosersPeriod') || 'Keine Verlierer in dieser Periode.' : 'Keine Verlierer in dieser Periode.'}</span></div>
-                        )}
-                    </div>
-                </div>
-
-            </div>
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table className="w-full text-left text-sm">
+                  <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold sticky top-0 z-10 shadow-sm">
+                      <tr>
+                          <th className="p-4">{safeT(t, 'colAssetPosition', 'Anlage / Asset')}</th>
+                          <th className="p-4">{safeT(t, 'assetClass', 'Anlageklasse')}</th>
+                          <th className="p-4 text-right">{safeT(t, 'startValue', 'Startwert')}</th>
+                          <th className="p-4 text-right">{safeT(t, 'endValue', 'Endwert')}</th>
+                          <th className="p-4 text-right">{safeT(t, 'colChangeCurrency', `Delta (${baseCur})`).replace('{cur}', baseCur)}</th>
+                          <th className="p-4 text-right">{safeT(t, 'performanceKPI', 'Performance (%)')}</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
+                      {filteredList.map((f, i) => (
+                          <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
+                              <td className="p-4 font-sans font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${f.isPos ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+                                  <span className="truncate">{f.name}</span>
+                              </td>
+                              <td className="p-4 font-sans text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-gray-200 dark:border-slate-700 uppercase text-[10px]">
+                                      {getAcName(f.class)}
+                                  </span>
+                              </td>
+                              <td className="p-4 text-right text-gray-500">{fCur(f.start)}</td>
+                              <td className="p-4 text-right font-bold text-slate-800 dark:text-slate-200">{fCur(f.end)}</td>
+                              <td className={`p-4 text-right font-bold ${f.isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                  {f.diff >= 0 ? '+' : ''}{fCur(f.diff)}
+                              </td>
+                              <td className={`p-4 text-right font-bold ${f.isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                  {f.pct >= 0 ? '+' : ''}{f.pct.toFixed(2)} %
+                              </td>
+                          </tr>
+                      ))}
+                  </tbody>
+              </table>
           </div>
       </div>
     </div>

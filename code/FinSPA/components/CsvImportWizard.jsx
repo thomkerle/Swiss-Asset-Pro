@@ -13,10 +13,8 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
     const [step, setStep] = useState(1);
     const [fileTypeLabel, setFileTypeLabel] = useState('CSV');
     
-    // Gesamte geparste Rohdaten (nur für CSV)
     const [allRows, setAllRows] = useState([]);
     
-    // Konfiguration des Grids (nur für CSV)
     const [config, setConfig] = useState({
         delimiter: ';',
         headerRow: 0,
@@ -24,11 +22,9 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
     });
     const [colMapping, setColMapping] = useState({});
 
-    // Finale Vorschau-Daten für alle Formate (CSV, CAMT, MT940)
     const [previewData, setPreviewData] = useState([]);
     const [importErrors, setImportErrors] = useState([]);
 
-    // --- ZIEL-MODUS ---
     const [importMode, setImportMode] = useState('single_asset');
 
     const availableAssets = useMemo(() => {
@@ -66,10 +62,8 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
     const [selectedAssetId, setSelectedAssetId] = useState(availableAssets.length > 0 ? availableAssets[0].id : '');
     const [selectedCategoryId, setSelectedCategoryId] = useState(availableCategories.length > 0 ? availableCategories[0].id : 'new_import');
 
-    const safeT = (key, fallback) => (t && t(key) ? t(key) : fallback);
+    const safeT = (key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
-    // --- PARSER FÜR STRUKTURIERTE FORMATE (CAMT & MT940) ---
-    
     const parseCamt053 = (xmlText) => {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, "text/xml");
@@ -85,12 +79,10 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
             const dt = bookgDtNode ? bookgDtNode.getElementsByTagName("Dt")[0]?.textContent : null;
             const isDebit = cdtDbtInd === 'DBIT';
 
-            // Absender / Empfänger ermitteln
             const cdtrNm = entry.getElementsByTagName("Cdtr")[0]?.getElementsByTagName("Nm")[0]?.textContent;
             const dbtrNm = entry.getElementsByTagName("Dbtr")[0]?.getElementsByTagName("Nm")[0]?.textContent;
             let counterParty = (isDebit ? cdtrNm : dbtrNm) || cdtrNm || dbtrNm || '';
 
-            // Texte, Mitteilungen und Referenzen
             const ustrd = entry.getElementsByTagName("Ustrd")[0]?.textContent;
             const addtlTxInf = entry.getElementsByTagName("AddtlTxInf")[0]?.textContent;
             const addtlNtryInf = entry.getElementsByTagName("AddtlNtryInf")[0]?.textContent;
@@ -99,7 +91,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
             let textParts = [];
             if (ustrd) textParts.push(ustrd);
             if (ref) textParts.push(`Ref: ${ref}`);
-            // Duplikate vermeiden (z.B. wenn AddtlTxInf und AddtlNtryInf beide "Vergütung" sind)
             if (addtlTxInf && !textParts.includes(addtlTxInf)) textParts.push(addtlTxInf);
             if (addtlNtryInf && !textParts.includes(addtlNtryInf)) textParts.push(addtlNtryInf);
 
@@ -108,7 +99,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
             if (textParts.length > 0) assetParts.push(textParts.join(', '));
             
             let assetStr = assetParts.join(' - ');
-            if (!assetStr) assetStr = 'CAMT.053 Buchung';
+            if (!assetStr) assetStr = safeT('txtCamtDefaultBooking', 'CAMT.053 Buchung');
 
             if (amtNode && dt) {
                  const amount = parseFloat(amtNode.textContent);
@@ -133,7 +124,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
     const parseMT940 = (text) => {
         let mtCurrency = data?.settings?.baseCurrency || 'CHF';
-        // Versuche Währung aus Eröffnungssaldo :60F: oder :60M: zu lesen
         const currMatch = text.match(/:6[02][FM]:[CD]\d{6}([A-Z]{3})/);
         if (currMatch) mtCurrency = currMatch[1];
 
@@ -144,17 +134,14 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line.startsWith(':61:')) {
-                // Vorherigen Eintrag speichern
                 if (currentEntry) { results.push(currentEntry); currentEntry = null; }
 
-                // Regex für MT940 Transaktion (z.B. :61:2308150815CD1000,00NTRF)
                 const match = line.match(/^:61:(\d{6})(?:\d{4})?(C|D|RC|RD)([A-Z]{1})?([\d,.]+)/);
                 if (match) {
                     const dateStr = match[1];
                     const typeInd = match[2];
                     const amountStr = match[4].replace(',', '.');
 
-                    // YYMMDD -> YYYY-MM-DD (Geht davon aus, dass 20xx gemeint ist)
                     const year = parseInt(dateStr.substring(0, 2)) + 2000;
                     const month = dateStr.substring(2, 4);
                     const day = dateStr.substring(4, 6);
@@ -183,12 +170,11 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         }
         if (currentEntry) results.push(currentEntry);
 
-        // Aufräumen der Texte
-        results.forEach(p => { p.asset = p.asset.trim().substring(0, 150) || 'MT940 Buchung'; });
+        const defaultMtText = safeT('txtMt940DefaultBooking', 'MT940 Buchung');
+        results.forEach(p => { p.asset = p.asset.trim().substring(0, 150) || defaultMtText; });
         return results;
     };
 
-    // --- STEP 1: UPLOAD & DISPATCHING ---
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -199,16 +185,15 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         reader.onload = (event) => {
             const text = event.target.result;
             
-            // Format-Erkennung
             const isXML = fileName.endsWith('.xml') || text.trim().startsWith('<?xml');
-            const isMT940 = fileName.endsWith('.mt940') || fileName.endsWith('.sta') || fileName.endsWith('.txt') && (text.trim().startsWith('{1:') || text.includes(':20:'));
+            const isMT940 = fileName.endsWith('.mt940') || fileName.endsWith('.sta') || (fileName.endsWith('.txt') && (text.trim().startsWith('{1:') || text.includes(':20:')));
             
             if (isXML) {
                 setFileTypeLabel('CAMT.053');
                 const parsedCamt = parseCamt053(text);
                 if (parsedCamt.length === 0) setImportErrors([safeT('errCamtNoEntries', "Konnte keine gültigen Buchungen (Ntry) in der CAMT-Datei finden.")]);
                 setPreviewData(parsedCamt);
-                setStep(3); // Mapping überspringen!
+                setStep(3);
                 return;
             } 
             
@@ -217,40 +202,72 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                 const parsedMt = parseMT940(text);
                 if (parsedMt.length === 0) setImportErrors([safeT('errMt940NoEntries', "Konnte keine gültigen Buchungen (:61:) in der MT940-Datei finden.")]);
                 setPreviewData(parsedMt);
-                setStep(3); // Mapping überspringen!
+                setStep(3);
                 return;
             }
 
-            // --- STANDARD CSV LOGIK ---
             setFileTypeLabel('CSV');
-            const parseLineRobust = (line, delim) => {
-                let res = []; let cur = ''; let inQ = false;
-                for(let i = 0; i < line.length; i++) {
-                    let c = line[i];
-                    if(inQ) {
-                        if(c === '"' && line[i+1] === '"') { cur += '"'; i++; }
-                        else if(c === '"') inQ = false;
-                        else cur += c;
-                    } else {
-                        if(c === '"') inQ = true;
-                        else if(c === delim) { res.push(cur.trim()); cur = ''; }
-                        else cur += c;
-                    }
-                }
-                res.push(cur.trim());
-                return res;
-            };
-
+            
             const firstLine = text.split('\n')[0] || '';
             const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
-            
-            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-            if (lines.length < 2) {
+
+            const parseCSVTextRobust = (csvText, delim) => {
+                let rows = [];
+                let currentRow = [];
+                let currentCell = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < csvText.length; i++) {
+                    let c = csvText[i];
+                    let nextC = csvText[i + 1];
+
+                    if (inQuotes) {
+                        if (c === '"') {
+                            if (nextC === '"') {
+                                currentCell += '"';
+                                i++; 
+                            } else {
+                                inQuotes = false;
+                            }
+                        } else {
+                            currentCell += c;
+                        }
+                    } else {
+                        if (c === '"') {
+                            inQuotes = true;
+                        } else if (c === delim) {
+                            currentRow.push(currentCell.trim());
+                            currentCell = '';
+                        } else if (c === '\n' || c === '\r') {
+                            if (c === '\r' && nextC === '\n') {
+                                i++;
+                            }
+                            if (currentRow.length > 0 || currentCell.trim() !== '') {
+                                currentRow.push(currentCell.trim());
+                                rows.push(currentRow);
+                            }
+                            currentRow = [];
+                            currentCell = '';
+                        } else {
+                            currentCell += c;
+                        }
+                    }
+                }
+                
+                if (currentRow.length > 0 || currentCell.trim() !== '') {
+                    currentRow.push(currentCell.trim());
+                    rows.push(currentRow);
+                }
+                
+                return rows;
+            };
+
+            const parsedRows = parseCSVTextRobust(text, delimiter);
+
+            if (parsedRows.length < 2) {
                 if (showToast) showToast(safeT('errCsvEmpty', 'Datei ist leer oder hat kein gültiges Format.'), 'error');
                 return;
             }
-
-            const parsedRows = lines.map(line => parseLineRobust(line, delimiter));
             
             let guessHeaderIdx = 0;
             for(let i = 0; i < Math.min(parsedRows.length, 20); i++) {
@@ -268,7 +285,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                     if (header.includes('datum') || header.includes('date') || header.includes('valuta')) guessMap[idx] = 'date';
                     else if (header.includes('typ') || header.includes('aktion') || header.includes('transaktionsart') || header === 'beschreibung') guessMap[idx] = 'type';
                     else if (header.includes('produkt') || header.includes('asset') || header.includes('name') || header.includes('isin') || header.includes('avisierungstext')) guessMap[idx] = 'asset';
-                    // Auto-Erkennung für kombinierte Betragsspalte (Betrag, Wert, Total, Bewegung)
                     else if (header === 'wert' || header.includes('betrag') || header.includes('total') || header.includes('umsatz') || header.includes('bewegung')) guessMap[idx] = 'amount'; 
                     else if (header === 'gutschrift' || header.includes('eingang')) guessMap[idx] = 'amountIn';
                     else if (header === '' && idx > 0 && parsedRows[guessHeaderIdx][idx-1].toLowerCase().trim() === 'änderung') guessMap[idx] = 'amountIn'; 
@@ -287,14 +303,12 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         reader.readAsText(file, 'UTF-8');
     };
 
-    // --- STEP 2: MAPPING (NUR FÜR CSV) ---
     const generatePreview = () => {
         const preview = [];
         const errors = [];
         const dataRows = allRows.slice(config.startRow);
 
         const getMappedFields = (row) => {
-            // "amount" hinzugefügt für das kombinierte Feld
             let map = { date: '', type: '', asset: '', amount: '', amountIn: '', amountOut: '', currency: '', shares: '', price: '' };
             row.forEach((cell, idx) => {
                 const targetField = colMapping[idx];
@@ -311,12 +325,9 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
             const parsedDate = parseDate ? parseDate(fields.date) : fields.date;
 
             let finalAmount = 0;
-            // Zuerst prüfen, ob das kombinierte 'amount' Feld genutzt wird
             if (fields.amount && String(fields.amount).trim() !== '') {
                 finalAmount = parseNumber ? parseNumber(fields.amount) : Number(fields.amount);
-            } 
-            // Fallback auf getrennte Spalten
-            else if (fields.amountIn && String(fields.amountIn).trim() !== '') {
+            } else if (fields.amountIn && String(fields.amountIn).trim() !== '') {
                 finalAmount = parseNumber ? parseNumber(fields.amountIn) : Number(fields.amountIn);
             } else if (fields.amountOut && String(fields.amountOut).trim() !== '') {
                 finalAmount = -(parseNumber ? Math.abs(parseNumber(fields.amountOut)) : Math.abs(Number(fields.amountOut)));
@@ -324,13 +335,13 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
             let entryType = normalizeType ? normalizeType(fields.type) : 'Einzahlung';
             
-            // Logik für korrekten Typ anhand des Vorzeichens, wenn kein spezieller Typ (wie Kauf/Verkauf) gefunden wurde
             if ((entryType === 'Einzahlung' || !fields.type || String(fields.type).toLowerCase().includes('buchung')) && finalAmount < 0) {
                 entryType = 'Auszahlung';
             }
 
             if (!parsedDate || isNaN(new Date(parsedDate).getTime())) {
-                errors.push(`Zeile ${actualRowIndex}: Ungültiges Datum (${fields.date || 'Leer'})`);
+                const dateErrPattern = safeT('errRowInvalidDate', "Zeile {row}: Ungültiges Datum ({value})");
+                errors.push(dateErrPattern.replace('{row}', actualRowIndex).replace('{value}', fields.date || 'Leer'));
                 return;
             }
 
@@ -345,13 +356,20 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                 }
             }
 
+            let rawAmountText = fields.amount || fields.amountIn || fields.amountOut || '';
+            let detectedCurrency = fields.currency;
+            if (!detectedCurrency && rawAmountText) {
+                const currMatch = String(rawAmountText).match(/\b([A-Z]{3})\b/);
+                if (currMatch) detectedCurrency = currMatch[1];
+            }
+
             preview.push({
                 _originalIndex: actualRowIndex,
                 date: parsedDate,
                 type: entryType,
-                asset: fields.asset ? fields.asset.replace(/^"|"$/g, '').trim() : 'Buchung / Text',
-                amount: Math.abs(finalAmount), // Betrag als positiven Wert speichern, das Vorzeichen steckt im `type`
-                currency: fields.currency || data?.settings?.baseCurrency || 'CHF',
+                asset: fields.asset ? fields.asset.replace(/^"|"$/g, '').trim() : safeT('txtCsvDefaultBooking', 'Buchung / Text'),
+                amount: Math.abs(finalAmount),
+                currency: detectedCurrency || data?.settings?.baseCurrency || 'CHF',
                 shares: parsedShares,
                 price: parsedPrice,
                 rawType: fields.type,
@@ -364,8 +382,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         setStep(3);
     };
 
-    // --- STEP 3 INTERAKTIONEN ---
-    
     const handleRowEdit = (index, field, value) => {
         setPreviewData(prevData => {
             const newData = [...prevData];
@@ -385,12 +401,12 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
     const processImport = () => {
         if (!processCsvImport) {
-            if (showToast) showToast('Import-Engine nicht gefunden.', 'error'); return;
+            if (showToast) showToast(safeT('errImportEngineMissing', 'Import-Engine nicht gefunden.'), 'error'); 
+            return;
         }
 
         const targetId = importMode === 'single_asset' ? selectedAssetId : selectedCategoryId;
         
-        // Filtert alle abgewählten Einträge heraus
         const mappedData = previewData
             .filter(item => item.selected !== false)
             .map(item => ({
@@ -404,7 +420,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
         }
 
         try {
-            const result = processCsvImport(mappedData, data, DataEngine, { importMode, targetId });
+            const result = processCsvImport(mappedData, data, DataEngine, { importMode, targetId, t });
             updateTreeData({ banks: result.updatedBanks });
             if (showToast) showToast(`${result.importedCount} ${safeT('msgImportSuccess', 'Buchungen erfolgreich importiert.')}`, 'success');
             setModalObj(null);
@@ -416,10 +432,13 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
     const maxCols = allRows.length > 0 ? Math.max(...allRows.map(r => r.length)) : 0;
     const selectedCount = previewData.filter(r => r.selected !== false).length;
 
-    // Weiter-Button nur aktivieren, wenn mindestens eine Art von Betrags-Feld zugeordnet ist
     const isAmountMapped = Object.values(colMapping).includes('amount') || 
                            Object.values(colMapping).includes('amountIn') || 
                            Object.values(colMapping).includes('amountOut');
+
+    const stepLabel = fileTypeLabel === 'CSV' 
+        ? safeT('wizStepCounter', `Schritt ${step} von 3`).replace('{step}', step).replace('{total}', '3')
+        : (step === 3 ? safeT('wizStepAutoExtracted', 'Automatisch extrahiert') : safeT('wizStepReady', 'Bereit'));
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
@@ -431,7 +450,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                         <div>
                             <h3 className="font-bold text-lg text-slate-800 dark:text-white">{safeT('wizBankImportTitle', 'Bankdaten Import')} <span className="text-xs ml-2 bg-blue-600 text-white px-2 py-0.5 rounded-full">{fileTypeLabel}</span></h3>
                             <div className="text-xs text-gray-500 font-medium">
-                                {fileTypeLabel === 'CSV' ? `Schritt ${step} von 3` : (step === 3 ? safeT('wizStepAutoExtracted', 'Automatisch extrahiert') : safeT('wizStepReady', 'Bereit'))}
+                                {stepLabel}
                             </div>
                         </div>
                     </div>
@@ -460,7 +479,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
                     {step === 2 && fileTypeLabel === 'CSV' && (
                         <div className="h-full flex flex-col">
-                            {/* Toolbar Oben */}
                             <div className="p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex flex-wrap gap-4 items-end shrink-0">
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{safeT('wizHeaderRow', 'Zeile der Überschriften')}</label>
@@ -477,7 +495,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                                 </div>
                             </div>
 
-                            {/* Generisches Daten-Grid - JETZT MIT HORIZONTALEM SCROLL */}
                             <div className="flex-1 overflow-auto p-4 finspa-scrollbar">
                                 <div className="w-max min-w-full border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
                                     <table className="w-full text-sm text-left border-collapse">
@@ -592,7 +609,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                                 </div>
                             )}
 
-                            {/* Die editierbare Tabelle für alle Einträge */}
                             <div className="border border-gray-200 dark:border-slate-700 rounded-xl flex-1 overflow-hidden flex flex-col min-h-[300px]">
                                 <div className="bg-gray-100 dark:bg-slate-800 p-3 border-b border-gray-200 dark:border-slate-700 shrink-0 flex justify-between items-center">
                                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -648,14 +664,14 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                                                             className="w-full p-2 bg-transparent outline-none dark:text-white rounded border border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
                                                             disabled={row.selected === false}
                                                         >
-                                                            <option value="Einzahlung">Einzahlung</option>
-                                                            <option value="Auszahlung">Auszahlung</option>
-                                                            <option value="Kauf">Kauf</option>
-                                                            <option value="Verkauf">Verkauf</option>
-                                                            <option value="Dividende">Dividende</option>
-                                                            <option value="Zinszahlung">Zinszahlung</option>
-                                                            <option value="Gebühr">Gebühr</option>
-                                                            <option value="Wertanpassung">Wertanpassung</option>
+                                                            <option value="Einzahlung">{safeT('typeDeposit', 'Einzahlung')}</option>
+                                                            <option value="Auszahlung">{safeT('typeWithdrawal', 'Auszahlung')}</option>
+                                                            <option value="Kauf">{safeT('typeBuy', 'Kauf')}</option>
+                                                            <option value="Verkauf">{safeT('typeSell', 'Verkauf')}</option>
+                                                            <option value="Dividende">{safeT('typeDividend', 'Dividende')}</option>
+                                                            <option value="Zinszahlung">{safeT('typeInterest', 'Zinszahlung')}</option>
+                                                            <option value="Gebühr">{safeT('typeFee', 'Gebühr')}</option>
+                                                            <option value="Wertanpassung">{safeT('typeRevaluation', 'Wertanpassung')}</option>
                                                         </select>
                                                     </td>
                                                     <td className="p-1.5 border-r dark:border-slate-700">
@@ -719,7 +735,6 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                     )}
                 </div>
 
-                {/* Footer Controls */}
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-between items-center shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                     <button onClick={() => setModalObj(null)} className="px-4 py-2 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl transition-colors">{safeT('wizBtnCancel', 'Abbrechen')}</button>
                     
@@ -738,7 +753,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                                 {fileTypeLabel === 'CSV' && (
                                     <button onClick={() => setStep(2)} className="px-4 py-2 font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl transition-colors">{safeT('wizBtnBack', 'Zurück')}</button>
                                 )}
-                                <button onClick={processImport} disabled={importMode === 'single_asset' && !selectedAssetId || selectedCount === 0} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
+                                <button onClick={processImport} disabled={(importMode === 'single_asset' && !selectedAssetId) || selectedCount === 0} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white font-bold rounded-xl shadow-md transition-all flex items-center gap-2">
                                     <Icon name="Check" size={16}/> {safeT('wizBtnImport', 'Importieren')} ({selectedCount})
                                 </button>
                             </>

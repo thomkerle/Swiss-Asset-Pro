@@ -4,66 +4,79 @@ const { useState, useEffect, useRef, useMemo } = React;
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
-const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header fehlt</div>);
-const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
+const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (() => <div>Header</div>);
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
-// FIX: getAllAssets hinzugefügt
-const { getNormalizedBookings, getAllAssets } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
+const { getNormalizedBookings, getAllAssets, getAssetRawValueAtDate, getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
+const PdfToolkit = safeRequire('../print/PdfToolkit.jsx') || window.PdfToolkit;
+
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
 const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
+  const reportRef = useRef(null);
+
   const chartRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
+  const baseCurrency = data?.settings?.baseCurrency || 'CHF';
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const [activeTab, setActiveTab] = useState('all'); 
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('desc'); 
 
-  const { totalPassive, monthlyDataPoints, categoryMap, assetMap, rawMonthsCount } = useMemo(() => {
+  const { totalPassive, monthlyDataPoints, categoryMap, assetMap, yearlyData, accumulatedData } = useMemo(() => {
     let total = 0;
     const mData = {};
+    const yMap = {};
     const cMap = { 'Dividenden': 0, 'Zinsen': 0, 'Mieteinnahmen': 0 };
     const aMap = {};
 
-    const start = new Date(dateRange.from);
-    const end = new Date(dateRange.to);
-    start.setDate(1); end.setDate(1);
-    
-    let monthsCount = 0;
-    while (start <= end) {
-      const mStr = start.toISOString().substring(0, 7);
-      mData[mStr] = { dateStr: mStr, dividends: 0, interests: 0, rents: 0, total: 0 };
-      start.setMonth(start.getMonth() + 1);
-      monthsCount++;
+    const startStr = (dateRange?.from || `${new Date().getFullYear()}-01-01`).substring(0, 7);
+    const endStr = (dateRange?.to || todayStr).substring(0, 7);
+
+    let [startYear, startMonth] = startStr.split('-').map(Number);
+    const [endYear, endMonth] = endStr.split('-').map(Number);
+
+    while (startYear < endYear || (startYear === endYear && startMonth <= endMonth)) {
+      const mKey = `${startYear}-${String(startMonth).padStart(2, '0')}`;
+      mData[mKey] = { dateStr: mKey, dividends: 0, interests: 0, rents: 0, total: 0 };
+      
+      startMonth++;
+      if (startMonth > 12) {
+        startMonth = 1;
+        startYear++;
+      }
     }
 
-    // FIX: Hole alle Assets aus data.banks, um auch archivierte Positionen in der Historie zu haben
     const allHistoricalAssets = getAllAssets ? getAllAssets(data?.banks || []) : activeAssets;
     const normBookings = getNormalizedBookings ? getNormalizedBookings(allHistoricalAssets) : [];
     
     normBookings.filter(bk => {
-        if (bk.date < dateRange.from || bk.date > dateRange.to) return false;
-        
-        // Echte Passiv-Einnahmen sind Einnahmen (income) in diesen 3 Kategorien.
-        // Dividenden auf dem Bankkonto (type: 'shift') werden so automatisch ignoriert -> keine Doppelzählung!
+        if (!bk.date || bk.date < dateRange.from || bk.date > dateRange.to) return false;
         const isPassiveCat = ['Dividenden', 'Zinsen', 'Mieteinnahmen'].includes(bk.category);
         return bk.type === 'income' && isPassiveCat;
-        
     }).forEach(bk => {
-        const val = bk._baseValue;
-        const monthStr = bk.date.substring(0, 7);
+        const val = Number(bk._baseValue || 0);
+        const mKey = bk.date.substring(0, 7);
+        const yKey = bk.date.substring(0, 4);
         const cat = bk.category;
-        const assetName = bk.assetName || (t ? t('unknown') || 'Unbekannt' : 'Unbekannt');
+        const assetName = bk.assetName || safeT(t, 'unknown', 'Unbekannt');
 
         total += val;
         cMap[cat] = (cMap[cat] || 0) + val;
         
-        if (mData[monthStr]) {
-            mData[monthStr].total += val;
-            if (cat === 'Dividenden') mData[monthStr].dividends += val;
-            if (cat === 'Zinsen') mData[monthStr].interests += val;
-            if (cat === 'Mieteinnahmen') mData[monthStr].rents += val;
+        if (mData[mKey]) {
+            mData[mKey].total += val;
+            if (cat === 'Dividenden') mData[mKey].dividends += val;
+            if (cat === 'Zinsen') mData[mKey].interests += val;
+            if (cat === 'Mieteinnahmen') mData[mKey].rents += val;
         }
+
+        if (!yMap[yKey]) yMap[yKey] = { year: yKey, dividends: 0, interests: 0, rents: 0, total: 0 };
+        yMap[yKey].total += val;
+        if (cat === 'Dividenden') yMap[yKey].dividends += val;
+        if (cat === 'Zinsen') yMap[yKey].interests += val;
+        if (cat === 'Mieteinnahmen') yMap[yKey].rents += val;
         
         if (!aMap[assetName]) aMap[assetName] = { val: 0, cat: cat, count: 0 };
         aMap[assetName].val += val;
@@ -71,19 +84,55 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
     });
 
     const sortedMonths = Object.keys(mData).sort().map(k => mData[k]);
+    const sortedYears = Object.keys(yMap).sort().map(k => yMap[k]);
+
+    let runningTotal = 0;
+    const accList = sortedMonths.map(m => {
+        runningTotal += m.total;
+        return { dateStr: m.dateStr, accumulated: runningTotal };
+    });
 
     return { 
         totalPassive: total, 
         monthlyDataPoints: sortedMonths, 
         categoryMap: cMap, 
         assetMap: aMap,
-        rawMonthsCount: Math.max(monthsCount, 1)
+        yearlyData: sortedYears,
+        accumulatedData: accList
     };
-  // FIX: data?.banks in Dependency Array hinzugefügt
-  }, [data?.banks, activeAssets, dateRange, t]);
+  }, [data?.banks, activeAssets, dateRange, todayStr, t]);
 
+  const forecast12m = useMemo(() => {
+      let annualSumBase = 0;
+      const allHistoricalAssets = getAllAssets ? getAllAssets(data?.banks || []) : (activeAssets || []);
+      
+      allHistoricalAssets.forEach(asset => {
+          if (!['stock', 'fund', 'managed_fund'].includes(asset.assetClass)) return;
+          const yieldPct = parseFloat(asset.forwardYield || 0);
+          if (yieldPct <= 0) return;
+
+          const taxPct = parseFloat(asset.totalTaxes || 0);
+          let currentValueNative = getAssetRawValueAtDate ? getAssetRawValueAtDate(asset, todayStr) : 0;
+          
+          if (!currentValueNative || currentValueNative === 0) {
+              const bVal = getAssetValueAtDate ? getAssetValueAtDate(asset, todayStr, allHistoricalAssets) : 0;
+              const fx = parseFloat(String(asset.exchangeRate || 1).replace(',', '.'));
+              currentValueNative = fx !== 0 ? bVal / fx : bVal;
+          }
+
+          if (currentValueNative <= 0) return;
+
+          const grossNative = currentValueNative * (yieldPct / 100);
+          const netNative = grossNative * (1 - (taxPct / 100));
+          const fxRate = parseFloat(String(asset.exchangeRate || 1).replace(',', '.'));
+          annualSumBase += netNative * fxRate;
+      });
+
+      return annualSumBase;
+  }, [data?.banks, activeAssets, todayStr]);
+
+  const rawMonthsCount = Math.max(monthlyDataPoints.length, 1);
   const monthlyAverage = totalPassive / rawMonthsCount;
-  const annualizedRunRate = monthlyAverage * 12;
   
   let bestMonth = '-';
   let bestMonthVal = 0;
@@ -116,103 +165,88 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
       });
   }, [assetMap, activeTab, searchQuery, sortBy, totalPassive]);
 
-  const repTitle = t ? t('repPassiveTitle') || "Passives Einkommen" : "Passives Einkommen";
-  const repSub = t ? t('descCashflowDividends') || "Cashflow durch Dividenden, Zinsen & Mieten" : "Cashflow durch Dividenden, Zinsen & Mieten";
-
-  const loadHtml2Canvas = () => {
-    return new Promise((resolve) => {
-        if (window.html2canvas) return resolve(window.html2canvas);
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        script.onload = () => resolve(window.html2canvas);
-        document.head.appendChild(script);
-    });
-  };
+  const repTitle = safeT(t, 'repPassiveTitle', "Passives Einkommen");
+  const repSub = `${dateRange?.from} ${safeT(t, 'wordTo', 'bis')} ${dateRange?.to} | Cashflow, Akkumulation & Prognose`;
 
   useEffect(() => {
     const buildReportData = async () => {
-        const html2canvas = await loadHtml2Canvas();
+        const kpis = [
+            { label: safeT(t, 'totalNetIncome', 'Gesamtertrag'), value: fCur(totalPassive), sub: safeT(t, 'descCumulatedMonthsCount', `Über ${rawMonthsCount} Monate`).replace('{count}', rawMonthsCount), color: '#10b981' },
+            { label: safeT(t, 'monthlyAverage', 'Monatlicher Schnitt'), value: fCur(monthlyAverage), sub: safeT(t, 'descHistoricalAverage', 'Historischer Schnitt'), color: '#3b82f6' },
+            { label: safeT(t, 'kpiForecast12mYield', '12M Prognose (Forward Yield)'), value: fCur(forecast12m), sub: safeT(t, 'descExpectedYieldAnnual', 'Erwarteter Cashflow p.a.'), color: '#8b5cf6' },
+            { label: safeT(t, 'labelBestMonth', 'Stärkster Monat'), value: bestMonth !== '-' ? bestMonth : '-', sub: fCur(bestMonthVal), color: '#f59e0b' }
+        ];
+
         let chartsData = [];
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#0f172a' : '#ffffff';
-
-        const captureBlock = async (selector, titleFallback = '') => {
-            const el = document.querySelector(selector);
-            if (el) {
-                const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
-            }
-        };
-
-        await captureBlock('.dashboard-top-export-block', ''); 
-
-        if (chartRef.current) {
-            const containers = chartRef.current.querySelectorAll('.chart-export-block');
-            for (let i = 0; i < containers.length; i++) {
-                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const canvas = await html2canvas(containers[i], { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 }); 
-            }
+        if (PdfToolkit && typeof PdfToolkit.captureCharts === 'function') {
+            chartsData = await PdfToolkit.captureCharts(reportRef.current, document.documentElement.classList.contains('dark'));
         }
 
-        const safeT = (key, fallback) => (t && t(key) && t(key) !== key) ? t(key) : fallback;
-
         const tableHeaders = [
-            safeT('colMonth', 'Monat'),
-            safeT('labelDividends', 'Dividenden'),
-            safeT('labelInterests', 'Zinsen'),
-            safeT('labelRents', 'Mieten'),
-            safeT('labelTotalReturn', 'Gesamtertrag')
+            safeT(t, 'colMonth', 'Monat'),
+            safeT(t, 'labelDividends', 'Dividenden'),
+            safeT(t, 'labelInterests', 'Zinsen'),
+            safeT(t, 'labelRents', 'Mieten'),
+            safeT(t, 'colMonthTotal', 'Monatstotal'),
+            safeT(t, 'colCumulative', 'Kumuliert')
         ];
         
-        const tableBody = monthlyDataPoints.slice().reverse().map(d => {
+        let runAcc = 0;
+        const tableBody = monthlyDataPoints.map(d => {
+            runAcc += d.total;
             const [y, m] = d.dateStr.split('-');
-            const dateObj = new Date(y, m - 1);
-            const formattedDate = dateObj.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' }); 
+            const formattedDate = new Date(Number(y), Number(m) - 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
             return [
-              formattedDate, 
-              `+${fCur(d.dividends)}`, 
-              `+${fCur(d.interests)}`, 
-              `+${fCur(d.rents)}`, 
-              { text: `+${fCur(d.total)}`, bold: true }
+                formattedDate,
+                `+${fCur(d.dividends)}`,
+                `+${fCur(d.interests)}`,
+                `+${fCur(d.rents)}`,
+                { text: `+${fCur(d.total)}`, bold: true },
+                { text: fCur(runAcc), bold: true }
             ];
-        });
+        }).reverse();
 
-        return { chartsData, tableHeaders, tableBody };
+        return { chartsData, tableHeaders, tableBody, kpis };
     };
 
     const handlePdfExport = async () => {
       try {
-        if (!PdfExportEngine) return;
-        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+        if (!PdfToolkit) return;
+        const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
 
-        await PdfExportEngine.exportReport({
+        await PdfToolkit.exportReport({
           title: repTitle,
-          subtitle: `${repSub} (${dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to})`,
-          tableHeaders, 
-          tableBody, 
-          chartsData, 
+          subtitle: repSub,
+          tableHeaders,
+          tableBody,
+          colWidthsPct: [0.24, 0.15, 0.15, 0.15, 0.16, 0.15],
+          colAligns: ['left', 'right', 'right', 'right', 'right', 'right'],
+          kpis,
+          chartsData,
           data
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im PassiveIncomeReport:", err);
+        console.error("[FinBundle Pro] PDF Export Error im PassiveIncomeReport:", err);
       }
     };
 
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
-                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
                 resolve({
-                    order: 6, 
+                    order: 6,
                     title: repTitle,
-                    subtitle: `${repSub} (${dateRange.from} ${t ? t('wordTo') || 'bis' : 'bis'} ${dateRange.to})`,
+                    subtitle: repSub,
                     tableHeaders,
                     tableBody,
+                    colWidthsPct: [0.24, 0.15, 0.15, 0.15, 0.16, 0.15],
+                    colAligns: ['left', 'right', 'right', 'right', 'right', 'right'],
+                    kpis,
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im PassiveIncomeReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error:", err);
                 resolve(null);
             }
         });
@@ -224,109 +258,169 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
 
     window.addEventListener('triggerPdfExport', handlePdfExport);
     window.addEventListener('triggerPdfBatchExport', handleBatchExport);
-    
     return () => {
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, dateRange]);
+  }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, totalPassive, monthlyAverage, forecast12m, bestMonth, bestMonthVal, rawMonthsCount]);
 
   const chartLabels = monthlyDataPoints.map(d => {
       const [y, m] = d.dateStr.split('-');
-      const dateObj = new Date(y, m - 1);
-      return `${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
+      return `${m}.${y.slice(-2)}`;
   });
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12">
-      <div className="mb-8 border-b border-gray-200 dark:border-slate-800 pb-6">
-      </div>
-
-      <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('totalNetIncome') || 'Gesamtertrag (Netto)' : 'Gesamtertrag (Netto)'}</div>
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fCur(totalPassive)}</div>
-                <div className="text-xs text-gray-400 mt-2">{t ? t('sumPassiveInflows') || 'Summe aller passiven Zuflüsse' : 'Summe aller passiven Zuflüsse'}</div>
+    <div className="max-w-7xl px-4 md:px-8 pb-12" ref={reportRef}>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'totalNetIncome', 'Gesamtertrag')}</div>
+            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fCur(totalPassive)}</div>
+            <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descCumulatedMonthsCount', `Kumuliert über ${rawMonthsCount} Monate`).replace('{count}', rawMonthsCount)}</div>
+         </div>
+         
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'monthlyAverage', 'Monatlicher Schnitt')}</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white">{fCur(monthlyAverage)}</div>
+            <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descHistoricalAverage', 'Bisheriger historischer Schnitt')}</div>
+         </div>
+         
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500">
+            <div className="text-purple-600 dark:text-purple-400 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'kpiForecast12mYield', '12M Prognose (Forward Yield)')}</div>
+            <div className="text-2xl font-black text-purple-700 dark:text-purple-300">{fCur(forecast12m)}</div>
+            <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descExpectedYieldAnnual', 'Erwartete Netto-Erträge p.a.')}</div>
+         </div>
+         
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
+             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'labelBestMonth', 'Stärkster Monat')}</div>
+             <div className="text-2xl font-black text-slate-900 dark:text-white">
+                {bestMonth !== '-' ? bestMonth : '-'}
              </div>
-             
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
-                <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('monthlyAverage') || 'Monatlicher Schnitt' : 'Monatlicher Schnitt'}</div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">{fCur(monthlyAverage)}</div>
-                <div className="text-xs text-gray-400 mt-2">{t ? t('labelBasedOn') || 'Bezogen auf' : 'Bezogen auf'} {rawMonthsCount} {t ? t('labelMonths') || 'Monate' : 'Monate'}</div>
-             </div>
-             
-             <div className="bg-indigo-50 border border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50 p-6 rounded-2xl shadow-sm">
-                <div className="text-indigo-700 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('annualProjection') || 'Hochrechnung (p.a.)' : 'Hochrechnung (p.a.)'}</div>
-                <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400">{fCur(annualizedRunRate)}</div>
-                <div className="text-xs text-indigo-500/70 dark:text-indigo-400/70 mt-2">{t ? t('annualizedRunRate') || 'Annualisierte Run-Rate' : 'Annualisierte Run-Rate'}</div>
-             </div>
-             
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm">
-                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{t ? t('labelBestMonth') || 'Stärkster Monat' : 'Stärkster Monat'}</div>
-                 <div className="text-2xl font-black text-slate-900 dark:text-white">
-                    {bestMonth !== '-' ? (() => {
-                        const [y, m] = bestMonth.split('-');
-                        return new Date(y, m - 1).toLocaleDateString('de-CH', { month: 'short', year: 'numeric' });
-                    })() : '-'}
-                 </div>
-                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-500 mt-1.5">{bestMonthVal > 0 ? `+${fCur(bestMonthVal)}` : ''}</div>
-             </div>
-          </div>
+             <div className="text-sm font-bold text-amber-600 dark:text-amber-500 mt-1">{bestMonthVal > 0 ? `+${fCur(bestMonthVal)}` : ''}</div>
+         </div>
       </div>
 
       {totalPassive > 0 ? (
-          <div className="space-y-8" ref={chartRef}>
+          <div className="space-y-8">
             
-            <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
-               data-pdf-title={t ? t('titleCashflowComposition') || "Zusammensetzung des Cashflows im Zeitverlauf" : "Zusammensetzung des Cashflows im Zeitverlauf"}
-            >
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                    <Icon name="BarChart2" className="text-emerald-500" /> {t ? t('titleCashflowDistribution') || 'Cashflow Verteilung (Zeitverlauf)' : 'Cashflow Verteilung (Zeitverlauf)'}
-                </h3>
-                <div style={{ width: '100%', height: '320px' }}>
-                    <UniversalChart 
-                        engine={activeChartEngine}
-                        type="bar"
-                        labels={chartLabels}
-                        datasets={[
-                            {
-                                name: t ? t('labelDividends') || 'Dividenden' : 'Dividenden',
-                                data: monthlyDataPoints.map(d => d.dividends),
-                                backgroundColor: '#10b981', 
-                                valueFormatter: fCur,
-                                stack: 'total'
-                            },
-                            {
-                                name: t ? t('labelInterests') || 'Zinsen' : 'Zinsen',
-                                data: monthlyDataPoints.map(d => d.interests),
-                                backgroundColor: '#3b82f6', 
-                                valueFormatter: fCur,
-                                stack: 'total'
-                            },
-                            {
-                                name: t ? t('labelRents') || 'Mieten' : 'Mieten',
-                                data: monthlyDataPoints.map(d => d.rents),
-                                backgroundColor: '#f59e0b',
-                                valueFormatter: fCur,
-                                stack: 'total'
-                            }
-                        ]} 
-                        height="100%"
-                    />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8" ref={chartRef}>
+                
+                <div 
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                   data-pdf-title={safeT(t, 'titleMonthlyCashflowByCat', 'Monatlicher Cashflow nach Kategorie')}
+                >
+                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                        <Icon name="BarChart2" className="text-emerald-500" /> {safeT(t, 'titleMonthlyCashflowTrend', 'Monatlicher Cashflow')}
+                    </h3>
+                    <div style={{ width: '100%', height: '320px' }}>
+                        <UniversalChart 
+                            engine={activeChartEngine}
+                            type="bar"
+                            labels={chartLabels}
+                            datasets={[
+                                {
+                                    name: safeT(t, 'labelDividends', 'Dividenden'),
+                                    data: monthlyDataPoints.map(d => d.dividends),
+                                    backgroundColor: '#10b981', 
+                                    valueFormatter: fCur,
+                                    stack: 'total'
+                                },
+                                {
+                                    name: safeT(t, 'labelInterests', 'Zinsen'),
+                                    data: monthlyDataPoints.map(d => d.interests),
+                                    backgroundColor: '#3b82f6', 
+                                    valueFormatter: fCur,
+                                    stack: 'total'
+                                },
+                                {
+                                    name: safeT(t, 'labelRents', 'Mieten'),
+                                    data: monthlyDataPoints.map(d => d.rents),
+                                    backgroundColor: '#f59e0b',
+                                    valueFormatter: fCur,
+                                    stack: 'total'
+                                }
+                            ]} 
+                            height="100%"
+                        />
+                    </div>
                 </div>
+
+                <div 
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                   data-pdf-title={safeT(t, 'titleAccumulatedPassiveCashflow', 'Akkumulierter Vermögenszufluss')}
+                >
+                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                        <Icon name="TrendingUp" className="text-blue-500" /> {safeT(t, 'titleAccumulatedPassiveCashflow', 'Akkumulierter Vermögenszufluss')}
+                    </h3>
+                    <div style={{ width: '100%', height: '320px' }}>
+                        <UniversalChart 
+                            engine={activeChartEngine}
+                            type="line"
+                            labels={chartLabels}
+                            datasets={[
+                                {
+                                    name: safeT(t, 'labelAccumulatedReturn', 'Kumulierter Ertrag'),
+                                    data: accumulatedData.map(d => d.accumulated),
+                                    backgroundColor: '#2563eb', 
+                                    valueFormatter: fCur
+                                }
+                            ]} 
+                            height="100%"
+                        />
+                    </div>
+                </div>
+
+                <div 
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block xl:col-span-2"
+                   data-pdf-title={safeT(t, 'titleAnnualReturnDev', 'Jährliche Ertragsentwicklung')}
+                >
+                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                        <Icon name="Calendar" className="text-purple-500" /> {safeT(t, 'titleAnnualReturnDev', 'Jährliche Ertragsentwicklung')}
+                    </h3>
+                    <div style={{ width: '100%', height: '280px' }}>
+                        <UniversalChart 
+                            engine={activeChartEngine}
+                            type="bar"
+                            labels={yearlyData.map(y => y.year)}
+                            datasets={[
+                                {
+                                    name: safeT(t, 'labelDividends', 'Dividenden'),
+                                    data: yearlyData.map(y => y.dividends),
+                                    backgroundColor: '#10b981',
+                                    valueFormatter: fCur,
+                                    stack: 'year'
+                                },
+                                {
+                                    name: safeT(t, 'labelInterests', 'Zinsen'),
+                                    data: yearlyData.map(y => y.interests),
+                                    backgroundColor: '#3b82f6',
+                                    valueFormatter: fCur,
+                                    stack: 'year'
+                                },
+                                {
+                                    name: safeT(t, 'labelRents', 'Mieten'),
+                                    data: yearlyData.map(y => y.rents),
+                                    backgroundColor: '#f59e0b',
+                                    valueFormatter: fCur,
+                                    stack: 'year'
+                                }
+                            ]} 
+                            height="100%"
+                        />
+                    </div>
+                </div>
+
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden chart-export-block" data-pdf-title={t ? t('topIncomeSources') || "Top Ertragsquellen" : "Top Ertragsquellen"}>
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 dark:border-slate-800 space-y-4 bg-gray-50/50 dark:bg-slate-800/30">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                            <Icon name="Star" className="text-amber-500"/> {t ? t('detailAnalysisTopSources') || 'Detailanalyse & Top Quellen' : 'Detailanalyse & Top Quellen'}
+                            <Icon name="Star" className="text-amber-500"/> {safeT(t, 'detailAnalysisTopSources', 'Detailanalyse & Top Quellen')}
                         </h3>
                         <div className="print-hide relative w-full sm:w-64">
                             <input 
-                                type="text" placeholder={t ? t('searchAsset') || 'Anlage suchen...' : 'Anlage suchen...'} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                type="text" placeholder={safeT(t, 'searchAsset', 'Anlage suchen...')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                                 className="w-full p-2 pl-8 text-sm border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-200 shadow-sm"
                             />
                             <div className="absolute left-2.5 top-2.5 text-gray-400"><Icon name="Search" size={14} /></div>
@@ -335,17 +429,17 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
 
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-1 print-hide">
                         <div className="flex gap-1.5 bg-gray-200/60 dark:bg-slate-800 p-1 rounded-lg text-xs font-semibold">
-                            <button onClick={() => setActiveTab('all')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{t ? t('tabAll') || 'Alle' : 'Alle'}</button>
-                            <button onClick={() => setActiveTab('Dividenden')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Dividenden' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{t ? t('labelDividends') || 'Dividenden' : 'Dividenden'}</button>
-                            <button onClick={() => setActiveTab('Zinsen')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Zinsen' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{t ? t('labelInterests') || 'Zinsen' : 'Zinsen'}</button>
-                            <button onClick={() => setActiveTab('Mieteinnahmen')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Mieteinnahmen' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{t ? t('labelRents') || 'Mieten' : 'Mieten'}</button>
+                            <button onClick={() => setActiveTab('all')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'all' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{safeT(t, 'tabAll', 'Alle')}</button>
+                            <button onClick={() => setActiveTab('Dividenden')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Dividenden' ? 'bg-white dark:bg-slate-700 shadow-sm text-emerald-600 dark:text-emerald-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{safeT(t, 'labelDividends', 'Dividenden')}</button>
+                            <button onClick={() => setActiveTab('Zinsen')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Zinsen' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{safeT(t, 'labelInterests', 'Zinsen')}</button>
+                            <button onClick={() => setActiveTab('Mieteinnahmen')} className={`px-4 py-1.5 rounded-md transition-all ${activeTab === 'Mieteinnahmen' ? 'bg-white dark:bg-slate-700 shadow-sm text-amber-600 dark:text-amber-400 font-bold' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}`}>{safeT(t, 'labelRents', 'Mieten')}</button>
                         </div>
                         <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
-                            <span>{t ? t('labelSorting') || 'Sortierung:' : 'Sortierung:'}</span>
+                            <span>{safeT(t, 'labelSorting', 'Sortierung:')}</span>
                             <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bg-transparent border border-gray-300 dark:border-slate-600 rounded-md p-1.5 outline-none text-slate-700 dark:text-slate-300">
-                                <option value="desc">{t ? t('sortHighestYield') || 'Höchster Ertrag' : 'Höchster Ertrag'}</option>
-                                <option value="asc">{t ? t('sortLowestYield') || 'Niedrigster Ertrag' : 'Niedrigster Ertrag'}</option>
-                                <option value="alpha">{t ? t('sortAlphabetical') || 'Alphabetisch' : 'Alphabetisch'}</option>
+                                <option value="desc">{safeT(t, 'sortHighestYield', 'Höchster Ertrag')}</option>
+                                <option value="asc">{safeT(t, 'sortLowestYield', 'Niedrigster Ertrag')}</option>
+                                <option value="alpha">{safeT(t, 'sortAlphabetical', 'Alphabetisch')}</option>
                             </select>
                         </div>
                     </div>
@@ -355,11 +449,11 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                     <table className="w-full text-left text-sm relative">
                         <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-4 font-bold uppercase text-xs">{t ? t('colAssetPosition') || 'Asset / Position' : 'Asset / Position'}</th>
-                                <th className="p-4 font-bold uppercase text-xs">{t ? t('category') || 'Kategorie' : 'Kategorie'}</th>
-                                <th className="p-4 font-bold uppercase text-xs text-center">{t ? t('colFrequency') || 'Frequenz' : 'Frequenz'}</th>
-                                <th className="p-4 font-bold uppercase text-xs w-1/3">{t ? t('colWeightingContribution') || 'Gewichtung / Beitrag' : 'Gewichtung / Beitrag'}</th>
-                                <th className="p-4 font-bold uppercase text-xs text-right">{t ? t('labelTotalReturn') || 'Gesamtertrag' : 'Gesamtertrag'}</th>
+                                <th className="p-4 font-bold uppercase text-xs">{safeT(t, 'colAssetPosition', 'Asset / Position')}</th>
+                                <th className="p-4 font-bold uppercase text-xs">{safeT(t, 'category', 'Kategorie')}</th>
+                                <th className="p-4 font-bold uppercase text-xs text-center">{safeT(t, 'colFrequency', 'Frequenz')}</th>
+                                <th className="p-4 font-bold uppercase text-xs w-1/3">{safeT(t, 'colWeightingContribution', 'Gewichtung')}</th>
+                                <th className="p-4 font-bold uppercase text-xs text-right">{safeT(t, 'totalIncome', 'Gesamtertrag')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
@@ -381,11 +475,11 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                                             <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{asset.name}</td>
                                             <td className="p-4">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold tracking-wide ${badgeStyle}`}>
-                                                    {t ? t(asset.cat) || asset.cat : asset.cat}
+                                                    {safeT(t, asset.cat, asset.cat)}
                                                 </span>
                                             </td>
                                             <td className="p-4 text-center font-medium font-mono text-gray-400">
-                                                {asset.count}x {t ? t('labelPaid') || 'bezahlt' : 'bezahlt'}
+                                                {safeT(t, 'labelPaidCountSuffix', `${asset.count}x bezahlt`).replace('{count}', asset.count)}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
@@ -404,7 +498,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="p-8 text-center text-gray-400 font-medium">
-                                        {t ? t('noPositionsMatchFilters') || 'Keine Positionen entsprechen den aktuellen Filterkriterien.' : 'Keine Positionen entsprechen den aktuellen Filterkriterien.'}
+                                        {safeT(t, 'msgNoMatchingPositionsFilter', 'Keine Positionen entsprechen den aktuellen Filterkriterien.')}
                                     </td>
                                 </tr>
                             )}
@@ -415,24 +509,23 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
 
             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
-                    {t ? t('monthlyHistoryBreakdown') || 'Monatliche Historie & Aufschlüsselung' : 'Monatliche Historie & Aufschlüsselung'}
+                    {safeT(t, 'titleMonthlyHistoryBreakdown', 'Monatliche Historie & Aufschlüsselung')}
                 </div>
                 <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                     <table className="w-full text-sm text-left relative">
                     <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th className="px-6 py-4 font-medium">{t ? t('colMonth') || 'Monat' : 'Monat'}</th>
-                            <th className="px-6 py-4 text-right font-medium text-emerald-600 dark:text-emerald-400">{t ? t('labelDividends') || 'Dividenden' : 'Dividenden'}</th>
-                            <th className="px-6 py-4 text-right font-medium text-blue-600 dark:text-blue-400">{t ? t('labelInterests') || 'Zinsen' : 'Zinsen'}</th>
-                            <th className="px-6 py-4 text-right font-medium text-amber-600 dark:text-amber-400">{t ? t('labelRents') || 'Mieten' : 'Mieten'}</th>
-                            <th className="px-6 py-4 text-right font-bold text-slate-800 dark:text-slate-200">{t ? t('totalIncome') || 'Total Ertrag' : 'Total Ertrag'}</th>
+                            <th className="px-6 py-4 font-medium">{safeT(t, 'colMonth', 'Monat')}</th>
+                            <th className="px-6 py-4 text-right font-medium text-emerald-600 dark:text-emerald-400">{safeT(t, 'labelDividends', 'Dividenden')}</th>
+                            <th className="px-6 py-4 text-right font-medium text-blue-600 dark:text-blue-400">{safeT(t, 'labelInterests', 'Zinsen')}</th>
+                            <th className="px-6 py-4 text-right font-medium text-amber-600 dark:text-amber-400">{safeT(t, 'labelRents', 'Mieten')}</th>
+                            <th className="px-6 py-4 text-right font-bold text-slate-800 dark:text-slate-200">{safeT(t, 'colMonthTotal', 'Monatstotal')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                         {monthlyDataPoints.slice().reverse().map((d, i) => {
                             const [y, m] = d.dateStr.split('-');
-                            const dateObj = new Date(y, m - 1);
-                            const displayDate = dateObj.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
+                            const displayDate = new Date(Number(y), Number(m) - 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
 
                             return (
                                 <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
@@ -454,9 +547,9 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
           </div>
       ) : (
           <div className="bg-gray-50 dark:bg-slate-900 border border-dashed border-gray-300 dark:border-slate-700 rounded-2xl p-12 text-center text-gray-500 mt-6">
-             <Icon name="Coffee" size={48} className="mx-auto mb-4 opacity-20 text-emerald-500" />
-             <p className="font-medium">{t ? t('noPassiveIncome') || 'Kein passives Einkommen im gewählten Zeitraum verzeichnet.' : 'Kein passives Einkommen im gewählten Zeitraum verzeichnet.'}</p>
-             <p className="text-xs text-gray-400 mt-1">{t ? t('recordDividendInterestRent') || 'Erfasse Dividenden-, Zins- oder Mietbuchungen auf deinen aktiven Assets.' : 'Erfasse Dividenden-, Zins- oder Mietbuchungen auf deinen aktiven Assets.'}</p>
+             <Icon name="Coins" size={48} className="mx-auto mb-4 opacity-20 text-emerald-500" />
+             <p className="font-medium">{safeT(t, 'msgNoPassiveIncomeRecorded', 'Kein passives Einkommen im gewählten Zeitraum verzeichnet.')}</p>
+             <p className="text-xs text-gray-400 mt-1">{safeT(t, 'descRecordPassiveIncomeHint', 'Erfasse Dividenden-, Zins- oder Mietbuchungen auf deinen aktiven Assets.')}</p>
           </div>
       )}
     </div>

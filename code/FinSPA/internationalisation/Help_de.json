@@ -8,11 +8,11 @@
       "content": [
         {
           "type": "h4",
-          "text": "Willkommen bei FinBundle"
+          "text": "Willkommen bei FinBundle Pro"
         },
         {
           "type": "p",
-          "text": "FinBundle PRO ist eine moderne Single Page Application (SPA) zur ganzheitlichen Verwaltung Ihres Vermögens und Budgets."
+          "text": "FinBundle Pro ist eine moderne Desktop- und Tablet-Anwendung für das ganzheitliche Wealth Management, Liquiditätsmonitoring, Steuerdeklaration und langfristige Budgetierung nach Schweizer und internationalen Standards."
         },
         {
           "type": "h5",
@@ -21,376 +21,269 @@
         {
           "type": "list",
           "items": [
-            "**Strukturbaum (Links):** Hier verwalten Sie Ihre Banken, Broker, Kategorien und die darin liegenden Assets.",
-            "**Editor & Dashboards (Mitte):** Der zentrale Arbeitsbereich für Auswertungen, Dashboards und Buchungen.",
-            "**Eigenschaftseditor (Rechts):** Stammdaten für das ausgewählte Element bearbeiten."
+            "**Strukturbaum (Links):** Hier organisieren Sie Institute, Banken, Broker, verschachtelte Kategorien und einzelne Vermögenswerte (Assets). Kann per Mausklick ausgeblendet werden, um den Fokus auf Diagramme zu maximieren.",
+            "**Arbeitsbereich (Mitte):** Die interaktive Schaltzentrale für Buchungsjournale, 15 spezialisierte Finanzberichte, ECharts-Vektordiagramme und AI-Dashboards.",
+            "**Eigenschaftseditor (Rechts):** Direkte Stammdatenbearbeitung des aktiven Knotens (Valuta, Devisenkurse, Ticker, Steuer- und Dividendenrenditen) mit unterbrechungsfreiem Auto-Save."
           ]
         }
       ]
     },
     {
-      "id": "uc1-3",
-      "title": "Banken & Kategorien",
-      "icon": "Shield",
+      "id": "fly_in",
+      "title": "Schnellzugriff & Fly-In Cockpit",
+      "icon": "Zap",
       "content": [
         {
           "type": "h4",
-          "text": "Strukturierung Ihres Vermögens"
+          "text": "Der rechte Schnellzugriff (Command Center)"
         },
         {
           "type": "p",
-          "text": "**Banken erfassen:** Auf oberster Ebene im Strukturbaum (Klick auf `+` Icon)."
-        },
-        {
-          "type": "p",
-          "text": "**Kategorien anlegen:** Beliebig tief verschachtelt innerhalb von Banken (Klick auf Ordner-Icon mit Plus)."
-        }
-      ]
-    },
-    {
-      "id": "uc4-5",
-      "title": "Konten & Buchungen",
-      "icon": "List",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Assets & Konten verwalten"
-        },
-        {
-          "type": "p",
-          "text": "**Assets erfassen:** Das tiefste Element im Baum ist immer ein Asset (z.B. Konto, Depot)."
-        },
-        {
-          "type": "p",
-          "text": "**Buchungen:** Erfassen Sie Transaktionen wie Einzahlungen oder Auszahlungen mit detaillierten Unterkategorien (Lohn, Steuern etc.)."
-        }
-      ]
-    },
-    {
-      "id": "budget",
-      "title": "Budget & 50/30/20",
-      "icon": "DollarSign",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Budgetierung leicht gemacht"
-        },
-        {
-          "type": "p",
-          "text": "FinBundle ordnet Ihre Ausgaben automatisch nach der **50/30/20 Regel**:"
+          "text": "Über die schwebende Leiste am rechten Bildschirmrand oder über den systemweiten Shortcut **Strg + K** (bzw. **Cmd + K**) öffnen Sie jederzeit das Schnellzugriff-Cockpit."
         },
         {
           "type": "list",
           "items": [
-            "**Needs (50%):** Fixkosten wie Wohnen, Steuern, Grundversorgung.",
-            "**Wants (30%):** Lifestyle, Freizeit, Abonnements.",
-            "**Savings (20%):** Sparen, Investitionen, Säule 3a."
+            "**Spotlight-Suche:** Findet in Millisekunden jedes Asset, jedes installierte Plugin und jeden Analysebericht.",
+            "**Smart Action Guard:** Erkennt automatisch, ob Sie im Strukturbaum ein valides Konto ausgewählt haben, und öffnet direkt die passende Buchungsmaske.",
+            "**Favoriten & Verlauf:** Zeigt die zuletzt bearbeiteten Vermögenswerte und deren aktuellen Saldo an.",
+            "**Angepinnte Add-Ins:** Startet häufig genutzte Analyse-Widgets mit einem Klick."
           ]
         },
         {
           "type": "infoBox",
-          "text": "Im Budget-Editor können Sie auch Kündigungsfristen für Verträge und Abonnements hinterlegen, um Kündigungstermine nicht zu verpassen."
+          "text": "Tipp: Drücken Sie einfach 'Escape', um das Fly-In-Panel blitzschnell wieder zu schließen."
         }
       ]
     },
     {
-      "id": "uc6",
-      "title": "Wertpapiere & Depots",
-      "icon": "TrendingUp",
+      "id": "bank_import",
+      "title": "Bankdaten-Import (CSV, CAMT, MT940)",
+      "icon": "UploadCloud",
       "content": [
         {
           "type": "h4",
-          "text": "Handel mit Aktien und Fonds"
+          "text": "Automatisierter Kontoauszugs-Import"
         },
         {
           "type": "p",
-          "text": "Legen Sie die Anlageklasse auf Aktie oder Fonds fest. Erfassen Sie Käufe, Verkäufe und Dividenden."
+          "text": "FinBundle Pro verfügt über einen dreistufigen Universal-Import-Assistenten für Bank- und Brokerdaten:"
         },
         {
-          "type": "p",
-          "text": "Der Dialog fragt automatisch nach Stückzahl, Preis, Gebühren, Steuern und dem tagesaktuellen Wechselkurs."
+          "type": "list",
+          "items": [
+            "**CAMT.053 (XML):** Der moderne Standard des Schweizer Zahlungsverkehrs (ISO 20022). Erkennt automatisch Valuta, Begünstigte, Referenzen und Gutschriften/Belastungen.",
+            "**MT940 (.sta / .txt):** Klassischer SWIFT-Standard. Liest Transaktionssätze (:61:) und Mehrzwecktexte (:86:) strukturiert aus.",
+            "**Generische CSV-Dateien:** Frei konfigurierbares Spalten-Mapping mit Erkennung von Trennzeichen, Zeilenoffset, Vorzeichenlogik (+/-) und kombinierten Umsatzspalten.",
+            "**Zielmodi:** Wählen Sie zwischen 'Einzel-Konto' (alle Buchungen in ein bestehendes Asset einfügen) oder 'Broker / Multi-Asset' (erzeugt automatisch für jede Aktie/ISIN ein eigenes Wertpapier)."
+          ]
         },
         {
           "type": "infoBox",
-          "text": "Bei einem Aktiensplit archivieren Sie das alte Asset und erstellen ein neues mit den aktuellen Werten."
+          "text": "Duplikat-Schutz: FinBundle gleicht Datum, Betrag und Verwendungszweck automatisch mit bestehenden Buchungen ab, sodass wiederholte Importe keine doppelten Einträge erzeugen."
         }
       ]
     },
     {
       "id": "live_editor",
-      "title": "API LiveEditor",
+      "title": "API LiveEditor & Marktdaten",
       "icon": "Cloud",
       "content": [
         {
           "type": "h4",
-          "text": "Marktdaten-Zentrale & Bulk-Sync"
+          "text": "Börsenkurse & Fundamentaldaten-Sync"
         },
         {
           "type": "p",
-          "text": "Der API LiveEditor ermöglicht die parallele Steuerung aller Börsen-Assets (Aktien, Fonds, Krypto)."
+          "text": "Der API LiveEditor ist die zentrale Verwaltungsplattform für alle börsengehandelten Titel (Aktien, ETFs, Fonds, Krypto)."
         },
         {
           "type": "list",
           "items": [
-            "**Data Grid:** Übersichtliche Tabelle mit Live-Kursen (Intraday), 6-Monats-Trend (Sparklines) und der Möglichkeit, fehlende Ticker-Symbole direkt zu ergänzen.",
-            "**Bulk-Sync:** Markieren Sie mehrere Assets, um die EOD-Kurse (End of Day) und die zugehörigen Wechselkurse automatisiert in einem Rutsch abzurufen.",
-            "**Fundamentaldaten:** Ein Klick auf das Info-Icon neben dem Ticker blendet Dividendenrenditen, das KGV und Marktkapitalisierungen ein.",
-            "**Chart Vergleiche:** Analysieren Sie historische Kurse (relativ oder absolut) sowie Echtzeit-Intraday-Charts inkl. technischer Indikatoren (SMA, EMA, Bollinger Bänder)."
+            "**Data Grid mit Inline-Editing:** Ergänzen Sie Ticker-Kürzel (z.B. AAPL.US, NESN.SW) direkt in der Tabelle.",
+            "**Bulk-Synchronisation:** Aktualisiert mit einem Klick die aktuellen End-of-Day (EOD) Kurse und historische Devisenkurse über EODHD oder Alpha Vantage.",
+            "**Sparkline-Trends:** Zeigt den 6-Monats-Kursverlauf im Original sowie währungsbereinigt in der Portfolio-Basiswährung.",
+            "**Fundamentaldaten-Einblick:** Blendet Dividendenrendite, Ex-Tag, KGV (P/E), Gewinn je Aktie (EPS), 52-Wochen-Spanne und Marktkapitalisierung ein.",
+            "**Chart-Vergleiche:** Erlaubt relative Performancetests (%), absolute Kurscharts sowie OHLC-Candlesticks inklusive technischer Indikatoren (SMA 50/200, EMA 20)."
           ]
+        }
+      ]
+    },
+    {
+      "id": "plugins",
+      "title": "Plugins, Add-Ins & Eigene Reports",
+      "icon": "Box",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Erweiterbares Add-In Ökosystem"
         },
         {
-          "type": "infoBox",
-          "text": "Voraussetzung: Für den vollautomatischen Abruf von Kursen und Fundamentaldaten muss in den allgemeinen Einstellungen (⚙️) ein gültiger API-Schlüssel für EODHD oder Alpha Vantage hinterlegt sein."
+          "type": "p",
+          "text": "FinBundle Pro bietet eine Sandbox-Architektur zur Ausführung maßgeschneiderter Auswertungen und visueller Komponenten."
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Erstellung via Copilot:** Beschreiben Sie Ihre Wunsch-Visualisierung in natürlicher Sprache. Die integrierte KI schreibt den HTML/JavaScript-Code vollautomatisch.",
+            "**FinSPA JavaScript API:** Plugins erhalten sicheren, lesenden Zugriff auf aggregierte Portfoliostrukturen, Währungskurse und Buchungsströme.",
+            "**Export & Import (.finplugin.json):** Teilen Sie Plugins mit anderen Nutzern oder sichern Sie Sammlungen als Bundle.",
+            "**Vektor-PDF-Export:** Jedes Add-In kann über die native PdfToolkit-Bridge hochauflösende Berichtsseiten mit Diagrammen erzeugen."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "full_export",
+      "title": "Gesamtreport als PDF & Excel-Export",
+      "icon": "Layers",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Reporting in Executive-Qualität"
+        },
+        {
+          "type": "p",
+          "text": "Über das Menü 'Datei ➔ Exportieren' stehen professionelle Komplett-Exporte zur Verfügung:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Gesamtreport als PDF (Full Report Orchestrator):** Aggregiert im Hintergrund alle 15 Analyseberichte in ein einziges, konsolidiertes PDF-Dokument mit einheitlichem Deckblatt, KPI-Zusammenfassungen und fortlaufender Seitennummerierung.",
+            "**Vektordiagramm-Abgriff:** Alle ECharts- und SVG-Visualisierungen werden gestochen scharf in das Drucklayout gerendert.",
+            "**Excel-Export (.xlsx):** Erzeugt eine formatierte Arbeitsmappe mit separaten Tabellenblättern für Vermögensübersicht, Kontostände, Wertschriftenverzeichnis, Buchungsjournal und Dividenden."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reports_detail",
+      "title": "Die 15 Analyseberichte im Detail",
+      "icon": "PieChart",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Ganzheitliche Vermögensanalytik"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Asset Allokation:** Aufschlüsselung nach Banken, Anlageklassen und Währungsexposure inklusive Klumpenrisiko-Messung (Top 3).",
+            "**Vermögensübersicht:** Aggregierte Übersicht über alle Konten, Depots und Sachwerte per Stichtag.",
+            "**Liquiditätsrisiko:** Betrachtung der sofort verfügbaren Mittel (Cash) im Verhältnis zu Marktliquidität und gebundenem Kapital.",
+            "**Historischer Verlauf:** Langzeitverlauf des Gesamtvermögens mit Monatsdeltas (MoM) und Höchststand-Tracking (All-Time High).",
+            "**Kategorienfluss:** Vergleicht Start- und Endbestand aller Kategorien und hebt die stärksten Zuwachstreiber hervor.",
+            "**Wasserfall-Analyse:** Mathematische Brückenrechnung: Zeigt exakt, wie viel Vermögenswachstum aus eigener Sparleistung und wie viel aus reinem Markteffekt stammt.",
+            "**Buchungsanalyse & Cashflow:** Trennt echte Einnahmen von Ausgaben und berechnet die Sparquote unter Ausschluss neutraler Umbuchungen.",
+            "**Passives Einkommen:** Detaillierte Historie aller Dividenden, Zinsen und Mieteinnahmen mit monatlicher und jährlicher Staffelung.",
+            "**Top Flow Assets:** Listet die profitabelsten und verlustreichsten Einzelpositionen der gewählten Periode auf.",
+            "**Dividenden-Kalender:** 12-Monats-Prognose zukünftiger Ausschüttungen mit Monatsstaffelung und Ex-Tag-Monitoring.",
+            "**Vorsorge & Säule 3a:** Trennung von 2. Säule (PK) und 3. Säule inklusive Überwachung des jährlichen Maximalbetrags (CHF 7'258).",
+            "**Wertschriften Performance:** Reine Renditeanalyse des freien Aktien- und Fonds-Portfolios mit Zeitgewichtung und Kursgewinnen.",
+            "**Steuer-Report:** Stichtagsbezogenes Wertschriften- und Schuldenverzeichnis per 31.12. mit Berechnung der Verrechnungssteuer-Rückforderung (35%).",
+            "**Zukunftsprognose (Regression):** Mathematische Extrapolation des bisherigen Sparverhaltens über 5 Jahre mit Zinseszins-Hebel.",
+            "**Szenarien & FIRE:** Simulation des Vermögenspfads bei künftigen Lebensereignissen und Messung der Zielerreichung bis zum Vorruhestand."
+          ]
         }
       ]
     },
     {
       "id": "uc7",
-      "title": "Vorsorge (Säule 2 & 3a)",
+      "title": "Vorsorge & Säule 3a",
       "icon": "Lock",
       "content": [
         {
           "type": "h4",
-          "text": "Berufliche & Gebundene Vorsorge (Schweiz)"
+          "text": "Berufliche & Private Vorsorge (Schweiz)"
         },
         {
           "type": "list",
           "items": [
-            "**Pensionskasse (2. Säule):** Das berufliche Pensionsguthaben. Wird als *nicht liquide* markiert.",
-            "**3a Vorsorgekonto:** Gebundenes Cash-Guthaben der privaten Vorsorge.",
-            "**3a Vorsorgefonds:** Erlaubt den Handel und die Verfolgung von Wertschriften der 3. Säule."
+            "**Pensionskasse (2. Säule):** Das reglementarische Vorsorgeguthaben. Wird als gebundenes, illiquides Vermögen geführt.",
+            "**Säule 3a Sparkonto:** Zinstragendes Bankkonto der gebundenen Selbstvorsorge.",
+            "**Säule 3a Wertschriftenfonds:** Fondslösungen mit Aktienanteil (z.B. VIAC, frankly, Finpension). Erlaubt Kurstracking oder die Führung über Gesamtwert.",
+            "**Einzahlungs-Tracker:** Überwacht das im laufenden Jahr einbezahlte Neugeld und warnt vor Überschreitung der gesetzlichen Obergrenze."
           ]
         }
       ]
     },
     {
-      "id": "uc9",
-      "title": "Immobilien & Hypotheken",
-      "icon": "Home",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Verwaltung von Sachwerten"
-        },
-        {
-          "type": "list",
-          "items": [
-            "**Immobilie:** Positiver Wert. Nutzen Sie *Wertanpassung* für Marktwertänderungen.",
-            "**Hypothek:** Als *negativer Stichtags-Saldo* erfasst. Nutzen Sie *Abzahlung* oder *Zinszahlung*."
-          ]
-        }
-      ]
-    },
-    {
-      "id": "import_scanner",
-      "title": "Import & PDF-Scanner",
+      "id": "tax_guide",
+      "title": "Steuerdeklaration & Verrechnungssteuer",
       "icon": "FileText",
       "content": [
         {
           "type": "h4",
-          "text": "Datenübernahme & KI-Erfassung"
+          "text": "Vorbereitung der Steuererklärung (31.12.)"
+        },
+        {
+          "type": "p",
+          "text": "Der Steuer-Report bereitet alle Daten stichtagsbezogen für das kantonale Wertschriftenverzeichnis auf:"
         },
         {
           "type": "list",
           "items": [
-            "**Parqet Import:** Sie können CSV-Exporte direkt aus Parqet importieren. Die Daten werden automatisch migriert.",
-            "**KI Beleg-Scanner:** Laden Sie PDF-Auszüge oder Rechnungen hoch. Die KI extrahiert Datum, Betrag und schlägt Buchungskategorien vor."
+            "**Steuerbares Reinvermögen:** Saldiert Bankguthaben, Wertschriftenkurse und Liegenschafts-Steuerwerte abzüglich Hypothekarschulden.",
+            "**Steuerfreie Vorsorge:** Weist Säule 2 und Säule 3a separat als steuerbefreites Vermögen in der Ansparphase aus.",
+            "**Ertragsverzeichnis:** Listet alle im Kalenderjahr angefallenen Dividenden und Zinsen auf.",
+            "**Verrechnungssteuer-Guthaben:** Berechnet automatisch den pauschalen 35%-Rückforderungsanspruch gegenüber der Eidgenössischen Steuerverwaltung (ESTV)."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "title": "Budget & 50/30/20 Regel",
+      "icon": "DollarSign",
+      "content": [
+        {
+          "type": "h4",
+          "text": "Regelbasierte Cashflow-Planung"
+        },
+        {
+          "type": "p",
+          "text": "FinBundle ordnet Ihre Einnahmen und Ausgaben automatisch nach dem standardisierten **50/30/20 Allokationsmodell**:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Needs (Ziel: max. 50%):** Grundbedürfnisse und Fixkosten wie Wohnungsmiete, Steuern, Krankenkasse, Versicherungen.",
+            "**Wants (Ziel: max. 30%):** Lifestyle, Hobbys, Abonnements und Restaurantbesuche.",
+            "**Savings (Ziel: min. 20%):** Sparpläne, Investitionen, Amortisationen und Säule 3a Einzahlungen."
           ]
         },
         {
           "type": "infoBox",
-          "text": "Datenschutz (Privacy-First): Bevor PDFs an externe Cloud-KIs (OpenAI, Claude, Gemini) gesendet werden, durchlaufen sie einen lokalen Filter. FinBundle anonymisiert alle IBANs, Namen, Adressen und Kartennummern."
-        }
-      ]
-    },
-    {
-      "id": "ai_copilot",
-      "title": "KI Copilot",
-      "icon": "Cpu",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Lokale KI-Integration (Ollama)"
-        },
-        {
-          "type": "p",
-          "text": "FinBundle bietet eine integrierte Schnittstelle zu lokalen Large Language Models (LLMs) via Ollama. Ihre Finanzdaten verlassen dabei niemals Ihr Gerät."
-        },
-        {
-          "type": "list",
-          "items": [
-            "**Widgets generieren:** Beschreiben Sie in natürlicher Sprache, welche Diagramme oder Tabellen Sie sehen möchten.",
-            "**Dynamische Interaktion:** Die KI baut maßgeschneiderte Dashboards basierend auf Ihren Live-Daten.",
-            "**Aktivierung:** Der KI-Modus muss zunächst in den Einstellungen global aktiviert werden."
-          ]
-        },
-        {
-          "type": "infoBox",
-          "text": "Voraussetzung: Sie müssen Ollama lokal installiert haben und ein kompatibles Modell (z.B. Qwen, Llama 3) über den Port 11434 bereitstellen."
-        }
-      ]
-    },
-    {
-      "id": "reports",
-      "title": "Reports & Dashboards",
-      "icon": "PieChart",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Umfangreiche Analysen"
-        },
-        {
-          "type": "list",
-          "items": [
-            "**Bestandesreports:** Allokation, Liquiditätsrisiko und Steuerreports.",
-            "**Bewegungsreports:** Cashflows, Buchungsanalysen und Passives Einkommen."
-          ]
-        }
-      ]
-    },
-    {
-      "id": "fire_scenarios",
-      "title": "FIRE & Szenarien",
-      "icon": "Target",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Finanzielle Unabhängigkeit planen"
-        },
-        {
-          "type": "p",
-          "text": "Im Report **Szenarien & FIRE** können Sie Ihr persönliches FIRE-Ziel (Financial Independence, Retire Early) und das gewünschte Zieljahr festlegen."
-        },
-        {
-          "type": "p",
-          "text": "Erstellen Sie **Zukunftsszenarien** (z.B. Autokauf, Erbschaft, Sabbatical), um präzise zu simulieren, wie sich einmalige Events auf Ihren Zinseszins und Vermögensverlauf auswirken."
+          "text": "Vertragsmanagement: Im Budget-Editor können Sie für Abos individuelle Kündigungsfristen erfassen, um Kündigungstermine vorausschauend im Blick zu behalten."
         }
       ]
     },
     {
       "id": "security",
-      "title": "Sicherheit & Verschlüsselung",
+      "title": "Sicherheit & AES-256 Verschlüsselung",
       "icon": "Shield",
       "content": [
         {
           "type": "h4",
-          "text": "Ihre Daten gehören Ihnen"
+          "text": "Konsequenter Local-First Datenschutz"
         },
         {
           "type": "p",
-          "text": "FinBundle speichert alle Daten lokal im Browser. Für Backups und den Dateitransfer stehen zwei Formate zur Verfügung:"
+          "text": "FinBundle Pro speichert Ihre sensiblen Finanzdaten ausschließlich lokal auf Ihrem Endgerät. Es existiert keine zentrale Entwickler-Cloud und kein Tracking."
         },
         {
           "type": "list",
           "items": [
-            "**Klartext (JSON):** Standardformat, schnell und einfach in anderen Tools weiterzuverarbeiten.",
-            "**Verschlüsseltes ZIP:** Nutzt modernste **AES-256 Verschlüsselung** und erfordert ein PIN-Passwort."
+            "**Klartext (JSON):** Transparentes Standardformat für schnelles Speichern und einfache manuelle Sicherungen.",
+            "**Verschlüsseltes ZIP (AES-256):** Militärischer Verschlüsselungsstandard. Das gesamte Projekt wird mit Ihrem persönlichen PIN geschützt.",
+            "**Automatische Speicherung:** Alle Änderungen werden im lokalen Speicher des Browsers gesichert, um Datenverlust bei versehentlichem Schließen vorzubeugen."
           ]
         },
         {
           "type": "infoBox",
-          "text": "Achtung: FinBundle kann den PIN nicht wiederherstellen. Wenn Sie das Passwort vergessen, sind die Daten im ZIP-Archiv unwiderruflich verloren."
-        }
-      ]
-    },
-    {
-      "id": "settings",
-      "title": "Einstellungen & Daten",
-      "icon": "Settings",
-      "content": [
-        {
-          "type": "h4",
-          "text": "Konfiguration"
-        },
-        {
-          "type": "p",
-          "text": "**Erweiterbarkeit:** Sie können Basiswährungen, eigene Buchungskategorien und sogar völlig neue Asset-Klassen definieren."
-        },
-        {
-          "type": "p",
-          "text": "**KI-Modelle:** Fügen Sie im entsprechenden Reiter eigene Ollama-Modelle (Strings) oder API-Keys für externe Anbieter hinzu."
+          "text": "Wichtiger Hinweis zum PIN: FinBundle speichert Ihren PIN-Code niemals persistent. Wenn Sie den PIN einer verschlüsselten ZIP-Datei vergessen, sind die Daten unwiederbringlich verloren."
         }
       ]
     }
-  ],
-  "translations": {
-    "menuFile": "Datei",
-    "menuWealth": "Vermögen",
-    "menuBudget": "Budget",
-    "menuViews": "Ansichten",
-    "menuReports": "Reports",
-    "menuData": "Datensicht",
-    "fileNew": "Neu (Leeres Projekt)",
-    "fileOpen": "Öffnen (JSON/ZIP)",
-    "fileSave": "Sichern (JSON/ZIP)",
-    "fileImport": "Importieren (CSV)",
-    "fileExport": "Exportieren",
-    "filePrint": "Drucken",
-    "fileSettings": "Einstellungen",
-    "menuHelp": "Hilfe",
-    "helpManual": "Benutzerhandbuch",
-    "viewWealth": "Vermögensverwaltung",
-    "viewBudget": "Budgetverwaltung",
-    "viewData": "Innere Datenhaltung (JSON)",
-    "repStock": "Bestandesreports",
-    "repFlow": "Bewegungsreports",
-    "repFuture": "Zukunftsreports",
-    "repBudget": "Budgetreports",
-    "repAlloc": "Allokation nach Banken",
-    "repLiq": "Liquiditätsrisiko",
-    "repHist": "Historischer Verlauf",
-    "repTax": "Steuerreport (31.12)",
-    "repCatFlow": "Kategorienfluss",
-    "repWaterfall": "Wasserfallfluss",
-    "repPassive": "Passives Einkommen",
-    "repTopFlow": "Top Flow Assets",
-    "repBookAna": "Buchungsanalyse",
-    "repSimReg": "Simulation & Regression",
-    "repScenFire": "Szenarien & FIRE",
-    "tree": "Strukturbaum",
-    "propEditor": "Eigenschaftseditor",
-    "statusReady": "Bereit",
-    "version": "Version",
-    "dateSelect": "Zeitraum",
-    "btnApply": "Anwenden",
-    "btnCancel": "Abbrechen",
-    "btnSave": "Speichern",
-    "btnAdd": "Hinzufügen",
-    "btnDelete": "Löschen",
-    "assetClass": "Anlageklasse",
-    "currency": "Währung",
-    "exchangeRate": "Wechselkurs",
-    "isLiquid": "Liquides Mittel",
-    "isArchived": "Archiviert",
-    "bookings": "Buchungen",
-    "date": "Datum",
-    "type": "Typ",
-    "category": "Kategorie",
-    "amount": "Betrag",
-    "income": "Einzahlung",
-    "expense": "Auszahlung",
-    "addBank": "Bank hinzufügen",
-    "addCategory": "Kategorie hinzufügen",
-    "addAsset": "Asset hinzufügen",
-    "deleteConfirm": "Wirklich löschen?",
-    "acCash": "Konto",
-    "acFund": "Fonds / ETF",
-    "acStock": "Aktie",
-    "acCrypto": "Krypto",
-    "acRealEstate": "Immobilie",
-    "acMortgage": "Hypothek",
-    "acPensionCash": "Pensionskasse",
-    "acPension3aCash": "3a Vorsorgekonto",
-    "acPension3aFund": "3a Vorsorgefonds",
-    "typeDeposit": "Einzahlung",
-    "typeWithdrawal": "Auszahlung",
-    "typeBuy": "Kauf",
-    "typeSell": "Verkauf",
-    "typeAmortization": "Abzahlung",
-    "typeReval": "Wertanpassung",
-    "typeInterest": "Zinszahlung",
-    "typeDiv": "Dividende",
-    "typeDebtInc": "Schulderhöhung",
-    "typeFee": "Gebühr"
-  }
+  ]
 }

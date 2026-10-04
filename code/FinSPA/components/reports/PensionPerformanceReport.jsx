@@ -1,40 +1,86 @@
 const React = require('react');
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
 const Icon = safeRequire('../Icons.jsx') || (({name}) => <span>[{name}]</span>);
-const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
+const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules?.['data/DataEngine.jsx']?.exports || {};
 
 const { getAssetValueAtDate = () => 0, generateMonthEnds = (s,e) => [s,e] } = DataEngine;
 
 const ReportHeader = safeRequire('../ReportHeader.jsx') || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
-const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center">Chart fehlt</div>);
+const PdfToolkit = safeRequire('../print/PdfToolkit.jsx') || window.PdfToolkit;
+
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
 const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
-  const chartRef = useRef(null);
+  const reportRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
   
   const [calcMethod, setCalcMethod] = useState('cumulative');
+  const [activeTableTab, setActiveTableTab] = useState('yearly');
+
+  const todayStr = dateRange?.to || new Date().toISOString().split('T')[0];
+  const currentCalendarYear = new Date(todayStr).getFullYear();
+
+  const maxPillar3aLimit = Number(data?.settings?.pillar3aMaxLimit) || 7258;
 
   const pensionClasses = ['pension_cash', 'pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'];
-  const pensionAssets = (activeAssets || []).filter(a => pensionClasses.includes(a.assetClass));
+  const pensionAssets = useMemo(() => {
+    return (activeAssets || []).filter(a => pensionClasses.includes(a.assetClass));
+  }, [activeAssets]);
   
-  const pillar2Assets = pensionAssets.filter(a => a.assetClass === 'pension_cash');
-  const pillar3Assets = pensionAssets.filter(a => ['pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(a.assetClass));
+  const pillar2Assets = useMemo(() => pensionAssets.filter(a => a.assetClass === 'pension_cash'), [pensionAssets]);
+  const pillar3Assets = useMemo(() => pensionAssets.filter(a => ['pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(a.assetClass)), [pensionAssets]);
 
-  if (pensionAssets.length === 0) {
-    return (
-      <div className="max-w-6xl px-4 md:px-8 pb-12">
-          <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
-          <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>{t ? t('noPensionData') || 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.' : 'Keine Pensionskassen oder Säule 3a Konten/Depots gefunden.'}</p>
-        </div>
-      </div>
-    );
-  }
+  const { pillar3aNewMoneyYTD, remaining3aRoom, pct3aUsed } = useMemo(() => {
+      let ytdDeposits = 0;
+      const yearPrefix = `${currentCalendarYear}`;
+
+      pillar3Assets.forEach(asset => {
+          (asset.bookings || []).forEach(bk => {
+              if (!bk.date || !bk.date.startsWith(yearPrefix)) return;
+
+              const bType = String(bk.type || '');
+              const sub = String(bk.subCategory || bk.category || '').toLowerCase();
+              const comment = String(bk.comment || '').toLowerCase();
+
+              const isInternalShift = 
+                  sub.includes('zins') || 
+                  sub.includes('dividende') || 
+                  sub.includes('umbuchung') || 
+                  sub.includes('übertrag') || 
+                  sub.includes('transfer');
+
+              if (isInternalShift) return;
+
+              const isRegularDeposit = (bType === 'Einzahlung');
+
+              const isDirectFundDeposit = (bType === 'Kauf') && (
+                  sub.includes('direkteinzahlung') || 
+                  sub.includes('neugeld') || 
+                  comment.includes('#neugeld')
+              );
+
+              if (isRegularDeposit || isDirectFundDeposit) {
+                  const amt = Number(bk.amount || 0);
+                  const rate = parseFloat(String(bk.bookingExchangeRate || asset.exchangeRate || 1).replace(',', '.'));
+                  ytdDeposits += amt * rate;
+              }
+          });
+      });
+
+      const remaining = Math.max(0, maxPillar3aLimit - ytdDeposits);
+      const pct = maxPillar3aLimit > 0 ? Math.min(100, (ytdDeposits / maxPillar3aLimit) * 100) : 0;
+
+      return {
+          pillar3aNewMoneyYTD: ytdDeposits,
+          remaining3aRoom: remaining,
+          pct3aUsed: pct
+      };
+  }, [pillar3Assets, currentCalendarYear, maxPillar3aLimit]);
 
   let earliestDate = dateRange?.from;
   if (!earliestDate) {
@@ -44,8 +90,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
           (asset.bookings || []).forEach(b => { if (b.date < earliestDate) earliestDate = b.date; });
       });
   }
-
-  const todayStr = dateRange?.to || new Date().toISOString().split('T')[0];
 
   const calculateCumulativeStats = (asset, targetDate) => {
       const investedInBase = DataEngine.getInvestedCapitalAtDate ? DataEngine.getInvestedCapitalAtDate(asset, targetDate, activeAssets) : 0;
@@ -72,7 +116,6 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                                     (asset.bookings || []).some(b => b.date <= startDate);
       
       const actualStart = hasHistoryBeforeStart ? (getAssetValueAtDate(asset, startDate, activeAssets) || 0) : 0;
-      
       const cumStart = calculateCumulativeStats(asset, startDate);
       const cumTarget = calculateCumulativeStats(asset, targetDate);
 
@@ -164,6 +207,68 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   }
 
   const latestData = monthlyDataPoints[monthlyDataPoints.length - 1]?.total || { invested: 0, actual: 0, delta: 0, priceProfit: 0, profit: 0, priceRoi: 0, roi: 0 };
+  const latestP3 = monthlyDataPoints[monthlyDataPoints.length - 1]?.p3 || { invested: 0, actual: 0 };
+  const latestP2 = monthlyDataPoints[monthlyDataPoints.length - 1]?.p2 || { invested: 0, actual: 0 };
+
+  const yearlyPerformance = useMemo(() => {
+      const yearsSet = new Set();
+      monthlyDataPoints.forEach(dp => {
+          yearsSet.add(dp.dateStr.substring(0, 4));
+      });
+      const years = Array.from(yearsSet).sort();
+
+      return years.map(yr => {
+          const yNum = Number(yr);
+          const startD = yNum === Number(years[0]) ? earliestDate : `${yNum - 1}-12-31`;
+          const endD = (yr === `${currentCalendarYear}`) ? todayStr : `${yr}-12-31`;
+
+          let startVal = 0;
+          let endVal = 0;
+          let yearDeposits = 0;
+          let yearYields = 0;
+
+          pensionAssets.forEach(a => {
+              startVal += getAssetValueAtDate(a, startD, activeAssets);
+              endVal += getAssetValueAtDate(a, endD, activeAssets);
+
+              (a.bookings || []).forEach(bk => {
+                  if (bk.date && bk.date.startsWith(yr)) {
+                      const sub = String(bk.subCategory || bk.category || '').toLowerCase();
+                      const bType = String(bk.type || '');
+                      const isYield = bType === 'Dividende' || sub.includes('zins');
+                      
+                      const rate = parseFloat(String(bk.bookingExchangeRate || a.exchangeRate || 1).replace(',', '.'));
+                      const amt = Number(bk.amount || 0) * rate;
+
+                      if (isYield) {
+                          yearYields += amt;
+                      } else if (bType === 'Einzahlung' || (bType === 'Kauf' && sub.includes('direkteinzahlung'))) {
+                          yearDeposits += amt;
+                      } else if (bType === 'Auszahlung') {
+                          yearDeposits -= amt;
+                      }
+                  }
+              });
+          });
+
+          const netGain = endVal - startVal - yearDeposits;
+          const totalAnnualReturn = netGain + yearYields;
+          
+          const baseCap = startVal + (yearDeposits / 2);
+          const annualPerformancePct = baseCap > 0 ? (totalAnnualReturn / baseCap) * 100 : 0;
+
+          return {
+              year: yr,
+              startVal,
+              endVal,
+              deposits: yearDeposits,
+              yields: yearYields,
+              netGain,
+              totalAnnualReturn,
+              performancePct: annualPerformancePct
+          };
+      });
+  }, [monthlyDataPoints, earliestDate, todayStr, currentCalendarYear, pensionAssets, activeAssets]);
 
   const currentStats = {
       pension_cash: { invested: 0, actual: 0, yields: 0, delta: 0 },
@@ -185,132 +290,84 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
       }
   });
 
-  const repTitle = t ? t('repPensionTitle') || "Vorsorge & Pensionskasse" : "Vorsorge & Pensionskasse";
-  const repSub = t ? t('repPensionSub') || "Rendite-Analyse der 2. und 3. Säule" : "Rendite-Analyse der 2. und 3. Säule";
-
-  const loadHtml2Canvas = () => {
-    return new Promise((resolve) => {
-        if (window.html2canvas) return resolve(window.html2canvas);
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        script.onload = () => resolve(window.html2canvas);
-        document.head.appendChild(script);
-    });
-  };
+  const repTitle = safeT(t, 'repPensionTitle', "Vorsorge & Pensionskasse");
+  const repSub = `${safeT(t, 'statusAsOf', 'Stichtag:')} ${new Date(todayStr).toLocaleDateString('de-CH')} | ${safeT(t, 'kpiPillar3aNewMoneyYear', 'Säule 3a Neugeld {year}').replace('{year}', currentCalendarYear)}: ${fCur(pillar3aNewMoneyYTD, 'CHF')} / max. ${fCur(maxPillar3aLimit, 'CHF')}`;
 
   useEffect(() => {
     const buildReportData = async () => {
-        const html2canvas = await loadHtml2Canvas();
-        let chartsData = [];
+        const transCalcMethod = calcMethod === 'cumulative' ? safeT(t, 'calcCumulative', 'Kumuliert') : safeT(t, 'calcPeriodic', 'Zeitraum-isoliert');
         
-        const isDark = document.documentElement.classList.contains('dark');
-        const bgColor = isDark ? '#0f172a' : '#ffffff';
+        const kpis = [
+            { label: safeT(t, 'kpiPensionWealthTotal', 'Vorsorgevermögen Gesamt'), value: fCur(latestData.actual, 'CHF'), sub: `PK: ${fCur(latestP2.actual, 'CHF')} | 3a: ${fCur(latestP3.actual, 'CHF')}`, color: '#2563eb' },
+            { label: safeT(t, 'kpiPillar3aNewMoneyYear', `Säule 3a Neugeld ${currentCalendarYear}`).replace('{year}', currentCalendarYear), value: fCur(pillar3aNewMoneyYTD, 'CHF'), sub: `${pct3aUsed.toFixed(1)}% / max. ${fCur(maxPillar3aLimit, 'CHF')}`, color: '#10b981' },
+            { label: safeT(t, 'kpiPillar3aRemaining', 'Verbleibend Säule 3a'), value: fCur(remaining3aRoom, 'CHF'), sub: safeT(t, 'descRemainingRoomYear', `Restlicher Spielraum ${currentCalendarYear}`).replace('{year}', currentCalendarYear), color: remaining3aRoom > 0 ? '#f59e0b' : '#10b981' },
+            { label: `${safeT(t, 'labelTotalReturn', 'Total Return')} (${transCalcMethod})`, value: `${latestData.profit >= 0 ? '+' : ''}${fCur(latestData.profit, 'CHF')}`, sub: `ROI: ${latestData.roi.toFixed(2)}%`, color: latestData.profit >= 0 ? '#6366f1' : '#ef4444' }
+        ];
 
-        const captureBlock = async (selector, titleFallback = '') => {
-            const el = document.querySelector(selector);
-            if (el) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-                const canvas = await html2canvas(el, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), width: 760 });
-            }
-        };
-
-        await captureBlock('.dashboard-top-export-block', ''); 
-
-        if (chartRef.current) {
-            const containers = chartRef.current.querySelectorAll('.chart-export-block');
-            for (let i = 0; i < containers.length; i++) {
-                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div') || containers[i].querySelector('div');
-                
-                if (chartDiv && window.echarts) {
-                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
-                    if (chartInstance) {
-                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
-                        continue;
-                    }
-                }
-                
-                const canvas = await html2canvas(containers[i], { 
-                    scale: 2, 
-                    backgroundColor: bgColor, 
-                    useCORS: true, 
-                    logging: false,
-                    ignoreElements: (element) => {
-                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
-                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
-                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT';
-                    }
-                });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] }); 
-            }
+        let chartsData = [];
+        if (PdfToolkit && typeof PdfToolkit.captureCharts === 'function') {
+            chartsData = await PdfToolkit.captureCharts(reportRef.current, document.documentElement.classList.contains('dark'));
         }
 
         const tableHeaders = [
-            t ? t('colMonth') || 'Monat' : 'Monat',
-            t ? t('colPill2Inv') || 'Säule 2 (Inv.)' : 'Säule 2 (Inv.)',
-            t ? t('colPill2Val') || 'Säule 2 (Wert)' : 'Säule 2 (Wert)',
-            t ? t('colPill3Inv') || 'Säule 3a (Inv.)' : 'Säule 3a (Inv.)',
-            t ? t('colPill3Val') || 'Säule 3a (Wert)' : 'Säule 3a (Wert)',
-            t ? t('colTotalInv') || 'Total (Inv.)' : 'Total (Inv.)',
-            t ? t('colTotalVal') || 'Total (Wert)' : 'Total (Wert)',
-            t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn',
-            t ? t('labelYields') || 'Erträge' : 'Erträge',
-            t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'
+            safeT(t, 'colMonth', 'Jahr'),
+            safeT(t, 'startValue', 'Startwert'),
+            safeT(t, 'inflows', 'Einzahlungen'),
+            safeT(t, 'endValue', 'Endwert'),
+            safeT(t, 'colNetValueGain', 'Wertzuwachs (Netto)'),
+            safeT(t, 'colPerformanceAnnual', 'Performance p.a.')
         ];
         
-        const tableBody = monthlyDataPoints.slice().reverse().map(d => {
-            const dateObj = new Date(d.dateStr);
-            const formattedDate = dateObj.toLocaleDateString('de-CH', { month: 'short', year: 'numeric' }); 
-            return [
-              formattedDate, 
-              fCur(d.p2.invested), fCur(d.p2.actual), 
-              fCur(d.p3.invested), fCur(d.p3.actual), 
-              fCur(d.total.invested), fCur(d.total.actual),
-              `${d.total.priceProfit > 0 ? '+' : ''}${fCur(d.total.priceProfit)}`, 
-              `+${fCur(d.total.yields)}`, 
-              `${d.total.roi > 0 ? '+' : ''}${d.total.roi.toFixed(2)} %`
-            ];
-        });
+        const tableBody = yearlyPerformance.slice().reverse().map(yp => [
+            yp.year,
+            fCur(yp.startVal, 'CHF'),
+            `+${fCur(yp.deposits, 'CHF')}`,
+            fCur(yp.endVal, 'CHF'),
+            `${yp.totalAnnualReturn >= 0 ? '+' : ''}${fCur(yp.totalAnnualReturn, 'CHF')}`,
+            `${yp.performancePct >= 0 ? '+' : ''}${yp.performancePct.toFixed(2)} %`
+        ]);
 
-        return { chartsData, tableHeaders, tableBody };
+        return { chartsData, tableHeaders, tableBody, kpis };
     };
 
     const handlePdfExport = async () => {
       try {
-        if (!PdfExportEngine) return;
-        const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
-        const { chartsData, tableHeaders, tableBody } = await buildReportData();
+        if (!PdfToolkit) return;
+        const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
 
-        await PdfExportEngine.exportReport({
-          title: `${repTitle} (${transCalcMethod})`,
+        await PdfToolkit.exportReport({
+          title: repTitle,
           subtitle: repSub,
           tableHeaders, 
           tableBody, 
+          colWidthsPct: [0.12, 0.18, 0.18, 0.18, 0.18, 0.16],
+          colAligns: ['left', 'right', 'right', 'right', 'right', 'right'],
+          kpis,
           chartsData, 
           data
         });
       } catch (err) {
-        console.error("[FinSPA] PDF Export Error im PensionPerformanceReport:", err);
+        console.error("[FinBundle Pro] PDF Export Error im PensionPerformanceReport:", err);
       }
     };
 
     const handleBatchExport = (e) => {
         const exportPromise = new Promise(async (resolve) => {
             try {
-                const transCalcMethod = calcMethod === 'cumulative' ? (t ? t('calcCumulative') || 'Kumuliert' : 'Kumuliert') : (t ? t('calcPeriodic') || 'Zeitraum' : 'Zeitraum');
-                const { chartsData, tableHeaders, tableBody } = await buildReportData();
+                const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
                 resolve({
                     order: 10, 
-                    title: `${repTitle} (${transCalcMethod})`,
+                    title: repTitle,
                     subtitle: repSub,
                     tableHeaders,
                     tableBody,
+                    colWidthsPct: [0.12, 0.18, 0.18, 0.18, 0.18, 0.16],
+                    colAligns: ['left', 'right', 'right', 'right', 'right', 'right'],
+                    kpis,
                     chartsData
                 });
             } catch (err) {
-                console.error("[FinSPA] Batch Export Error im PensionPerformanceReport:", err);
+                console.error("[FinBundle Pro] Batch Export Error:", err);
                 resolve(null);
             }
         });
@@ -327,360 +384,327 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [monthlyDataPoints, fCur, t, repTitle, repSub, data, calcMethod]);
+  }, [monthlyDataPoints, yearlyPerformance, fCur, t, repTitle, repSub, data, calcMethod, pillar3aNewMoneyYTD, remaining3aRoom, pct3aUsed, currentCalendarYear, maxPillar3aLimit, latestData, latestP2, latestP3]);
 
-  // --- INTERPOLATION FÜR PROPORTIONALE X-ACHSE ---
-  const interpolateTimeSeries = (points) => {
-    if (!points || points.length < 2) return points;
-    const result = [];
-    
-    const lerpObj = (o1, o2, ratio) => {
-        const out = {};
-        for (const key in o1) {
-            if (typeof o1[key] === 'number' && typeof o2[key] === 'number') {
-                out[key] = o1[key] + (o2[key] - o1[key]) * ratio;
-            } else if (typeof o1[key] === 'object' && o1[key] !== null) {
-                out[key] = lerpObj(o1[key], o2[key], ratio);
-            } else {
-                out[key] = o1[key];
-            }
-        }
-        return out;
-    };
-
-    for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        
-        // Zwinge das Datum auf UTC, um DST-Sprünge zu vermeiden
-        const t1 = new Date(p1.dateStr + 'T00:00:00Z').getTime();
-        const t2 = new Date(p2.dateStr + 'T00:00:00Z').getTime();
-        const days = Math.round((t2 - t1) / (1000 * 3600 * 24));
-        
-        result.push(p1);
-        
-        // Füge für jeden einzelnen Tag einen interpolierten Datenpunkt ein
-        if (days > 1 && days < 1000) { 
-            for (let d = 1; d < days; d++) {
-                const ratio = d / days;
-                const currentTime = t1 + d * 24 * 3600 * 1000;
-                const interp = lerpObj(p1, p2, ratio);
-                interp.dateStr = new Date(currentTime).toISOString().split('T')[0];
-                interp.isInterpolated = true;
-                result.push(interp);
-            }
-        }
-    }
-    result.push(points[points.length - 1]);
-    return result;
-  };
-
-  const chartDataPoints = interpolateTimeSeries(monthlyDataPoints);
-
-  const chartLabels = chartDataPoints.map(d => {
+  const chartLabelsMonths = monthlyDataPoints.map(d => {
       const dateObj = new Date(d.dateStr);
-      return `${('0'+dateObj.getDate()).slice(-2)}.${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
+      return `${('0'+(dateObj.getMonth()+1)).slice(-2)}.${dateObj.getFullYear().toString().slice(-2)}`;
   });
 
-  return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12">
+  if (pensionAssets.length === 0) {
+    return (
+      <div className="max-w-6xl px-4 md:px-8 pb-12">
+        <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
+          <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
+          <p>{safeT(t, 'msgNoPensionAssetsFound', 'Keine Pensionskassen oder Säule 3a Konten im Portfolio gefunden.')}</p>
+        </div>
+      </div>
+    );
+  }
 
+  return (
+    <div className="max-w-7xl px-4 md:px-8 pb-12" ref={reportRef}>
+      
       <div className="print-hide flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 mb-8 gap-3 shadow-sm">
          <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
             <Icon name="Activity" size={14} className="text-blue-500"/>
-            {t ? t('methodDashMetrics') || 'Berechnungsmethode für Dashboard-Metriken:' : 'Berechnungsmethode für Dashboard-Metriken:'}
+            {safeT(t, 'labelCalcMethodDashMetrics', 'Berechnungsmethode für Dashboard-Metriken:')}
          </div>
          <div className="flex bg-gray-200/60 dark:bg-slate-800 p-1 rounded-lg border dark:border-slate-700 text-xs font-semibold self-stretch sm:self-auto justify-between sm:justify-start">
             <button 
                 onClick={() => setCalcMethod('cumulative')}
                 className={`px-4 py-1.5 rounded-md transition-all ${calcMethod === 'cumulative' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm font-bold' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
             >
-                {t ? t('methodCumLong') || 'Kumuliert (Gesamthistorie)' : 'Kumuliert (Gesamthistorie)'}
+                {safeT(t, 'labelCalcCumulativeFull', 'Kumuliert (Gesamthistorie)')}
             </button>
             <button 
                 onClick={() => setCalcMethod('periodic')}
                 className={`px-4 py-1.5 rounded-md transition-all ${calcMethod === 'periodic' ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm font-bold' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
             >
-                {t ? t('methodPerLong') || 'Perioden-isoliert (Zeitraum-Delta)' : 'Perioden-isoliert (Zeitraum-Delta)'}
+                {safeT(t, 'labelCalcPeriodicInterval', 'Perioden-isoliert (Intervall)')}
             </button>
          </div>
       </div>
 
-      <div className="dashboard-top-export-block w-full bg-white dark:bg-slate-950">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm overflow-hidden">
-                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2">
-                    <span>{String(calcMethod === 'cumulative' ? (t ? t('netInvestedTotal') || 'Netto Investiert (Total)' : 'Netto Investiert (Total)') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital')).toUpperCase()}</span>
-                </div>
-                <div className="w-full">
-                    <div className="font-black text-slate-900 dark:text-white flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}>
-                        <span>{fCur ? fCur(latestData.invested, 'CHF') : latestData.invested}</span>
-                    </div>
-                </div>
-                
-                {calcMethod === 'periodic' && (
-                    <div className={`text-sm font-bold mt-1 flex items-center gap-1.5 ${latestData.delta >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600'}`}>
-                        <Icon name={latestData.delta >= 0 ? "TrendingUp" : "TrendingDown"} size={14} prefix="" /> 
-                        <span>{latestData.delta > 0 ? '+' : ''}{fCur ? fCur(latestData.delta, 'CHF') : latestData.delta} {t ? t('netInflow') || 'Netto-Zufluss' : 'Netto-Zufluss'}</span>
-                    </div>
-                )}
-                
-                <div className="text-xs text-gray-400 mt-2 truncate">
-                    <span>{calcMethod === 'cumulative' 
-                        ? (t ? t('histDeposits') || 'Historische Einzahlungen' : 'Historische Einzahlungen') 
-                        : `${t ? t('baseValuePlusInflows') || 'Basiswert' : 'Basiswert'} (${new Date(earliestDate).toLocaleDateString('de-CH')}?) + ${t ? t('inflows') || 'Zuflüsse' : 'Zuflüsse'}`
-                    }</span>
-                </div>
-             </div>
-             
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
-                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2">
-                    <span>{String(t ? t('marketValueEnd') || 'Marktwert per Ende' : 'Marktwert per Ende').toUpperCase()}</span>
-                </div>
-                <div className="w-full">
-                    <div className="font-black text-blue-600 dark:text-blue-400 flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 text-xl md:text-2xl" title={fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}>
-                        <span>{fCur ? fCur(latestData.actual, 'CHF') : latestData.actual}</span>
-                    </div>
-                </div>
-                <div className="text-xs text-gray-400 mt-2">
-                    <span>{t ? t('statusAsOf') || 'Stand per' : 'Stand per'} {new Date(todayStr).toLocaleDateString('de-CH')}</span>
-                </div>
-             </div>
-             
-             <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.priceProfit >= 0 ? 'bg-green-50 border-green-200 dark:bg-green-900/20' : 'bg-red-50 border-red-200 dark:bg-red-900/20'}`}>
-                <div className={`text-xs font-bold tracking-wider mb-2 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-green-400'}`}>
-                    <span>{String(t ? t('priceProfitInterval') || 'Kursgewinn im Intervall' : 'Kursgewinn im Intervall').toUpperCase()}</span>
-                </div>
-                <div className="w-full">
-                    <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 ${latestData.priceProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                       <div className="font-black text-xl md:text-2xl" title={`${latestData.priceProfit > 0 ? '+' : ''}${fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}`}>
-                           {latestData.priceProfit > 0 ? '+' : ''}{fCur ? fCur(latestData.priceProfit, 'CHF') : latestData.priceProfit}
-                       </div>
-                       <span className="text-sm font-medium opacity-70 shrink-0">({latestData.priceRoi > 0 ? '+' : ''}{latestData.priceRoi.toFixed(2)}%)</span>
-                    </div>
-                </div>
-             </div>
-             
-             <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.profit >= 0 ? 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20'}`}>
-                <div className={`text-xs font-bold tracking-wider mb-2 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                    <span>{String(t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)').toUpperCase()}</span>
-                </div>
-                <div className="w-full">
-                    <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 pb-1 ${latestData.profit >= 0 ? 'text-indigo-700 dark:text-indigo-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                       <div className="font-black text-xl md:text-2xl" title={`${latestData.profit > 0 ? '+' : ''}${fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}`}>
-                           {latestData.profit > 0 ? '+' : ''}{fCur ? fCur(latestData.profit, 'CHF') : latestData.profit}
-                       </div>
-                       <span className="text-sm font-medium opacity-70 shrink-0">({latestData.roi > 0 ? '+' : ''}{latestData.roi.toFixed(2)}%)</span>
-                    </div>
-                </div>
-             </div>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+         
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+               <Icon name="Shield" size={14} className="text-blue-500"/>
+               {safeT(t, 'labelPensionWealthTotalHeader', 'GESAMTVERMÖGEN VORSORGE')}
+            </div>
+            <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+               {fCur(latestData.actual, 'CHF')}
+            </div>
+            <div className="text-xs text-gray-400 mt-2">
+               PK: {fCur(latestP2.actual, 'CHF')} | 3a: {fCur(latestP3.actual, 'CHF')}
+            </div>
+         </div>
 
-          <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200">{t ? t('labelBreakdownByAssetClass') || 'Aufschlüsselung nach Anlageklasse' : 'Aufschlüsselung nach Anlageklasse'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {pensionClasses.map(cls => {
-                const stats = currentStats[cls];
-                if (stats.invested === 0 && stats.actual === 0 && stats.yields === 0) return null;
-                
-                let priceProfit = stats.actual - stats.invested;
-                if (['pension_cash', 'pension_3a_cash', 'pension_3a_managed'].includes(cls)) {
-                    priceProfit -= stats.yields;
-                }
-                
-                const totalProfit = priceProfit + stats.yields;
-                const roi = stats.invested > 0 ? (totalProfit / stats.invested) * 100 : 0;
-                const isPos = totalProfit >= 0;
-                
-                const titleMap = { 
-                    'pension_cash': t ? t('titlePensionCash') || 'Pensionskasse' : 'Pensionskasse', 
-                    'pension_3a_cash': t ? t('titlePension3aCash') || '3a Vorsorgekonto' : '3a Vorsorgekonto', 
-                    'pension_3a_fund': t ? t('titlePension3aFund') || '3a Vorsorgefonds' : '3a Vorsorgefonds',
-                    'pension_3a_managed': t ? t('titlePension3aManaged') || '3a Fondslösung (Gesamtwert)' : '3a Fondslösung (Gesamtwert)'
-                };
-                const iconMap = { 'pension_cash': 'Building', 'pension_3a_cash': 'Lock', 'pension_3a_fund': 'TrendingUp', 'pension_3a_managed': 'Activity' };
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+            <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+               <span className="flex items-center gap-1.5">
+                  <Icon name="Calendar" size={14} className="text-emerald-500"/>
+                  {safeT(t, 'labelPillar3aNewMoneyHeader', '3A NEUGELD {year}').replace('{year}', currentCalendarYear)}
+               </span>
+               <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
+                  {pct3aUsed.toFixed(1)}%
+               </span>
+            </div>
+            <div className="font-black text-2xl text-emerald-600 dark:text-emerald-400 truncate">
+               {fCur(pillar3aNewMoneyYTD, 'CHF')}
+            </div>
+            
+            <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
+               <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pct3aUsed}%` }}></div>
+            </div>
+            <div className="text-[11px] text-gray-400 mt-1 flex justify-between">
+               <span>{safeT(t, 'labelPillar3aRoomMax', 'Max: {val}').replace('{val}', fCur(maxPillar3aLimit, 'CHF'))}</span>
+               <span className="font-medium text-slate-600 dark:text-slate-300">{safeT(t, 'labelPillar3aRoomRest', 'Rest: {val}').replace('{val}', fCur(remaining3aRoom, 'CHF'))}</span>
+            </div>
+         </div>
 
-                return (
-                    <div key={cls} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex flex-col">
-                        <div className="flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200 font-bold border-b border-gray-100 dark:border-slate-800 pb-3">
-                            <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
-                               <Icon name={iconMap[cls]} size={16} />
-                            </div>
-                            {titleMap[cls]}
-                        </div>
-                        <div className="space-y-3 text-sm flex-1">
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-500">
-                                    {calcMethod === 'cumulative' 
-                                        ? (t ? t('labelInvested') || 'Investiert:' : 'Investiert:') 
-                                        : (t ? t('labelBasePlusInflows') || 'Basis + Zuflüsse:' : 'Basis + Zuflüsse:')}
-                                </span>
-                                <span className="font-mono">{fCur ? fCur(stats.invested, 'CHF') : stats.invested}</span>
-                            </div>
-                            
-                            {calcMethod === 'periodic' && (
-                                <div className="flex justify-between items-center text-xs mt-1 border-b border-dashed border-gray-100 dark:border-slate-800 pb-1 mb-1">
-                                    <span className="text-gray-400 pl-2">{t ? t('labelNetInflowPeriod') || '↳ Netto-Zufluss (Periode):' : '↳ Netto-Zufluss (Periode):'}</span>
-                                    <span className={`font-mono font-bold ${stats.delta >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
-                                        {stats.delta > 0 ? '+' : ''}{fCur ? fCur(stats.delta, 'CHF') : stats.delta}
-                                    </span>
-                                </div>
-                            )}
+         <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.priceProfit >= 0 ? 'bg-green-50/50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-red-50/50 border-red-200 dark:bg-red-900/20'}`}>
+            <div className="text-xs font-bold uppercase tracking-wider mb-2 text-green-800 dark:text-green-300 flex items-center gap-2">
+               <Icon name="TrendingUp" size={14}/>
+               {safeT(t, 'labelPriceEffectProfitHeader', 'KURSEFFEKT / GEWINN')}
+            </div>
+            <div className="font-black text-2xl text-green-700 dark:text-green-400 truncate">
+               {latestData.priceProfit > 0 ? '+' : ''}{fCur(latestData.priceProfit, 'CHF')}
+            </div>
+            <div className="text-xs text-green-600/70 dark:text-green-400/70 mt-2">
+               ({latestData.priceRoi > 0 ? '+' : ''}{safeT(t, 'descPriceRoiPercent', '{roi}% Kurs-Rendite').replace('{roi}', latestData.priceRoi.toFixed(2))})
+            </div>
+         </div>
 
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-500">{t ? t('labelYieldsInterestDiv') || 'Erträge (Zinsen/Div):' : 'Erträge (Zinsen/Div):'}</span>
-                                <span className="font-mono text-indigo-500">+{fCur ? fCur(stats.yields, 'CHF') : stats.yields}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-500">{t ? t('labelEndMarketValue') || 'End-Marktwert:' : 'End-Marktwert:'}</span>
-                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{fCur ? fCur(stats.actual, 'CHF') : stats.actual}</span>
-                            </div>
-                        </div>
-                        <div className={`mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex justify-between font-bold ${isPos ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                            <span>{t ? t('labelResult') || 'Ergebnis:' : 'Ergebnis:'} {isPos ? '+' : ''}{fCur ? fCur(totalProfit, 'CHF') : totalProfit}</span>
-                            <span>{isPos ? '+' : ''}{roi.toFixed(2)}%</span>
-                        </div>
-                    </div>
-                );
-            })}
-          </div>
+         <div className={`border p-6 rounded-2xl shadow-sm overflow-hidden ${latestData.profit >= 0 ? 'bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800' : 'bg-orange-50/50 border-orange-200 dark:bg-orange-900/20'}`}>
+            <div className="text-xs font-bold uppercase tracking-wider mb-2 text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+               <Icon name="Activity" size={14}/>
+               {safeT(t, 'labelTotalReturnWithYieldsHeader', 'TOTAL RETURN (INKL. ERTRÄGE)')}
+            </div>
+            <div className="font-black text-2xl text-indigo-700 dark:text-indigo-400 truncate">
+               {latestData.profit > 0 ? '+' : ''}{fCur(latestData.profit, 'CHF')}
+            </div>
+            <div className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-2">
+               {safeT(t, 'descTotalRoiPercent', 'Gesamtrendite: {roi}%').replace('{roi}', `${latestData.roi > 0 ? '+' : ''}${latestData.roi.toFixed(2)}`)}
+            </div>
+         </div>
       </div>
 
-      {monthlyDataPoints.length > 1 && (
-         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={chartRef}>
+      <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200">{safeT(t, 'titlePensionCatBreakdown', 'Gliederung nach Vorsorge-Kategorien')}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {pensionClasses.map(cls => {
+            const stats = currentStats[cls];
+            if (stats.invested === 0 && stats.actual === 0 && stats.yields === 0) return null;
             
-            <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
-               data-pdf-title={`${t ? t('devPension2') || 'Entwicklung Pensionskasse (2. Säule)' : 'Entwicklung Pensionskasse (2. Säule)'} - ${calcMethod === 'cumulative' ? (t ? t('labelAbsolute') || 'Absolut' : 'Absolut') : (t ? t('labelInterval') || 'Intervall' : 'Intervall')}`}
-            >
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                    <Icon name="Building" className="text-blue-500" /> {t ? t('devPension2') || 'Entwicklung Pensionskasse (2. Säule)' : 'Entwicklung Pensionskasse (2. Säule)'}
-                </h3>
-                <div style={{ width: '100%', height: '300px' }}>
-                    <UniversalChart 
-                        engine={activeChartEngine}
-                        type="line"
-                        xAxisType="time"
-                        isTimeSeries={true}
-                        showDataLabels={false}
-                        labels={chartLabels}
-                        datasets={[
-                            {
-                                name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: chartDataPoints.map(d => d.p2.invested),
-                                backgroundColor: '#475569', 
-                                valueFormatter: fCur,
-                                label: { show: false }
-                            },
-                            {
-                                name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: chartDataPoints.map(d => d.p2.actual),
-                                backgroundColor: '#2563eb', 
-                                valueFormatter: fCur,
-                                label: { show: false }
-                            }
-                        ]} 
-                        height="100%"
-                    />
+            let priceProfit = stats.actual - stats.invested;
+            if (['pension_cash', 'pension_3a_cash', 'pension_3a_managed'].includes(cls)) {
+                priceProfit -= stats.yields;
+            }
+            
+            const totalProfit = priceProfit + stats.yields;
+            const roi = stats.invested > 0 ? (totalProfit / stats.invested) * 100 : 0;
+            const isPos = totalProfit >= 0;
+            
+            const titleMap = { 
+                'pension_cash': safeT(t, 'acPensionCash', 'Pensionskasse (2. Säule)'), 
+                'pension_3a_cash': safeT(t, 'acPension3aCash', '3a Sparkonto'), 
+                'pension_3a_fund': safeT(t, 'acPension3aFund', '3a Wertschriftenfonds'),
+                'pension_3a_managed': safeT(t, 'acPension3aManaged', '3a Verwaltetes Depot')
+            };
+            const iconMap = { 'pension_cash': 'Building', 'pension_3a_cash': 'Lock', 'pension_3a_fund': 'TrendingUp', 'pension_3a_managed': 'Activity' };
+
+            return (
+                <div key={cls} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex flex-col">
+                    <div className="flex items-center gap-2 mb-4 text-slate-800 dark:text-slate-200 font-bold border-b border-gray-100 dark:border-slate-800 pb-3">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                           <Icon name={iconMap[cls]} size={16} />
+                        </div>
+                        <span className="truncate text-sm">{titleMap[cls]}</span>
+                    </div>
+                    <div className="space-y-2.5 text-xs flex-1">
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">{safeT(t, 'labelInvestedHeader', 'Investiert')}:</span>
+                            <span className="font-mono">{fCur(stats.invested, 'CHF')}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">{safeT(t, 'labelYields', 'Erträge')}:</span>
+                            <span className="font-mono text-indigo-500">+{fCur(stats.yields, 'CHF')}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">{safeT(t, 'labelMarketValueHeader', 'Marktwert')}:</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(stats.actual, 'CHF')}</span>
+                        </div>
+                    </div>
+                    <div className={`mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex justify-between font-bold text-xs ${isPos ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                        <span>{safeT(t, 'labelReturnShort', 'Ertrag:')} {isPos ? '+' : ''}{fCur(totalProfit, 'CHF')}</span>
+                        <span>{isPos ? '+' : ''}{roi.toFixed(1)}%</span>
+                    </div>
                 </div>
-            </div>
+            );
+        })}
+      </div>
 
-            <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
-               data-pdf-title={`${t ? t('devPension3a') || 'Entwicklung Säule 3a' : 'Entwicklung Säule 3a'} - ${calcMethod === 'cumulative' ? (t ? t('labelAbsolute') || 'Absolut' : 'Absolut') : (t ? t('labelInterval') || 'Intervall' : 'Intervall')}`}
-            >
-                <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                    <Icon name="Lock" className="text-indigo-500" /> {t ? t('devPension3a') || 'Entwicklung Säule 3a' : 'Entwicklung Säule 3a'}
-                </h3>
-                <div style={{ width: '100%', height: '300px' }}>
-                    <UniversalChart 
-                        engine={activeChartEngine}
-                        type="line"
-                        xAxisType="time"
-                        isTimeSeries={true}
-                        showDataLabels={false}
-                        labels={chartLabels}
-                        datasets={[
-                            {
-                                name: calcMethod === 'cumulative' ? (t ? t('labelNetInvested') || 'Netto Investiert' : 'Netto Investiert') : (t ? t('workingCapital') || 'Arbeitendes Kapital' : 'Arbeitendes Kapital'),
-                                data: chartDataPoints.map(d => d.p3.invested),
-                                backgroundColor: '#475569',
-                                valueFormatter: fCur,
-                                label: { show: false }
-                            },
-                            {
-                                name: t ? t('labelMarketValue') || 'Marktwert' : 'Marktwert',
-                                data: chartDataPoints.map(d => d.p3.actual),
-                                backgroundColor: '#059669',
-                                valueFormatter: fCur,
-                                label: { show: false }
-                            },
-                            {
-                                name: t ? t('labelTotalReturnYields') || 'Total Return (inkl. Erträge)' : 'Total Return (inkl. Erträge)',
-                                data: chartDataPoints.map(d => d.p3.actual + d.p3.yields),
-                                backgroundColor: '#d97706',
-                                valueFormatter: fCur,
-                                label: { show: false }
-                            }
-                        ]} 
-                        height="100%"
-                    />
-                </div>
-            </div>
-
-         </div>
-      )}
-
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-             <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-300">
-                 {t ? t('monthlyHistoryTotal') || 'Monatliche Historie & Renditen (Total)' : 'Monatliche Historie & Renditen (Total)'}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={reportRef}>
+         
+         <div 
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+            data-pdf-title={safeT(t, 'titleHistTrackPillar2And3', 'Historischer Verlauf 2. und 3. Säule')}
+         >
+             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                 <Icon name="TrendingUp" className="text-blue-500" /> {safeT(t, 'titleHistTrackPillar2And3', 'Historischer Verlauf 2. und 3. Säule')}
+             </h3>
+             <div style={{ width: '100%', height: '300px' }}>
+                 <UniversalChart 
+                     engine={activeChartEngine}
+                     type="line"
+                     labels={chartLabelsMonths}
+                     datasets={[
+                         {
+                             name: safeT(t, 'colPillar2', 'Pensionskasse (2. Säule)'),
+                             data: monthlyDataPoints.map(d => d.p2.actual),
+                             backgroundColor: '#2563eb', 
+                             valueFormatter: fCur
+                         },
+                         {
+                             name: safeT(t, 'colPillar3a', 'Säule 3a (Vorsorge)'),
+                             data: monthlyDataPoints.map(d => d.p3.actual),
+                             backgroundColor: '#10b981', 
+                             valueFormatter: fCur
+                         }
+                     ]} 
+                     height="100%"
+                 />
              </div>
+         </div>
+
+         <div 
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+            data-pdf-title={safeT(t, 'titleAnnualDepositsVsYieldsPdf', 'Jährliche Einzahlungen vs. Ertrag')}
+         >
+             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                 <Icon name="Calendar" className="text-purple-500" /> {safeT(t, 'titleAnnualDepositsVsYields', 'Jährliche Einzahlungen vs. Wertzuwachs')}
+             </h3>
+             <div style={{ width: '100%', height: '300px' }}>
+                 <UniversalChart 
+                     engine={activeChartEngine}
+                     type="bar"
+                     labels={yearlyPerformance.map(y => y.year)}
+                     datasets={[
+                         {
+                             name: safeT(t, 'labelNetDeposits', 'Netto-Einzahlungen'),
+                             data: yearlyPerformance.map(y => y.deposits),
+                             backgroundColor: '#3b82f6',
+                             valueFormatter: fCur
+                         },
+                         {
+                             name: safeT(t, 'labelPureValueGrowthNet', 'Reiner Wertzuwachs (Gewinn)'),
+                             data: yearlyPerformance.map(y => y.totalAnnualReturn),
+                             backgroundColor: '#10b981',
+                             valueFormatter: fCur
+                         }
+                     ]} 
+                     height="100%"
+                 />
+             </div>
+         </div>
+
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+         <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center">
+             <div className="font-bold text-gray-700 dark:text-gray-300">
+                 {safeT(t, 'titleHistEvalPerformance', 'Historische Auswertung & Performance')}
+             </div>
+             <div className="flex gap-2">
+                 <button 
+                     onClick={() => setActiveTableTab('yearly')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTableTab === 'yearly' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}
+                 >
+                     {safeT(t, 'btnYearlyOverview', 'Jahresübersicht')}
+                 </button>
+                 <button 
+                     onClick={() => setActiveTableTab('monthly')}
+                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${activeTableTab === 'monthly' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-200 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}
+                 >
+                     {safeT(t, 'btnMonthlyDetail', 'Monatsdetail')}
+                 </button>
+             </div>
+         </div>
+
+         {activeTableTab === 'yearly' && (
+             <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                   <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
+                      <tr>
+                         <th className="px-6 py-4">{safeT(t, 'colMonth', 'Jahr')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'startValue', 'Startwert')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'inflows', 'Einzahlungen')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'endValue', 'Endwert')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colNetValueGain', 'Wertzuwachs (Netto)')}</th>
+                         <th className="px-6 py-4 text-right">{safeT(t, 'colPerformanceAnnual', 'Performance p.a.')}</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
+                      {yearlyPerformance.slice().reverse().map((yp, i) => (
+                          <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                              <td className="px-6 py-3.5 font-bold font-sans text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10">
+                                  {yp.year} {yp.year === `${currentCalendarYear}` ? '(YTD)' : ''}
+                              </td>
+                              <td className="px-4 py-3.5 text-right text-gray-500">{fCur(yp.startVal, 'CHF')}</td>
+                              <td className="px-4 py-3.5 text-right text-blue-600 dark:text-blue-400">+{fCur(yp.deposits, 'CHF')}</td>
+                              <td className="px-4 py-3.5 text-right font-bold text-slate-800 dark:text-slate-200">{fCur(yp.endVal, 'CHF')}</td>
+                              <td className={`px-4 py-3.5 text-right font-bold ${yp.totalAnnualReturn >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
+                                  {yp.totalAnnualReturn >= 0 ? '+' : ''}{fCur(yp.totalAnnualReturn, 'CHF')}
+                              </td>
+                              <td className={`px-6 py-3.5 text-right font-bold ${yp.performancePct >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600'}`}>
+                                  {yp.performancePct >= 0 ? '+' : ''}{yp.performancePct.toFixed(2)} %
+                              </td>
+                          </tr>
+                      ))}
+                   </tbody>
+                </table>
+             </div>
+         )}
+
+         {activeTableTab === 'monthly' && (
              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full text-sm text-left relative">
                    <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
-                      <tr className="border-b border-gray-100 dark:border-slate-800">
-                         <th rowSpan="2" className="px-6 py-4 align-middle text-left bg-gray-50/50 dark:bg-slate-900/50">{t ? t('colMonthTarget') || 'Monat / Stichtag' : 'Monat / Stichtag'}</th>
-                         <th colSpan="2" className="px-4 py-2 text-center text-blue-600 dark:text-blue-400 bg-blue-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar2') || 'Säule 2 (Pension)' : 'Säule 2 (Pension)'}</th>
-                         <th colSpan="2" className="px-4 py-2 text-center text-emerald-600 dark:text-emerald-400 bg-emerald-50/10 border-r border-gray-100 dark:border-slate-800">{t ? t('colPillar3a') || 'Säule 3a (Vorsorge)' : 'Säule 3a (Vorsorge)'}</th>
-                         <th colSpan="5" className="px-4 py-2 text-center text-slate-700 dark:text-slate-300 bg-slate-50/30">{t ? t('colOverallTotal') || 'Gesamtübersicht (Total)' : 'Gesamtübersicht (Total)'}</th>
-                      </tr>
                       <tr>
-                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                         <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                         <th className="px-4 py-3 text-right font-medium border-r border-gray-100 dark:border-slate-800">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                         <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-400">{t ? t('labelInvestedHeader') || 'Investiert' : 'Investiert'}</th>
-                         <th className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{t ? t('labelMarketValueHeader') || 'Marktwert' : 'Marktwert'}</th>
-                         <th className="px-4 py-3 text-right font-medium">{t ? t('labelPriceProfit') || 'Kursgewinn' : 'Kursgewinn'}</th>
-                         <th className="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-medium">{t ? t('labelYields') || 'Erträge' : 'Erträge'}</th>
-                         <th className="px-6 py-3 text-right text-indigo-600 dark:text-indigo-400 font-bold">{t ? t('labelTotalReturn') || 'Total Return' : 'Total Return'}</th>
+                         <th className="px-6 py-4">{safeT(t, 'colMonth', 'Monat')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colPillar2Invested', 'PK Inv.')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colPillar2Value', 'PK Wert')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colPillar3Invested', '3a Inv.')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colPillar3Value', '3a Wert')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colTotalInvested', 'Total Inv.')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'colTotalValue', 'Total Wert')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'labelPriceProfit', 'Kursgewinn')}</th>
+                         <th className="px-4 py-4 text-right">{safeT(t, 'labelYields', 'Erträge')}</th>
+                         <th className="px-6 py-4 text-right">{safeT(t, 'labelTotalReturn', 'Total Return')}</th>
                       </tr>
                    </thead>
-                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
                       {monthlyDataPoints.slice().reverse().map((d, i) => {
                           const dateObj = new Date(d.dateStr);
-                          const isCurrentMonth = d.dateStr === todayStr;
-                          const monthLabel = dateObj.toLocaleDateString('de-CH', { month: 'long', year: 'numeric' });
-                          const exactLabel = dateObj.toLocaleDateString('de-CH');
-                          const isLastDay = new Date(dateObj.getFullYear(), dateObj.getMonth() + 1, 0).getDate() === dateObj.getDate();
-                          const displayDate = isLastDay ? monthLabel : exactLabel;
+                          const displayDate = dateObj.toLocaleDateString('de-CH', { month: 'short', year: 'numeric' });
 
                           return (
                               <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                                  <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10">
-                                      {isCurrentMonth ? `${displayDate} ${t ? t('todayBracket') || '(Heute)' : '(Heute)'}` : displayDate}
+                                  <td className="px-6 py-3 font-bold font-sans text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10 whitespace-nowrap">
+                                      {displayDate}
                                   </td>
-                                  <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p2.invested, 'CHF') : d.p2.invested}</td>
-                                  <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p2.actual, 'CHF') : d.p2.actual}</td>
-                                  <td className="px-4 py-3 text-right font-mono text-slate-400 dark:text-slate-500">{fCur ? fCur(d.p3.invested, 'CHF') : d.p3.invested}</td>
-                                  <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 border-r border-gray-100 dark:border-slate-800">{fCur ? fCur(d.p3.actual, 'CHF') : d.p3.actual}</td>
-                                  <td className="px-4 py-3 text-right font-mono text-slate-500 dark:text-slate-400">{fCur ? fCur(d.total.invested, 'CHF') : d.total.invested}</td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur ? fCur(d.total.actual, 'CHF') : d.total.actual}</td>
-                                  <td className={`px-4 py-3 text-right font-mono ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                                     {d.total.priceProfit > 0 ? '+' : ''}{fCur ? fCur(d.total.priceProfit, 'CHF') : d.total.priceProfit} 
-                                     <span className="text-[10px] ml-1">({d.total.priceRoi > 0 ? '+' : ''}{d.total.priceRoi.toFixed(1)}%)</span>
+                                  <td className="px-4 py-3 text-right text-slate-400">{fCur(d.p2.invested, 'CHF')}</td>
+                                  <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{fCur(d.p2.actual, 'CHF')}</td>
+                                  <td className="px-4 py-3 text-right text-slate-400">{fCur(d.p3.invested, 'CHF')}</td>
+                                  <td className="px-4 py-3 text-right text-slate-700 dark:text-slate-300">{fCur(d.p3.actual, 'CHF')}</td>
+                                  <td className="px-4 py-3 text-right text-slate-500">{fCur(d.total.invested, 'CHF')}</td>
+                                  <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">{fCur(d.total.actual, 'CHF')}</td>
+                                  <td className={`px-4 py-3 text-right ${d.total.priceProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600'}`}>
+                                     {d.total.priceProfit > 0 ? '+' : ''}{fCur(d.total.priceProfit, 'CHF')}
                                   </td>
-                                  <td className="px-4 py-3 text-right font-mono text-blue-600 dark:text-blue-400">+{fCur ? fCur(d.total.yields, 'CHF') : d.total.yields}</td>
-                                  <td className={`px-6 py-3 text-right font-bold ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                                  <td className="px-4 py-3 text-right text-blue-600 dark:text-blue-400">+{fCur(d.total.yields, 'CHF')}</td>
+                                  <td className={`px-6 py-3 text-right font-bold ${d.total.profit >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-orange-600'}`}>
                                      {d.total.roi > 0 ? '+' : ''}{d.total.roi.toFixed(2)} %
                                   </td>
                               </tr>
@@ -689,7 +713,8 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                    </tbody>
                 </table>
              </div>
-          </div>
+         )}
+      </div>
     </div>
   );
 };

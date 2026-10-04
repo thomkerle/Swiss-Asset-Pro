@@ -15,6 +15,8 @@ const PdfExportEngine = safeRequire('./print/PdfExportEngine.jsx') || safeRequir
   exportReport: () => alert('PdfExportEngine konnte nicht geladen werden.') 
 };
 
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
+
 const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode, updateTreeData, t, defaultBookingCategories }) => {
     const baseCurrency = data?.settings?.baseCurrency || 'CHF';
     const isForeignCurrency = selectedNode?.currency && selectedNode.currency !== baseCurrency;
@@ -52,14 +54,13 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         bookingExchangeRate: isForeignCurrency ? (selectedNode?.exchangeRate || 1) : 1,
         targetAssetId: '',
         bulkOperation: 'delete',
-        ticker: '', // NEU: Initiale Werte für Ticker/ISIN
+        ticker: '',
         isin: ''
     });
 
     const [suggestedFxRate, setSuggestedFxRate] = useState(null);
     const [isFetchingFx, setIsFetchingFx] = useState(false);
 
-    // --- Die clevere, ausfallsichere FX-Logik aus dem PropertyEditor ---
     const fetchHistoricalRate = async (manualTrigger = false) => {
         const dateToFetch = form.date;
         const fromCur = selectedNode?.currency;
@@ -77,7 +78,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         const targetEndpoint = dateToFetch > todayStr ? 'latest' : dateToFetch;
 
         try {
-            // 1. Versuch: Frankfurter V2 (dev)
             try {
                 const res = await fetch(`https://api.frankfurter.dev/v1/${targetEndpoint}?base=${fromCur}&symbols=${toCur}`);
                 if (res.ok) {
@@ -86,7 +86,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 }
             } catch (e) { console.warn("Frankfurter V2 failed", e); }
 
-            // 2. Versuch: Fallback auf V1 (app)
             if (!rate) {
                 try {
                     const res = await fetch(`https://api.frankfurter.app/${targetEndpoint}?base=${fromCur}&symbols=${toCur}`);
@@ -97,7 +96,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 } catch (e) { console.warn("Frankfurter V1 failed", e); }
             }
 
-            // 3. Versuch: Fallback auf 'latest', falls historisches Datum (z.B. alter Feiertag) fehlschlägt
             if (!rate && targetEndpoint !== 'latest') {
                  try {
                     const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCur}&symbols=${toCur}`);
@@ -108,7 +106,6 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 } catch (e) { console.warn("Frankfurter V2 latest fallback failed", e); }
             }
 
-            // 4. Versuch: Offline Mock Map (Der Retter in der Not)
             if (!rate) {
                 const mockMap = {
                     'USD_CHF': 0.89, 'EUR_CHF': 0.95, 'GBP_CHF': 1.13, 'JPY_CHF': 0.0056,
@@ -117,7 +114,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 rate = mockMap[`${fromCur}_${toCur}`];
                 
                 if (manualTrigger && rate && typeof window !== 'undefined' && window.showToast) {
-                    window.showToast("API blockiert. Verwende Offline-Richtwert.", "warning");
+                    window.showToast(safeT(t, 'msgApiBlockedOfflineRate', "API blockiert. Verwende Offline-Richtwert."), "warning");
                 }
             }
 
@@ -126,13 +123,13 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 if (manualTrigger) {
                     setForm(prev => ({...prev, bookingExchangeRate: rate}));
                     if (typeof window !== 'undefined' && window.showToast) {
-                        window.showToast(`Kurs aktualisiert: 1 ${fromCur} = ${rate} ${toCur}`, "success");
+                        window.showToast(`${safeT(t, 'msgRateUpdated', "Kurs aktualisiert")}: 1 ${fromCur} = ${rate} ${toCur}`, "success");
                     }
                 }
             } else {
                 setSuggestedFxRate(null);
                 if (manualTrigger && typeof window !== 'undefined' && window.showToast) {
-                    window.showToast("Kein Kurs für diese Währung gefunden.", "error");
+                    window.showToast(safeT(t, 'msgNoRateFound', "Kein Kurs für diese Währung gefunden."), "error");
                 }
             }
         } catch (error) {
@@ -143,12 +140,10 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         }
     };
 
-    // Automatischer Fetch im Hintergrund bei Datumsänderung
     useEffect(() => {
         const timeoutId = setTimeout(() => fetchHistoricalRate(false), 500);
         return () => clearTimeout(timeoutId);
     }, [form.date, selectedNode?.currency, baseCurrency, isForeignCurrency]);
-
 
     const refreshActiveNode = (newBanks) => {
         if (!selectedNode) return;
@@ -187,19 +182,19 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
         filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        const tableHeaders = [t ? t('date') || 'Datum' : 'Datum', t ? t('entryType') || 'Eintrag' : 'Eintrag', t ? t('entryDetail') || 'Detail' : 'Detail', t ? t('amount') || 'Betrag' : 'Betrag'];
+        const tableHeaders = [safeT(t, 'date', 'Datum'), safeT(t, 'entryType', 'Eintrag'), safeT(t, 'entryDetail', 'Detail'), safeT(t, 'amount', 'Betrag')];
 
         const tableBody = filtered.map(item => {
             let typeLabel = item.type;
-            if (item._isBal) typeLabel = t ? t('balanceLabel') || 'SALDO' : 'SALDO';
+            if (item._isBal) typeLabel = safeT(t, 'balanceLabel', 'SALDO');
             else {
                 const typeMap = { 'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee', 'Umbuchung': 'typeTransfer' };
-                if (typeMap[item.type] && t) typeLabel = t(typeMap[item.type]);
+                if (typeMap[item.type] && t) typeLabel = safeT(t, typeMap[item.type], item.type);
             }
 
-            let details = item._isBal ? (t ? t('systemManual') || 'System/Manuell' : 'System/Manuell') : (item.subCategory || '');
+            let details = item._isBal ? safeT(t, 'systemManual', 'System/Manuell') : (item.subCategory || '');
             if (item.comment) details += ` | ${item.comment}`; 
-            if (!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares) details += ` (${item.shares} ${t ? t('pcsAt') || 'Stk. à' : 'Stk. à'} ${item.price})`;
+            if (!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares) details += ` (${item.shares} ${safeT(t, 'pcsAt', 'Stk. à')} ${item.price})`;
 
             let displayAmount = Number(item.amount);
             let isPositiveType = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(item.type);
@@ -213,7 +208,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         });
 
         if (tableBody.length === 0) {
-            tableBody.push([{ text: t ? t('noEntries') || 'Keine Einträge.' : 'Keine Einträge.', colSpan: 4, alignment: 'center' }, {}, {}, {}]);
+            tableBody.push([{ text: safeT(t, 'noEntries', 'Keine Einträge.'), colSpan: 4, alignment: 'center' }, {}, {}, {}]);
         } else {
             let totalIn = 0; let totalOut = 0; const currency = selectedNode?.currency || baseCurrency;
             filtered.forEach(item => {
@@ -225,18 +220,18 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             });
 
             tableBody.push(["", "", "", ""]);
-            tableBody.push([{ text: t ? t('totalIn') || 'Total Ein (+)' : 'Total Ein (+)', bold: true }, "", "", { text: `+${totalIn.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
-            tableBody.push([{ text: t ? t('totalOut') || 'Total Aus (-)' : 'Total Aus (-)', bold: true }, "", "", { text: `-${totalOut.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
+            tableBody.push([{ text: safeT(t, 'totalIn', 'Total Ein (+)'), bold: true }, "", "", { text: `+${totalIn.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
+            tableBody.push([{ text: safeT(t, 'totalOut', 'Total Aus (-)'), bold: true }, "", "", { text: `-${totalOut.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
             const netFlow = totalIn - totalOut; const netPrefix = netFlow >= 0 ? '+' : '';
-            tableBody.push([{ text: t ? t('totalNet') || 'Total Netto' : 'Total Netto', bold: true }, "", "", { text: `${netPrefix}${netFlow.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
+            tableBody.push([{ text: safeT(t, 'totalNet', 'Total Netto'), bold: true }, "", "", { text: `${netPrefix}${netFlow.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`, bold: true }]);
         }
 
-        let filterLabel = t ? t('filterAll') || "Alle Buchungen" : "Alle Buchungen";
-        if (filterType === 'in') filterLabel = t ? t('filterIn') || "Nur Zuflüsse/Einzahlungen" : "Nur Zuflüsse/Einzahlungen";
-        if (filterType === 'out') filterLabel = t ? t('filterOut') || "Nur Abflüsse/Auszahlungen" : "Nur Abflüsse/Auszahlungen";
-        if (filterType === 'reval') filterLabel = t ? t('filterReval') || "Nur Wertanpassungen" : "Nur Wertanpassungen";
+        let filterLabel = safeT(t, 'filterAll', "Alle Buchungen");
+        if (filterType === 'in') filterLabel = safeT(t, 'filterIn', "Nur Zuflüsse/Einzahlungen");
+        if (filterType === 'out') filterLabel = safeT(t, 'filterOut', "Nur Abflüsse/Auszahlungen");
+        if (filterType === 'reval') filterLabel = safeT(t, 'filterReval', "Nur Wertanpassungen");
 
-        PdfExportEngine.exportReport({ title: `${t ? t('bookingJournal') || 'Buchungsjournal' : 'Buchungsjournal'} - ${selectedNode.name}`, subtitle: `${t ? t('dateRangeTitle') || 'Zeitraum:' : 'Zeitraum:'} ${fromDate || 'Anfang'} ${t ? t('wordTo') || 'bis' : 'bis'} ${toDate || 'Heute'} | Filter: ${filterLabel} | Währung: ${selectedNode.currency || baseCurrency}`, tableHeaders, tableBody, data });
+        PdfExportEngine.exportReport({ title: `${safeT(t, 'bookingJournal', 'Buchungsjournal')} - ${selectedNode.name}`, subtitle: `${safeT(t, 'dateRangeTitle', 'Zeitraum:')} ${fromDate || 'Anfang'} ${safeT(t, 'wordTo', 'bis')} ${toDate || 'Heute'} | Filter: ${filterLabel} | Währung: ${selectedNode.currency || baseCurrency}`, tableHeaders, tableBody, data });
         setModalObj(null);
     };
 
@@ -264,7 +259,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                 return n;
             });
             newData.banks = updateRecursive(newData.banks);
-            if (typeof window !== 'undefined' && window.showToast) window.showToast(`${modalObj.selectedIds.length} ${t ? t('msgEntriesEdited') || 'Einträge bearbeitet' : 'Einträge bearbeitet'}`, "success");
+            if (typeof window !== 'undefined' && window.showToast) window.showToast(`${modalObj.selectedIds.length} ${safeT(t, 'msgEntriesEdited', 'Einträge bearbeitet')}`, "success");
             
             updateTreeData(newData);
             refreshActiveNode(newData.banks); 
@@ -276,10 +271,10 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; 
         } 
         else if (modalObj.type === 'addScenario') { 
-            newData.scenarios.push({ id: generateId(), name: form.name||(t('newTargetName')||'Neu'), date: form.date, impact: Number(form.impact||0) }); 
+            newData.scenarios.push({ id: generateId(), name: form.name||safeT(t, 'newTargetName', 'Neu'), date: form.date, impact: Number(form.impact||0) }); 
         } 
         else if (modalObj.type === 'addBank') { 
-            newData.banks.push({ id: generateId(), name: form.name || (t('newBankName')||'Neue Bank'), type: 'bank', isArchived: false, children: [] }); 
+            newData.banks.push({ id: generateId(), name: form.name || safeT(t, 'newBankName', 'Neue Bank'), type: 'bank', isArchived: false, children: [] }); 
         } 
         else if (modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
             const group = modalObj.budgetGroup;
@@ -291,7 +286,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                     item.id === modalObj.item.id ? { ...item, name: form.name, amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' } : item
                 );
             } else {
-                newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || (t('newBudgetItem')||'Neuer Posten'), amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
+                newData.budget[group] = [...newData.budget[group], { id: generateId(), name: form.name || safeT(t, 'newBudgetItem', 'Neuer Posten'), amount: Number(form.amount || 0), frequency: form.frequency || 'monthly', ruleCategory: form.ruleCategory || 'needs' }];
             }
         } 
         else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
@@ -313,7 +308,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                     copy.bookings.push({
                         id: generateId(), date: form.date, type: isTargetSecurity ? 'Kauf' : 'Einzahlung', 
-                        subCategory: form.type === 'Dividende' ? (t('divIn')||'Dividenden Eingang') : (t('transferIn')||'Umbuchung Eingang'),
+                        subCategory: form.type === 'Dividende' ? safeT(t, 'divIn', 'Dividenden Eingang') : safeT(t, 'transferIn', 'Umbuchung Eingang'),
                         amount: Number(finalTargetAmount.toFixed(2)), bookingExchangeRate: isTargetForeign ? targetRate : 1
                     });
                 }
@@ -324,7 +319,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                         if (modalObj.item) copy.bookings = copy.bookings.filter(b=>b.id !== modalObj.item.id);
                         
                         let saveType = form.type; let saveCat = form.subCategory;
-                        if (form.type === 'Umbuchung') { saveType = 'Auszahlung'; saveCat = t('transferOut') || 'Umbuchung Ausgang'; }
+                        if (form.type === 'Umbuchung') { saveType = 'Auszahlung'; saveCat = safeT(t, 'transferOut', 'Umbuchung Ausgang'); }
 
                         copy.bookings.push({ 
                             id: modalObj.item?.id || generateId(), date: form.date, type: saveType, subCategory: saveCat, 
@@ -351,12 +346,11 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                     let copy = {...n};
                     if (!copy.children) copy.children = [];
                     if (modalObj.type === 'addCategory') {
-                        copy.children.push({ id: generateId(), name: form.name || (t('newCategoryName')||'Neue Kategorie'), type: 'category', isArchived: false, children: [] });
+                        copy.children.push({ id: generateId(), name: form.name || safeT(t, 'newCategoryName', 'Neue Kategorie'), type: 'category', isArchived: false, children: [] });
                     } else {
                         const ac = form.assetClass || 'cash';
                         const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage', 'pension_3a_managed'].includes(ac);
-                        // NEU: ticker und isin in das neue Asset übernehmen
-                        copy.children.push({ id: generateId(), name: form.name || (t('newAssetName')||'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [], ticker: form.ticker || '', isin: form.isin || '' });
+                        copy.children.push({ id: generateId(), name: form.name || safeT(t, 'newAssetName', 'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [], ticker: form.ticker || '', isin: form.isin || '' });
                     }
                     return copy;
                 }
@@ -365,7 +359,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             });
             newData.banks = updateRecursive(newData.banks);
         }
-        if (typeof window !== 'undefined' && window.showToast) window.showToast(t('msgSaveSuccess2') || "Erfolgreich gespeichert", "success");
+        if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT(t, 'msgSaveSuccess2', "Erfolgreich gespeichert"), "success");
         updateTreeData(newData); 
         setModalObj(null);
     };
@@ -388,7 +382,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         
         refreshActiveNode(newData.banks); 
 
-        if (typeof window !== 'undefined' && window.showToast) window.showToast(t ? t('msgDeleted') || "Gelöscht" : "Gelöscht", "success");
+        if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT(t, 'msgDeleted', "Gelöscht"), "success");
         setModalObj(null);
     };
 
@@ -409,9 +403,9 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
     const currentSh = getActualShares(selectedNode);
     const currentPr = getActualPrice(selectedNode);
 
-    let modalTitle = modalObj.type.includes('edit') ? (t ? t('modalEdit') : 'Bearbeiten') : (t ? t('modalNew') : 'Neu');
-    if (modalObj.type === 'printAssetBookings') modalTitle = t ? t('printTitle') || 'Journal Drucken' : 'Journal Drucken';
-    if (modalObj.type === 'bulkAction') modalTitle = t ? t('titleBulkAction') || 'Massenbearbeitung' : 'Massenbearbeitung';
+    let modalTitle = modalObj.type.includes('edit') ? safeT(t, 'modalEdit', 'Bearbeiten') : safeT(t, 'modalNew', 'Neu');
+    if (modalObj.type === 'printAssetBookings') modalTitle = safeT(t, 'printTitle', 'Journal Drucken');
+    if (modalObj.type === 'bulkAction') modalTitle = safeT(t, 'titleBulkAction', 'Massenbearbeitung');
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -431,27 +425,27 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                   <div className="space-y-4">
                       <div className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-300 p-4 rounded-xl border border-indigo-200 dark:border-indigo-800/50 text-sm font-medium shadow-sm flex items-start gap-3">
                           <Icon name="Info" size={18} className="mt-0.5 shrink-0" />
-                          <span>{t ? t('descBulkEdit1') || 'Sie bearbeiten aktuell' : 'Sie bearbeiten aktuell'} <strong>{modalObj.selectedIds.length}</strong> {t ? t('descBulkEdit2') || 'ausgewählte Einträge.' : 'ausgewählte Einträge.'}</span>
+                          <span>{safeT(t, 'descBulkEdit1', 'Sie bearbeiten aktuell')} <strong>{modalObj.selectedIds.length}</strong> {safeT(t, 'descBulkEdit2', 'ausgewählte Einträge.')}</span>
                       </div>
                       
                       <div>
-                          <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{t ? t('labelSelectAction') || 'Aktion wählen' : 'Aktion wählen'}</label>
+                          <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{safeT(t, 'labelSelectAction', 'Aktion wählen')}</label>
                           <select 
                               className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
                               value={form.bulkOperation} 
                               onChange={e => setForm({...form, bulkOperation: e.target.value})}
                           >
-                              <option value="delete">{t ? t('optBulkDelete') || 'Ausgewählte Einträge löschen' : 'Ausgewählte Einträge löschen'}</option>
-                              <option value="changeCategory">{t ? t('optBulkCategory') || 'Kategorie (Dropdown) ändern' : 'Kategorie (Dropdown) ändern'}</option>
-                              <option value="changeComment">{t ? t('optBulkComment') || 'Kommentar / Tags in Masse setzen' : 'Kommentar / Tags in Masse setzen'}</option>
-                              <option value="changeDate">{t ? t('optBulkDate') || 'Datum für alle ändern' : 'Datum für alle ändern'}</option>
+                              <option value="delete">{safeT(t, 'optBulkDelete', 'Ausgewählte Einträge löschen')}</option>
+                              <option value="changeCategory">{safeT(t, 'optBulkCategory', 'Kategorie (Dropdown) ändern')}</option>
+                              <option value="changeComment">{safeT(t, 'optBulkComment', 'Kommentar / Tags in Masse setzen')}</option>
+                              <option value="changeDate">{safeT(t, 'optBulkDate', 'Datum für alle ändern')}</option>
                           </select>
                       </div>
 
                       {form.bulkOperation === 'changeCategory' && (
                           <div className="animate-fade-in mt-4">
-                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{t ? t('labelSetNewCategory') || 'Neue Kategorie setzen' : 'Neue Kategorie setzen'}</label>
-                              <input type="text" list="bulk-categories" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={t ? t('placeholderCategory') || 'Kategorie wählen oder tippen...' : 'Kategorie wählen oder tippen...'} value={form.subCategory || ''} onChange={e => setForm({...form, subCategory: e.target.value})} />
+                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{safeT(t, 'labelSetNewCategory', 'Neue Kategorie setzen')}</label>
+                              <input type="text" list="bulk-categories" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={safeT(t, 'placeholderCategory', 'Kategorie wählen oder tippen...')} value={form.subCategory || ''} onChange={e => setForm({...form, subCategory: e.target.value})} />
                               <datalist id="bulk-categories">
                                   {Object.values(activeBookingCategories).flat().filter((v,i,a)=>a.indexOf(v)===i).map(cat => <option key={cat} value={cat} />)}
                               </datalist>
@@ -460,14 +454,14 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                       {form.bulkOperation === 'changeComment' && (
                           <div className="animate-fade-in mt-4">
-                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{t ? t('labelSetNewComment') || 'Neuer Kommentar / Tags' : 'Neuer Kommentar / Tags'}</label>
-                              <input type="text" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="#Steuererklärung2026" value={form.comment || ''} onChange={e => setForm({...form, comment: e.target.value})} />
+                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{safeT(t, 'labelSetNewComment', 'Neuer Kommentar / Tags')}</label>
+                              <input type="text" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder={safeT(t, 'placeholderTaxExample', '#Steuererklärung2026')} value={form.comment || ''} onChange={e => setForm({...form, comment: e.target.value})} />
                           </div>
                       )}
 
                       {form.bulkOperation === 'changeDate' && (
                           <div className="animate-fade-in mt-4">
-                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{t ? t('labelSetNewDate') || 'Neues Datum setzen' : 'Neues Datum setzen'}</label>
+                              <label className="block font-bold mb-2 text-xs uppercase tracking-wider text-gray-500">{safeT(t, 'labelSetNewDate', 'Neues Datum setzen')}</label>
                               <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none tabular-nums" value={form.date || ''} onChange={e => setForm({...form, date: e.target.value})} />
                           </div>
                       )}
@@ -477,25 +471,25 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
               {modalObj.type === 'printAssetBookings' && (
                   <>
                       <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 p-3 rounded-lg border border-blue-200 dark:border-blue-900/50 mb-4 text-xs font-medium">
-                          {t ? t('printBookingsNotice') || 'Wählen Sie Zeitraum und Buchungsart für den Export.' : 'Wählen Sie Zeitraum und Buchungsart für den Export.'}
+                          {safeT(t, 'printBookingsNotice', 'Wählen Sie Zeitraum und Buchungsart für den Export.')}
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                           <div>
-                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('fromDate') || 'Von Datum' : 'Von Datum'}</label>
+                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'fromDate', 'Von Datum')}</label>
                               <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.fromDate || ''} onChange={e=>setForm({...form, fromDate: e.target.value})}/>
                           </div>
                           <div>
-                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('toDate') || 'Bis Datum' : 'Bis Datum'}</label>
+                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'toDate', 'Bis Datum')}</label>
                               <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.toDate || ''} onChange={e=>setForm({...form, toDate: e.target.value})}/>
                           </div>
                       </div>
                       <div className="mt-2">
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('filterBookings') || 'Buchungen filtern' : 'Buchungen filtern'}</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'filterBookings', 'Buchungen filtern')}</label>
                           <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.filterType} onChange={e=>setForm({...form, filterType: e.target.value})}>
-                              <option value="all">{t ? t('filterAll') || 'Alle Buchungen & Salden' : 'Alle Buchungen & Salden'}</option>
-                              <option value="in">{t ? t('filterIn') || 'Nur Zuflüsse (Einzahlung, Kauf, Zins...)' : 'Nur Zuflüsse (Einzahlung, Kauf, Zins...)'}</option>
-                              <option value="out">{t ? t('filterOut') || 'Nur Abflüsse (Auszahlung, Verkauf, Gebühr...)' : 'Nur Abflüsse (Auszahlung, Verkauf, Gebühr...)'}</option>
-                              <option value="reval">{t ? t('filterReval') || 'Nur Wertanpassungen' : 'Nur Wertanpassungen'}</option>
+                              <option value="all">{safeT(t, 'filterAll', 'Alle Buchungen & Salden')}</option>
+                              <option value="in">{safeT(t, 'filterIn', 'Nur Zuflüsse (Einzahlung, Kauf, Zins...)')}</option>
+                              <option value="out">{safeT(t, 'filterOut', 'Nur Abflüsse (Auszahlung, Verkauf, Gebühr...)')}</option>
+                              <option value="reval">{safeT(t, 'filterReval', 'Nur Wertanpassungen')}</option>
                           </select>
                       </div>
                   </>
@@ -504,11 +498,11 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
               {modalObj.type === 'editGoal' && (
                   <>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('goalTarget') : 'Zielwert'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'goalTarget', 'Zielwert')}</label>
                           <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent tabular-nums" value={form.target || ''} onChange={e=>setForm({...form, target: e.target.value})}/>
                       </div>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('goalYear') : 'Zieljahr'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'goalYear', 'Zieljahr')}</label>
                           <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent tabular-nums" value={form.year || ''} onChange={e=>setForm({...form, year: e.target.value})}/>
                       </div>
                   </>
@@ -517,15 +511,15 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
               {modalObj.type === 'addScenario' && (
                   <>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('scenarioName') : 'Name'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'scenarioName', 'Name')}</label>
                           <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/>
                       </div>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('scenarioDate') : 'Datum'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'scenarioDate', 'Datum')}</label>
                           <input type="date" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent tabular-nums" value={form.date || ''} onChange={e=>setForm({...form, date: e.target.value})}/>
                       </div>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('scenarioImpact') : 'Auswirkung'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'scenarioImpact', 'Auswirkung')}</label>
                           <input type="number" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent tabular-nums" value={form.impact || ''} onChange={e=>setForm({...form, impact: e.target.value})}/>
                       </div>
                   </>
@@ -534,59 +528,58 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
               {(modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                   <>
                       <div>
-                          <label className="block font-bold mb-1">{t ? t('propName') : 'Name'}</label>
+                          <label className="block font-bold mb-1">{safeT(t, 'propName', 'Name')}</label>
                           <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/>
                       </div>
                       {(modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                           <>
                               <div>
-                                  <label className="block font-bold mb-1 mt-3">{t ? t('amount') : 'Betrag'}</label>
+                                  <label className="block font-bold mb-1 mt-3">{safeT(t, 'amount', 'Betrag')}</label>
                                   <input type="number" step="any" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent tabular-nums" value={form.amount || ''} onChange={e=>setForm({...form, amount: e.target.value})}/>
                               </div>
                               <div>
-                                  <label className="block font-bold mb-1 mt-3">{t ? t('budgetFreq') : 'Frequenz'}</label>
+                                  <label className="block font-bold mb-1 mt-3">{safeT(t, 'budgetFreq', 'Frequenz')}</label>
                                   <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.frequency || 'monthly'} onChange={e=>setForm({...form, frequency: e.target.value})}>
-                                      <option value="monthly">{t ? t('freqMonthly') : 'Monatlich'}</option>
-                                      <option value="yearly">{t ? t('freqYearly') : 'Jährlich'}</option>
+                                      <option value="monthly">{safeT(t, 'freqMonthly', 'Monatlich')}</option>
+                                      <option value="yearly">{safeT(t, 'freqYearly', 'Jährlich')}</option>
                                   </select>
                               </div>
                               <div>
-                                  <label className="block font-bold mb-1 mt-3">{t ? t('ruleNeeds') : 'Regelwerk'}</label>
+                                  <label className="block font-bold mb-1 mt-3">{safeT(t, 'ruleNeeds', 'Regelwerk')}</label>
                                   <select className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.ruleCategory || 'needs'} onChange={e=>setForm({...form, ruleCategory: e.target.value})}>
-                                      <option value="needs">{t ? t('ruleNeeds') : 'Bedürfnisse'}</option>
-                                      <option value="wants">{t ? t('ruleWants') : 'Wünsche'}</option>
-                                      <option value="savings">{t ? t('ruleSavings') : 'Sparen/Investieren'}</option>
+                                      <option value="needs">{safeT(t, 'ruleNeedsFix', 'Bedürfnisse')}</option>
+                                      <option value="wants">{safeT(t, 'ruleWantsLife', 'Wünsche')}</option>
+                                      <option value="savings">{safeT(t, 'ruleSavingsSave', 'Sparen/Investieren')}</option>
                                   </select>
                               </div>
                           </>
                       )}
                       {modalObj.type === 'addAsset' && (
                           <div className="mt-3">
-                              <label className="block font-bold mb-1">{t ? t('assetClass') : 'Asset-Klasse'}</label>
+                              <label className="block font-bold mb-1">{safeT(t, 'assetClass', 'Asset-Klasse')}</label>
                               <select className="w-full p-2 border rounded dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.assetClass || 'cash'} onChange={e => setForm({...form, assetClass: e.target.value})}>
-                                  <option value="cash">{t ? t('acCash') : 'Bargeld'}</option>
-                                  <option value="fund">{t ? t('acFund') : 'Fonds'}</option>
-                                  <option value="stock">{t ? t('acStock') : 'Aktien'}</option>
-                                  <option value="crypto">{t ? t('acCrypto') : 'Krypto'}</option>
-                                  <option value="realestate">{t ? t('acRealEstate') : 'Immobilien'}</option>
-                                  <option value="mortgage">{t ? t('acMortgage') : 'Hypothek'}</option>
-                                  <option value="pension_cash">{t ? t('acPensionCash') : 'Pensionskasse'}</option>
-                                  <option value="pension_fund">{t ? t('acPensionFund') : 'Vorsorge Fonds'}</option>
-                                  <option value="pension_3a_cash">{t ? t('acPension3aCash') : '3a Cash'}</option>
-                                  <option value="pension_3a_fund">{t ? t('acPension3aFund') : '3a Fonds'}</option>
-                                  <option value="managed_fund">{t ? t('acManagedFund') : 'Verwaltetes Portfolio (Robo-Advisor)'}</option>
-                                  <option value="pension_3a_managed">{t ? t('acPension3aManaged') : '3a Fonds (Gesamtwert)'}</option>
+                                  <option value="cash">{safeT(t, 'acCash', 'Bargeld')}</option>
+                                  <option value="fund">{safeT(t, 'acFund', 'Fonds')}</option>
+                                  <option value="stock">{safeT(t, 'acStock', 'Aktien')}</option>
+                                  <option value="crypto">{safeT(t, 'acCrypto', 'Krypto')}</option>
+                                  <option value="realestate">{safeT(t, 'acRealEstate', 'Immobilien')}</option>
+                                  <option value="mortgage">{safeT(t, 'acMortgage', 'Hypothek')}</option>
+                                  <option value="pension_cash">{safeT(t, 'acPensionCash', 'Pensionskasse')}</option>
+                                  <option value="pension_fund">{safeT(t, 'acPensionFund', 'Vorsorge Fonds')}</option>
+                                  <option value="pension_3a_cash">{safeT(t, 'acPension3aCash', '3a Cash')}</option>
+                                  <option value="pension_3a_fund">{safeT(t, 'acPension3aFund', '3a Fonds')}</option>
+                                  <option value="managed_fund">{safeT(t, 'acManagedFund', 'Verwaltetes Portfolio (Robo-Advisor)')}</option>
+                                  <option value="pension_3a_managed">{safeT(t, 'acPension3aManaged', '3a Fonds (Gesamtwert)')}</option>
                               </select>
 
-                              {/* NEU: Ticker & ISIN Felder im Anlage-Modal */}
                               {['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(form.assetClass || 'cash') && (
                                   <div className="grid grid-cols-2 gap-3 mt-3">
                                       <div>
-                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('ticker') || 'Ticker (API)' : 'Ticker (API)'}</label>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'ticker', 'Ticker (API)')}</label>
                                           <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. AAPL.US" value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
                                       </div>
                                       <div>
-                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('isin') || 'ISIN' : 'ISIN'}</label>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'isin', 'ISIN')}</label>
                                           <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. CH123456789" value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
                                       </div>
                                   </div>
@@ -598,21 +591,21 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
               {modalObj.type.includes('Balance') && (
                   <>
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">{t ? t('balanceNotice') : 'Stichtags-Salden überschreiben historische Buchungen.'}</div>
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg border border-yellow-200 dark:border-yellow-900/50 mb-4 text-xs font-medium">{safeT(t, 'balanceNotice', 'Stichtags-Salden überschreiben historische Buchungen.')}</div>
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('labelBalanceDate') : 'Datum'}</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'labelBalanceDate', 'Datum')}</label>
                           <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
                       </div>
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('labelAbsoluteBalance') : 'Saldo'} ({selectedNode?.currency || baseCurrency})</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'labelAbsoluteBalance', 'Saldo')} ({selectedNode?.currency || baseCurrency})</label>
                           <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold tabular-nums" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
                       </div>
                       {isForeignCurrency && (
                           <div>
-                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t ? t('labelExchangeRateDate') : 'Kurs'} ({selectedNode?.currency} -> {baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Kurs')} ({selectedNode?.currency} -> {baseCurrency})</label>
                               <div className="relative">
                                  <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
-                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={t ? t('titleUpdateRate') || "Kurs ermitteln" : "Kurs ermitteln"}>
+                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={safeT(t, 'titleUpdateRate', "Kurs ermitteln")}>
                                      <Icon name="RefreshCw" size={14} />
                                  </button>
                               </div>
@@ -624,7 +617,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                           className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors"
                                       >
                                           <Icon name="Download" size={10} />
-                                          {t ? t('labelFxSuggestion') || 'Vorschlag:' : 'Vorschlag:'} <span className="font-bold">{suggestedFxRate}</span> {t ? t('btnApply') || 'übernehmen' : 'übernehmen'}
+                                          {safeT(t, 'labelFxSuggestion', 'Vorschlag:')} <span className="font-bold">{suggestedFxRate}</span> {safeT(t, 'btnApply', 'übernehmen')}
                                       </button>
                                   )}
                               </div>
@@ -636,24 +629,24 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
               {modalObj.type.includes('Booking') && modalObj.type !== 'printAssetBookings' && (
                   <>
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('date') : 'Datum'}</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'date', 'Datum')}</label>
                           <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
                       </div>
 
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('entryType') : 'Typ'}</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'entryType', 'Typ')}</label>
                           <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.type} onChange={e=>setForm({...form, type: e.target.value, subCategory: ''})}>
                               {availableBookingTypes.map(tOption => {
                                   const typeMap = { 'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee', 'Umbuchung': 'typeTransfer' };
                                   const translationKey = typeMap[tOption] || tOption;
-                                  return <option key={tOption} value={tOption}>{t ? t(translationKey) : tOption}</option>;
+                                  return <option key={tOption} value={tOption}>{safeT(t, translationKey, tOption)}</option>;
                               })}
                           </select>
                       </div>
 
                       {!(isSecurities && form.type === 'Wertanpassung') && (
                           <div>
-                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('amount') : 'Betrag'} ({selectedNode?.currency || baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'amount', 'Betrag')} ({selectedNode?.currency || baseCurrency})</label>
                               <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold tabular-nums" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
                           </div>
                       )}
@@ -663,17 +656,17 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                               
                               {['Kauf', 'Verkauf'].includes(form.type) && (
                                   <div>
-                                      <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('shares') : 'Stücke'}</label>
+                                      <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'shares', 'Stücke')}</label>
                                       <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.shares || ''} onChange={e => { const sh = e.target.value; const pr = form.price || 0; setForm({ ...form, shares: sh, amount: sh && pr ? (Number(sh) * Number(pr)).toFixed(2) : form.amount }); }}/>
                                   </div>
                               )}
                               
                               <div className={['Kauf', 'Verkauf'].includes(form.type) ? "" : "col-span-2"}>
                                   <label className={`block font-bold mb-1 text-xs uppercase ${form.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500'}`}>
-                                      {form.type === 'Wertanpassung' ? (t ? t('labelNewMarketPrice') || 'Neuer Börsenkurs' : 'Neuer Börsenkurs') : (t ? t('labelMarketPriceOpt') || 'Börsenkurs (Optional)' : 'Börsenkurs (Optional)')}
+                                      {form.type === 'Wertanpassung' ? safeT(t, 'labelNewMarketPrice', 'Neuer Börsenkurs') : safeT(t, 'labelMarketPriceOpt', 'Börsenkurs (Optional)')}
                                   </label>
                                   <input type="number" step="any" className={`w-full p-2.5 border rounded-lg dark:bg-slate-800 bg-transparent tabular-nums ${form.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-700 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} 
-                                      placeholder={currentPr ? `${t ? t('labelUntilNow') || 'Bisher:' : 'Bisher:'} ${currentPr}` : ''}
+                                      placeholder={currentPr ? `${safeT(t, 'labelUntilNow', 'Bisher:')} ${currentPr}` : ''}
                                       value={form.price || ''} 
                                       onChange={e => { 
                                           const pr = e.target.value; 
@@ -686,7 +679,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                               {form.type === 'Wertanpassung' && (
                                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 mt-1">
-                                      <Icon name="Info" size={14} /> {t ? t('infoValuationAuto') || 'Die Wertermittlung erfolgt automatisch über die aktuellen Stücke' : 'Die Wertermittlung erfolgt automatisch über die aktuellen Stücke'} ({currentSh} Stk.).
+                                      <Icon name="Info" size={14} /> {safeT(t, 'infoValuationAuto', 'Die Wertermittlung erfolgt automatisch über die aktuellen Stücke')} ({currentSh} Stk.).
                                   </div>
                               )}
                           </div>
@@ -694,9 +687,9 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                       {['Dividende', 'Umbuchung'].includes(form.type) && !modalObj.item && (
                           <div>
-                              <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{t ? t('targetAccount') : 'Zielkonto'}</label>
+                              <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{safeT(t, 'targetAccount', 'Zielkonto')}</label>
                               <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
-                                  <option value="">{t('optTargetAccount') || '-- Optional: Zielkonto wählen --'}</option>
+                                  <option value="">{safeT(t, 'optTargetAccount', '-- Optional: Zielkonto wählen --')}</option>
                                   {data.banks.map(bank => {
                                       const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
                                       if (eligibleAssets.length === 0) return null;
@@ -712,25 +705,25 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                       
                       {availableSubCategories.length > 0 && (
                           <div>
-                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('category') : 'Kategorie'}</label>
+                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'category', 'Kategorie')}</label>
                               <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" value={form.subCategory || ''} onChange={e=>setForm({...form, subCategory: e.target.value})}>
-                                  <option value="">{t('optOptional') || '-- Keine --'}</option>
-                                  {availableSubCategories.map(cat => <option key={cat} value={cat}>{t ? t(cat) : cat}</option>)}
+                                  <option value="">{safeT(t, 'optOptional', '-- Keine --')}</option>
+                                  {availableSubCategories.map(cat => <option key={cat} value={cat}>{safeT(t, cat, cat)}</option>)}
                               </select>
                           </div>
                       )}
                       
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{t ? t('comment') : 'Kommentar / Tags'}</label>
-                          <input type="text" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" placeholder="#Steuern2026 oder Notiz..." value={form.comment || ''} onChange={e=>setForm({...form, comment: e.target.value})}/>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'comment', 'Kommentar / Tags')}</label>
+                          <input type="text" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" placeholder={safeT(t, 'placeholderTaxExample', '#Steuern2026 oder Notiz...')} value={form.comment || ''} onChange={e=>setForm({...form, comment: e.target.value})}/>
                       </div>
 
                       {isForeignCurrency && (
                           <div>
-                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{t ? t('labelExchangeRateDate') : 'Wechselkurs'} ({selectedNode?.currency} -> {baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Wechselkurs')} ({selectedNode?.currency} -> {baseCurrency})</label>
                               <div className="relative">
                                  <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
-                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={t ? t('titleUpdateRate') || "Kurs ermitteln" : "Kurs ermitteln"}>
+                                 <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={safeT(t, 'titleUpdateRate', "Kurs ermitteln")}>
                                      <Icon name="RefreshCw" size={14} />
                                  </button>
                               </div>
@@ -743,7 +736,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                           className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1 transition-colors"
                                       >
                                           <Icon name="Download" size={10} />
-                                          {t ? t('labelFxSuggestion') || 'Vorschlag:' : 'Vorschlag:'} <span className="font-bold">{suggestedFxRate}</span> {t ? t('btnApply') || 'übernehmen' : 'übernehmen'}
+                                          {safeT(t, 'labelFxSuggestion', 'Vorschlag:')} <span className="font-bold">{suggestedFxRate}</span> {safeT(t, 'btnApply', 'übernehmen')}
                                       </button>
                                   )}
                               </div>
@@ -757,19 +750,19 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
           <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between gap-3 shrink-0 rounded-b-2xl">
             {modalObj.item ? (
                 <button onClick={handleItemDelete} className="px-4 py-2.5 text-red-600 font-bold hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors flex items-center gap-2">
-                    <Icon name="Trash" size={16}/> {t ? t('btnDelete') : 'Löschen'}
+                    <Icon name="Trash" size={16}/> {safeT(t, 'btnDelete', 'Löschen')}
                 </button>
             ) : <div></div>}
             
             <div className="flex gap-2 w-full justify-end">
                 <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">
-                    {t('btnCancel') || 'Abbrechen'}
+                    {safeT(t, 'btnCancel', 'Abbrechen')}
                 </button>
                 <button 
                     onClick={modalObj.type === 'printAssetBookings' ? handlePrintAssetBookings : handleSave} 
                     className="px-6 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                    {modalObj.type === 'bulkAction' ? <><Icon name="Check" size={18}/> {t('btnExecute') || 'Ausführen'}</> : <><Icon name="Save" size={18}/> {t('btnSave') || 'Speichern'}</>}
+                    {modalObj.type === 'bulkAction' ? <><Icon name="Check" size={18}/> {safeT(t, 'btnExecute', 'Ausführen')}</> : <><Icon name="Save" size={18}/> {safeT(t, 'btnSave', 'Speichern')}</>}
                 </button>
             </div>
           </div>

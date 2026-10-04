@@ -6,16 +6,19 @@ const safeRequire = getRequire();
 
 const Icon = safeRequire('../Icons.jsx') || window.Icon || (({name, size = 16}) => <span style={{fontSize: size}}>[{name}]</span>);
 const ReportHeader = safeRequire('../ReportHeader.jsx') || window.ReportHeader || (({title, subtitle}) => <div className="mb-8 border-b pb-4"><h2 className="text-3xl font-extrabold">{title}</h2><p>{subtitle}</p></div>);
-const PdfExportEngine = safeRequire('../print/PdfExportEngine.jsx') || window.PdfExportEngine;
-const { getAllAssets, getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || window.UniversalChart || (() => <div className="p-4 text-center text-gray-500">UniversalChart fehlt</div>);
+const { getAllAssets, getAssetValueAtDate } = safeRequire('../../data/DataEngine.jsx') || window.DataEngine || {};
+
+const PdfToolkit = safeRequire('../print/PdfToolkit.jsx') || window.PdfToolkit;
+
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
 const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fCur, t }) => {
-  const chartRef = useRef(null);
+  const reportRef = useRef(null);
   const activeChartEngine = (typeof window !== 'undefined' && window.__activeChartEngine) || data?.settings?.chartEngine || 'echarts';
   const targetDate = dateRange?.to || new Date().toISOString().split('T')[0];
+  const baseCurrency = data?.settings?.baseCurrency || 'CHF';
 
-  // Theme-Überwachung: Erzwingt einen Re-Render des Charts beim Wechsel Dark/Light
   const [isDark, setIsDark] = useState(typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : false);
 
   useEffect(() => {
@@ -27,177 +30,191 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
       return () => observer.disconnect();
   }, []);
 
-  // Sicherer Währungs-Formatter
   const formatCurrency = (val) => fCur ? fCur(val) : val;
 
-  // 1. PERFORMANCE & STABILITÄT: Daten via useMemo cachen
   const { 
     allocData, 
+    currencyData,
+    macroClasses,
     grandTotal, 
     totalAssetsCount, 
     topBank, 
     topBankPercent, 
+    top3Percent,
     uniqueBanksCount 
   } = useMemo(() => {
     let gt = 0;
     let tac = 0;
     
-    if (!data?.banks) return { allocData: [], grandTotal: 0, totalAssetsCount: 0, topBank: null, topBankPercent: 0, uniqueBanksCount: 0 };
+    if (!data?.banks) {
+      return { 
+        allocData: [], currencyData: [], macroClasses: [], 
+        grandTotal: 0, totalAssetsCount: 0, topBank: null, 
+        topBankPercent: 0, top3Percent: 0, uniqueBanksCount: 0 
+      };
+    }
+
+    const curMap = {};
+    const macroMap = {
+      cash: { label: safeT(t, 'catMacroCash', safeT(t, 'catCashShort', 'Liquidität & Cash')), value: 0, color: '#10b981' },
+      securities: { label: safeT(t, 'catMacroSecurities', safeT(t, 'catSecuritiesShort', 'Wertpapiere & Krypto')), value: 0, color: '#3b82f6' },
+      pension: { label: safeT(t, 'catMacroPension', safeT(t, 'catPensionShort', 'Vorsorge & Säule 3a')), value: 0, color: '#8b5cf6' },
+      realestate: { label: safeT(t, 'catMacroRealEstate', safeT(t, 'catRealEstateShort', 'Immobilien & Sachwerte')), value: 0, color: '#f59e0b' }
+    };
 
     const mappedData = data.banks.map(b => {
       const assets = getAllAssets([b]).filter(a => !a?.isArchived);
-      const val = assets.reduce((s, a) => s + getAssetValueAtDate(a, targetDate), 0);
-      gt += val;
-      tac += assets.length;
+      let bankVal = 0;
+      const bankCurrencies = {};
+
+      assets.forEach(a => {
+        const val = getAssetValueAtDate(a, targetDate);
+        bankVal += val;
+        gt += val;
+        tac++;
+
+        const cur = a.currency || baseCurrency;
+        curMap[cur] = (curMap[cur] || 0) + val;
+        bankCurrencies[cur] = (bankCurrencies[cur] || 0) + val;
+
+        const ac = (a.assetClass || '').toLowerCase();
+        if (ac === 'cash') macroMap.cash.value += val;
+        else if (['stock', 'fund', 'crypto', 'managed_fund'].includes(ac)) macroMap.securities.value += val;
+        else if (ac.includes('pension')) macroMap.pension.value += val;
+        else if (['realestate', 'mortgage'].includes(ac)) macroMap.realestate.value += val;
+        else macroMap.cash.value += val;
+      });
+
+      const primaryCur = Object.keys(bankCurrencies).sort((x, y) => bankCurrencies[y] - bankCurrencies[x])[0] || baseCurrency;
+
       return { 
-          label: b.name || 'Unbekannt', 
-          value: val,
-          assetCount: assets.length
+          label: b.name || safeT(t, 'unknown', 'Unbekannt'), 
+          value: bankVal,
+          assetCount: assets.length,
+          primaryCurrency: primaryCur
       };
     })
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
+    let runningSum = 0;
+    mappedData.forEach(item => {
+      runningSum += item.value;
+      item.cumPercentage = gt > 0 ? (runningSum / gt) * 100 : 0;
+      item.percentage = gt > 0 ? (item.value / gt) * 100 : 0;
+    });
+
     const top = mappedData.length > 0 ? mappedData[0] : null;
-    const topPercent = (gt > 0 && top) ? ((top.value / gt) * 100).toFixed(1) : 0;
+    const topPercent = (gt > 0 && top) ? Number(top.percentage.toFixed(1)) : 0;
+    
+    const top3Sum = mappedData.slice(0, 3).reduce((sum, item) => sum + item.value, 0);
+    const top3Pct = gt > 0 ? Number(((top3Sum / gt) * 100).toFixed(1)) : 0;
+
+    const curArray = Object.keys(curMap).map(cur => ({
+      currency: cur,
+      value: curMap[cur],
+      percentage: gt > 0 ? (curMap[cur] / gt) * 100 : 0
+    })).sort((a, b) => b.value - a.value);
+
+    const macroArray = Object.values(macroMap).filter(m => m.value > 0);
 
     return { 
       allocData: mappedData, 
+      currencyData: curArray,
+      macroClasses: macroArray,
       grandTotal: gt, 
       totalAssetsCount: tac, 
       topBank: top, 
-      topBankPercent: topPercent, 
+      topBankPercent: topPercent,
+      top3Percent: top3Pct,
       uniqueBanksCount: mappedData.length 
     };
-  }, [data, targetDate]);
+  }, [data, targetDate, baseCurrency, t]);
 
-  // 2. ZENTRALE PDF-EXPORT LOGIK (Moderne Methode via QuerySelector All)
   useEffect(() => {
-    const loadHtml2Canvas = () => {
-        return new Promise((resolve) => {
-            if (window.html2canvas) return resolve(window.html2canvas);
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-            script.onload = () => resolve(window.html2canvas);
-            document.head.appendChild(script);
-        });
-    };
-
     const buildReportData = async () => {
-        const html2canvas = await loadHtml2Canvas();
-        let chartsData = [];
-        const isDarkTheme = document.documentElement.classList.contains('dark');
-        const bgColor = isDarkTheme ? '#0f172a' : '#ffffff';
-
-        // 1. KPI-Block erfassen
-        const kpiBlock = document.querySelector('.kpi-export-block');
-        if (kpiBlock) {
-            const canvas = await html2canvas(kpiBlock, { scale: 2, backgroundColor: bgColor, useCORS: true, logging: false });
-            chartsData.push({ title: '', image: canvas.toDataURL('image/png', 1.0), width: 760 });
-        }
-
-        // 2. Charts erfassen (mit dem neuen ECharts Fallback-Schutz)
-        if (chartRef.current) {
-            const containers = chartRef.current.querySelectorAll('.chart-export-block');
-            for (let i = 0; i < containers.length; i++) {
-                const titleFallback = containers[i].getAttribute('data-pdf-title') || '';
-                const chartDiv = containers[i].querySelector('.universal-chart-wrapper > div');
-                
-                if (chartDiv && window.echarts) {
-                    const chartInstance = window.echarts.getInstanceByDom(chartDiv);
-                    if (chartInstance) {
-                        const currentOption = chartInstance.getOption();
-                        const hasLegend = currentOption.legend && currentOption.legend.length > 0;
-                        const isPie = currentOption.series && currentOption.series.length > 0 && currentOption.series[0].type === 'pie';
-                        
-                        let isDoughnut = false;
-                        if (isPie && currentOption.series[0].radius) {
-                            isDoughnut = Array.isArray(currentOption.series[0].radius);
-                        } else if (isPie) {
-                            isDoughnut = true; 
-                        }
-                        
-                        chartInstance.setOption({
-                            legend: hasLegend ? { type: 'plain', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } } : undefined,
-                            series: isPie ? [{ center: ['50%', '35%'], radius: isDoughnut ? ['30%', '55%'] : '55%' }] : undefined,
-                            grid: (!isPie && currentOption.grid) ? { bottom: '26%' } : undefined 
-                        });
-                        
-                        const imgData = chartInstance.getDataURL({ type: 'png', pixelRatio: 2.5, backgroundColor: bgColor });
-                        
-                        chartInstance.setOption({
-                            legend: hasLegend ? { type: 'scroll', bottom: 0, top: 'auto', left: 'center', icon: 'circle', itemGap: 24, textStyle: { fontSize: 13 } } : undefined,
-                            series: isPie ? [{ center: ['50%', '50%'], radius: isDoughnut ? ['45%', '75%'] : '70%' }] : undefined,
-                            grid: (!isPie && currentOption.grid) ? { bottom: '25%' } : undefined 
-                        });
-                        
-                        chartsData.push({ title: titleFallback, image: imgData, fit: [360, 260] });
-                        continue; 
-                    }
-                }
-                
-                // html2canvas Fallback mit ECharts Text-Ignore
-                const canvas = await html2canvas(containers[i], { 
-                    scale: 2, backgroundColor: bgColor, useCORS: true, logging: false,
-                    ignoreElements: (element) => {
-                        if (element.classList && element.classList.contains('echarts-tooltip')) return true;
-                        if (element.tagName === 'DIV' && element.style && element.style.position === 'absolute' && element.style.top === '0px') return true;
-                        return element.tagName === 'IFRAME' || element.tagName === 'NOSCRIPT' || element.tagName === 'FONT';
-                    }
-                });
-                chartsData.push({ title: titleFallback, image: canvas.toDataURL('image/png', 1.0), fit: [360, 260] });
-            }
-        }
-
-        // 3. Tabellendaten für den AllocationReport
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
         const tableHeaders = [
-          capitalize(t ? (t('bank') || 'Bank / Institut') : 'Bank / Institut'), 
-          t ? (t('share') || 'Anteil') : 'Anteil',
-          capitalize(t ? (t('amount') || 'Betrag') : 'Betrag')
+          capitalize(safeT(t, 'bank', 'Institut / Bank')), 
+          safeT(t, 'assets', 'Assets'),
+          safeT(t, 'colPrimaryCurrency', 'Hauptwährung'),
+          capitalize(safeT(t, 'amount', 'Volumen')),
+          safeT(t, 'share', 'Anteil'),
+          safeT(t, 'colCumulative', 'Kumuliert')
         ];
         
+        const posSuffix = safeT(t, 'labelPosSuffix', 'Pos.');
+
         const tableBody = allocData.map(d => [
-            d.label, 
-            `${((d.value / grandTotal) * 100).toFixed(1)}%`,
-            formatCurrency(d.value)
+            d.label,
+            `${d.assetCount} ${posSuffix}`,
+            d.primaryCurrency,
+            formatCurrency(d.value),
+            `${d.percentage.toFixed(1)}%`,
+            `${d.cumPercentage.toFixed(1)}%`
         ]);
 
-        return { chartsData, tableHeaders, tableBody };
+        tableBody.push([
+            safeT(t, 'labelTotalPortfolioUpper', 'TOTAL PORTFOLIO'),
+            `${totalAssetsCount} ${posSuffix}`,
+            baseCurrency,
+            formatCurrency(grandTotal),
+            '100.0%',
+            '100.0%'
+        ]);
+
+        const exposureSuffix = safeT(t, 'descExposureSuffix', 'Exposure');
+
+        const kpis = [
+            { label: safeT(t, 'totalWealth', 'Gesamtkapital'), value: formatCurrency(grandTotal), sub: `${safeT(t, 'statusAsOf', 'Stichtag:')} ${new Date(targetDate).toLocaleDateString('de-CH')}`, color: '#2563eb' },
+            { label: safeT(t, 'topInstitution', 'Grösstes Institut'), value: topBank ? topBank.label : '-', sub: `${topBankPercent}% ${safeT(t, 'ofPortfolio', 'vom Portfolio')}`, color: '#10b981' },
+            { label: safeT(t, 'labelTop3Concentration', 'Top-3 Konzentration'), value: `${top3Percent}%`, sub: `${Math.min(3, uniqueBanksCount)} / ${uniqueBanksCount} ${safeT(t, 'banks', 'Banken/Institute')}`, color: '#f59e0b' },
+            { label: safeT(t, 'colPrimaryCurrency', 'Hauptwährung'), value: currencyData[0]?.currency || baseCurrency, sub: `${(currencyData[0]?.percentage || 0).toFixed(1)}% ${exposureSuffix}`, color: '#8b5cf6' }
+        ];
+
+        let chartsData = [];
+        if (PdfToolkit && typeof PdfToolkit.captureCharts === 'function') {
+             chartsData = await PdfToolkit.captureCharts(reportRef.current, document.documentElement.classList.contains('dark'));
+        }
+
+        return { chartsData, tableHeaders, tableBody, kpis };
     };
 
     const handlePdfExport = async () => {
       try {
-        if (!PdfExportEngine) {
-            console.error("[FinBundle Pro Diagnose] PdfExportEngine nicht verfügbar.");
-            return;
-        }
-        const { chartsData, tableHeaders, tableBody } = await buildReportData();
-        
-        const subtitleText = `${t ? (t('reportDate') || 'Stichtag:') : 'Stichtag:'} ${new Date(targetDate).toLocaleDateString('de-CH')} | ${t ? (t('totalVolume') || 'Gesamtvolumen') : 'Gesamtvolumen'}: ${formatCurrency(grandTotal)}`;
+        if (!PdfToolkit) return;
+        const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
+        const subtitleText = `${safeT(t, 'reportDate', 'Stichtag:')} ${new Date(targetDate).toLocaleDateString('de-CH')} | ${uniqueBanksCount} ${safeT(t, 'banks', 'Banken/Institute')}`;
 
-        await PdfExportEngine.exportReport({
-          title: t ? (t('repAlloc') || 'Allokation nach Banken') : 'Allokation nach Banken',
+        await PdfToolkit.exportReport({
+          title: safeT(t, 'repAlloc', 'Asset Allokation nach Instituten'),
           subtitle: subtitleText,
           tableHeaders,
           tableBody,
+          colWidthsPct: [0.30, 0.12, 0.14, 0.22, 0.11, 0.11],
+          colAligns: ['left', 'center', 'center', 'right', 'right', 'right'],
+          kpis,
           chartsData,
-          data: data 
+          data
         });
-      } catch (err) { console.error("[FinBundle Pro] PDF-Export Fehler:", err); }
+      } catch (err) {
+        console.error("[FinBundle Pro] PDF-Export Fehler:", err);
+      }
     };
 
     const handleBatchExport = (e) => {
       const exportPromise = new Promise(async (resolve) => {
         try {
-          const { chartsData, tableHeaders, tableBody } = await buildReportData();
-
+          const { chartsData, tableHeaders, tableBody, kpis } = await buildReportData();
           resolve({
             order: 2, 
-            title: t ? (t('repAlloc') || 'Allokation nach Banken') : 'Allokation nach Banken',
-            subtitle: `Stichtag: ${new Date(targetDate).toLocaleDateString('de-CH')}`,
+            title: safeT(t, 'repAlloc', 'Asset Allokation nach Instituten'),
+            subtitle: `${safeT(t, 'statusAsOf', 'Stichtag:')} ${new Date(targetDate).toLocaleDateString('de-CH')}`,
             tableHeaders,
             tableBody,
+            colWidthsPct: [0.30, 0.12, 0.14, 0.22, 0.11, 0.11],
+            colAligns: ['left', 'center', 'center', 'right', 'right', 'right'],
+            kpis,
             chartsData
           });
         } catch (err) {
@@ -218,37 +235,40 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
         window.removeEventListener('triggerPdfExport', handlePdfExport);
         window.removeEventListener('triggerPdfBatchExport', handleBatchExport);
     };
-  }, [allocData, grandTotal, targetDate, data, t]); 
+  }, [allocData, currencyData, grandTotal, targetDate, data, t, topBank, topBankPercent, top3Percent, uniqueBanksCount, totalAssetsCount, baseCurrency]); 
 
   if (grandTotal === 0) {
     return (
       <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
-          <p>{t ? (t('noAssetsFoundDate') || 'Keine Vermögenswerte zum gewählten Stichtag gefunden.') : 'Keine Vermögenswerte zum gewählten Stichtag gefunden.'}</p>
+          <p>{safeT(t, 'noAssetsFoundDate', 'Keine Vermögenswerte zum gewählten Stichtag gefunden.')}</p>
         </div>
       </div>
     );
   }
 
+  const curDistTitle = safeT(t, 'titleCurrencyDistBase', 'Währungsverteilung ({cur} Basis)').replace('{cur}', baseCurrency);
+  const activeCurCountDesc = safeT(t, 'descActiveCurrenciesCount', '{count} Währungen aktiv im Depot').replace('{count}', currencyData.length);
+  const activePosCountDesc = safeT(t, 'descActivePositionsCount', '{count} aktive Positionen').replace('{count}', totalAssetsCount);
+  const volInCurLabel = safeT(t, 'labelVolumeInCurrency', 'Volumen in {cur}').replace('{cur}', baseCurrency);
+
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
       <div className="w-full bg-white dark:bg-transparent">
           
-          <div className="kpi-export-block grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
              
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
-                    <span>{String(t ? (t('totalWealth') || 'Gesamtkapital') : 'Gesamtkapital').toUpperCase()}</span>
+                    <span>{String(safeT(t, 'totalWealth', 'Gesamtkapital')).toUpperCase()}</span>
                 </div>
-                <div className="w-full" style={{ containerType: 'inline-size' }}>
-                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.875rem)' }} title={formatCurrency(grandTotal)}>
-                        <span>{formatCurrency(grandTotal)}</span>
-                    </div>
+                <div className="font-black text-2xl text-slate-900 dark:text-white truncate" title={formatCurrency(grandTotal)}>
+                    {formatCurrency(grandTotal)}
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
-                    <span>{t ? (t('statusAsOf') || 'Stichtag:') : 'Stichtag:'} {new Date(targetDate).toLocaleDateString('de-CH')}</span>
+                <div className="text-xs text-gray-400 mt-2">
+                    {safeT(t, 'statusAsOf', 'Stichtag:')} {new Date(targetDate).toLocaleDateString('de-CH')}
                 </div>
              </div>
 
@@ -256,68 +276,70 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Building" size={14} className="text-emerald-500"/>
-                      {String(t ? (t('topInstitution') || 'Grösste Position') : 'Grösste Position').toUpperCase()}
+                      {String(safeT(t, 'topInstitution', 'Grösstes Institut')).toUpperCase()}
+                    </span>
+                    <span className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded">
+                      {topBankPercent}%
                     </span>
                 </div>
-                <div className="w-full" style={{ containerType: 'inline-size' }}>
-                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" title={topBank?.label} style={{ fontSize: 'clamp(1.125rem, 12cqw, 1.5rem)' }}>
-                        <span>{topBank ? topBank.label : '-'}</span>
-                    </div>
+                <div className="font-black text-xl text-slate-900 dark:text-white truncate" title={topBank?.label}>
+                    {topBank ? topBank.label : '-'}
                 </div>
-                <div className="text-xs font-bold text-gray-500 mt-1 truncate">
-                    <span>{topBank ? formatCurrency(topBank.value) : ''} <span className="text-emerald-600 dark:text-emerald-400">({topBankPercent}%)</span></span>
-                </div>
-             </div>
-
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
-                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
-                    <Icon name="Layers" size={14} className="text-indigo-500"/>
-                    <span>{String(t ? (t('diversification') || 'Diversifikation') : 'Diversifikation').toUpperCase()}</span>
-                </div>
-                <div className="w-full" style={{ containerType: 'inline-size' }}>
-                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.25rem, 12cqw, 1.875rem)' }}>
-                        <span>{uniqueBanksCount}</span>
-                    </div>
-                </div>
-                <div className="text-xs text-gray-400 mt-1 truncate">
-                    <span>{t ? (t('connectedInstitutions') || 'Verbundene Banken/Institute') : 'Verbundene Banken/Institute'}</span>
+                <div className="text-xs text-gray-400 mt-2">
+                    {topBank ? formatCurrency(topBank.value) : '-'}
                 </div>
              </div>
 
              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+                <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Icon name="Layers" size={14} className="text-amber-500"/>
+                      <span>{safeT(t, 'labelTop3ClusterRisk', 'KLUMPENRISIKO (TOP 3)')}</span>
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${top3Percent > 75 ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                      {top3Percent > 75 ? safeT(t, 'labelClusterHigh', 'Hoch') : safeT(t, 'labelClusterModerate', 'Moderat')}
+                    </span>
+                </div>
+                <div className="font-black text-2xl text-slate-900 dark:text-white">
+                    {top3Percent}%
+                </div>
+                <div className="text-xs text-gray-400 mt-2 truncate">
+                    {safeT(t, 'descBoundInTop3', 'Gebunden in den 3 grössten Instituten')}
+                </div>
+             </div>
+
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
-                    <Icon name="Database" size={14} className="text-amber-500"/>
-                    <span>{String(t ? (t('totalAssets') || 'Verwaltete Assets') : 'Verwaltete Assets').toUpperCase()}</span>
+                    <Icon name="Globe" size={14} className="text-purple-500"/>
+                    <span>{safeT(t, 'labelMainCurrency', 'HAUPTWÄHRUNG')}</span>
                 </div>
-                <div className="w-full" style={{ containerType: 'inline-size' }}>
-                    <div className="font-black text-slate-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis pb-1" style={{ fontSize: 'clamp(1.25rem, 12cqw, 1.875rem)' }}>
-                        <span>{totalAssetsCount}</span>
-                    </div>
+                <div className="font-black text-2xl text-slate-900 dark:text-white">
+                    {currencyData[0]?.currency || baseCurrency} <span className="text-sm font-medium text-purple-600 dark:text-purple-400">({currencyData[0]?.percentage.toFixed(1)}%)</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-1 truncate">
-                    <span>{t ? (t('activePositions') || 'Aktive Anlagepositionen gesamt') : 'Aktive Anlagepositionen gesamt'}</span>
+                <div className="text-xs text-gray-400 mt-2 truncate">
+                    {activeCurCountDesc}
                 </div>
              </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10" ref={chartRef}>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+            
             <div 
-                className="lg:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8"
-                data-pdf-title={t ? (t('distribution') || 'Verteilung') : 'Verteilung'}
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                data-pdf-title={safeT(t, 'titleAllocByInst', 'Allokation nach Instituten')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                    <Icon name="PieChart" className="text-indigo-500" /> {t ? (t('distribution') || 'Verteilung') : 'Verteilung'}
+                    <Icon name="PieChart" className="text-blue-500" /> {safeT(t, 'titleAllocByInst', 'Allokation nach Instituten')}
                 </h3>
-<div style={{ width: '100%', height: '350px' }}>
+                <div style={{ width: '100%', height: '320px' }}>
                     <UniversalChart
-                        key={`alloc-chart-${isDark ? 'dark' : 'light'}`} 
+                        key={`alloc-bank-${isDark ? 'dark' : 'light'}`} 
                         engine={activeChartEngine}
                         type="doughnut"
                         height="100%"
                         labels={allocData.map(d => d.label)}
                         datasets={[{
-                            label: t ? (t('allocation') || 'Allokation') : 'Allokation',
-                            // KORREKTUR: UniversalChart erwartet hier ein flaches Array aus Werten, keine Objekte
+                            label: safeT(t, 'amount', 'Volumen'),
                             data: allocData.map(d => d.value),
                             valueFormatter: formatCurrency
                         }]}
@@ -325,48 +347,92 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                 </div>
             </div>
 
-            <div className="lg:col-span-7 space-y-5">
-                <h3 className="font-bold text-lg mb-4 text-slate-800 dark:text-slate-200 flex items-center gap-2 ml-1">
-                    <Icon name="List" className="text-slate-500" />
-                    {t ? (t('institutionsWeighting') || 'Institute & Gewichtung') : 'Institute & Gewichtung'}
+            <div 
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                data-pdf-title={safeT(t, 'titleCurrencyExposure', 'Währungs-Exposure')}
+            >
+                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                    <Icon name="Globe" className="text-purple-500" /> {curDistTitle}
                 </h3>
-                
-                <div className="grid gap-4">
-                    {allocData.map((bank, idx) => {
-                        const percentage = grandTotal > 0 ? (bank.value / grandTotal) * 100 : 0;
-                        return (
-                            <div key={idx} className="group bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-md transition-all duration-200">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="min-w-0 pr-4">
-                                        <div className="text-lg font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-2 truncate" title={bank.label}>
-                                            <Icon name="Building" size={16} className="text-gray-400 group-hover:text-blue-500 shrink-0"/>
-                                            <span className="truncate">{bank.label}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-2 mt-1.5 bg-gray-100 dark:bg-slate-800 w-max px-2 py-0.5 rounded">
-                                            <Icon name="Database" size={10}/> {bank.assetCount} {t ? (t('assets') || 'Assets') : 'Assets'}
-                                        </div>
-                                    </div>
-                                    <div className="text-right flex flex-col items-end shrink-0">
-                                        <div className="text-lg font-black text-slate-900 dark:text-white font-mono bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg">
-                                            {formatCurrency(bank.value)}
-                                        </div>
-                                        <div className="text-blue-600 dark:text-blue-400 text-xs font-bold mt-1">
-                                            {percentage.toFixed(1)}% {t ? (t('share') || 'Anteil') : 'Anteil'}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="w-full h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
-                                    <div 
-                                        className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-all duration-1000 group-hover:bg-blue-600 dark:group-hover:bg-blue-300" 
-                                        style={{ width: `${percentage}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        );
-                    })}
+                <div style={{ width: '100%', height: '320px' }}>
+                    <UniversalChart
+                        key={`alloc-cur-${isDark ? 'dark' : 'light'}`} 
+                        engine={activeChartEngine}
+                        type="bar"
+                        horizontal={true}
+                        height="100%"
+                        labels={currencyData.map(d => d.currency)}
+                        datasets={[{
+                            label: volInCurLabel,
+                            data: currencyData.map(d => d.value),
+                            backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
+                            valueFormatter: formatCurrency
+                        }]}
+                    />
                 </div>
             </div>
+
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+              <div className="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/30">
+                  <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                      <Icon name="List" className="text-slate-500"/> {safeT(t, 'titleDetailedInstOverview', 'Detaillierte Instituts-Übersicht')}
+                  </h3>
+                  <span className="text-xs font-medium text-gray-500">
+                      {uniqueBanksCount} {safeT(t, 'banks', 'Banken/Institute')} | {activePosCountDesc}
+                  </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                      <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
+                          <tr>
+                              <th className="p-4">{safeT(t, 'bank', 'Institut / Bank')}</th>
+                              <th className="p-4 text-center">{safeT(t, 'assets', 'Assets')}</th>
+                              <th className="p-4 text-center">{safeT(t, 'colPrimaryCurrency', 'Hauptwährung')}</th>
+                              <th className="p-4 text-right">{safeT(t, 'amount', 'Volumen')}</th>
+                              <th className="p-4 text-right">{safeT(t, 'share', 'Anteil')}</th>
+                              <th className="p-4 text-right">{safeT(t, 'colCumulative', 'Kumuliert')}</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
+                          {allocData.map((bank, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
+                                  <td className="p-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                      <Icon name="Building" size={14} className="text-gray-400"/>
+                                      {bank.label}
+                                  </td>
+                                  <td className="p-4 text-center text-gray-500 font-mono">
+                                      {bank.assetCount} {safeT(t, 'labelPosSuffix', 'Pos.')}
+                                  </td>
+                                  <td className="p-4 text-center">
+                                      <span className="px-2 py-0.5 text-xs font-bold bg-gray-100 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-300">
+                                          {bank.primaryCurrency}
+                                      </span>
+                                  </td>
+                                  <td className="p-4 text-right font-black font-mono text-slate-900 dark:text-white">
+                                      {formatCurrency(bank.value)}
+                                  </td>
+                                  <td className="p-4 text-right font-bold text-blue-600 dark:text-blue-400 font-mono">
+                                      {bank.percentage.toFixed(1)}%
+                                  </td>
+                                  <td className="p-4 text-right text-gray-400 font-mono text-xs">
+                                      {bank.cumPercentage.toFixed(1)}%
+                                  </td>
+                              </tr>
+                          ))}
+                          <tr className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t-2 border-slate-200 dark:border-slate-700">
+                              <td className="p-4 uppercase text-slate-900 dark:text-white">{safeT(t, 'totalPortfolioCombined', 'Gesamtportfolio')}</td>
+                              <td className="p-4 text-center text-slate-700 dark:text-slate-300">{totalAssetsCount} {safeT(t, 'labelPosSuffix', 'Pos.')}</td>
+                              <td className="p-4 text-center text-slate-700 dark:text-slate-300">{baseCurrency}</td>
+                              <td className="p-4 text-right font-black font-mono text-slate-900 dark:text-white">{formatCurrency(grandTotal)}</td>
+                              <td className="p-4 text-right font-mono text-blue-600 dark:text-blue-400">100.0%</td>
+                              <td className="p-4 text-right font-mono text-gray-500">100.0%</td>
+                          </tr>
+                      </tbody>
+                  </table>
+              </div>
           </div>
       </div>
     </div>

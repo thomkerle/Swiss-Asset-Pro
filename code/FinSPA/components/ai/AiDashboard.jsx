@@ -1,18 +1,16 @@
 /**
  * @file AiDashboard.jsx
- * @description FinSPA KI Copilot Dashboard. Bietet eine Chat-Schnittstelle zu lokalen LLMs (Ollama)
- * sowie zu Cloud-Modellen (OpenAI, Anthropic, Gemini), generiert dynamische HTML/Chart.js Widgets 
- * basierend auf den Finanzdaten des Nutzers.
- * @version 2.6.0 - Robust Cloud API Handling (analog zum PdfScanner)
+ * @description FinSPA KI Copilot Dashboard mit Plugin-/Add-In-Speicherfunktion,
+ * optimiertem Tab-Flyout für Temperatur/Kontext und Iframe-Sandbox.
  */
 
 const React = require('react');
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 const Icon = safeRequire('../Icons.jsx') || (({name, className, size}) => <span className={className}>[{name}]</span>);
-const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules['data/DataEngine.jsx']?.exports || {};
+const DataEngine = safeRequire('../../data/DataEngine.jsx') || window.__FinSPAModules?.['data/DataEngine.jsx']?.exports || {};
 const finspaSchema = safeRequire('../../schema/finspa-schema.json');
 const { getFinSpaApiScript } = safeRequire('../../api/FinSpaApiInject.js') || require('../../api/FinSpaApiInject.js');
 const { getSystemPrompt } = safeRequire('../../api/SystemPrompt.js') || require('../../api/SystemPrompt.js');
@@ -20,14 +18,15 @@ const { getSystemPrompt } = safeRequire('../../api/SystemPrompt.js') || require(
 const extractCodeFromText = (inputText) => {
     if (!inputText) return null;
     try {
-        const regex = new RegExp("\\x60\\x60\\x60(?:html|xml)?\\s*([\\s\\S]*?)\\s*\\x60\\x60\\x60", "i");
+        const regex = new RegExp("\\x60\\x60\\x60(?:html|xml|javascript|js)?\\s*([\\s\\S]*?)\\s*\\x60\\x60\\x60", "i");
         const match = inputText.match(regex);
         let code = null;
+        
         if (match && match[1]) {
             code = match[1].trim();
         } else {
             const doctypeIndex = inputText.toUpperCase().indexOf('<!DOCTYPE');
-            const htmlIndex = inputText.toLowerCase().indexOf('<HTML');
+            const htmlIndex = inputText.toLowerCase().indexOf('<html');
             let startIndex = -1;
             if (doctypeIndex !== -1) startIndex = doctypeIndex;
             else if (htmlIndex !== -1) startIndex = htmlIndex;
@@ -36,17 +35,22 @@ const extractCodeFromText = (inputText) => {
                 code = inputText.substring(startIndex).trim();
             }
         }
+
         if (code) {
             const endIndex = code.toLowerCase().lastIndexOf('</html>');
             if (endIndex !== -1) {
                 code = code.substring(0, endIndex + 7);
             }
             code = code.replace(/^<modus_.*?>/i, '').replace(/<\/modus_.*?>$/i, '').trim();
+
+            if (!code.toLowerCase().includes('<html')) {
+                code = `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"></head><body>${code}</body></html>`;
+            }
             return code;
         }
         return null;
     } catch (e) {
-        console.error("Fehler beim Extrahieren des Codes:", e);
+        console.error("[AiDashboard] Fehler beim Extrahieren des Codes:", e);
         return null;
     }
 };
@@ -57,18 +61,14 @@ const formatTokenCount = (num) => {
 };
 
 const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
-    
-    // --- HILFSFUNKTIONEN WIE IM PDF-SCANNER ---
     const isOpenAI = (id) => id.startsWith('gpt-');
     const isGemini = (id) => id.startsWith('gemini-');
     const isClaude = (id) => id.startsWith('claude-');
     const isCloudModelFn = (id) => isOpenAI(id) || isGemini(id) || isClaude(id);
 
-    // --- DYNAMISCHE MODELLE WIE IM PDF-SCANNER LADEN ---
-// --- DYNAMISCHE MODELLE WIE IM PDF-SCANNER LADEN ---
     const buildAvailableModels = () => {
-        const tLocal = t ? t('suffixLocal') : '- Lokal';
-        const tCloud = t ? t('suffixCloud') : '(Cloud)';
+        const tLocal = t ? (t('suffixLocal') || '- Lokal') : '- Lokal';
+        const tCloud = t ? (t('suffixCloud') || '(Cloud)') : '(Cloud)';
 
         let models = data?.settings?.aiModels && data.settings.aiModels.length > 0 
             ? [...data.settings.aiModels] 
@@ -80,7 +80,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         const keys = data?.settings?.aiApiKeys || {};
         
         if (keys.gemini) {
-            // Aktualisiert auf die neuen Gemini 3 Modelle
             models.push({ id: 'gemini-3.5-flash', name: `Gemini 3.5 Flash ${tCloud}` });
             models.push({ id: 'gemini-3.1-flash-lite', name: `Gemini 3.1 Flash Lite ${tCloud}` });
             models.push({ id: 'gemini-3-flash-preview', name: `Gemini 3 Flash Preview ${tCloud}` });
@@ -99,42 +98,47 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
     const PROMPT_LIBRARY = [
         {
-            category: t('aiCatPortfolio') || 'Portfolio & Assets',
+            category: 'Portfolio & Assets',
             icon: 'PieChart',
             prompts: [
-                { title: t('aiP1Title'), text: t('aiP1Text') },
-                { title: t('aiP2Title'), text: t('aiP2Text') },
-                { title: t('aiP3Title'), text: t('aiP3Text') }
+                { title: 'Vorsorge & Rentenanalyse', text: 'Erstelle eine Auswertung, die mein liquides Vermögen der gebundenen Säule 3a und Pensionskasse gegenüberstellt und eine Rentenschätzung visualisiert.' },
+                { title: 'Dividenden-Cluster & Zahltage', text: 'Zeige mir eine Übersicht der Top-Dividendenzahler gruppiert nach Zahlungsintervallen und Währungen.' },
+                { title: 'Vermögenskonzentration & Klumpenrisiko', text: 'Analysiere Klumpenrisiken nach Banken und Einzelwerten mit einer Risikomatrix.' }
             ]
         },
         {
-            category: t('aiCatBudget') || 'Budget & Cashflow',
+            category: 'Budget & Cashflow',
             icon: 'TrendingDown',
             prompts: [
-                { title: t('aiP4Title'), text: t('aiP4Text') },
-                { title: t('aiP5Title'), text: t('aiP5Text') },
-                { title: t('aiP6Title'), text: t('aiP6Text') }
+                { title: 'Monatlicher Sparpuffer', text: 'Berechne meinen monatlichen freien Cashflow und zeige ein Balkendiagramm der Fixkosten vs. Einnahmen.' },
+                { title: 'Historische Sparquote', text: 'Analysiere meine Sparquote über die letzten 12 Monate und stelle Einnahmen und Ausgaben gegenüber.' }
             ]
         },
         {
-            category: t('aiCatFire') || 'FIRE & Zukunftsplanung',
+            category: 'FIRE & Zukunftsplanung',
             icon: 'Target',
             prompts: [
-                { title: t('aiP7Title'), text: t('aiP7Text') },
-                { title: t('aiP8Title'), text: t('aiP8Text') }
+                { title: 'Projizierte liquide Vermögensentwicklung', text: 'Erstelle einen Zukunfts-Report, der mein liquides Vermögen über 10 Jahre mit einer 4% und 7% Renditekurve extrapoliert.' },
+                { title: 'FIRE-Zielerreichung mit Szenarien', text: 'Berechne anhand meines Sparverhaltens das voraussichtliche Erreichen der finanziellen Freiheit unter Berücksichtigung geplanter Szenarien.' }
             ]
         }
     ];
 
     const [prompt, setPrompt] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [chatHistory, setChatHistory] = useState(data.aiContext?.history || []);
+    const [chatHistory, setChatHistory] = useState(data?.aiContext?.history || []);
     const [selectedModel, setSelectedModel] = useState(availableModels[0]?.id || 'qwen2.5-coder:14b');
     
+    // Sidebar State mit Tabs
     const [showSidebar, setShowSidebar] = useState(false);
-    const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+    const [sidebarTab, setSidebarTab] = useState('prompts'); // 'prompts' | 'settings'
     const [aiTemperature, setAiTemperature] = useState(0.1);
     const [aiContextWindow, setAiContextWindow] = useState(16384);
+
+    // Modal State: Plugin Speichern
+    const [pluginModal, setPluginModal] = useState(null);
+    const [pluginTitle, setPluginTitle] = useState('');
+    const [pluginCategory, setPluginCategory] = useState('Vorsorge');
     
     const chatContainerRef = useRef(null);
     const endOfMessagesRef = useRef(null);
@@ -161,7 +165,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
     const handleClearChat = () => {
         if (chatHistory.length === 0) return;
-        if (window.confirm(t('aiClearChatConfirm') || "Chatverlauf leeren?")) {
+        if (window.confirm("Chatverlauf wirklich leeren?")) {
             setChatHistory([]);
             setPrompt('');
             if (updateTreeData) updateTreeData({ aiContext: { history: [], apiMessages: [] } });
@@ -176,6 +180,62 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text).catch(err => console.error('Fehler beim Kopieren:', err));
+        if (typeof window !== 'undefined' && window.showToast) window.showToast("In die Zwischenablage kopiert", "info");
+    };
+
+    const existingCategories = useMemo(() => {
+        const cats = new Set(['Vorsorge', 'Vermögen', 'Performance', 'Steuern', 'Cashflow', 'Budget']);
+        (data?.plugins || []).forEach(p => {
+            if (p.category) cats.add(p.category);
+        });
+        return Array.from(cats);
+    }, [data?.plugins]);
+
+    const handleOpenSavePlugin = (htmlCode, lastUserPrompt = '') => {
+        let suggestedTitle = 'Neuer Report';
+        if (lastUserPrompt) {
+            const clean = lastUserPrompt.replace(/^(erstelle|zeige|berechne|mache)\s+(mir\s+)?(einen\s+|eine\s+|das\s+)?/i, '').trim();
+            suggestedTitle = clean.charAt(0).toUpperCase() + clean.slice(1);
+            if (suggestedTitle.length > 35) suggestedTitle = suggestedTitle.substring(0, 32) + '...';
+        }
+
+        let suggestedCat = 'Vermögen';
+        const lower = (lastUserPrompt || '').toLowerCase();
+        if (lower.includes('vorsorge') || lower.includes('3a') || lower.includes('rente') || lower.includes('pension')) suggestedCat = 'Vorsorge';
+        else if (lower.includes('steuer')) suggestedCat = 'Steuern';
+        else if (lower.includes('dividende') || lower.includes('rendite') || lower.includes('performance')) suggestedCat = 'Performance';
+        else if (lower.includes('budget') || lower.includes('sparen') || lower.includes('ausgabe')) suggestedCat = 'Budget';
+        else if (lower.includes('cashflow') || lower.includes('fluss')) suggestedCat = 'Cashflow';
+
+        setPluginTitle(suggestedTitle);
+        setPluginCategory(suggestedCat);
+        setPluginModal({ code: htmlCode });
+    };
+
+    const handleConfirmSavePlugin = () => {
+        if (!pluginTitle.trim()) {
+            alert("Bitte geben Sie einen Namen für das Plugin ein.");
+            return;
+        }
+
+        const newPlugin = {
+            id: 'plug_' + Math.random().toString(36).substr(2, 9),
+            title: pluginTitle.trim(),
+            category: pluginCategory.trim() || 'Allgemein',
+            code: pluginModal.code,
+            createdAt: new Date().toISOString()
+        };
+
+        const updatedPlugins = [...(data?.plugins || []), newPlugin];
+        if (updateTreeData) {
+            updateTreeData({ plugins: updatedPlugins });
+        }
+
+        if (typeof window !== 'undefined' && window.showToast) {
+            window.showToast(`Plugin "${newPlugin.title}" im Menü unter "${newPlugin.category}" gespeichert!`, "success");
+        }
+
+        setPluginModal(null);
     };
 
     const handleAskAI = async () => {
@@ -189,7 +249,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
         if (textareaRef.current) textareaRef.current.style.height = '56px';
         
-        const budgetString = JSON.stringify(data.budget || {});
+        const budgetString = JSON.stringify(data?.budget || {});
         const schemaInfo = JSON.stringify(finspaSchema, null, 2);
 
         const systemPrompt = getSystemPrompt(schemaInfo, budgetString);
@@ -204,7 +264,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                 content: h.content || h.htmlWidget || h.text || ''
             }));
 
-            // --- CLOUD ROUTING ODER LOKAL ---
             if (isOpenAI(selectedModel)) {
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
@@ -221,10 +280,9 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                         temperature: aiTemperature
                     })
                 });
-                
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(`OpenAI API: ${errData.error?.message || response.statusText || 'Unbekannter Fehler'}`);
+                    throw new Error(`OpenAI API: ${errData.error?.message || response.statusText}`);
                 }
                 const result = await response.json();
                 textContent = result.choices[0].message.content;
@@ -247,10 +305,9 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                         temperature: aiTemperature
                     })
                 });
-                
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(`Anthropic API: ${errData.error?.message || response.statusText || 'Unbekannter Fehler'}`);
+                    throw new Error(`Anthropic API: ${errData.error?.message || response.statusText}`);
                 }
                 const result = await response.json();
                 textContent = result.content[0].text;
@@ -260,7 +317,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                     role: h.role === 'user' ? 'user' : 'model',
                     parts: [{ text: h.content }]
                 }));
-                
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKeys.gemini}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -270,16 +326,14 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                         generationConfig: { temperature: aiTemperature }
                     })
                 });
-                
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(`Google API: ${errData.error?.message || response.statusText || 'Unbekannter Fehler'}`);
+                    throw new Error(`Google API: ${errData.error?.message || response.statusText}`);
                 }
                 const result = await response.json();
                 textContent = result.candidates[0].content.parts[0].text;
                 
             } else {
-                // Local Ollama Fallback
                 const response = await fetch('http://localhost:11434/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -293,7 +347,6 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                         options: { temperature: aiTemperature, num_ctx: aiContextWindow }
                     })
                 });
-
                 if (!response.ok) throw new Error(`Ollama Error: ${response.status}`);
                 const result = await response.json();
                 textContent = result.message.content;
@@ -304,7 +357,7 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
 
             if (!cleanCode) {
                  const errorMessage = { 
-                     role: 'assistant', text: t('aiErrorNoHtml') || "Konnte keinen gültigen Code aus der Antwort extrahieren.",
+                     role: 'assistant', text: "Konnte keinen gültigen HTML/JS Code aus der Antwort extrahieren.",
                      timestamp: new Date().toISOString()
                  };
                  const finalHistory = [...newHistory, errorMessage];
@@ -316,20 +369,18 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
             const finalMessage = { 
                 role: 'assistant', 
                 htmlWidget: cleanCode, 
+                userPrompt: userMessage.content,
                 timestamp: new Date().toISOString(), 
                 modelUsed: returnedModel 
             };
             
             const finalHistory = [...newHistory, finalMessage];
-            
             setChatHistory(finalHistory);
             if (updateTreeData) updateTreeData({ aiContext: { history: finalHistory } });
 
         } catch (error) {
-            // Dynamischer Fehlerpräfix analog zum PdfScanner
             const isCloud = isCloudModelFn(selectedModel);
-            const errorPrefix = isCloud ? '' : (t('aiErrorConnection') ? t('aiErrorConnection') + ' ' : 'Verbindungsfehler zur lokalen KI (Ollama): ');
-            
+            const errorPrefix = isCloud ? '' : 'Verbindungsfehler zur lokalen KI (Ollama): ';
             setChatHistory([...newHistory, { 
                 role: 'assistant', 
                 text: `${errorPrefix}${error.message}`.trim(), 
@@ -341,44 +392,23 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         }
     };
 
-const renderIframeWidget = (htmlContent) => {
-        // PARAMETERLOSE INJECTED-API
+    const renderIframeWidget = (htmlContent, lastPrompt = '') => {
         const injectedScripts = `
         <style>
-            /* Basis-Reset für den iFrame */
             html, body {
                 margin: 0;
-                padding: 10px;
+                padding: 12px;
                 box-sizing: border-box;
                 max-width: 100vw;
                 overflow-x: hidden;
                 font-family: system-ui, -apple-system, sans-serif;
-                background-color: #ffffff; /* WICHTIG: Verhindert schwarze Hintergründe beim PDF-Export */
+                background-color: #ffffff;
             }
             * { box-sizing: inherit; }
-
             canvas {
                 max-width: 100% !important;
                 max-height: 400px !important;
                 height: auto !important;
-                object-fit: contain;
-                background-color: #ffffff;
-            }
-
-            .js-plotly-plot, .plotly-graph-div, div[_echarts_instance_] {
-                max-width: 100% !important;
-                max-height: 400px !important;
-                background-color: #ffffff;
-            }
-
-            .chart-container, #chart, #myChart, .wrapper {
-                position: relative;
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: 400px !important;
-                display: flex;
-                justify-content: center;
-                align-items: center;
                 background-color: #ffffff;
             }
         </style>
@@ -386,39 +416,29 @@ const renderIframeWidget = (htmlContent) => {
         <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
         <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script>
-            window.PdfExportEngine = window.parent.PdfExportEngine; 
-            
-            // --- FIX FÜR LEERE GRAFIKEN BEIM PDF-EXPORT ---
-            // html2canvas fotografiert den DOM sofort ab. Chart-Animationen müssen daher 
-            // global deaktiviert sein, sonst wird der Chart "leer" (im Frame 0) exportiert.
+            window.PdfToolkit = window.parent.PdfToolkit || window.PdfToolkit;
+            window.PdfExportEngine = window.parent.PdfToolkit || window.parent.PdfExportEngine || window.PdfExportEngine;
             
             if (window.Chart) {
                 window.Chart.defaults.animation = false;
                 window.Chart.defaults.responsiveAnimationDuration = 0;
             }
-            
             if (window.echarts) {
                 const originalInit = window.echarts.init;
                 window.echarts.init = function() {
                     const chart = originalInit.apply(this, arguments);
                     const originalSetOption = chart.setOption;
                     chart.setOption = function(option) {
-                        if (option) {
-                            option.animation = false;
-                        }
+                        if (option) option.animation = false;
                         return originalSetOption.apply(this, arguments);
                     };
                     return chart;
                 };
             }
         </script>
-
         ${getFinSpaApiScript()}
-
         <script>
             window.finspaData = ${JSON.stringify(data).replace(/</g, '\\u003c')};        
         </script>
@@ -433,23 +453,37 @@ const renderIframeWidget = (htmlContent) => {
 
         return (
             <div className="flex flex-col mt-3 w-full animate-fade-in-up">
-                <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl shadow-black/10 dark:shadow-black/30 transition-all group">
+                <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl transition-all group">
                     <div className="bg-gradient-to-b from-gray-100 to-gray-200 dark:from-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-slate-700 px-4 py-2.5 flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                            <div className="flex gap-1.5 group-hover:opacity-100 opacity-70 transition-opacity">
+                            <div className="flex gap-1.5 opacity-70">
                                 <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
                                 <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
                                 <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
                             </div>
                             <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 ml-3 tracking-wider uppercase">
-                                {t('aiWidgetTitle') || 'AI Widget'} <span className="opacity-50 lowercase ml-1">{t('aiWidgetVersion')}</span>
+                                FinBundle AI Widget
                             </span>
                         </div>
-                        <div className="flex gap-2">
-                            <button className="text-gray-400 hover:text-blue-500 transition-colors" title={t('aiWidgetReload')} onClick={(e) => {
-                                const iframe = e.currentTarget.parentElement.parentElement.parentElement.querySelector('iframe');
-                                if (iframe) iframe.srcdoc = iframe.srcdoc;
-                            }}>
+                        
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => handleOpenSavePlugin(htmlContent, lastPrompt)}
+                                className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                                title="Diesen Report dauerhaft im Menü unter Plugins speichern"
+                            >
+                                <Icon name="FolderPlus" size={13} className="text-white" />
+                                <span>Als Plugin speichern</span>
+                            </button>
+                            
+                            <button 
+                                className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors" 
+                                title="Widget neu laden" 
+                                onClick={(e) => {
+                                    const iframe = e.currentTarget.parentElement.parentElement.parentElement.querySelector('iframe');
+                                    if (iframe) iframe.srcdoc = iframe.srcdoc;
+                                }}
+                            >
                                 <Icon name="RefreshCw" size={14} />
                             </button>
                         </div>
@@ -458,9 +492,9 @@ const renderIframeWidget = (htmlContent) => {
                     <div className="relative bg-white dark:bg-slate-950">
                         <iframe 
                             srcDoc={finalHtml}
-                            sandbox="allow-scripts allow-same-origin allow-downloads"
+                            sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
                             className="w-full bg-transparent"
-                            style={{ minHeight: '450px', height: '100%', border: 'none' }} 
+                            style={{ minHeight: '480px', height: '100%', border: 'none' }} 
                             title="AI Generated Widget"
                         />
                     </div>
@@ -468,14 +502,14 @@ const renderIframeWidget = (htmlContent) => {
 
                 <details className="mt-4 text-sm text-gray-500 dark:text-slate-400 group/code">
                     <summary className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors list-none flex items-center gap-2 font-medium bg-gray-50 dark:bg-slate-900/50 w-max px-4 py-2 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-slate-800">
-                        <Icon name="Code" size={16} /> {t('aiViewCode') || 'Code anzeigen'}
+                        <Icon name="Code" size={16} /> Code anzeigen
                         <Icon name="ChevronDown" size={14} className="ml-2 group-open/code:rotate-180 transition-transform" />
                     </summary>
                     <div className="mt-3 relative animate-fade-in-up">
                         <button 
                             onClick={() => copyToClipboard(htmlContent)}
                             className="absolute top-3 right-3 p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors border border-slate-600 shadow-md z-10"
-                            title={t('aiCopyCode')}
+                            title="Code kopieren"
                         >
                             <Icon name="Copy" size={16} />
                         </button>
@@ -488,79 +522,142 @@ const renderIframeWidget = (htmlContent) => {
         );
     };
 
+    // --- RECHTES FLYOUT: MIT TABS & GARANTIERT FREI ZUGÄNGLICHER TEMPERATUR ---
     const renderSidebar = () => {
         return (
-            <div className={`fixed inset-y-0 right-0 w-80 bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}>
-                <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50">
+            <div className={`fixed inset-y-0 right-0 w-96 max-w-full bg-white dark:bg-slate-900 border-l border-gray-200 dark:border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}>
+                
+                {/* Header */}
+                <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center bg-gray-50 dark:bg-slate-900/50 shrink-0">
                     <h2 className="font-bold text-lg flex items-center gap-2 text-slate-800 dark:text-white">
-                        <Icon name="BookOpen" className="text-blue-500" /> {t('aiPromptLibrary') || 'Prompt Bibliothek'}
+                        <Icon name={sidebarTab === 'prompts' ? "BookOpen" : "Settings"} className="text-blue-500" /> 
+                        {sidebarTab === 'prompts' ? 'Prompt Bibliothek' : 'KI Einstellungen'}
                     </h2>
                     <button onClick={() => setShowSidebar(false)} className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors">
                         <Icon name="X" size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 space-y-8 custom-scrollbar">
-                    <div className="space-y-6">
-                        {PROMPT_LIBRARY.map((category, idx) => (
-                            <div key={idx}>
-                                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
-                                    <Icon name={category.icon} size={14} /> {category.category}
-                                </h3>
-                                <div className="space-y-2">
-                                    {category.prompts.map((p, pIdx) => (
-                                        <div 
-                                            key={pIdx} onClick={() => handlePromptSelect(p.text)}
-                                            className="p-3 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md bg-white dark:bg-slate-950 cursor-pointer transition-all group"
-                                        >
-                                            <div className="font-bold text-sm text-slate-700 dark:text-slate-200 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">{p.title}</div>
-                                            <div className="text-xs text-gray-500 dark:text-slate-500 line-clamp-2">{p.text}</div>
-                                        </div>
-                                    ))}
+                {/* Tabs Leiste */}
+                <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-100/70 dark:bg-slate-950/60 p-1.5 shrink-0">
+                    <button 
+                        onClick={() => setSidebarTab('prompts')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${sidebarTab === 'prompts' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        <Icon name="BookOpen" size={13} />
+                        <span>Prompts</span>
+                    </button>
+                    <button 
+                        onClick={() => setSidebarTab('settings')}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${sidebarTab === 'settings' ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                    >
+                        <Icon name="Settings" size={13} />
+                        <span>Einstellungen ({aiTemperature})</span>
+                    </button>
+                </div>
+
+                {/* Body mit pb-32 Puffer gegen Abschneiden */}
+                <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6 custom-scrollbar">
+                    
+                    {/* TAB 1: PROMPTS */}
+                    {sidebarTab === 'prompts' && (
+                        <div className="space-y-6">
+                            {PROMPT_LIBRARY.map((category, idx) => (
+                                <div key={idx}>
+                                    <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
+                                        <Icon name={category.icon} size={14} /> {category.category}
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {category.prompts.map((p, pIdx) => (
+                                            <div 
+                                                key={pIdx} onClick={() => handlePromptSelect(p.text)}
+                                                className="p-3 rounded-xl border border-gray-100 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md bg-white dark:bg-slate-950 cursor-pointer transition-all group"
+                                            >
+                                                <div className="font-bold text-sm text-slate-700 dark:text-slate-200 mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">{p.title}</div>
+                                                <div className="text-xs text-gray-500 dark:text-slate-500 line-clamp-2">{p.text}</div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <hr className="border-gray-200 dark:border-slate-800" />
-
-                    <div>
-                        <div className="flex justify-between items-center cursor-pointer group" onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}>
-                            <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                                <Icon name="Settings" size={14} /> {t('aiAdvancedSettings') || 'Erweiterte Einstellungen'}
-                            </h3>
-                            <Icon name={showAdvancedSettings ? "ChevronUp" : "ChevronDown"} size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                            ))}
                         </div>
-                        
-                        {showAdvancedSettings && (
-                            <div className="mt-4 space-y-4 animate-fade-in-up">
-                                <div>
-                                    <label className="flex justify-between text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        <span>{t('aiTemp')}</span><span className="font-mono">{aiTemperature}</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="1" step="0.1" value={aiTemperature} 
-                                        onChange={(e) => setAiTemperature(parseFloat(e.target.value))} className="w-full accent-blue-600"
-                                    />
-                                    <p className="text-[10px] text-gray-400 mt-1">{t('aiTempDesc')}</p>
+                    )}
+
+                    {/* TAB 2: KI-EINSTELLUNGEN */}
+                    {sidebarTab === 'settings' && (
+                        <div className="space-y-6 animate-fade-in-up">
+                            
+                            {/* Temperatur Box */}
+                            <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                        <Icon name="Zap" size={13} className="text-amber-500" />
+                                        Modell-Temperatur
+                                    </span>
+                                    <span className="font-mono text-xs font-black bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                                        {aiTemperature.toFixed(1)}
+                                    </span>
                                 </div>
-                                <div>
-                                    <label className="flex justify-between text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                                        <span>{t('aiContext')}</span><span className="font-mono">{formatTokenCount(aiContextWindow)}</span>
-                                    </label>
-                                    <select 
-                                        value={aiContextWindow} onChange={(e) => setAiContextWindow(parseInt(e.target.value))}
-                                        className="w-full p-2 text-xs rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 outline-none"
-                                    >
-                                        <option value={4096} className="bg-white dark:bg-slate-900">{t('aiCtx4k') || '4K Tokens'}</option>
-                                        <option value={8192} className="bg-white dark:bg-slate-900">{t('aiCtx8k') || '8K Tokens'}</option>
-                                        <option value={16384} className="bg-white dark:bg-slate-900">{t('aiCtx16k') || '16K Tokens'}</option>
-                                        <option value={32768} className="bg-white dark:bg-slate-900">{t('aiCtx32k') || '32K Tokens'}</option>
-                                    </select>
+
+                                <input 
+                                    type="range" 
+                                    min="0.0" 
+                                    max="1.0" 
+                                    step="0.05" 
+                                    value={aiTemperature} 
+                                    onChange={(e) => setAiTemperature(parseFloat(e.target.value))} 
+                                    className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-slate-800 rounded-lg"
+                                />
+
+                                <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                                    <span>0.0 (Faktisch / Code)</span>
+                                    <span>0.5 (Ausgewogen)</span>
+                                    <span>1.0 (Kreativ)</span>
+                                </div>
+
+                                <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed pt-1">
+                                    {aiTemperature <= 0.2 ? 'Empfohlen für exakte Charts, Berechnungen und fehlerfreien Code.' : 'Höhere Kreativität – für freie Finanzanalysen oder neue Widget-Ideen.'}
+                                </p>
+                            </div>
+
+                            {/* Kontextfenster */}
+                            <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-3">
+                                <label className="flex justify-between text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                                    <span>Kontextfenster</span>
+                                    <span className="font-mono text-xs font-black text-slate-600 dark:text-slate-400">{formatTokenCount(aiContextWindow)}</span>
+                                </label>
+                                
+                                <select 
+                                    value={aiContextWindow} 
+                                    onChange={(e) => setAiContextWindow(parseInt(e.target.value))}
+                                    className="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none font-semibold cursor-pointer"
+                                >
+                                    <option value={4096}>4K Tokens (~3'000 Wörter)</option>
+                                    <option value={8192}>8K Tokens (~6'000 Wörter)</option>
+                                    <option value={16384}>16K Tokens (~12'000 Wörter - Empfohlen)</option>
+                                    <option value={32768}>32K Tokens (~24'000 Wörter)</option>
+                                </select>
+                                
+                                <p className="text-[11px] text-gray-500 dark:text-slate-400 leading-relaxed">
+                                    Größere Fenster erlauben der KI, das komplette Portfolio samt Buchungshistorie im Gedächtnis zu behalten[cite: 17, 23].
+                                </p>
+                            </div>
+
+                            {/* Modellinfo Box */}
+                            <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs text-blue-900 dark:text-blue-300 space-y-2">
+                                <div className="font-bold flex items-center gap-1.5">
+                                    <Icon name="Cpu" size={14} className="text-blue-600 dark:text-blue-400" />
+                                    Aktives Modell: {selectedModel}
+                                </div>
+                                <div className="text-[11px] text-blue-800/80 dark:text-blue-400/80 leading-relaxed">
+                                    {isCloudModelFn(selectedModel) 
+                                        ? 'Cloud-Verarbeitung mit hoher Geschwindigkeit und komplexer Code-Generierung.' 
+                                        : 'Vollständig lokale Ausführung über Ollama. Deine Daten verlassen dieses Gerät nicht.'}
                                 </div>
                             </div>
-                        )}
-                    </div>
+
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -569,7 +666,12 @@ const renderIframeWidget = (htmlContent) => {
     return (
         <div className="h-full bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 flex flex-col relative transition-colors duration-500 overflow-hidden font-sans">
             
-            {showSidebar && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={() => setShowSidebar(false)}></div>}
+            {showSidebar && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity" 
+                    onClick={() => setShowSidebar(false)}
+                />
+            )}
             
             {renderSidebar()}
 
@@ -580,9 +682,9 @@ const renderIframeWidget = (htmlContent) => {
                     </div>
                     <div>
                         <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 tracking-tight">
-                            {t('aiCopilotTitle') || 'FinSPA'} <span className="text-blue-600 dark:text-blue-400">Copilot</span>
+                            FinBundle <span className="text-blue-600 dark:text-blue-400">Copilot</span>
                         </h1>
-                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{t('aiCopilotSubtitle')}</p>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">KI-gestützte Report- & Widget-Entwicklung</p>
                     </div>
                 </div>
                 
@@ -601,16 +703,15 @@ const renderIframeWidget = (htmlContent) => {
 
                     <button 
                         onClick={handleClearChat} 
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all duration-300"
-                        title={t('aiClearChatTooltip')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300"
                     >
-                        <Icon name="PlusCircle" size={16} /> <span className="hidden sm:inline">{t('aiNewChat') || 'Neuer Chat'}</span>
+                        <Icon name="PlusCircle" size={16} /> <span className="hidden sm:inline">Neuer Chat</span>
                     </button>
 
                     <button 
-                        onClick={() => setShowSidebar(true)} 
-                        className="p-2.5 rounded-xl text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 border border-transparent hover:border-blue-200 dark:hover:border-blue-800/50" 
-                        title={t('aiPromptSettingsTooltip')}
+                        onClick={() => { setSidebarTab('prompts'); setShowSidebar(true); }} 
+                        className="p-2.5 rounded-xl text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                        title="Prompts & Einstellungen"
                     >
                         <Icon name="BookOpen" size={18} />
                     </button>
@@ -618,35 +719,34 @@ const renderIframeWidget = (htmlContent) => {
             </header>
             
             <main ref={chatContainerRef} className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative bg-gray-50/50 dark:bg-slate-950">
-                
                 <div className="flex-1 p-4 md:p-8 space-y-8 w-full max-w-6xl mx-auto">
                     
                     {chatHistory.length === 0 && (
                         <div className="flex flex-col items-center justify-center h-full mt-10 md:mt-20 animate-fade-in-up px-4">
-                            <div className="inline-flex justify-center items-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/10 border border-blue-200/50 dark:border-blue-800/30 text-blue-600 dark:text-blue-400 mb-8 shadow-2xl shadow-blue-500/10">
-                                <Icon name="Sparkles" size={40} className="stroke-1" />
+                            <div className="inline-flex justify-center items-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-6 shadow-xl">
+                                <Icon name="Sparkles" size={36} />
                             </div>
-                            <h2 className="text-3xl md:text-4xl font-black mb-4 text-slate-800 dark:text-slate-100 tracking-tight text-center">
-                                {t('aiReadyToCode')}
+                            <h2 className="text-3xl font-black mb-3 text-slate-800 dark:text-slate-100 text-center">
+                                Was möchtest du heute analysieren?
                             </h2>
-                            <p className="text-slate-500 dark:text-slate-400 mb-12 text-center max-w-lg text-lg leading-relaxed">
-                                {t('aiHeroDesc')}
+                            <p className="text-slate-500 dark:text-slate-400 mb-8 text-center max-w-lg text-sm">
+                                Stelle eine Finanzfrage. Der Copilot generiert interaktive Widgets, die du direkt als dauerhaftes <strong>Menü-Plugin</strong> speichern kannst.
                             </p>
                             
                             <div className="flex flex-wrap justify-center gap-3 max-w-2xl">
                                 {PROMPT_LIBRARY[0].prompts.slice(0, 2).map((p, i) => (
                                     <button 
                                         key={i} onClick={() => handlePromptSelect(p.text)}
-                                        className="px-5 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-full text-sm font-semibold hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all text-slate-700 dark:text-slate-300"
+                                        className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-full text-xs font-semibold hover:border-blue-500 hover:shadow-md transition-all text-slate-700 dark:text-slate-300"
                                     >
                                         {p.title}
                                     </button>
                                 ))}
                                 <button 
-                                    onClick={() => setShowSidebar(true)}
-                                    className="px-5 py-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-full text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all flex items-center gap-2"
+                                    onClick={() => { setSidebarTab('prompts'); setShowSidebar(true); }}
+                                    className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-full text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-all flex items-center gap-1.5"
                                 >
-                                    <Icon name="Menu" size={16} /> {t('aiShowAllPrompts') || 'Alle Prompts'}
+                                    <Icon name="Menu" size={13} /> Alle Prompts
                                 </button>
                             </div>
                         </div>
@@ -660,20 +760,20 @@ const renderIframeWidget = (htmlContent) => {
                                 </div>
                             ) : (
                                 <div className="w-full max-w-5xl flex gap-3 md:gap-5">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2548C3] to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/20 mt-1">
-                                        <Icon name="Cpu" size={20} className="stroke-[2px]" />
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2548C3] to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg mt-1">
+                                        <Icon name="Cpu" size={20} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-2 ml-1">
-                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">FinSPA Copilot</span>
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">FinBundle Copilot</span>
                                             {msg.modelUsed && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 dark:bg-slate-800 text-gray-500 dark:text-gray-400 font-mono">{msg.modelUsed}</span>}
                                         </div>
                                         {msg.text && (
-                                            <div className={`p-5 rounded-2xl rounded-tl-sm text-sm border shadow-sm ${msg.isError ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/30' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-slate-800'}`}>
+                                            <div className={`p-5 rounded-2xl rounded-tl-sm text-sm border shadow-sm ${msg.isError ? 'bg-red-50 dark:bg-red-900/10 text-red-700 border-red-200' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-slate-800'}`}>
                                                 {msg.text}
                                             </div>
                                         )}
-                                        {msg.htmlWidget && renderIframeWidget(msg.htmlWidget)}
+                                        {msg.htmlWidget && renderIframeWidget(msg.htmlWidget, msg.userPrompt)}
                                     </div>
                                 </div>
                             )}
@@ -682,18 +782,12 @@ const renderIframeWidget = (htmlContent) => {
                     
                     {isLoading && (
                         <div className="w-full max-w-5xl flex gap-3 md:gap-5 animate-fade-in-up">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2548C3] to-blue-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-500/20 mt-1">
-                                <Icon name="Cpu" size={20} className="stroke-[2px] animate-pulse" />
+                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 animate-pulse mt-1">
+                                <Icon name="Cpu" size={20} />
                             </div>
-                            <div className="flex items-center gap-3 px-6 py-4 rounded-3xl rounded-tl-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm w-max">
-                                <div className="flex gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                </div>
-                                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 ml-2">
-                                    {t('aiIsTyping') || 'Denkt nach...'}
-                                </span>
+                            <div className="flex items-center gap-3 px-6 py-4 rounded-3xl rounded-tl-sm bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm">
+                                <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce"></div>
+                                <span className="text-sm font-medium text-slate-500">Copilot generiert Analyse & Code...</span>
                             </div>
                         </div>
                     )}
@@ -702,22 +796,11 @@ const renderIframeWidget = (htmlContent) => {
             </main>
 
             <footer className="shrink-0 p-4 md:px-8 md:py-6 bg-white dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 relative z-20">
-                <div className="max-w-4xl mx-auto relative group">
-                    
-                    {chatHistory.length > 0 && (
-                        <button 
-                            onClick={handleClearChat}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all z-10"
-                            title={t('aiClearChatConfirm')}
-                        >
-                            <Icon name="Trash2" size={18} />
-                        </button>
-                    )}
-
+                <div className="max-w-4xl mx-auto relative">
                     <textarea 
                         ref={textareaRef}
-                        className={`w-full ${chatHistory.length > 0 ? 'pl-14' : 'pl-6'} pr-[68px] py-4 border border-gray-300 dark:border-slate-700 rounded-[28px] resize-none bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 focus:border-[#2548C3] dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-[15px] min-h-[56px] max-h-[200px] transition-all text-slate-800 dark:text-slate-200 shadow-inner custom-scrollbar`}
-                        placeholder={t('aiInputPlaceholder') || 'Frag den FinSPA Copilot...'}
+                        className="w-full pl-6 pr-[68px] py-4 border border-gray-300 dark:border-slate-700 rounded-[28px] resize-none bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-950 focus:border-blue-600 outline-none text-[15px] min-h-[56px] max-h-[200px] transition-all text-slate-800 dark:text-slate-200 custom-scrollbar"
+                        placeholder="Beschreibe die gewünschte Auswertung..."
                         value={prompt}
                         onChange={e => setPrompt(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAskAI(); } }}
@@ -727,35 +810,92 @@ const renderIframeWidget = (htmlContent) => {
                     <button 
                         onClick={handleAskAI} 
                         disabled={isLoading || !prompt.trim()} 
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#2548C3] hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-600 text-white rounded-full flex items-center justify-center transition-all duration-200 shadow-md active:scale-95 disabled:shadow-none disabled:active:scale-100"
-                        title={t('aiSendTooltip')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-full flex items-center justify-center transition-all shadow-md"
                     >
-                        <Icon name="ArrowUp" size={20} className="font-bold stroke-[3px]" />
+                        <Icon name="ArrowUp" size={20} />
                     </button>
                 </div>
-                <div className="text-center mt-3 text-[10px] text-gray-400 dark:text-slate-500 font-medium tracking-wide">
-                    {isCloudModelFn(selectedModel) 
-                        ? `CLOUD KI (${selectedModel.toUpperCase()}) • DATEN WERDEN ZUR VERARBEITUNG GESENDET` 
-                        : (t('aiPrivacyDisclaimer') ? t('aiPrivacyDisclaimer').replace('{model}', selectedModel.split(':')[0].toUpperCase()) : `LOKALE KI (${selectedModel.split(':')[0].toUpperCase()}) • DATEN VERLASSEN DEIN GERÄT NICHT`)}
-                </div>
             </footer>
-            
-            <style dangerouslySetInnerHTML={{__html: `
-                .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; border: 2px solid transparent; background-clip: padding-box; }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #475569; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
-                
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(15px) scale(0.99); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                .animate-fade-in-up {
-                    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-            `}} />
+
+            {/* MODAL: ALS PLUGIN SPEICHERN */}
+            {pluginModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-slate-700 overflow-hidden">
+                        <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/40 flex justify-between items-center">
+                            <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+                                <Icon name="FolderPlus" className="text-blue-500" />
+                                Report als Plugin speichern
+                            </h3>
+                            <button onClick={() => setPluginModal(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white">
+                                <Icon name="X" size={18} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                    Name des Reports (im Menü)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={pluginTitle} 
+                                    onChange={e => setPluginTitle(e.target.value)} 
+                                    onKeyDown={e => { if (e.key === 'Enter') handleConfirmSavePlugin(); if (e.key === 'Escape') setPluginModal(null); }}
+                                    placeholder="z.B. Vorsorge & Rentenanalyse" 
+                                    className="w-full p-3 border border-gray-300 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                    Menü-Kategorie (z.B. Vorsorge, Vermögen)
+                                </label>
+                                <div className="space-y-2">
+                                    <input 
+                                        type="text" 
+                                        value={pluginCategory} 
+                                        onChange={e => setPluginCategory(e.target.value)} 
+                                        placeholder="Kategorie eingeben..." 
+                                        className="w-full p-3 border border-gray-300 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                                    />
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {existingCategories.map((c, i) => (
+                                            <button 
+                                                key={i} 
+                                                type="button" 
+                                                onClick={() => setPluginCategory(c)}
+                                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${pluginCategory === c ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'}`}
+                                            >
+                                                {c}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                                Dieser Report wird dauerhaft im Hauptmenü unter <strong>Plugins &rarr; {pluginCategory || '...'}</strong> verankert und steht jederzeit für Analysen und den PDF-Export bereit.
+                            </p>
+                        </div>
+
+                        <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/40 flex justify-end gap-3">
+                            <button 
+                                onClick={() => setPluginModal(null)} 
+                                className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold"
+                            >
+                                Abbrechen
+                            </button>
+                            <button 
+                                onClick={handleConfirmSavePlugin} 
+                                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md transition-colors"
+                            >
+                                Als Plugin speichern
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,16 +1,16 @@
-// Hilfsfunktion: Versucht "require" sicher aufzurufen
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
 
-// Die Export-Funktion (bestehend)
+const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
+
 const exportCSV = (data, t) => {
-   let csv = t ? t('csvHeader') : "Datum;Typ;Kategorie;Asset;Betrag;Waehrung;Wechselkurs\n";
+   let csv = safeT(t, 'csvHeader', "Datum;Typ;Kategorie;Asset;Betrag;Waehrung;Wechselkurs\n");
    const traverse = (nodes) => {
       nodes.forEach(n => {
          if (n.type === 'asset') {
              if (n.bookings) n.bookings.forEach(b => { csv += `${b.date};${b.type};${b.subCategory || ''};${n.name};${b.amount};${n.currency};${b.bookingExchangeRate || 1}\n`; });
              if (n.balances) n.balances.forEach(b => { 
-                csv += `${b.date};${t ? t('csvBalanceDate') : 'Stichtag-Saldo'};${t ? t('csvSystem') : 'System'};${n.name};${b.amount};${n.currency};${b.bookingExchangeRate || 1}\n`; 
+                csv += `${b.date};${safeT(t, 'csvBalanceDate', 'Stichtag-Saldo')};${safeT(t, 'csvSystem', 'System')};${n.name};${b.amount};${n.currency};${b.bookingExchangeRate || 1}\n`; 
              });
          }
          if (n.children) traverse(n.children);
@@ -19,8 +19,6 @@ const exportCSV = (data, t) => {
    if(data && data.banks) traverse(data.banks);
    return csv;
 };
-
-// --- IMPORT PARSING & UTILITIES ---
 
 const detectDelimiter = (text) => {
     const firstLine = text.split('\n')[0];
@@ -38,7 +36,6 @@ const parseCSVLine = (text, delimiter) => {
         let c = text[i];
         if (inQuotes) {
             if (c === '"') {
-                // Check für escaped Quotes (z.B. "")
                 if (i + 1 < text.length && text[i + 1] === '"') {
                     cur += '"'; 
                     i++; 
@@ -52,23 +49,25 @@ const parseCSVLine = (text, delimiter) => {
             if (c === '"') {
                 inQuotes = true;
             } else if (c === delimiter) {
-                result.push(cur.trim()); // Feld abschliessen
+                result.push(cur.trim());
                 cur = '';
             } else {
                 cur += c;
             }
         }
     }
-    result.push(cur.trim()); // Letztes Feld anfügen
+    result.push(cur.trim());
     return result;
 };
 
 const parseNumber = (val) => {
     if (!val) return 0;
-    let str = String(val).replace(/['’]/g, '').trim(); // Schweizer Format (1'000) bereinigen
-    if (str.match(/\d+\.\d{3},\d+/)) str = str.replace(/\./g, '').replace(',', '.'); // DE Format (1.000,50)
-    else if (str.match(/\d+,\d{3}\.\d+/)) str = str.replace(/,/g, ''); // US Format (1,000.50)
-    else str = str.replace(',', '.'); // Allgemeines Komma zu Punkt
+    let str = String(val);
+    str = str.replace(/[A-Za-z]/g, '').trim();
+    str = str.replace(/['’]/g, '').trim();
+    if (str.match(/\d+\.\d{3},\d+/)) str = str.replace(/\./g, '').replace(',', '.');
+    else if (str.match(/\d+,\d{3}\.\d+/)) str = str.replace(/,/g, '');
+    else str = str.replace(',', '.');
     
     const num = parseFloat(str);
     return isNaN(num) ? 0 : num;
@@ -77,15 +76,15 @@ const parseNumber = (val) => {
 const parseDate = (val) => {
     if (!val) return '';
     const str = String(val).trim();
-    if (str.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) { // DD.MM.YYYY
+    if (str.match(/^\d{1,2}\.\d{1,2}\.\d{4}$/)) {
         const [d, m, y] = str.split('.');
         return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
-    if (str.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) { // MM/DD/YYYY
+    if (str.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
         const [m, d, y] = str.split('/');
         return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
     }
-    if (str.match(/^\d{4}-\d{2}-\d{2}/)) return str.substring(0, 10); // YYYY-MM-DD
+    if (str.match(/^\d{4}-\d{2}-\d{2}/)) return str.substring(0, 10);
     return str; 
 };
 
@@ -93,39 +92,26 @@ const normalizeType = (val) => {
     if (!val) return 'Einzahlung';
     const str = String(val).toLowerCase();
     
-    // Exact startsWith for DEGIRO ("Kauf 25 zu je...")
     if (str.startsWith('kauf') || str.includes('buy')) return 'Kauf';
     if (str.startsWith('verkauf') || str.includes('sell')) return 'Verkauf';
-    
-    // Dividenden & Steuern
     if (str.includes('dividende') || str.includes('ausschüttung') || str.includes('dividend')) return 'Dividende';
     if (str.includes('zins')) return 'Zinszahlung';
-    
-    // DEGIRO Transaktionsgebühren, Fremdkosten, Dividendensteuer
     if (str.includes('gebühr') || str.includes('fee') || str.includes('steuer') || str.includes('kosten')) return 'Gebühr';
-    
     if (str.includes('auszahlung')) return 'Auszahlung';
     
-    return 'Einzahlung'; // Fallback für z.B. Währungswechsel
+    return 'Einzahlung';
 };
-// --- CORE IMPORT LOGIC ---
 
-/**
- * Übernimmt die Vorschau-Daten aus dem Wizard und integriert sie in den aktuellen State.
- * Verhindert Duplikate und legt fehlende Assets/Kategorien dynamisch an.
- */
-/**
- * Übernimmt die Vorschau-Daten und importiert sie in ein bestimmtes Konto (Asset) 
- * oder eine Kategorie.
- */
 const processCsvImport = (previewData, currentData, DataEngine, options = {}) => {
     const { generateId } = DataEngine;
-    const { importMode = 'single_asset', targetId = null } = options;
+    const { importMode = 'single_asset', targetId = null, t } = options;
     
     let banksCopy = JSON.parse(JSON.stringify(currentData.banks || []));
     let importedBookingsCount = 0;
 
-    // --- MODUS 1: IMPORT IN EIN SPEZIFISCHES KONTO (SINGLE ASSET) ---
+    const defaultCsvCategoryName = safeT(t, 'csvImportDefaultCategory', 'Importierte Assets');
+    const importedPrefix = safeT(t, 'bookingImportedOn', 'Importiert am');
+
     if (importMode === 'single_asset' && targetId) {
         let targetAsset = null;
         
@@ -142,7 +128,7 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
         findAssetById(banksCopy);
 
         if (!targetAsset) {
-            throw new Error("Das gewählte Ziel-Konto wurde nicht im Portfolio gefunden.");
+            throw new Error(safeT(t, 'errTargetAccountNotFound', "Das gewählte Ziel-Konto wurde nicht im Portfolio gefunden."));
         }
 
         if (!targetAsset.bookings) targetAsset.bookings = [];
@@ -150,7 +136,6 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
         previewData.forEach(item => {
             if (!item.date) return;
 
-            // Duplikats-Prüfung auf diesem spezifischen Konto (Datum + Typ + Betrag + Text)
             const isDuplicate = targetAsset.bookings.some(b => 
                 b.date === item.date && 
                 b.type === item.type && 
@@ -167,14 +152,12 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
                     shares: item.shares > 0 ? item.shares : undefined,
                     price: item.price > 0 ? item.price : undefined,
                     subCategory: item.asset ? item.asset.substring(0, 40) : 'CSV Import',
-                    comment: item.asset || `Importiert am ${new Date().toISOString().split('T')[0]}`
+                    comment: item.asset || `${importedPrefix} ${new Date().toISOString().split('T')[0]}`
                 });
                 importedBookingsCount++;
             }
         });
-    } 
-    // --- MODUS 2: IMPORT IN EINE KATEGORIE (MULTI ASSET / DEPOT) ---
-    else {
+    } else {
         let targetBank = null;
         let targetCategory = null;
 
@@ -190,9 +173,9 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
                 targetBank = { id: generateId(), type: 'bank', name: 'CSV Import', children: [] };
                 banksCopy.push(targetBank);
             }
-            targetCategory = targetBank.children.find(c => c.name === 'Importierte Assets');
+            targetCategory = targetBank.children.find(c => c.name === defaultCsvCategoryName || c.name === 'Importierte Assets');
             if (!targetCategory) {
-                targetCategory = { id: generateId(), type: 'category', name: 'Importierte Assets', children: [] };
+                targetCategory = { id: generateId(), type: 'category', name: defaultCsvCategoryName, children: [] };
                 targetBank.children.push(targetCategory);
             }
         }
@@ -243,7 +226,7 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
                     shares: item.shares > 0 ? item.shares : undefined,
                     price: item.price > 0 ? item.price : undefined,
                     subCategory: 'CSV Import',
-                    comment: `Importiert am ${new Date().toISOString().split('T')[0]}`
+                    comment: `${importedPrefix} ${new Date().toISOString().split('T')[0]}`
                 });
                 importedBookingsCount++;
             }
@@ -255,7 +238,6 @@ const processCsvImport = (previewData, currentData, DataEngine, options = {}) =>
         importedCount: importedBookingsCount
     };
 };
-    
 
 module.exports = { 
     exportCSV,
