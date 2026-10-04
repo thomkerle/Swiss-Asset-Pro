@@ -142,6 +142,11 @@ Die von FinBundle Pro erstellten AI-Abfragen können nahtlos in die Umgebung int
 
 <img width="2364" height="1316" alt="image" src="https://github.com/user-attachments/assets/f01fb519-de9e-4e12-9eeb-09c2b23a54ec" />
 
+### Bild 4 - Schnellzugriff Integration
+
+<img width="824" height="1162" alt="image" src="https://github.com/user-attachments/assets/365a0255-a483-4a9a-928c-e182ee9f984e" />
+
+
 ### Planung nächster Release (Windows)
 
 Der nächste Release Kandidat auf RC_3 ist auf den 26.Oktober 2026 geplant.
