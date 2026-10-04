@@ -147,7 +147,7 @@ Die von FinBundle Pro erstellten AI-Abfragen können nahtlos in die Umgebung int
 <img width="824" height="1162" alt="image" src="https://github.com/user-attachments/assets/365a0255-a483-4a9a-928c-e182ee9f984e" />
 
 
-### Planung nächster Release (Windows)
+### Planung nächster Releases (Windows)
 
 Der nächste Release Kandidat auf RC_3 ist auf den 26.Oktober 2026 geplant.
 
@@ -164,3 +164,11 @@ Korrekturen:
 - überarbeites Benutzermanual
 - verbesserte CSV Import Funktion
 - allgemeine Korrekturen
+
+Der RC_5 ist auf den 23. November geplant
+
+New Features:
+- Wirklich cool: Buchungen sind nun über die AI Integration möglich
+Bspw. Anweisung an KI: "Ich war schnell in der Migros und habe einen Einkauf für Lebensmittel über 56.70 getätigt. Kannst Du das auf meinem Privatkonto buchen?"
+- Löst automatische Buchung aus, ohne dass gross der normale Bearbeitungsweg gegangen werden muss.
+- always on Top Dialog (wird vielleicht auch nächster Release): KI schaltet sich nach wenigen Minuten Inaktivität mit einem Dialog ein und lässt direkt Fragen zu. 
