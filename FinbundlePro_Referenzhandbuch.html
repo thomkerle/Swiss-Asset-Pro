@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="de" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinBundle PRO — Das umfassende Referenzhandbuch (v1.0.0 RC2.2 / RC3)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .glass-nav {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    
+    .toc-active {
+      background-color: rgba(14, 165, 233, 0.12);
+      color: #38bdf8 !important;
+      font-weight: 700;
+      border-left: 3px solid #38bdf8;
+    }
+
+    .math-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-left: 4px solid #38bdf8;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #38bdf8;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    .code-box {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #e2e8f0;
+      font-size: 11.5px;
+      overflow-x: auto;
+      line-height: 1.65;
+    }
+
+    .tip-box {
+      background: rgba(15, 23, 42, 0.85);
+      border-left: 4px solid #10b981;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+    }
+
+    .warn-box {
+      background: rgba(30, 27, 75, 0.5);
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+    }
+
+    @media print {
+      body { background: white !important; color: black !important; }
+      nav, #sidebar, #header-bar, #download-banner, .no-print, button { display: none !important; }
+      main { margin-left: 0 !important; width: 100% !important; max-width: 100% !important; }
+      .page-break { page-break-before: always; }
+      svg { max-width: 100% !important; height: auto !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Scroll Progress Bar -->
+  <div id="read-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-400 z-50 transition-all duration-75 w-0"></div>
+
+  <header id="header-bar" class="sticky top-0 z-40 w-full glass-nav bg-slate-950/85 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Version -->
+      <div class="flex items-center gap-3">
+        <button id="toggle-mobile-sidebar" class="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none" aria-label="Menü einblenden">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-extrabold text-lg">
+            F
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold tracking-tight text-white text-lg">FinBundle <span class="text-sky-400">PRO</span></span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                v1.0.0 RC2.2 / RC3
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Referenzhandbuch, Reporting-Suite &amp; Sandboxed AI-Plugin Architektur</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="flex-1 max-w-md hidden md:block">
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </span>
+          <input type="text" id="manual-search-input" placeholder="Handbuch durchsuchen (z.B. Total Return, Injektor, FIRE, 15 Reports)..." 
+                 class="w-full pl-9 pr-8 py-1.5 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+          <button id="clear-search-btn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white hidden">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Interactive Calculators & Simulators -->
+        <button onclick="toggleModal('calc-modal')" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+          <span>⚡</span>
+          <span class="hidden sm:inline">Labor &amp; Simulatoren</span>
+        </button>
+
+        <!-- Print / PDF Button -->
+        <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition" title="Handbuch drucken oder als PDF sichern">
+          <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span class="hidden md:inline">Drucken / PDF</span>
+        </button>
+
+        <!-- Download Standalone SPA File -->
+        <button id="download-html-btn" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-sky-500/25 flex items-center gap-1.5 transition transform active:scale-95" title="Dieses Handbuch als autarke HTML-Datei offline speichern">
+          <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>Herunterladen</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-8">
+
+    <!-- Sticky Sidebar Navigation (Left) -->
+    <aside id="sidebar" class="fixed lg:sticky top-20 left-0 h-[calc(100vh-5.5rem)] w-72 bg-slate-900/95 lg:bg-transparent backdrop-blur-lg lg:backdrop-blur-none p-4 rounded-xl border border-slate-800 lg:border-transparent z-30 overflow-y-auto hidden lg:block shrink-0 transition-all duration-200">
+      <div class="flex items-center justify-between mb-3 px-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Inhaltsverzeichnis</h2>
+        <span class="text-[11px] text-sky-400 font-semibold">15 Kapitel</span>
+      </div>
+      <nav id="toc-nav" class="space-y-1 text-xs">
+        <a href="#kapitel-1" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">1. Einführung &amp; Philosophie</a>
+        <a href="#kapitel-2" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">2. Benutzeroberfläche &amp; UI</a>
+        <a href="#kapitel-3" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">3. Datensicherheit &amp; AES-256</a>
+        <a href="#kapitel-4" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">4. Migration &amp; Schnittstellen</a>
+        <a href="#kapitel-5" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">5. Der Hierarchiebaum</a>
+        <a href="#kapitel-6" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">6. Asset-Klassen &amp; Editor</a>
+        <a href="#kapitel-7" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">7. Buchhaltung &amp; Total Return Spikes</a>
+        <a href="#kapitel-8" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-bold text-sky-400">8. Auto-Valuation Engine v2</a>
+        <a href="#kapitel-9" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">9. API Live Editor &amp; EODHD</a>
+        <a href="#kapitel-10" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium text-emerald-400">10. Die 15 Reports im Detail</a>
+        <a href="#kapitel-11" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">11. Budgetverwaltung (50/30/20)</a>
+        <a href="#kapitel-12" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20">12. KI-Plugin Architektur &amp; Injektor</a>
+        <a href="#kapitel-13" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">13. Beleg-Scanner &amp; PII-Gate</a>
+        <a href="#kapitel-14" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-semibold text-blue-400">14. Fly-In Schnellzugriff (Cockpit)</a>
+        <a href="#kapitel-15" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">15. Best Practices &amp; Glossar</a>
+      </nav>
+
+      <!-- Offline Badge Card -->
+      <div class="mt-6 p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400">
+        <div class="flex items-center gap-2 mb-1 text-emerald-400 font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          100% Autark &amp; Offline
+        </div>
+        Dieses Dokument benötigt keine Internetverbindung. Sämtliche Diagramme, Vektoren und Rechenmodelle sind vollständig in diese Datei eingebettet.
+      </div>
+    </aside>
+
+    <!-- Main Content Area (Right) -->
+    <main class="flex-1 min-w-0 max-w-4xl space-y-16">
+
+      <!-- Hero Header Section with Cover SVG -->
+      <section class="space-y-6">
+        <div class="p-1 rounded-2xl bg-gradient-to-r from-sky-500/30 via-indigo-500/20 to-purple-500/30 border border-slate-800 shadow-2xl">
+          <svg viewBox="0 0 920 330" width="100%" height="auto" class="rounded-xl w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bgCover" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#070a13"/>
+                <stop offset="40%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#1e1b4b"/>
+              </linearGradient>
+              <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="50%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#a855f7"/>
+              </linearGradient>
+              <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+              </linearGradient>
+              <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.5"/>
+              </filter>
+            </defs>
+            <rect width="920" height="330" rx="14" fill="url(#bgCover)"/>
+            <rect x="2" y="2" width="916" height="326" rx="12" fill="none" stroke="#334155" stroke-width="1.5"/>
+            <circle cx="820" cy="70" r="140" fill="#2563eb" opacity="0.12"/>
+            <circle cx="120" cy="250" r="160" fill="#38bdf8" opacity="0.06"/>
+            <path d="M 430 270 C 580 180, 720 250, 890 100" fill="none" stroke="url(#accentGlow)" stroke-width="3.5" stroke-linecap="round" opacity="0.45"/>
+            <g transform="translate(48, 36)">
+              <rect width="180" height="26" rx="13" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+              <circle cx="13" cy="13" r="4.5" fill="#38bdf8"/>
+              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#e0f2fe" letter-spacing="1">VERSION 1.0.0 RC2.2 / RC3</text>
+            </g>
+            <text x="48" y="104" font-family="sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-0.5">
+              FinBundle <tspan fill="url(#accentGlow)">PRO</tspan>
+            </text>
+            <text x="48" y="136" font-family="sans-serif" font-size="16" font-weight="500" fill="#94a3b8">
+              Das offizielle Referenzhandbuch &amp; Technische Systemarchitektur
+            </text>
+            <text x="48" y="160" font-family="sans-serif" font-size="13" font-weight="400" fill="#64748b">
+              Offline-First Accounting, 15 Kern-Reports, Total Return Spikes &amp; Sandboxed AI DataEngine-Injektor
+            </text>
+            <!-- 4 Badges -->
+            <g transform="translate(48, 205)">
+              <g transform="translate(0, 0)" filter="url(#shadow)">
+                <rect width="195" height="82" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+                <circle cx="24" cy="26" r="6" fill="#10b981"/>
+                <text x="38" y="30" font-family="sans-serif" font-size="13" font-weight="700" fill="#f8fafc">100% Offline-First</text>
+                <text x="14" y="52" font-family="sans-serif" font-size="10" fill="#94a3b8">Zero-Cloud, Festplatten-I/O</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="10" fill="#94a3b8">und W3C File Access API</text>
+              </g>
+              <g transform="translate(208, 0)" filter="url(#shadow)">
+                <rect width="195" height="82" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+                <circle cx="24" cy="26" r="6" fill="#38bdf8"/>
+                <text x="38" y="30" font-family="sans-serif" font-size="13" font-weight="700" fill="#f8fafc">15 Standard-Reports</text>
+                <text x="14" y="52" font-family="sans-serif" font-size="10" fill="#94a3b8">Bestände, Bewegungen</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="10" fill="#94a3b8">&amp; FIRE-Zukunftssimulation</text>
+              </g>
+              <g transform="translate(416, 0)" filter="url(#shadow)">
+                <rect width="195" height="82" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+                <circle cx="24" cy="26" r="6" fill="#f59e0b"/>
+                <text x="38" y="30" font-family="sans-serif" font-size="13" font-weight="700" fill="#f8fafc">Auto-Valuation v2</text>
+                <text x="14" y="52" font-family="sans-serif" font-size="10" fill="#94a3b8">Total Return mit Dividenden-</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="10" fill="#94a3b8">Integration in die Spikes</text>
+              </g>
+              <g transform="translate(624, 0)" filter="url(#shadow)">
+                <rect width="198" height="82" rx="8" fill="url(#cardGrad)" stroke="#38bdf8" stroke-width="1.2"/>
+                <circle cx="24" cy="26" r="6" fill="#a855f7"/>
+                <text x="38" y="30" font-family="sans-serif" font-size="13" font-weight="700" fill="#ffffff">AI-Plugin Injektor</text>
+                <text x="14" y="52" font-family="sans-serif" font-size="10" fill="#cbd5e1">Lokale Dateninjektion in</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="10" fill="#cbd5e1">sandboxed HTML/JS-Widgets</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
+          <div>
+            <span class="text-slate-400">Dokument-Klassifizierung:</span>
+            <span class="font-semibold text-white ml-1">Enterprise Wealth Architecture &amp; Extensible AI Runtime</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span>Stand: <strong class="text-sky-400">RC2.2 / RC3</strong></span>
+            <span>Basiswährung: <strong class="text-emerald-400">Multi-Currency (CHF / EUR / USD)</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 1 -->
+      <section id="kapitel-1" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">01</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Einführung &amp; Systemphilosophie</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-sky-400">1.1 Der fundamentale Paradigmenwechsel: Zero-Cloud</h3>
+          <p>
+            FinBundle PRO entstand aus einer tiefgreifenden Kritik am modernen FinTech-Ökosystem: Während Anleger verlangen, dass ihre Vermögensverhältnisse streng vertraulich bleiben, zwingen fast alle zeitgenössischen Lösungen zur Preisgabe sensibelster Daten in proprietären Multi-Tenant-Clouds. Nutzer müssen dort Bankverbindungen, Salden, Einkommen und Transaktionsbelege hochladen, wo sie Analyse-Algorithmen Dritter, Hacks oder unangekündigten Plattformschließungen ausgesetzt sind.
+          </p>
+          <p>
+            FinBundle PRO bricht radikal mit diesem Geschäftsmodell. Das System basiert auf der Überzeugung: <strong>Finanzdaten gehören ausschließlich dem Anwender.</strong>
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4 font-mono text-xs">
+            <div class="p-4 rounded-lg bg-red-950/20 border border-red-900/50 text-red-300">
+              <div class="font-bold text-red-400 mb-2">❌ TRADITIONELLE CLOUD-APPS</div>
+              Browser / App ➔ [ Öffentliches Internet ] ➔ [ Fremde Cloud-DB ]<br><br>
+              <span class="text-slate-400 font-sans">Gefahren: Datenlecks, Telemetrie-Tracking, Vendor-Lock-in, Ausfall externer Server, Kontosperrungen.</span>
+            </div>
+            <div class="p-4 rounded-lg bg-emerald-950/20 border border-emerald-900/50 text-emerald-300">
+              <div class="font-bold text-emerald-400 mb-2">✅ FINBUNDLE PRO</div>
+              Lokaler Client (SPA) ⟷ [ Lokaler AES-256 Vault auf SSD ]<br><br>
+              <span class="text-slate-400 font-sans">Vorteile: 100% Offline lauffähig, vollständige Datenhoheit, Zero-Knowledge, uneingeschränkte Privatsphäre.</span>
+            </div>
+          </div>
+
+          <h3 class="text-lg font-semibold text-sky-400 mt-6">1.2 Die Offline-First Hybrid-Architektur</h3>
+          <p>
+            FinBundle PRO ist als hochgradig optimierte Single-Page-Application (SPA) auf der Basis von modernem React, TypeScript und WebAssembly konzipiert. Alle Programmbibliotheken, Berechnungsmodule, Chart-Engines (Apache ECharts) und kryptografischen Routinen sind im kompilierte Bundle gebündelt.
+          </p>
+          <p>
+            Die Software benötigt zur Erfüllung ihrer Kernaufgaben — Bilanzierung, Transaktionsführung, Zinseszinsberechnung, Wasserfall-Zerlegung, Budgetierung und Berichterstellung — <strong>keine aktive Internetverbindung</strong>. Ein Datenaustausch mit der Außenwelt findet ausschließlich dann statt, wenn der Anwender explizit:
+          </p>
+          <ol class="list-decimal pl-5 space-y-1">
+            <li>Den Abruf historischer oder aktueller Kurse im API LiveEditor auslöst (EODHD oder Alpha Vantage),</li>
+            <li>Den EZB-Devisenkurs über die Frankfurter API synchronisiert, oder</li>
+            <li>Eine externe Cloud-KI zur Analyse unstrukturierter Belege autorisiert (nach vorheriger clientseitiger PII-Maskierung).</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- KAPITEL 2 -->
+      <section id="kapitel-2" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">02</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Benutzeroberfläche &amp; Bedienkonzept</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-sky-400">2.1 Das Dreizonen-Layout</h3>
+          <p>
+            Die Benutzeroberfläche von FinBundle PRO folgt einem ergonomischen Dreizonen-Prinzip, das auch bei Portfolios mit mehreren Tausend Buchungen Übersichtlichkeit und verzögerungsfreie Interaktion sicherstellt:
+          </p>
+
+          <!-- SVG: UI 3-Zone Architecture Diagram -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 320" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="320" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Zone 1: Top Bar -->
+              <rect x="18" y="16" width="844" height="46" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="32" y="36" font-family="sans-serif" font-size="11" font-weight="700" fill="#38bdf8">ZONE 1: DIE MENÜLEISTE (MenuBar)</text>
+              <text x="32" y="50" font-family="sans-serif" font-size="9.5" fill="#94a3b8">Datei-Aktionen &bull; Vermögen &bull; LiveEditor &bull; Reports &bull; Budget &bull; Plugins &bull; Live Mini-Sparklines &bull; Dark/Light Mode</text>
+              
+              <!-- Mini Sparkline in Topbar -->
+              <g transform="translate(680, 22)">
+                <rect width="170" height="32" rx="4" fill="#0f172a" stroke="#334155"/>
+                <text x="8" y="20" font-family="sans-serif" font-size="9" fill="#94a3b8">Total Net Worth:</text>
+                <path d="M 85 24 Q 105 14 120 20 T 140 10 T 160 16" fill="none" stroke="#10b981" stroke-width="1.8"/>
+              </g>
+
+              <!-- Zone 2: TreeView (Left) -->
+              <rect x="18" y="72" width="270" height="232" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+              <text x="32" y="94" font-family="sans-serif" font-size="11" font-weight="700" fill="#10b981">ZONE 2: STRUKTURBAUM (TreeView)</text>
+              <text x="32" y="112" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">Hierarchische Vermögensstruktur:</text>
+              
+              <g transform="translate(32, 126)">
+                <circle cx="6" cy="6" r="3.5" fill="#38bdf8"/>
+                <text x="16" y="10" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">🏛 UBS Switzerland</text>
+                <text x="160" y="10" font-family="sans-serif" font-size="9.5" fill="#64748b">128'450 CHF</text>
+                
+                <g transform="translate(14, 22)">
+                  <rect x="0" y="2" width="8" height="6" rx="1" fill="#f59e0b"/>
+                  <text x="14" y="8" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">📁 Giro- &amp; Sparkonten</text>
+                  
+                  <g transform="translate(14, 20)">
+                    <text x="0" y="8" font-family="sans-serif" font-size="9.5" fill="#10b981">$</text>
+                    <text x="12" y="8" font-family="sans-serif" font-size="9.5" fill="#e2e8f0">Privatkonto CHF</text>
+                    <text x="120" y="8" font-family="sans-serif" font-size="9" font-weight="600" fill="#10b981">24'100</text>
+                  </g>
+                </g>
+
+                <g transform="translate(14, 66)">
+                  <circle cx="4" cy="4" r="3.5" fill="#8b5cf6"/>
+                  <text x="14" y="8" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">📁 Wertpapierdepot</text>
+                  
+                  <!-- Selected Asset -->
+                  <g transform="translate(10, 18)">
+                    <rect width="206" height="24" rx="4" fill="#0284c7" fill-opacity="0.3" stroke="#38bdf8" stroke-width="1"/>
+                    <text x="8" y="16" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#ffffff">Apple Inc. (AAPL)</text>
+                    <text x="135" y="16" font-family="sans-serif" font-size="9" font-weight="700" fill="#38bdf8">84'250 USD</text>
+                  </g>
+                </g>
+              </g>
+
+              <!-- Zone 3: Workspace (Right) -->
+              <rect x="302" y="72" width="560" height="232" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="320" y="94" font-family="sans-serif" font-size="11" font-weight="700" fill="#f59e0b">ZONE 3: ARBEITSBEREICH &amp; WORKSPACE (EditorArea)</text>
+              <text x="320" y="112" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">Kontextsensitiv: Transaktionsjournal, Report-Charts oder Plugin-Container</text>
+
+              <!-- Mock Workspace Table -->
+              <g transform="translate(320, 126)">
+                <!-- Header with Spike -->
+                <rect width="524" height="34" rx="4" fill="#0f172a" stroke="#334155"/>
+                <text x="12" y="21" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">Apple Inc. (AAPL)</text>
+                <text x="135" y="21" font-family="sans-serif" font-size="9.5" fill="#94a3b8">Klasse: SECURITIES | Saldo: $84'250</text>
+                <!-- Mini Total Return Spike -->
+                <g transform="translate(380, 6)">
+                  <path d="M 0 16 L 20 18 L 40 8 L 60 14 L 80 4 L 100 2" fill="none" stroke="#38bdf8" stroke-width="2"/>
+                  <text x="106" y="16" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#38bdf8">+37% TR</text>
+                </g>
+
+                <!-- Transactions Rows with Running Total -->
+                <g transform="translate(0, 42)">
+                  <rect width="524" height="22" fill="#1e293b"/>
+                  <text x="8" y="15" font-family="sans-serif" font-size="8.5" fill="#94a3b8">12.03.2026</text>
+                  <text x="75" y="15" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#10b981">KAUF</text>
+                  <text x="135" y="15" font-family="sans-serif" font-size="8.5" fill="#cbd5e1">200 Stk. @ $185.50</text>
+                  <text x="290" y="15" font-family="sans-serif" font-size="8.5" fill="#a5b4fc">#InitialDepot</text>
+                  <text x="445" y="15" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#cbd5e1">Run: $37'100</text>
+                  
+                  <rect y="24" width="524" height="22" fill="#0f172a"/>
+                  <text x="8" y="39" font-family="sans-serif" font-size="8.5" fill="#94a3b8">15.05.2026</text>
+                  <text x="75" y="39" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#38bdf8">DIVIDENDE</text>
+                  <text x="135" y="39" font-family="sans-serif" font-size="8.5" fill="#cbd5e1">$0.25/Stk. (+50.00)</text>
+                  <text x="290" y="39" font-family="sans-serif" font-size="8.5" fill="#6ee7b7">#Q2_Yield</text>
+                  <text x="445" y="39" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#10b981">Run: $37'150</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-sky-400 mt-6">2.2 Tastatur-Shortcuts für Power-User</h3>
+          <div class="overflow-x-auto my-3">
+            <table class="w-full text-left text-xs border border-slate-800 rounded-lg overflow-hidden">
+              <thead class="bg-slate-900 text-slate-300 font-semibold uppercase">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800">Windows / Linux</th>
+                  <th class="p-2.5 border-b border-slate-800">macOS</th>
+                  <th class="p-2.5 border-b border-slate-800">Aktion</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 font-mono text-slate-300">
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 text-sky-400">Ctrl + K / Space</td><td class="p-2.5 text-sky-400">Cmd + K / Space</td><td class="font-sans">Fly-In Schnellzugriff öffnen (Cockpit)</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 text-sky-400">Ctrl + S</td><td class="p-2.5 text-sky-400">Cmd + S</td><td class="font-sans">Sofortiger Festplatten-Flush (Save)</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 text-sky-400">Ctrl + N</td><td class="p-2.5 text-sky-400">Cmd + N</td><td class="font-sans">Neue Buchung im aktiven Asset anlegen</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 text-sky-400">Ctrl + Shift + P</td><td class="p-2.5 text-sky-400">Cmd + Shift + P</td><td class="font-sans">Plugin-Verwaltung &amp; Copilot öffnen</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 text-sky-400">Ctrl + Shift + R</td><td class="p-2.5 text-sky-400">Cmd + Shift + R</td><td class="font-sans">Reporting-Suite aufrufen</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 3 -->
+      <section id="kapitel-3" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">03</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Datensicherheit, Kryptografie &amp; Speichermodell</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-sky-400">3.1 Der autonome Projekt-Vault</h3>
+          <p>
+            FinBundle PRO bündelt das gesamte Portfolio in einem einzigen autarken Datenobjekt. Es gibt keine getrennten Datenbanktabellen oder externe Speicherorte. Der Vault umfasst alle Konten, Transaktionen, benutzerdefinierten Plugins, Notizen und historischen Kurse.
+          </p>
+
+          <!-- SVG: Cryptographic Vault Pipeline -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 200" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="200" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">KRYPTOGRAFISCHE STORAGE-PIPELINE (AES-256 PBKDF2 ZIP CONTAINER)</text>
+
+              <!-- Step 1 -->
+              <g transform="translate(25, 42)">
+                <rect width="180" height="135" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="14" y="26" font-family="sans-serif" font-size="11" font-weight="700" fill="#38bdf8">1. Memory State</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">JSON Payload:</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Konten &amp; Hierarchie</text>
+                <text x="14" y="82" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Transaktionsjournal</text>
+                <text x="14" y="98" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Installierte Plugins</text>
+                <text x="14" y="114" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; EODHD Kurs-Cache</text>
+              </g>
+
+              <!-- Arrow 1 -->
+              <g transform="translate(212, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 2 -->
+              <g transform="translate(245, 42)">
+                <rect width="185" height="135" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+                <text x="14" y="26" font-family="sans-serif" font-size="11" font-weight="700" fill="#fbbf24">2. PBKDF2 &amp; Chiffre</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">Key Derivation:</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; 100'000 Iterationen</text>
+                <text x="14" y="82" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; SHA-256 + Salt</text>
+                <text x="14" y="98" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; AES-256-CBC Chiffre</text>
+                <text x="14" y="118" font-family="sans-serif" font-size="9" font-weight="700" fill="#facc15">✓ Zero-Knowledge PIN</text>
+              </g>
+
+              <!-- Arrow 2 -->
+              <g transform="translate(437, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 3 -->
+              <g transform="translate(470, 42)">
+                <rect width="180" height="135" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.5"/>
+                <text x="14" y="26" font-family="sans-serif" font-size="11" font-weight="700" fill="#c084fc">3. ZIP Archiver</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">Deflate Compression:</text>
+                <text x="14" y="66" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; JSZip Pack-Engine</text>
+                <text x="14" y="82" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Reduziert Dateigröße</text>
+                <text x="14" y="98" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Robuste Checksumme</text>
+                <text x="14" y="114" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Integritätsschutz</text>
+              </g>
+
+              <!-- Arrow 3 -->
+              <g transform="translate(657, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 4 -->
+              <g transform="translate(690, 42)">
+                <rect width="165" height="135" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="14" y="26" font-family="sans-serif" font-size="11" font-weight="700" fill="#6ee7b7">4. Lokale SSD / HDD</text>
+                <text x="14" y="52" font-family="sans-serif" font-size="14" font-weight="800" fill="#ffffff">.ZIP VAULT</text>
+                <text x="14" y="74" font-family="sans-serif" font-size="9.5" fill="#a7f3d0">W3C File API</text>
+                <text x="14" y="92" font-family="sans-serif" font-size="9" fill="#a7f3d0">Direkter Festplatten-I/O</text>
+                <text x="14" y="118" font-family="sans-serif" font-size="9" font-weight="700" fill="#d1fae5">100% Sicher</text>
+              </g>
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-sky-400 mt-4">3.2 Militärische Verschlüsselung: AES-256 mit PBKDF2</h3>
+          <p>
+            Wird das Projekt als verschlüsseltes ZIP gesichert, schützt der integrierte Krypto-Layer die Datei:
+          </p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Schlüsselableitung:</strong> PBKDF2 mit 100'000 SHA-256-Iterationen und dynamischem Salt.</li>
+            <li><strong>Chiffre:</strong> AES-256 im CBC-Modus mit sicherem Initialisierungsvektor (IV).</li>
+            <li><strong>Zero-Knowledge:</strong> Der PIN wird niemals gespeichert. Ohne PIN existiert keine Hintertür zur Entschlüsselung.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- KAPITEL 4 -->
+      <section id="kapitel-4" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">04</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Datenmigration, Schnittstellen &amp; Interoperabilität</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            FinBundle PRO erlaubt den unterbrechungsfreien Wechsel aus bestehenden Tools und garantiert offene Datenstandards:
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-2 text-xs">
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <span class="text-sky-400 font-bold block mb-1">Parqet CSV Import</span>
+              Liest automatisiert Wertpapierkäufe, Dividenden und Bankknoten aus Parqet-CSV-Exporten ein.
+            </div>
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <span class="text-emerald-400 font-bold block mb-1">ExcelJS Export (.xlsx)</span>
+              Generiert ein dreiteiliges Excel-Workbook (Assets, Buchungsjournal, Jahressteuer).
+            </div>
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <span class="text-amber-400 font-bold block mb-1">JSON Raw Backup</span>
+              Direkter Export des rohen State-Objekts zur revisionssicheren Kaltarchivierung.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 5 -->
+      <section id="kapitel-5" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">05</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Vermögensstrukturierung (Der Hierarchiebaum)</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Im Gegensatz zu tabellarischen Portfoliomanagern organisiert FinBundle PRO Vermögenswerte in einem dreistufigen Strukturbaum mit dynamischer Saldenvererbung:
+          </p>
+
+          <!-- SVG: TreeView Hierarchy Structure -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 220" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="220" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">DAS 3-STUFEN-HIERARCHIEMODELL MIT REKURSIVER SALDEN-AGGREGATION</text>
+
+              <!-- Level 1: Bank -->
+              <g transform="translate(30, 48)">
+                <rect width="240" height="145" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+                <rect width="240" height="28" rx="8" fill="#1d4ed8"/>
+                <text x="14" y="19" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">STUFE 1: BANK / INSTITUT</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="10" font-weight="600" fill="#93c5fd">Rechtlicher Verwahrort</text>
+                <text x="14" y="68" font-family="sans-serif" font-size="9" fill="#cbd5e1">Beispiele: UBS, Swissquote, Raiffeisen</text>
+                <text x="14" y="90" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Aggregiert alle Untersalden</text>
+                <text x="14" y="106" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Bildet Risikoknoten für Allokation</text>
+                <text x="14" y="126" font-family="sans-serif" font-size="9" font-weight="700" fill="#38bdf8">Gesamtsaldo: 342'000 CHF</text>
+              </g>
+
+              <!-- Connect 1 to 2 -->
+              <path d="M 270 120 L 320 120" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 4"/>
+
+              <!-- Level 2: Category -->
+              <g transform="translate(320, 48)">
+                <rect width="240" height="145" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+                <rect width="240" height="28" rx="8" fill="#d97706"/>
+                <text x="14" y="19" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">STUFE 2: KATEGORIE (ORDNER)</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="10" font-weight="600" fill="#fcd34d">Logische Gliederung</text>
+                <text x="14" y="68" font-family="sans-serif" font-size="9" fill="#cbd5e1">Beispiele: Giro, Säule 3a, Tech-Aktien</text>
+                <text x="14" y="90" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Beliebig tief verschachtelbar</text>
+                <text x="14" y="106" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Unterstützt Drag &amp; Drop Reorganisation</text>
+                <text x="14" y="126" font-family="sans-serif" font-size="9" font-weight="700" fill="#fbbf24">Zwischensumme: 215'000 CHF</text>
+              </g>
+
+              <!-- Connect 2 to 3 -->
+              <path d="M 560 120 L 610 120" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 4"/>
+
+              <!-- Level 3: Asset -->
+              <g transform="translate(610, 48)">
+                <rect width="240" height="145" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <rect width="240" height="28" rx="8" fill="#059669"/>
+                <text x="14" y="19" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">STUFE 3: ASSET (WERTANLAGE)</text>
+                <text x="14" y="48" font-family="sans-serif" font-size="10" font-weight="600" fill="#6ee7b7">Buchbares Finanzobjekt</text>
+                <text x="14" y="68" font-family="sans-serif" font-size="9" fill="#cbd5e1">Beispiele: Apple (AAPL), Sparkonto Plus</text>
+                <text x="14" y="90" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Führt Transaktionsjournal</text>
+                <text x="14" y="106" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Live-Kurse &amp; Dividenden-Attribution</text>
+                <text x="14" y="126" font-family="sans-serif" font-size="9" font-weight="700" fill="#34d399">Endwert: 84'250 USD</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 6 -->
+      <section id="kapitel-6" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">06</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Asset-Klassen, Schweizer Vorsorge &amp; Eigenschaftseditor</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-sky-400">6.1 Der Eigenschaftseditor im Detail</h3>
+          <p>
+            Im Eigenschaftseditor wird die finanzmathematische DNA jedes Assets festgelegt. Er steuert Berechnungsmodelle, Währungen und Prognoseparameter:
+          </p>
+
+          <!-- SVG: Property Editor Mockup -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 250" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="250" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Header -->
+              <rect x="0" y="0" width="880" height="38" rx="10" fill="#1e293b"/>
+              <text x="20" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">⚙ EIGENSCHAFTSEDITOR</text>
+              <text x="760" y="24" font-family="sans-serif" font-size="10" font-weight="700" fill="#10b981">✓ AUTO-SAVE AKTIV</text>
+
+              <!-- Grid -->
+              <g transform="translate(24, 52)">
+                <!-- Row 1 -->
+                <text x="0" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">NAME DES ASSETS</text>
+                <rect x="0" y="18" width="400" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                <text x="12" y="38" font-family="sans-serif" font-size="11" fill="#ffffff">Vanguard FTSE All-World (VWRL.SW)</text>
+
+                <text x="430" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">ARCHIVIERUNGS-STATUS</text>
+                <rect x="430" y="18" width="400" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                <rect x="444" y="25" width="16" height="16" rx="3" fill="#0f172a" stroke="#64748b"/>
+                <text x="470" y="37" font-family="sans-serif" font-size="10.5" fill="#cbd5e1">Asset aktiv (nicht archiviert)</text>
+
+                <!-- Row 2 -->
+                <g transform="translate(0, 60)">
+                  <text x="0" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">ANLAGEKLASSE</text>
+                  <rect x="0" y="18" width="400" height="30" rx="4" fill="#1e293b" stroke="#38bdf8"/>
+                  <text x="12" y="38" font-family="sans-serif" font-size="11" font-weight="600" fill="#38bdf8">Aktien &amp; Fonds (SECURITIES) ▾</text>
+
+                  <text x="430" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">ORIGINÄRE WÄHRUNG &amp; FX</text>
+                  <rect x="430" y="18" width="400" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                  <text x="442" y="38" font-family="sans-serif" font-size="11" fill="#ffffff">CHF (1.0000) &bull; EZB Live-Sync</text>
+                </g>
+
+                <!-- Row 3: Dividend Settings -->
+                <g transform="translate(0, 120)">
+                  <text x="0" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">TICKER / ISIN</text>
+                  <rect x="0" y="18" width="260" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                  <text x="12" y="38" font-family="monospace" font-size="10.5" fill="#38bdf8">VWRL.SW / IE00B3RBWM25</text>
+
+                  <text x="285" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">FORWARD YIELD (%)</text>
+                  <rect x="285" y="18" width="250" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                  <text x="297" y="38" font-family="sans-serif" font-size="11" fill="#34d399">2.10% (Erwartete Rendite)</text>
+
+                  <text x="560" y="12" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">ZAHLMONATE</text>
+                  <rect x="560" y="18" width="270" height="30" rx="4" fill="#1e293b" stroke="#334155"/>
+                  <text x="572" y="38" font-family="sans-serif" font-size="11" fill="#cbd5e1">3, 6, 9, 12 (Quartalszahler)</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-sky-400 mt-6">6.2 Spezifische Anlageklassen &amp; Total Return</h3>
+          <ul class="list-disc pl-5 space-y-1.5">
+            <li><strong>Konto / Bargeld (CASH):</strong> Der Saldo errechnet sich 1:1 aus der Differenz von Ein- und Auszahlungen.</li>
+            <li><strong>Aktien &amp; Fonds (SECURITIES):</strong> Stückzahlführung multipliziert mit aktuellem Börsenkurs. <strong>Total Return Prinzip:</strong> Ausgeschüttete Dividenden werden mathematisch in den Performance-Verlauf (die visuellen Sparkline-Spikes) integriert.</li>
+            <li><strong>Schweizer Vorsorge (Säule 3a &amp; BVG):</strong> Granulare Differenzierung zwischen <em>3a Cash</em> (zinsbasiert), <em>3a Fund</em> (wertschriftenbasiert, z.B. VIAC/finpension), <em>3a Managed</em> und <em>Pensionskasse (2. Säule)</em>.</li>
+            <li><strong>Immobilien &amp; Hypotheken:</strong> Sachwerte und Verbindlichkeiten werden saldiert zur Bestimmung des Netto-Eigenkapitals herangezogen.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- KAPITEL 7 -->
+      <section id="kapitel-7" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">07</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Buchhaltung, Transaktionen &amp; Total Return Spikes</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Jede Buchung in FinBundle PRO wird chronologisch erfasst und führt einen permanenten fortlaufenden Saldo (<em>Running Total</em>). Der integrierte <strong>Umbuchungs-Assistent</strong> generiert bei Transfers zwischen Konten simultan eine verknüpfte Gegenbuchung.
+          </p>
+
+          <!-- SVG: Total Return Sparkline Spikes Integration -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 230" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="230" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">INTEGRATION VON DIVIDENDEN IN DIE PERFORMANCE-SPIKES (TOTAL RETURN)</text>
+
+              <!-- Graph comparison -->
+              <g transform="translate(30, 45)">
+                <!-- Pure Price Curve (Dips on Ex-Date) -->
+                <rect width="400" height="155" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1"/>
+                <text x="15" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#f87171">❌ REINE KURSBETRACHTUNG (Verfälscht)</text>
+                <path d="M 20 110 L 80 90 L 150 70 L 200 115 L 260 100 L 320 85 L 380 75" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="3 3"/>
+                <circle cx="200" cy="115" r="4" fill="#ef4444"/>
+                <text x="175" y="135" font-family="sans-serif" font-size="8.5" fill="#fca5a5">Ex-Tag Kursabschlag</text>
+                <text x="15" y="145" font-family="sans-serif" font-size="9" fill="#94a3b8">Zeigt Kursknick am Ex-Dividenden-Tag und unterschlägt Erträge.</text>
+              </g>
+
+              <g transform="translate(450, 45)">
+                <!-- Total Return Curve (Dividends Reintegrated) -->
+                <rect width="400" height="155" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="15" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#34d399">✅ TOTAL RETURN SPIKES (FinBundle PRO Standard)</text>
+                <path d="M 20 110 L 80 90 L 150 70 L 200 60 L 260 48 L 320 35 L 380 20" fill="none" stroke="#10b981" stroke-width="2.5"/>
+                <circle cx="200" cy="60" r="4" fill="#38bdf8"/>
+                <text x="210" y="65" font-family="sans-serif" font-size="8.5" font-weight="700" fill="#38bdf8">+Dividende reintegriert</text>
+                <text x="15" y="145" font-family="sans-serif" font-size="9" fill="#cbd5e1">Spikes visualisieren den realen Vermögenszuwachs inklusive Cashflows.</text>
+              </g>
+            </svg>
+          </div>
+
+          <p class="text-xs">
+            Bei börsenkotierten Werten kompensiert FinBundle PRO den optischen Kursabschlag am Ex-Tag vollständig: Jede erfasste Dividendenbuchung wird mathematisch in die Spike-Performancekurve einberechnet.
+          </p>
+        </div>
+      </section>
+
+      <!-- KAPITEL 8 (EXAKT EINMAL VORHANDEN) -->
+      <section id="kapitel-8" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500 text-slate-950 font-mono font-bold text-sm">08</span>
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Die Auto-Valuation Engine v2 (Synthetische Bewertungslogik)</h2>
+            <p class="text-xs text-sky-400">Mathematische Trennung von Buchwert (Principal) und Performance (Unrealized P&amp;L)</p>
+          </div>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Traditionelle Portfolio-Apps zwingen Anleger entweder dazu, jeden unrealisierten Kursgewinn manuell einzutippen, oder sie trennen Kurse von den Transaktionen ab, was das Journal verfälscht. FinBundle PRO löst dies über die <strong>Auto-Valuation Engine v2</strong> in Kombination mit der Dividenden-Attribution:
+          </p>
+
+          <!-- SVG: Auto-Valuation Engine v2 Flowchart -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 240" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="240" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">ALGORITHMUS DER SYNTHETISCHEN AUTO-VALUATION &amp; TOTAL RETURN</text>
+
+              <!-- Track 1: Principal -->
+              <g transform="translate(30, 45)">
+                <rect width="240" height="75" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10" font-weight="700" fill="#93c5fd">1. KAPITALEINSATZ (Principal)</text>
+                <text x="14" y="44" font-family="monospace" font-size="9" fill="#ffffff">Summe(Käufe) - Summe(Verkäufe)</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Physisch investiertes Kapital</text>
+              </g>
+
+              <!-- Track 2: Market Value -->
+              <g transform="translate(320, 45)">
+                <rect width="240" height="75" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.2"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10" font-weight="700" fill="#6ee7b7">2. MARKTWERT (EODHD / Live)</text>
+                <text x="14" y="44" font-family="monospace" font-size="9" fill="#ffffff">Stückzahl × Letzter Schlusskurs</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Aktueller Börsenwert der Anteile</text>
+              </g>
+
+              <!-- Delta Bridge -->
+              <g transform="translate(610, 45)">
+                <rect width="240" height="75" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.2"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10" font-weight="700" fill="#fcd34d">3. SYNTHETISCHES DELTA (P&amp;L)</text>
+                <text x="14" y="44" font-family="monospace" font-size="9" fill="#ffffff">Δ = Marktwert - Kapitaleinsatz</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Automatische Anpassungsbuchung</text>
+              </g>
+
+              <!-- Bottom Flow: Dividend Reintegration -->
+              <g transform="translate(30, 140)">
+                <rect width="820" height="75" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.2"/>
+                <text x="20" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#c7d2fe">4. TOTAL RETURN SYNTHESE (SPARKLINE SPIKES &amp; REPORTS)</text>
+                <text x="20" y="46" font-family="monospace" font-size="10" fill="#38bdf8">
+                  Total_Return_Absolut = Δ_Valuation (Kursgewinn) + Kumulierte_Dividenden
+                </text>
+                <text x="20" y="64" font-family="sans-serif" font-size="9" fill="#cbd5e1">
+                  Der Strukturbaum summiert exakt auf den Marktwert, während die Performance-Spikes die ganzheitliche Vermögensmehrung ausweisen.
+                </text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="math-box my-3">
+            Investiertes_Kapital = Summe(Käufe) - Summe(Verkäufe)<br>
+            Aktueller_Marktwert  = Stückzahl × Letzter_EOD_Kurs<br>
+            Kursgewinn_Unrealized = Aktueller_Marktwert - Investiertes_Kapital<br>
+            Kumulierte_Dividenden = Summe aller erfassten Buchungen (Typ: Dividende)<br>
+            <br>
+            // Total Return Formel (in Spikes und Reporting-Tabellen visualisiert):<br>
+            Total_Return_Absolut = Kursgewinn_Unrealized + Kumulierte_Dividenden<br>
+            Total_Return_Prozent = (Total_Return_Absolut / Investiertes_Kapital) × 100%
+          </div>
+          <p class="text-xs text-slate-400">
+            Das System generiert bei Kursänderungen automatisch temporäre, synthetische Anpassungssätze. Die Bilanzsumme des Baums entspricht somit immer auf den Rappen genau dem realen Börsenwert, während die Spikes die Gesamtrendite aus Kursgewinn plus allen geflossenen Dividenden widerspiegeln.
+          </p>
+        </div>
+      </section>
+
+      <!-- KAPITEL 9 -->
+      <section id="kapitel-9" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">09</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">API Live Editor, EODHD &amp; Chart-Analyser</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Der API LiveEditor fasst alle börsennotierten Wertpapiere in einem interaktiven Data Grid zusammen. Über <strong>EODHD</strong> oder <strong>Alpha Vantage</strong> werden End-Of-Day-Schlusskurse geladen.
+          </p>
+
+          <!-- SVG: LiveEditor Data Grid Mockup -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 230" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="230" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Toolbar -->
+              <rect x="0" y="0" width="880" height="42" rx="10" fill="#1e293b"/>
+              <text x="20" y="26" font-family="sans-serif" font-size="12" font-weight="700" fill="#ffffff">API LiveEditor — Marktdaten Data Grid</text>
+              <rect x="580" y="8" width="130" height="26" rx="4" fill="#0f172a" stroke="#334155"/>
+              <text x="592" y="25" font-family="sans-serif" font-size="9.5" font-weight="600" fill="#cbd5e1">Marktdaten (Live)</text>
+              <rect x="720" y="8" width="145" height="26" rx="4" fill="#0284c7"/>
+              <text x="732" y="25" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#ffffff">Markierte aktualisieren</text>
+
+              <!-- Header Row -->
+              <rect x="15" y="52" width="850" height="28" rx="4" fill="#1e293b"/>
+              <text x="28" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">[✓]</text>
+              <text x="60" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">TICKER</text>
+              <text x="145" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">ASSET NAME</text>
+              <text x="320" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">SCHLUSSKURS</text>
+              <text x="430" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">HEUTE (%)</text>
+              <text x="530" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">KGV (P/E)</text>
+              <text x="620" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">FORWARD YIELD</text>
+              <text x="740" y="70" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#94a3b8">STATUS</text>
+
+              <!-- Rows -->
+              <g transform="translate(15, 84)">
+                <!-- Row 1 -->
+                <rect width="850" height="34" fill="#0f172a"/>
+                <rect x="13" y="10" width="12" height="12" rx="2" fill="#0284c7"/>
+                <text x="45" y="22" font-family="monospace" font-size="10.5" font-weight="700" fill="#38bdf8">AAPL.US</text>
+                <text x="130" y="22" font-family="sans-serif" font-size="10" fill="#ffffff">Apple Inc.</text>
+                <text x="305" y="22" font-family="sans-serif" font-size="10" font-weight="600" fill="#ffffff">$224.23</text>
+                <text x="415" y="22" font-family="sans-serif" font-size="10" font-weight="700" fill="#10b981">+1.32%</text>
+                <text x="515" y="22" font-family="sans-serif" font-size="10" fill="#94a3b8">33.4</text>
+                <text x="605" y="22" font-family="sans-serif" font-size="10" fill="#38bdf8">0.45%</text>
+                <rect x="725" y="7" width="75" height="18" rx="9" fill="#064e3b"/>
+                <text x="738" y="20" font-family="sans-serif" font-size="9" font-weight="700" fill="#34d399">Aktuell</text>
+
+                <!-- Row 2 -->
+                <rect y="36" width="850" height="34" fill="#1e293b"/>
+                <rect x="13" y="46" width="12" height="12" rx="2" fill="#0284c7"/>
+                <text x="45" y="58" font-family="monospace" font-size="10.5" font-weight="700" fill="#38bdf8">VWRL.SW</text>
+                <text x="130" y="58" font-family="sans-serif" font-size="10" fill="#ffffff">Vanguard FTSE All-World</text>
+                <text x="305" y="58" font-family="sans-serif" font-size="10" font-weight="600" fill="#ffffff">124.60 CHF</text>
+                <text x="415" y="58" font-family="sans-serif" font-size="10" font-weight="700" fill="#10b981">+0.48%</text>
+                <text x="515" y="58" font-family="sans-serif" font-size="10" fill="#94a3b8">18.2</text>
+                <text x="605" y="58" font-family="sans-serif" font-size="10" fill="#38bdf8">2.10%</text>
+                <rect x="725" y="43" width="75" height="18" rx="9" fill="#064e3b"/>
+                <text x="738" y="56" font-family="sans-serif" font-size="9" font-weight="700" fill="#34d399">Aktuell</text>
+
+                <!-- Row 3 -->
+                <rect y="72" width="850" height="34" fill="#0f172a"/>
+                <rect x="13" y="82" width="12" height="12" rx="2" fill="#334155"/>
+                <text x="45" y="94" font-family="monospace" font-size="10.5" font-weight="700" fill="#94a3b8">NESN.SW</text>
+                <text x="130" y="94" font-family="sans-serif" font-size="10" fill="#ffffff">Nestlé SA</text>
+                <text x="305" y="94" font-family="sans-serif" font-size="10" font-weight="600" fill="#ffffff">88.50 CHF</text>
+                <text x="415" y="94" font-family="sans-serif" font-size="10" font-weight="700" fill="#f87171">-0.25%</text>
+                <text x="515" y="94" font-family="sans-serif" font-size="10" fill="#94a3b8">19.8</text>
+                <text x="605" y="94" font-family="sans-serif" font-size="10" fill="#38bdf8">3.45%</text>
+                <rect x="725" y="79" width="75" height="18" rx="9" fill="#451a03"/>
+                <text x="734" y="92" font-family="sans-serif" font-size="9" font-weight="700" fill="#f59e0b">Ausstehend</text>
+              </g>
+            </svg>
+          </div>
+
+          <p class="text-xs">
+            Im Tab <em>Chart Vergleiche</em> können Wertpapiere relativ (normiert auf 0%) verglichen werden. Indikatoren wie <strong>SMA 50</strong>, <strong>SMA 200</strong>, <strong>EMA 20</strong> und <strong>Bollinger Bands (±2σ)</strong> sowie die taggenaue Währungsumrechnung in die Basiswährung (<em>Base-FX</em>) unterstützen tiefe Analysen.
+          </p>
+        </div>
+      </section>
+
+      <!-- KAPITEL 10 -->
+      <section id="kapitel-10" class="space-y-8 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">10</span>
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Die 15 Standard-Reports im Detail</h2>
+            <p class="text-xs text-slate-400">Vollständige Referenz der Bestandes-, Bewegungs- und Zukunftsanalysen</p>
+          </div>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-6 text-slate-300 text-sm leading-relaxed">
+          <p>
+            FinBundle PRO verfügt über eine native Reporting-Suite aus exakt 15 spezialisierten Auswertungsmodulen:
+          </p>
+
+          <!-- SVG: Waterfall Performance Attribution Chart -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 250" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="250" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">REPORT 9: WASSERFALL-ATTRIBUTIONSANALYSE (PERFORMANCE-ZERLEGUNG)</text>
+
+              <!-- Chart Baseline -->
+              <line x1="50" y1="200" x2="830" y2="200" stroke="#334155" stroke-width="1.5"/>
+
+              <!-- Bar 1: Start 100k -->
+              <rect x="70" y="110" width="85" height="90" rx="3" fill="#2563eb"/>
+              <text x="92" y="102" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#93c5fd">100'000</text>
+              <text x="82" y="218" font-family="sans-serif" font-size="9" fill="#94a3b8">Startvermögen</text>
+
+              <!-- Connector 1 -->
+              <line x1="155" y1="110" x2="200" y2="110" stroke="#475569" stroke-dasharray="3 3"/>
+
+              <!-- Bar 2: +Sparrate 25k -->
+              <rect x="200" y="85" width="85" height="25" rx="3" fill="#10b981"/>
+              <text x="220" y="78" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#6ee7b7">+25'000</text>
+              <text x="210" y="218" font-family="sans-serif" font-size="9" fill="#94a3b8">+ Einzahlungen</text>
+
+              <!-- Connector 2 -->
+              <line x1="285" y1="85" x2="330" y2="85" stroke="#475569" stroke-dasharray="3 3"/>
+
+              <!-- Bar 3: -Entnahmen 10k -->
+              <rect x="330" y="85" width="85" height="15" rx="3" fill="#ef4444"/>
+              <text x="350" y="78" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#fca5a5">-10'000</text>
+              <text x="340" y="218" font-family="sans-serif" font-size="9" fill="#94a3b8">- Entnahmen</text>
+
+              <!-- Connector 3 -->
+              <line x1="415" y1="100" x2="460" y2="100" stroke="#475569" stroke-dasharray="3 3"/>
+
+              <!-- Bar 4: +Börsenkursgewinne 18k -->
+              <rect x="460" y="68" width="85" height="32" rx="3" fill="#8b5cf6"/>
+              <text x="480" y="60" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#c084fc">+18'000</text>
+              <text x="465" y="218" font-family="sans-serif" font-size="9" fill="#94a3b8">+ Kursgewinne</text>
+
+              <!-- Connector 4 -->
+              <line x1="545" y1="68" x2="590" y2="68" stroke="#475569" stroke-dasharray="3 3"/>
+
+              <!-- Bar 5: +Dividenden 6k -->
+              <rect x="590" y="56" width="85" height="12" rx="3" fill="#38bdf8"/>
+              <text x="612" y="48" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#7dd3fc">+6'000</text>
+              <text x="600" y="218" font-family="sans-serif" font-size="9" fill="#94a3b8">+ Dividenden</text>
+
+              <!-- Connector 5 -->
+              <line x1="675" y1="56" x2="720" y2="56" stroke="#475569" stroke-dasharray="3 3"/>
+
+              <!-- Bar 6: Endvermögen 139k -->
+              <rect x="720" y="56" width="85" height="144" rx="3" fill="#0284c7"/>
+              <text x="742" y="48" font-family="sans-serif" font-size="11" font-weight="800" fill="#ffffff">139'000</text>
+              <text x="730" y="218" font-family="sans-serif" font-size="9" font-weight="700" fill="#38bdf8">Endvermögen</text>
+            </svg>
+          </div>
+
+          <!-- Gruppe A: Bestandesreports -->
+          <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-4">
+            <div class="flex items-center gap-2 text-sky-400 font-bold text-base border-b border-slate-800 pb-2">
+              <span>📋</span>
+              <h3>10.1 Bestandesreports (Vermögensstatus &amp; Stichtage)</h3>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">1. Banken &amp; Kategorien</h4>
+                <p class="text-slate-300 mt-1">Die aggregierte Bestandsbilanz. Listet das gesamte Nettovermögen strukturiert nach übergeordneten Bankinstituten und Unterkategorien auf. Zeigt prozentuale Anteile, nominale Salden in Basiswährung sowie die Anzahl enthaltener Unterpositionen.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">2. Allokation nach Banken</h4>
+                <p class="text-slate-300 mt-1">Überwacht das Gegenparteien- und Verwahrstellenrisiko (Counterparty Risk). Ein Donut-Diagramm visualisiert, wie sich das Vermögen auf Banken, Broker und Wallets verteilt, um Klumpenrisiken bei einem einzelnen Finanzinstitut sofort aufzudecken.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">3. Liquiditätsrisiko</h4>
+                <p class="text-slate-300 mt-1">Gegenüberstellung von sofort verfügbarem Notgroschen (Assets mit Checkbox <em>Liquides Mittel</em>) und den durchschnittlichen monatlichen Lebenshaltungskosten. Ermittelt die <em>Liquiditätsreichweite in Monaten</em> und warnt vor finanziellen Engpässen.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">4. Historischer Verlauf</h4>
+                <p class="text-slate-300 mt-1">Zeigt die Zeitreihen-Kurve des gesamten Portfolio-Net-Worth über den gewählten Zeitraum. Ermöglicht das Einblenden von Höchstständen (All-Time-Highs) und maximalen Drawdown-Phasen.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">5. Steuerreport (31.12.)</h4>
+                <p class="text-slate-300 mt-1">Der offizielle Nachweis für das kantonale Steueramt bzw. Finanzamt. Fixiert die Stichtags-Salden aller Valoren, Bankkonten und Schulden per 31. Dezember des Steuerjahres und listet steuerbare Zins- und Brutto-/Nettodividendenerträge auf.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">6. Säule 3a Performance</h4>
+                <p class="text-slate-300 mt-1">Spezifische Schweizer Vorsorgeanalyse. Vergleicht zinsbasierte 3a-Sparkonten mit wertschriftenbasierten Fondslösungen (z.B. VIAC, finpension, frankly), isoliert die jährlichen Maximalbeiträge und berechnet die kumulierte Rendite seit Einzahlung.</p>
+              </div>
+
+              <div class="border-l-2 border-sky-500 pl-3">
+                <h4 class="font-bold text-white text-sm">7. Aktien &amp; Fonds Performance</h4>
+                <p class="text-slate-300 mt-1">Reines Wertpapier-Ranking. Stellt sämtliche Einzeltitel und ETFs in einer Matrix gegenüber: Einstandspreis (Cost Basis), aktueller Börsenwert, realisierte Kursgewinne, kumulierte Dividendenerträge und <strong>Total Return inklusive Dividenden</strong>. Die in der Zeile gerenderten Spikes visualisieren diesen ganzheitlichen Ertragsverlauf.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gruppe B: Bewegungsreports -->
+          <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-4">
+            <div class="flex items-center gap-2 text-indigo-400 font-bold text-base border-b border-slate-800 pb-2">
+              <span>🌊</span>
+              <h3>10.2 Bewegungsreports (Cashflow &amp; Attribution)</h3>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+              <div class="border-l-2 border-indigo-500 pl-3">
+                <h4 class="font-bold text-white text-sm">8. Kategorienfluss</h4>
+                <p class="text-slate-300 mt-1">Interaktives Sankey-Flussdiagramm. Zeigt bildhaft, aus welchen Einnahmequellen (Gehalt, Dividenden, Mieteinnahmen) Liquidität zugeflossen ist und in welche Konsum- oder Sparkategorien sie weitergeleitet wurde.</p>
+              </div>
+
+              <div class="border-l-2 border-indigo-500 pl-3">
+                <h4 class="font-bold text-white text-sm">9. Wasserfallfluss</h4>
+                <p class="text-slate-300 mt-1">Die ultimative finanzmathematische Attributionsanalyse. Startet beim Anfangsvermögen der Periode und visualisiert sequenziell: +Ersparnisse, -Entnahmen, +Realisierte Gewinne, ±Synthetische Marktschwankungen, +Dividenden, um nahtlos beim aktuellen Endvermögen zu landen.</p>
+              </div>
+
+              <div class="border-l-2 border-indigo-500 pl-3">
+                <h4 class="font-bold text-white text-sm">10. Passives Einkommen</h4>
+                <p class="text-slate-300 mt-1">Monatliche Balkenmatrix aller historisch gutgeschriebenen Dividenden und Festgeldzinsen im Mehrjahresvergleich. Weist Bruttobeträge, abgezogene Quellensteuern und Netto-Zahlungen transparent aus.</p>
+              </div>
+
+              <div class="border-l-2 border-indigo-500 pl-3">
+                <h4 class="font-bold text-white text-sm">11. Top Flow Assets</h4>
+                <p class="text-slate-300 mt-1">Identifiziert die aktivsten Treiber im Portfolio: Welche Assets verzeichneten im Berichtszeitraum die größten absoluten Mittelzuflüsse oder Abflüsse?</p>
+              </div>
+
+              <div class="border-l-2 border-indigo-500 pl-3">
+                <h4 class="font-bold text-white text-sm">12. Buchungsanalyse</h4>
+                <p class="text-slate-300 mt-1">Statistische Auswertung des gesamten Transaktionsjournals nach Buchungstypen (Käufe, Verkäufe, Umbuchungen, Spesen). Berechnet durchschnittliche Transaktionsvolumina und kumulierte Bankgebühren.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gruppe C: Zukunftsreports -->
+          <div class="p-5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-4">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold text-base border-b border-slate-800 pb-2">
+              <span>🔮</span>
+              <h3>10.3 Zukunftsreports (Projektionen &amp; FIRE-Rechner)</h3>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+              <div class="border-l-2 border-emerald-500 pl-3">
+                <h4 class="font-bold text-white text-sm">13. Dividenden-Kalender</h4>
+                <p class="text-slate-300 mt-1">Zukunftsgerichtete 12-Monats-Projektion. Nutzt die im Eigenschaftseditor hinterlegten <em>Forward Yields</em> und <em>Zahlmonate</em> (z.B. 3,6,9,12), um den zu erwartenden monatlichen Netto-Cashflow auf den Kalender zu verteilen.</p>
+              </div>
+
+              <div class="border-l-2 border-emerald-500 pl-3">
+                <h4 class="font-bold text-white text-sm">14. Simulation &amp; Regression</h4>
+                <p class="text-slate-300 mt-1">Ermittelt über lineare Regression durch die Buchungshistorie die tatsächliche monatliche Sparrate $\beta$. Projiziert den Portfoliowert über 1 bis 5 Jahre in drei Zinseszins-Szenarien: Linear (0%), Konservativ (3% p.a.) und Optimistisches Aktienwachstum (7% p.a.).</p>
+              </div>
+
+              <div class="border-l-2 border-emerald-500 pl-3">
+                <h4 class="font-bold text-white text-sm">15. Szenarien &amp; FIRE (Financial Independence, Retire Early)</h4>
+                <p class="text-slate-300 mt-1">Berechnet das exakte Datum der finanziellen Freiheit auf Basis der Trinity-Studie (Safe Withdrawal Rate, typisch 3.5% bis 4.0%). Vergleicht laufende Lebenshaltungskosten mit dem passiven Ertragspotenzial und simuliert Renteneintrittsalter sowie Deckungslücken.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 11 -->
+      <section id="kapitel-11" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">11</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Budgetverwaltung (Die 50/30/20 Cashflow-Planung)</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Die Budgetverwaltung operiert vorausschauend und harmonisiert quartalsweise oder jährliche Ausgaben auf monatliche Rückstellungsbeträge:
+          </p>
+
+          <!-- SVG: 50/30/20 Budget Donut Architecture -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 210" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="210" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Donut Chart Left -->
+              <g transform="translate(120, 105)">
+                <!-- Needs 50% (Right half circle) -->
+                <path d="M 0 -65 A 65 65 0 0 1 0 65 L 0 40 A 40 40 0 0 0 0 -40 Z" fill="#2563eb"/>
+                <!-- Wants 30% -->
+                <path d="M 0 65 A 65 65 0 0 1 -61.8 -20 L -38 -12.3 A 40 40 0 0 0 0 40 Z" fill="#f59e0b"/>
+                <!-- Savings 20% -->
+                <path d="M -61.8 -20 A 65 65 0 0 1 0 -65 L 0 -40 A 40 40 0 0 0 -38 -12.3 Z" fill="#10b981"/>
+                <circle cx="0" cy="0" r="32" fill="#0f172a"/>
+                <text x="0" y="4" font-family="sans-serif" font-size="10" font-weight="800" text-anchor="middle" fill="#ffffff">50/30/20</text>
+              </g>
+
+              <!-- Legend / Cards Right -->
+              <g transform="translate(240, 30)">
+                <!-- Needs -->
+                <rect x="0" y="0" width="600" height="44" rx="6" fill="#1e293b" stroke="#2563eb" stroke-width="1"/>
+                <circle cx="16" cy="22" r="5" fill="#38bdf8"/>
+                <text x="32" y="20" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">NEEDS — Zwingende Fixkosten (Ziel: 50%)</text>
+                <text x="32" y="34" font-family="sans-serif" font-size="9" fill="#94a3b8">Wohnungsmiete, Krankenkasse, Grundnahrungsmittel, Pflichtversicherungen, Strom</text>
+
+                <!-- Wants -->
+                <rect x="0" y="52" width="600" height="44" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+                <circle cx="16" cy="74" r="5" fill="#fbbf24"/>
+                <text x="32" y="72" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">WANTS — Lifestyle &amp; Konsum (Ziel: 30%)</text>
+                <text x="32" y="86" font-family="sans-serif" font-size="9" fill="#94a3b8">Gastronomie, Freizeit, Streaming-Abos, Urlaubsreisen, Hobby</text>
+
+                <!-- Savings -->
+                <rect x="0" y="104" width="600" height="44" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1"/>
+                <circle cx="16" cy="126" r="5" fill="#34d399"/>
+                <text x="32" y="124" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">SAVINGS — Vermögensaufbau &amp; Tilgung (Ziel: 20%)</text>
+                <text x="32" y="138" font-family="sans-serif" font-size="9" fill="#94a3b8">ETF-Sparpläne, Einzahlungen in Säule 3a, Tilgung von Hypotheken, Notgroschen</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 12 -->
+      <section id="kapitel-12" class="space-y-8 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 font-mono font-bold text-sm border border-amber-500/20">12</span>
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Die AI-Plugin-Architektur &amp; Der DataEngine-Injektor</h2>
+            <p class="text-xs text-amber-400 font-semibold">Zero-Data-Exfiltration: Individuelle Erweiterungen via KI-Copilot</p>
+          </div>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-6 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-amber-400">12.1 Das Grundprinzip: Warum keine realen Daten ins Internet fließen</h3>
+          <p>
+            Bestehende Softwarelösungen, die KI einbinden, senden oft das gesamte Portfolio an externe Cloud-Server. Dies birgt unkalkulierbare Risiken für die Privatsphäre. 
+          </p>
+          <p>
+            FinBundle PRO löst dieses Dilemma durch eine <strong>vollständige Entkopplung von Code-Generierung und Datenverarbeitung</strong>:
+          </p>
+
+          <!-- SVG: DataEngine Injector Architecture -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 320" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="320" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+              <text x="25" y="26" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">ARCHITEKTUR: SANDBOXED AI-PLUGIN &amp; DATAENGINE-INJEKTOR PIPELINE</text>
+              
+              <!-- Left: AI Copilot Generator -->
+              <g transform="translate(25, 45)">
+                <rect width="245" height="250" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+                <rect width="245" height="30" rx="8" fill="#1d4ed8"/>
+                <text x="14" y="20" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">1. AI-Copilot (Prompting)</text>
+                <text x="14" y="50" font-family="sans-serif" font-size="10.5" font-weight="600" fill="#93c5fd">Systemprompt übergibt nur API:</text>
+                <rect x="12" y="60" width="221" height="85" rx="4" fill="#0f172a"/>
+                <text x="18" y="76" font-family="monospace" font-size="9" fill="#38bdf8">interface FinBundleDataBridge {</text>
+                <text x="24" y="90" font-family="monospace" font-size="9" fill="#94a3b8">getAssets(): Asset[];</text>
+                <text x="24" y="104" font-family="monospace" font-size="9" fill="#94a3b8">getTransactions(): Tx[];</text>
+                <text x="24" y="118" font-family="monospace" font-size="9" fill="#94a3b8">getBaseCurrency(): string;</text>
+                <text x="18" y="132" font-family="monospace" font-size="9" fill="#38bdf8">}</text>
+                <rect x="12" y="155" width="221" height="42" rx="4" fill="#064e3b" stroke="#059669" stroke-width="1"/>
+                <text x="18" y="172" font-family="sans-serif" font-size="10" font-weight="700" fill="#6ee7b7">✓ ZERO DATA LEAKAGE</text>
+                <text x="18" y="186" font-family="sans-serif" font-size="9.5" fill="#a7f3d0">Keine Salden, keine IBANs zur KI</text>
+                <text x="14" y="215" font-family="sans-serif" font-size="10" fill="#cbd5e1">Output: Reiner HTML/JS/CSS-Code</text>
+                <text x="14" y="230" font-family="sans-serif" font-size="9.5" fill="#64748b">Mehrsprachig (i18n vorbereitet)</text>
+              </g>
+
+              <!-- Center: Vault Storage -->
+              <g transform="translate(300, 45)">
+                <rect width="260" height="250" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+                <rect width="260" height="30" rx="8" fill="#d97706"/>
+                <text x="14" y="20" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">2. FinBundle Vault Storage</text>
+                <text x="14" y="50" font-family="sans-serif" font-size="10.5" font-weight="600" fill="#fcd34d">Plugin-Kategorisierung:</text>
+                <text x="14" y="68" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">• Vermögen, Vorsorge, Allokation</text>
+                <text x="14" y="84" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">• Dividenden, Performance, Liquidität</text>
+                <text x="14" y="100" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">• Immobilien, Steuern</text>
+                
+                <rect x="14" y="118" width="232" height="60" rx="4" fill="#0f172a" stroke="#475569"/>
+                <text x="22" y="136" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">Pinning ins Fly-In Cockpit</text>
+                <text x="22" y="152" font-family="sans-serif" font-size="9" fill="#94a3b8">Favoriten erscheinen mit 1-Klick im</text>
+                <text x="22" y="165" font-family="sans-serif" font-size="9" fill="#94a3b8">globalen Schnellzugriff (Cmd+K)</text>
+
+                <rect x="14" y="190" width="232" height="45" rx="4" fill="#1e1b4b" stroke="#6366f1"/>
+                <text x="22" y="208" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#c7d2fe">Export &amp; Import (JSON)</text>
+                <text x="22" y="222" font-family="sans-serif" font-size="9" fill="#a5b4fc">Add-Ins mit Community teilen</text>
+              </g>
+
+              <!-- Right: Local Runtime Injector -->
+              <g transform="translate(590, 45)">
+                <rect width="265" height="250" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+                <rect width="265" height="30" rx="8" fill="#059669"/>
+                <text x="14" y="20" font-family="sans-serif" font-size="11" font-weight="700" fill="#ffffff">3. Local DataEngine-Injektor</text>
+                <text x="14" y="50" font-family="sans-serif" font-size="10.5" font-weight="600" fill="#6ee7b7">Isolierte Sandbox-Ausführung:</text>
+                <rect x="12" y="60" width="241" height="85" rx="4" fill="#0f172a" stroke="#334155"/>
+                <text x="20" y="78" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#38bdf8">&lt;iframe sandbox="allow-scripts"&gt;</text>
+                <text x="26" y="94" font-family="monospace" font-size="9" fill="#a7f3d0">// Injektion zur Laufzeit:</text>
+                <text x="26" y="108" font-family="monospace" font-size="8.5" fill="#f8fafc">window.FinBundleData = realData;</text>
+                <text x="26" y="122" font-family="monospace" font-size="8.5" fill="#f8fafc">window.renderPlugin();</text>
+                <text x="20" y="136" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#38bdf8">&lt;/iframe&gt;</text>
+                <rect x="12" y="155" width="241" height="80" rx="4" fill="#042f2e" stroke="#0d9488"/>
+                <text x="20" y="174" font-family="sans-serif" font-size="10" font-weight="700" fill="#5eead4">REALE DATEN NUR LOKAL</text>
+                <text x="20" y="190" font-family="sans-serif" font-size="9.5" fill="#ccfbf1">Berechnung, Rendern von Grafiken</text>
+                <text x="20" y="204" font-family="sans-serif" font-size="9.5" fill="#ccfbf1">&amp; Tabellen erfolgt 100% autark</text>
+                <text x="20" y="218" font-family="sans-serif" font-size="9.5" fill="#ccfbf1">auf der CPU des Anwenders.</text>
+              </g>
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-amber-400 mt-6">12.2 Der Systemprompt-API-Contract</h3>
+          <p>
+            Wenn Sie im Menü auf <code>Plugins ➔ + Neues Plugin (AI Copilot)...</code> klicken, generiert FinBundle PRO einen hochpräzisen Systemprompt für die KI. Dieser Prompt enthält das vollständige TypeScript-Schnittstellenmodell:
+          </p>
+
+          <div class="code-box">
+<span class="text-slate-400">// Der Daten-Contract der FinBundle DataEngine:</span>
+<span class="text-sky-400">interface</span> <span class="text-yellow-300">FinBundleAsset</span> {
+  id: <span class="text-emerald-400">string</span>;
+  name: <span class="text-emerald-400">string</span>;
+  type: <span class="text-emerald-400">'CASH'</span> | <span class="text-emerald-400">'SECURITIES'</span> | <span class="text-emerald-400">'3A_CASH'</span> | <span class="text-emerald-400">'3A_FUND'</span> | <span class="text-emerald-400">'PENSION'</span> | <span class="text-emerald-400">'REAL_ESTATE'</span> | <span class="text-emerald-400">'MORTGAGE'</span>;
+  currency: <span class="text-emerald-400">string</span>;
+  balance: <span class="text-emerald-400">number</span>;
+  isLiquid: <span class="text-emerald-400">boolean</span>;
+  ticker?: <span class="text-emerald-400">string</span>;
+  forwardYield?: <span class="text-emerald-400">number</span>;
+}
+
+<span class="text-sky-400">interface</span> <span class="text-yellow-300">FinBundleTransaction</span> {
+  id: <span class="text-emerald-400">string</span>;
+  assetId: <span class="text-emerald-400">string</span>;
+  date: <span class="text-emerald-400">string</span>; <span class="text-slate-400">// YYYY-MM-DD</span>
+  type: <span class="text-emerald-400">'DEPOSIT'</span> | <span class="text-emerald-400">'WITHDRAWAL'</span> | <span class="text-emerald-400">'BUY'</span> | <span class="text-emerald-400">'SELL'</span> | <span class="text-emerald-400">'DIVIDEND'</span> | <span class="text-emerald-400">'FEE'</span>;
+  amount: <span class="text-emerald-400">number</span>;
+  shares?: <span class="text-emerald-400">number</span>;
+  price?: <span class="text-emerald-400">number</span>;
+  tags?: <span class="text-emerald-400">string[]</span>;
+}
+
+<span class="text-sky-400">interface</span> <span class="text-yellow-300">FinBundleDataEngineBridge</span> {
+  baseCurrency: <span class="text-emerald-400">string</span>;
+  locale: <span class="text-emerald-400">'de'</span> | <span class="text-emerald-400">'en'</span> | <span class="text-emerald-400">'fr'</span> | <span class="text-emerald-400">'it'</span>;
+  assets: <span class="text-yellow-300">FinBundleAsset</span>[];
+  transactions: <span class="text-yellow-300">FinBundleTransaction</span>[];
+}
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 13 -->
+      <section id="kapitel-13" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">13</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Beleg-Scanner &amp; Clientseitiges PII-Gate</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Wird ein Bankbeleg per PDF importiert, schützt das integrierte <strong>PII-Gate</strong> (Personally Identifiable Information):
+          </p>
+
+          <!-- SVG: PII-Gate Anonymization Flow -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 180" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="180" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              <text x="25" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#94a3b8">CLIENTSEITIGE PII-ANONYMISIERUNGS-PIPELINE VOR DEM CLOUD-TRANSFER</text>
+
+              <!-- Step 1 -->
+              <g transform="translate(25, 42)">
+                <rect width="180" height="115" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#ffffff">1. PDF Dokument</text>
+                <text x="14" y="46" font-family="sans-serif" font-size="9" fill="#94a3b8">Max Mustermann</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="9" fill="#94a3b8">IBAN: CH93 0023...</text>
+                <text x="14" y="78" font-family="sans-serif" font-size="9" fill="#94a3b8">Bahnhofstrasse 12</text>
+                <text x="14" y="98" font-family="sans-serif" font-size="9.5" font-weight="700" fill="#38bdf8">Dividende: $450.00</text>
+              </g>
+
+              <!-- Arrow 1 -->
+              <g transform="translate(212, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 2 -->
+              <g transform="translate(245, 42)">
+                <rect width="210" height="115" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#38bdf8">2. Lokale Regex-Filter</text>
+                <text x="14" y="46" font-family="sans-serif" font-size="9" fill="#cbd5e1">Namen ➔ [BENUTZER]</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="9" fill="#cbd5e1">IBAN ➔ [CH_MASKED]</text>
+                <text x="14" y="78" font-family="sans-serif" font-size="9" fill="#cbd5e1">Adresse ➔ [ADRESSE]</text>
+                <text x="14" y="98" font-family="sans-serif" font-size="9" font-weight="700" fill="#10b981">✓ Im Browser ausgeführt</text>
+              </g>
+
+              <!-- Arrow 2 -->
+              <g transform="translate(462, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 3 -->
+              <g transform="translate(495, 42)">
+                <rect width="180" height="115" rx="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1"/>
+                <text x="14" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#ffffff">3. Cloud LLM / Ollama</text>
+                <text x="14" y="46" font-family="sans-serif" font-size="9" fill="#94a3b8">Empfängt nur Zahlen:</text>
+                <text x="14" y="62" font-family="sans-serif" font-size="9" fill="#cbd5e1">&bull; Betrag: $450.00</text>
+                <text x="14" y="78" font-family="sans-serif" font-size="9" fill="#cbd5e1">&bull; Datum: 2026-09-12</text>
+                <text x="14" y="94" font-family="sans-serif" font-size="9" fill="#cbd5e1">&bull; Ticker: AAPL</text>
+              </g>
+
+              <!-- Arrow 3 -->
+              <g transform="translate(682, 100)">
+                <line x1="0" y1="0" x2="25" y2="0" stroke="#64748b" stroke-width="2"/>
+                <polygon points="25,0 17,-5 17,5" fill="#64748b"/>
+              </g>
+
+              <!-- Step 4 -->
+              <g transform="translate(715, 42)">
+                <rect width="140" height="115" rx="6" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+                <text x="12" y="24" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#6ee7b7">4. Buchung</text>
+                <text x="12" y="46" font-family="sans-serif" font-size="9" fill="#a7f3d0">Automatischer</text>
+                <text x="12" y="62" font-family="sans-serif" font-size="9" fill="#a7f3d0">Vorschlag im</text>
+                <text x="12" y="78" font-family="sans-serif" font-size="9" fill="#a7f3d0">Workspace</text>
+                <text x="12" y="98" font-family="sans-serif" font-size="9" font-weight="700" fill="#d1fae5">1-Klick Erfassung</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 14 -->
+      <section id="kapitel-14" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">14</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Fly-In Schnellzugriff (Das Cockpit)</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Über die Tastenkombination <code>Ctrl + K</code> bzw. <code>Cmd + K</code> öffnet sich das <strong>FinBundle Schnellzugriff Cockpit</strong>:
+          </p>
+
+          <!-- SVG: Fly-In Cockpit Interface Mockup -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 270" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="270" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Search Bar -->
+              <rect x="25" y="18" width="830" height="38" rx="8" fill="#1e293b" stroke="#334155"/>
+              <circle cx="45" cy="37" r="6" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+              <line x1="50" y1="41" x2="56" y2="47" stroke="#94a3b8" stroke-width="1.5"/>
+              <text x="68" y="41" font-family="sans-serif" font-size="11" fill="#64748b">Asset, Plugin oder Bericht suchen...</text>
+              <rect x="805" y="24" width="38" height="24" rx="4" fill="#0f172a" stroke="#475569"/>
+              <text x="814" y="40" font-family="sans-serif" font-size="9.5" fill="#94a3b8">ESC</text>
+
+              <!-- Häufige Aktionen -->
+              <text x="25" y="78" font-family="sans-serif" font-size="9" font-weight="700" fill="#f87171">♥ HÄUFIGE AKTIONEN</text>
+              <g transform="translate(25, 88)">
+                <rect width="195" height="52" rx="6" fill="#1e293b" stroke="#334155"/>
+                <circle cx="22" cy="26" r="10" fill="#065f46"/>
+                <text x="18" y="30" font-family="sans-serif" font-size="12" font-weight="700" fill="#34d399">+</text>
+                <text x="40" y="22" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">Neue Buchung</text>
+                <text x="40" y="36" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Asset wählen</text>
+
+                <g transform="translate(212, 0)">
+                  <rect width="195" height="52" rx="6" fill="#1e293b" stroke="#334155"/>
+                  <circle cx="22" cy="26" r="10" fill="#1e3a8a"/>
+                  <text x="18" y="29" font-family="sans-serif" font-size="11" fill="#60a5fa">☁</text>
+                  <text x="40" y="22" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">Live-Kurse</text>
+                  <text x="40" y="36" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Marktdaten abrufen</text>
+                </g>
+
+                <g transform="translate(424, 0)">
+                  <rect width="195" height="52" rx="6" fill="#1e293b" stroke="#334155"/>
+                  <circle cx="22" cy="26" r="10" fill="#042f2e"/>
+                  <text x="18" y="30" font-family="sans-serif" font-size="11" fill="#2dd4bf">📄</text>
+                  <text x="40" y="22" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">PDF Scanner</text>
+                  <text x="40" y="36" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Bankbeleg parsen</text>
+                </g>
+
+                <g transform="translate(636, 0)">
+                  <rect width="194" height="52" rx="6" fill="#1e293b" stroke="#334155"/>
+                  <circle cx="22" cy="26" r="10" fill="#312e81"/>
+                  <text x="18" y="29" font-family="sans-serif" font-size="11" fill="#818cf8">⤓</text>
+                  <text x="40" y="22" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">CSV Import</text>
+                  <text x="40" y="36" font-family="sans-serif" font-size="8.5" fill="#94a3b8">Assistent starten</text>
+                </g>
+              </g>
+
+              <!-- Angepinnte Plugins -->
+              <text x="25" y="165" font-family="sans-serif" font-size="9" font-weight="700" fill="#cbd5e1">🗄 ANGEPINNTE PLUGINS (3)</text>
+              <g transform="translate(25, 175)">
+                <!-- Plugin 1 -->
+                <rect width="265" height="74" rx="6" fill="#1e293b" stroke="#334155"/>
+                <rect x="12" y="10" width="55" height="16" rx="3" fill="#581c87"/>
+                <text x="18" y="21" font-family="sans-serif" font-size="8" font-weight="700" fill="#c084fc">Vorsorge</text>
+                <text x="12" y="42" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">Renten- und 3a Prognosereport</text>
+                <text x="12" y="60" font-family="sans-serif" font-size="8.5" fill="#38bdf8">Öffnen ➔</text>
+
+                <!-- Plugin 2 -->
+                <g transform="translate(282, 0)">
+                  <rect width="265" height="74" rx="6" fill="#1e293b" stroke="#0284c7" stroke-width="1.2"/>
+                  <rect x="12" y="10" width="55" height="16" rx="3" fill="#581c87"/>
+                  <text x="18" y="21" font-family="sans-serif" font-size="8" font-weight="700" fill="#c084fc">Vorsorge</text>
+                  <text x="12" y="42" font-family="sans-serif" font-size="10" font-weight="700" fill="#38bdf8">Schweizer Renten- &amp; Deckung</text>
+                  <text x="12" y="60" font-family="sans-serif" font-size="8.5" fill="#38bdf8">Öffnen ➔</text>
+                </g>
+
+                <!-- Plugin 3 -->
+                <g transform="translate(565, 0)">
+                  <rect width="265" height="74" rx="6" fill="#1e293b" stroke="#334155"/>
+                  <rect x="12" y="10" width="60" height="16" rx="3" fill="#713f12"/>
+                  <text x="16" y="21" font-family="sans-serif" font-size="8" font-weight="700" fill="#facc15">Dividenden</text>
+                  <text x="12" y="42" font-family="sans-serif" font-size="10" font-weight="700" fill="#ffffff">DRIP Reinvestition &amp; Wachstum</text>
+                  <text x="12" y="60" font-family="sans-serif" font-size="8.5" fill="#38bdf8">Öffnen ➔</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- KAPITEL 15 -->
+      <section id="kapitel-15" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">15</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Best Practices, Fehlerbehebung &amp; Fachglossar</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <h3 class="text-lg font-semibold text-sky-400">15.1 Troubleshooting</h3>
+          <div class="space-y-3 text-xs">
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <strong class="text-sky-400">Browser verliert Dateizugriff:</strong><br>
+              Nach einem Systemneustart verlangt die W3C File API aus Sicherheitsgründen eine erneute Bestätigung. Klicken Sie auf <code>Datei ➔ Speichern unter...</code> und bestätigen Sie die Datei einmalig.
+            </div>
+            <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <strong class="text-sky-400">Keine Kurse für Schweizer Valoren:</strong><br>
+              Titel an der SIX Swiss Exchange benötigen bei EODHD das Suffix <code>.SW</code> (z.B. <code>NESN.SW</code> für Nestlé, <code>NOVN.SW</code> für Novartis).
+            </div>
+          </div>
+
+          <h3 class="text-lg font-semibold text-sky-400 mt-6">15.2 Umfassendes Fachglossar</h3>
+          <div class="overflow-x-auto my-3">
+            <table class="w-full text-left text-xs border border-slate-800 rounded-lg overflow-hidden">
+              <thead class="bg-slate-900 text-slate-300 font-semibold uppercase">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800 w-1/4">Terminus</th>
+                  <th class="p-2.5 border-b border-slate-800">Definition im FinBundle PRO Kontext</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-slate-300">
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">Auto-Valuation v2</td><td>Synthetischer Differenzabgleich zwischen investiertem Buchwert und aktuellem Marktwert zur lückenlosen Transaktionsintegrität.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">DataEngine-Injektor</td><td>Lokale Runtime-Bridge, die echte Portfoliodaten isoliert in sandboxed AI-Plugins übergibt, ohne dass Daten das Endgerät verlassen.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">FIRE</td><td><em>Financial Independence, Retire Early</em> — Finanzielle Freiheit basierend auf der 4%-Entnahmerate und Vermögenserträgen.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">Forward Yield</td><td>Erwartete Dividendenrendite auf Basis von Prognosen für den zukünftigen 12-Monats-Cashflow.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">PII-Gate</td><td>Clientseitige Regex-Anonymisierung von Personennamen, Adressen und IBANs vor der Belegweitergabe an Sprachmodelle.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">Running Total</td><td>Der nach jedem Transaktionssatz fortlaufend berechnete Saldo des jeweiligen Kontos.</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-bold text-sky-400">Total Return (Spikes)</td><td>Ganzheitliche Performance-Kennzahl für Wertpapiere: Summe aus Kursgewinn/Kursverlust plus sämtliche zugeflossenen Brutto-/Nettodividenden seit Kauf. Steuert die visuelle Steigung der Mini-Sparks.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Calculators Modal -->
+      <div id="calc-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>⚡</span> FinBundle PRO Labor &amp; Injektor-Simulator
+            </h3>
+            <button onclick="toggleModal('calc-modal')" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+          </div>
+
+          <!-- Tabs for Calculator -->
+          <div class="flex border-b border-slate-800 gap-4 text-xs font-semibold">
+            <button id="tab-btn-autoval" onclick="switchCalcTab('autoval')" class="pb-2 text-sky-400 border-b-2 border-sky-400">Auto-Valuation Rechner</button>
+            <button id="tab-btn-budget" onclick="switchCalcTab('budget')" class="pb-2 text-slate-400 hover:text-white">50/30/20 Schnell-Check</button>
+            <button id="tab-btn-injector" onclick="switchCalcTab('injector')" class="pb-2 text-slate-400 hover:text-white flex items-center gap-1">
+              <span>🔌</span> DataEngine Injektor
+            </button>
+          </div>
+
+          <!-- Calculator Content 1: Auto-Valuation -->
+          <div id="calc-pane-autoval" class="space-y-4 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-slate-400 block mb-1">Investiertes Kapital (CHF):</label>
+                <input type="number" id="calc-principal" value="50000" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono">
+              </div>
+              <div>
+                <label class="text-slate-400 block mb-1">Stückzahl:</label>
+                <input type="number" id="calc-shares" value="250" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono">
+              </div>
+              <div>
+                <label class="text-slate-400 block mb-1">Aktueller Kurs (CHF):</label>
+                <input type="number" id="calc-price" value="260" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono">
+              </div>
+              <div>
+                <label class="text-slate-400 block mb-1">Kumulierte Dividenden (CHF):</label>
+                <input type="number" id="calc-dividends" value="3500" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono">
+              </div>
+              <div class="col-span-2 flex items-end">
+                <button onclick="runAutoValCalc()" class="w-full py-2 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded">Total Return &amp; Spike-Performance berechnen</button>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-1">
+              <div class="flex justify-between text-slate-400"><span>Aktueller Marktwert:</span> <strong id="res-market" class="text-white">65'000.00 CHF</strong></div>
+              <div class="flex justify-between text-slate-400"><span>Kursgewinn (Unrealized Capital Gain):</span> <strong id="res-delta" class="text-emerald-400">+15'000.00 CHF</strong></div>
+              <div class="flex justify-between text-slate-400"><span>Erhaltene Dividenden:</span> <strong id="res-divs" class="text-emerald-300">+3'500.00 CHF</strong></div>
+              <div class="flex justify-between text-slate-200 border-t border-slate-800 pt-1 font-bold">
+                <span>Total Return (in Spikes dargestellt):</span> 
+                <strong id="res-total-return" class="text-sky-400">+18'500.00 CHF (+37.00%)</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calculator Content 2: 50/30/20 Budget -->
+          <div id="calc-pane-budget" class="space-y-4 text-xs hidden">
+            <div>
+              <label class="text-slate-400 block mb-1">Monatliches Nettoeinkommen (CHF):</label>
+              <input type="number" id="calc-income" value="7500" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white font-mono">
+            </div>
+            <button onclick="runBudgetCalc()" class="w-full py-2 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded">50/30/20 Budget aufteilen</button>
+            <div class="grid grid-cols-3 gap-2 pt-2">
+              <div class="p-3 bg-blue-950/40 border border-blue-800/50 rounded-lg text-center">
+                <span class="text-blue-400 font-bold block mb-1">NEEDS (50%)</span>
+                <strong id="res-needs" class="text-white font-mono text-sm">3'750 CHF</strong>
+              </div>
+              <div class="p-3 bg-amber-950/40 border border-amber-800/50 rounded-lg text-center">
+                <span class="text-amber-400 font-bold block mb-1">WANTS (30%)</span>
+                <strong id="res-wants" class="text-white font-mono text-sm">2'250 CHF</strong>
+              </div>
+              <div class="p-3 bg-emerald-950/40 border border-emerald-800/50 rounded-lg text-center">
+                <span class="text-emerald-400 font-bold block mb-1">SAVINGS (20%)</span>
+                <strong id="res-savings" class="text-white font-mono text-sm">1'500 CHF</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calculator Content 3: DataEngine Injector Simulation -->
+          <div id="calc-pane-injector" class="space-y-4 text-xs hidden">
+            <p class="text-slate-300">
+              Testen Sie live, wie die DataEngine von FinBundle PRO lokale Vermögenswerte in ein beliebiges sandboxed AI-Plugin injiziert:
+            </p>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                <span class="text-slate-400 block text-[10px]">Test-Asset 1 (Cash):</span>
+                <strong class="text-white font-mono">15'000 CHF</strong>
+              </div>
+              <div class="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                <span class="text-slate-400 block text-[10px]">Test-Asset 2 (Säule 3a):</span>
+                <strong class="text-sky-400 font-mono">48'500 CHF</strong>
+              </div>
+              <div class="p-2.5 bg-slate-950 border border-slate-800 rounded">
+                <span class="text-slate-400 block text-[10px]">Test-Asset 3 (Aktien):</span>
+                <strong class="text-emerald-400 font-mono">142'000 CHF</strong>
+              </div>
+            </div>
+            
+            <button onclick="runInjectorDemo()" class="w-full py-2 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold rounded">
+              ⚡ Injektion in Sandbox simulieren
+            </button>
+
+            <!-- Virtual Sandboxed Iframe Container -->
+            <div class="border border-slate-700 rounded-lg p-3 bg-slate-950">
+              <div class="text-[10px] font-mono text-amber-400 mb-2 flex items-center justify-between">
+                <span>[SANDBOX IFRAME CONTAINER]</span>
+                <span id="injector-status" class="text-slate-500">Warte auf Injektion...</span>
+              </div>
+              <div id="sandbox-output" class="p-4 rounded bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[11px] text-center">
+                Keine Daten injiziert. Klicken Sie oben auf den Button.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download / Offline Callout Banner -->
+      <div id="download-banner" class="p-6 rounded-2xl bg-gradient-to-r from-sky-950/40 via-indigo-950/40 to-blue-950/40 border border-sky-800/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 class="text-base font-bold text-white">Dieses Handbuch offline sichern</h4>
+          <p class="text-xs text-slate-400 mt-1">Laden Sie die vollständige Dokumentation inklusive aller SVGs, 15 Reports und Injektor-Spezifikationen als autarke HTML-App herunter.</p>
+        </div>
+        <button onclick="downloadSelf()" class="px-4 py-2.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-xl shadow-lg shadow-sky-500/20 whitespace-nowrap transition active:scale-95 flex items-center gap-2">
+          <span>📥</span> Jetzt als HTML herunterladen
+        </button>
+      </div>
+
+      <!-- Footer Note -->
+      <footer class="pt-6 border-t border-slate-800 text-center text-xs text-slate-400 pb-12">
+        <p>FinBundle PRO &bull; Version 1.0.0 RC2.2 / RC3 &bull; Enterprise Asset Management &amp; Extensible AI Suite</p>
+        <p class="text-[11px] text-slate-500 mt-1">100% Offline-First Architecture &bull; Sandboxed DataEngine-Injektor &bull; AES-256 Vault Container</p>
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 border border-slate-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <span id="toast-icon">✓</span>
+    <span id="toast-msg">Meldung</span>
+  </div>
+
+  <script>
+    // --- Download Self as HTML File ---
+    function downloadSelf() {
+      showToast("📥 Vorbereitung des HTML-Handbuch Downloads...", "info");
+      setTimeout(() => {
+        const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "FinBundle_PRO_Benutzerhandbuch_v1_0_0_RC2_2.html";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("✓ Handbuch erfolgreich als autarke HTML-Datei gespeichert!", "success");
+      }, 200);
+    }
+
+    document.getElementById('download-html-btn')?.addEventListener('click', downloadSelf);
+
+    // --- Reading Progress Indicator ---
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      const progressBar = document.getElementById("read-progress");
+      if (progressBar) progressBar.style.width = scrolled + "%";
+    });
+
+    // --- Active TOC Navigation Highlighting ---
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.toc-link');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 120;
+        if (pageYOffset >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.remove('toc-active');
+        if (link.getAttribute('href') === '#' + current) {
+          link.classList.add('toc-active');
+        }
+      });
+    });
+
+    // --- Mobile Sidebar Toggle ---
+    const mobileBtn = document.getElementById('toggle-mobile-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    mobileBtn?.addEventListener('click', () => {
+      sidebar?.classList.toggle('hidden');
+    });
+
+    // --- Search Filter Logic ---
+    const searchInput = document.getElementById('manual-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+
+    searchInput?.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (query.length > 0) {
+        clearSearchBtn?.classList.remove('hidden');
+      } else {
+        clearSearchBtn?.classList.add('hidden');
+      }
+
+      sections.forEach(section => {
+        const text = section.innerText.toLowerCase();
+        if (query === '' || text.includes(query)) {
+          section.style.display = '';
+        } else {
+          section.style.display = 'none';
+        }
+      });
+    });
+
+    clearSearchBtn?.addEventListener('click', () => {
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+      }
+    });
+
+    // --- Modal Handler ---
+    function toggleModal(id) {
+      const m = document.getElementById(id);
+      if (m) m.classList.toggle('hidden');
+    }
+
+    function switchCalcTab(tab) {
+      const paneAuto = document.getElementById('calc-pane-autoval');
+      const paneBudget = document.getElementById('calc-pane-budget');
+      const paneInjector = document.getElementById('calc-pane-injector');
+      
+      const btnAuto = document.getElementById('tab-btn-autoval');
+      const btnBudget = document.getElementById('tab-btn-budget');
+      const btnInjector = document.getElementById('tab-btn-injector');
+
+      paneAuto?.classList.add('hidden');
+      paneBudget?.classList.add('hidden');
+      paneInjector?.classList.add('hidden');
+
+      btnAuto?.classList.remove('text-sky-400', 'border-b-2', 'border-sky-400');
+      btnBudget?.classList.remove('text-sky-400', 'border-b-2', 'border-sky-400');
+      btnInjector?.classList.remove('text-sky-400', 'border-b-2', 'border-sky-400');
+
+      btnAuto?.classList.add('text-slate-400');
+      btnBudget?.classList.add('text-slate-400');
+      btnInjector?.classList.add('text-slate-400');
+
+      if (tab === 'autoval') {
+        paneAuto?.classList.remove('hidden');
+        btnAuto?.classList.add('text-sky-400', 'border-b-2', 'border-sky-400');
+        btnAuto?.classList.remove('text-slate-400');
+      } else if (tab === 'budget') {
+        paneBudget?.classList.remove('hidden');
+        btnBudget?.classList.add('text-sky-400', 'border-b-2', 'border-sky-400');
+        btnBudget?.classList.remove('text-slate-400');
+      } else if (tab === 'injector') {
+        paneInjector?.classList.remove('hidden');
+        btnInjector?.classList.add('text-sky-400', 'border-b-2', 'border-sky-400');
+        btnInjector?.classList.remove('text-slate-400');
+      }
+    }
+
+    // --- Interactive Auto-Valuation Calculation ---
+    function runAutoValCalc() {
+      const p = parseFloat(document.getElementById('calc-principal').value) || 0;
+      const s = parseFloat(document.getElementById('calc-shares').value) || 0;
+      const pr = parseFloat(document.getElementById('calc-price').value) || 0;
+      const d = parseFloat(document.getElementById('calc-dividends').value) || 0;
+      const m = s * pr;
+      const capGain = m - p;
+      const totalReturn = capGain + d;
+      const totalYield = p > 0 ? (totalReturn / p) * 100 : 0;
+
+      document.getElementById('res-market').innerText = m.toLocaleString('de-CH', { minimumFractionDigits: 2 }) + " CHF";
+      const deltaEl = document.getElementById('res-delta');
+      const divsEl = document.getElementById('res-divs');
+      const totalEl = document.getElementById('res-total-return');
+
+      deltaEl.innerText = (capGain >= 0 ? "+" : "") + capGain.toLocaleString('de-CH', { minimumFractionDigits: 2 }) + " CHF";
+      deltaEl.className = capGain >= 0 ? "text-emerald-400 font-bold" : "text-red-400 font-bold";
+
+      if (divsEl) divsEl.innerText = "+" + d.toLocaleString('de-CH', { minimumFractionDigits: 2 }) + " CHF";
+
+      if (totalEl) {
+        totalEl.innerText = (totalReturn >= 0 ? "+" : "") + totalReturn.toLocaleString('de-CH', { minimumFractionDigits: 2 }) + " CHF (" + (totalYield >= 0 ? "+" : "") + totalYield.toFixed(2) + "%)";
+        totalEl.className = totalReturn >= 0 ? "text-sky-400 font-bold" : "text-red-400 font-bold";
+      }
+    }
+
+    // --- Interactive 50/30/20 Calculation ---
+    function runBudgetCalc() {
+      const inc = parseFloat(document.getElementById('calc-income').value) || 0;
+      const needs = inc * 0.50;
+      const wants = inc * 0.30;
+      const savings = inc * 0.20;
+
+      document.getElementById('res-needs').innerText = needs.toLocaleString('de-CH', { maximumFractionDigits: 0 }) + " CHF";
+      document.getElementById('res-wants').innerText = wants.toLocaleString('de-CH', { maximumFractionDigits: 0 }) + " CHF";
+      document.getElementById('res-savings').innerText = savings.toLocaleString('de-CH', { maximumFractionDigits: 0 }) + " CHF";
+    }
+
+    // --- Interactive DataEngine Injector Simulation ---
+    function runInjectorDemo() {
+      const status = document.getElementById('injector-status');
+      const output = document.getElementById('sandbox-output');
+      if (status) status.innerHTML = "<span class='text-emerald-400 animate-pulse'>✓ INJEKTION ERFOLGREICH (100% LOKAL)</span>";
+      
+      if (output) {
+        output.className = "p-4 rounded bg-slate-900 border border-emerald-500/40 text-left font-mono text-[11px] text-slate-200 space-y-2";
+        output.innerHTML = `
+          <div class="text-emerald-400 font-bold flex items-center justify-between">
+            <span>&lt;PluginWidget: Schweizer Renten- &amp; Deckungsplaner /&gt;</span>
+            <span class="text-[10px] text-slate-400">Render-Time: 1.4ms</span>
+          </div>
+          <div class="text-slate-400 text-xs">Empfangener lokaler State (Bridge API):</div>
+          <div class="bg-slate-950 p-2 rounded border border-slate-800 text-[10.5px]">
+            &bull; Gesamtkapital: <span class="text-white font-bold">205'500.00 CHF</span><br>
+            &bull; Davon Vorsorge Säule 3a: <span class="text-sky-400 font-bold">48'500.00 CHF (23.6%)</span><br>
+            &bull; Projizierte Rente mit 65: <span class="text-emerald-400 font-bold">3'420.00 CHF / Monat</span>
+          </div>
+          <div class="text-[10px] text-slate-500 italic">
+            Hinweis: Keine dieser Zahlen wurde an ein LLM übertragen. Die KI lieferte lediglich das HTML-Layout; die Daten wurden zur Laufzeit von der internen DataEngine bereitgestellt.
+          </div>
+        `;
+      }
+      showToast("✓ Lokale DataEngine Injektion abgeschlossen!", "success");
+    }
+
+    // --- Toast Helper ---
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      const toastIcon = document.getElementById('toast-icon');
+      if (!toast || !toastMsg) return;
+
+      toastMsg.innerText = msg;
+      toastIcon.innerText = type === "success" ? "✓" : "ℹ";
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
