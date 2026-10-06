@@ -1,0 +1,174 @@
+# 🏔️ FinBundle Pro
+
+**FinBundle Pro** ist eine moderne, hochgradig interaktive Single Page Application (SPA) zur ganzheitlichen Überwachung und Planung von privaten Vermögenswerten, Wertpapieren, Immobilien, Vorsorge und Budgetflüssen. 
+
+Im Gegensatz zu klassischen SaaS-Lösungen setzt FinBundle Pro konsequent auf **Privacy-First** und lokale Datenkontrolle. Es gibt keine Cloud-Anbindung, keinen Login-Zwang und keine Backend-Datenbank. Die App ist 100% offline-fähig und bietet dennoch die Funktionalität professioneller Portfolio-Tracker.
+
+---
+
+## ✨ Kernfunktionen im Detail
+
+### ⚡ Interaktives Schnellzugriff-Cockpit (Fly-In & Command Center)
+Das integrierte Schnellzugriff-Panel dient als zentraler Produktivitäts-Hub und lässt sich jederzeit über den rechten Bildschirmrand oder den globalen Shortcut (`Strg + K` bzw. `Cmd + K`) aufrufen:
+*   **Spotlight-Command-Bar:** Echtzeit-Filterung über das gesamte Portfolio – findet blitzschnell Konten, Depots, Standardberichte oder interaktive Add-Ins.
+*   **Zuletzt geöffnete Assets:** Direktsprung zu den bevorzugten Konten und Depots inklusive Live-Saldo-Anzeige.
+*   **Intelligenter Asset-Guard:** Schützt vor Fehlbedienungen bei der Buchungserfassung, indem kontextbezogen geprüft wird, ob ein konkretes Asset aktiv ist.
+*   **Direkt-Aktionen:** Ein-Klick-Trigger für PDF-Beleg-Scanner, CSV-Importassistenten, Marktdaten-Synchronisation und den KI-Copilot.
+
+### 📈 Umfassendes Report-Ökosystem (Bestands-, Bewegungs- & Zukunftsreports)
+FinBundle Pro bietet eine breite Palette an nativen Analysen, strukturiert in drei klare Kategorien:
+
+#### 🏛️ Bestandsreports
+*   **Banken & Kategorien:** Konsolidierte Strukturübersicht aller Konten, Depots und Anlageklassen in einer hierarchischen Baumansicht.
+*   **Allokation nach Banken:** Detaillierte prozentuale Verteilung des Vermögens über verschiedene Finanzinstitute und Halteorte.
+*   **Liquiditätsrisiko:** Überwachung frei verfügbarer Mittel versus kurzfristiger Verpflichtungen.
+*   **Historischer Verlauf:** Langfristige Vermögensentwicklung über wählbare Zeiträume inkl. MoM-Veränderungen und All-Time-High (Peak).
+*   **Steuerreport (31.12.):** Stichtagsbezogene Salden- und Bewertungsübersicht zur nahtlosen Übernahme in die Steuererklärung.
+*   **Säule 3a Performance:** Spezifische Performance- und Wertverlaufsanalyse für gebundene Vorsorgekonten und -fonds.
+*   **Aktien & Fonds Performance:** Detailliertes Tracking von Einzeltiteln, Kursgewinnen, Realized Gains und Benchmark-Vergleichen.
+
+#### 🔄 Bewegungsreports
+*   **Kategorienfluss:** Visualisierung von Kapitalflüssen und Vermögensverschiebungen zwischen den Hauptkategorien.
+*   **Wasserfallfluss:** Brückenanalyse zwischen Start- und Endvermögen (trennt echte Marktrenditen von Ein- und Auszahlungen).
+*   **Passives Einkommen:** Erfassung und Prognose von Dividenden, Zinsen und Mieteinnahmen.
+*   **Top Flow Assets:** Identifikation der vermögenswirksamsten Transaktionen und Depot-Treiber.
+*   **Buchungsanalyse:** Granulare Auswertung aller Journal-Einträge nach Typ, Intervall und Kategorien.
+
+#### 🚀 Zukunftsreports
+*   **Dividenden-Kalender:** Monatsgenaue Übersicht erwarteter Ausschüttungen und Zinszahlungen über das gesamte Jahr.
+*   **Simulation & Regression:** Mathematische Trendanalysen und lineare/exponentielle Prognosen zukünftiger Vermögenspfade.
+*   **Szenarien & FIRE:** Modellierung von Zukunftsszenarien (finanzielle Unabhängigkeit, Sabbatical, Entnahmestrategien nach der 4%-Regel).
+
+### 🧩 Modulare Add-In- & Plugin-Architektur
+Ergänzend zu den Standard-Reports verfügt FinBundle Pro über ein erweiterbares Modulsystem:
+*   **Isolierte Sandbox-Umgebung:** Eigene Analysen und Rechenmodelle greifen über eine standardisierte Schnittstelle (`window.FinSPA_API`) auf die Portfoliodaten zu.
+*   **Kachel-Launcher:** Wichtige Spezial-Erweiterungen lassen sich als Schnellstart-Kacheln an den Schnellzugriff anpinnen.
+*   **Offener Import & Export:** Vordefinierte Add-Ins (z. B. für Rentenprognosen, DRIP-Planer, Stresstests oder TER-Gebührenanalysen) lassen sich unkompliziert per JSON-Bundle importieren.
+
+### 🌐 API LiveEditor & Marktdaten-Zentrale
+Der API LiveEditor ist das Herzstück für alle börsengehandelten Assets (Aktien, Fonds, ETFs, Kryptowährungen).
+*   **Intelligentes Caching:** Um API-Limits zu schonen, werden Real-Time-Kurse, EOD-Daten (End of Day) und Fundamentaldaten lokal zwischengespeichert.
+*   **Bulk-Sync:** Automatisierter Abruf von tagesaktuellen Kursen und zugehörigen Wechselkursen für das gesamte Portfolio in einem Durchgang.
+*   **Fundamentaldaten & Dividenden:** Auf Knopfdruck Anzeige von Dividendenrendite, Ex-Datum, KGV (P/E), EPS, Marktkapitalisierung und 52-Wochen-Hoch/Tief.
+
+### 📊 Ganzheitliches Portfolio-Tracking
+Egal ob traditionelle oder alternative Anlageklassen – FinBundle Pro aggregiert alles in einer einheitlichen Baumstruktur.
+*   **Schweizer Spezialitäten:** Native Unterstützung für Pensionskassen (2. Säule) und Säule 3a (Konten & Fonds) inklusive rechtlicher Schutzmechanismen bei Portfolio-Umschichtungen (Rebalancing ausschliesslich auf frei verfügbarem Anlagevermögen).
+*   **Sachwerte & Immobilien:** Verwaltung von Immobilien (über Marktwertanpassungen) und Hypotheken (als negative Salden inkl. Zins- und Amortisationserfassung).
+*   **Multi-Währung:** Lückenlose Unterstützung von Fremdwährungen mit automatischer und historisch korrekter Umrechnung via Frankfurter API.
+
+### 💰 Budgetierung nach 50/30/20
+Ein integriertes Budget-Dashboard überwacht die laufenden Einnahmen und Ausgaben.
+*   **Regelbasierte Aufteilung:** Automatische Klassifizierung in *Needs* (50% Fixkosten), *Wants* (30% Lifestyle) und *Savings* (20% Sparen).
+*   **Abo-Manager:** Erfassung von Verträgen und Abonnements inklusive Kündigungsfristen.
+*   **Netto-Cashflow:** Darstellung der monatlichen Überschüsse als Grundlage für weitere Investitionen.
+
+### 🔒 Privacy-First & Verschlüsselung
+Ihre Finanzdaten gehören Ihnen. Punkt.
+*   **Zero-Knowledge-Architektur:** Speicherung der Daten wahlweise im `localStorage` des Browsers oder im lokalen Dateisystem.
+*   **AES-256 ZIP-Export:** Projekte lassen sich als hochsichere `.zip`-Archive mit PIN-Schutz exportieren (via CryptoJS).
+*   **Offene Daten-Standards:** Import von CSV-Daten (z.B. aus Parqet) und Export der generierten Buchungsjournale nach `.xlsx` und `.csv`.
+
+### 🤖 Lokale KI-Integration (Ollama / WebLLM)
+*   **KI-Copilot:** Nahtlose Anbindung an lokale Large Language Models (LLMs) via Ollama. Die KI generiert Widgets und analysiert Dashboards, ohne dass Ihre Finanzdaten das Gerät verlassen.
+*   **KI-Belegscanner:** Extrahierung von Datum, Betrag und Kategorie aus PDF-Rechnungen. Vor dem Senden an Cloud-KIs werden sensible Daten (IBAN, Namen) lokal anonymisiert.
+
+---
+
+## 🛠️ Tech Stack & Integrationen
+
+*   **Core:** React (JSX), Tailwind CSS
+*   **Visualisierung:** Apache ECharts (`echarts.min.js`), Chart.js, Plotly.js
+*   **APIs (Marktdaten):** EODHD, Alpha Vantage, Frankfurter API
+*   **Daten-Verarbeitung & PDF:** `PdfToolkit.jsx`, pdfMake, html2canvas, ExcelJS
+*   **Security:** CryptoJS, JSZip, Capacitor Filesystem API
+*   **Hybrid Ready:** Vorbereitet für Web, Capacitor und Electron / WebView2
+*   **i18n:** Volle Mehrsprachigkeit über 4 Sprachen (Deutsch, Englisch, Französisch, Italienisch)
+
+---
+
+## 🚀 Ausführung & Installation
+
+Da FinBundle Pro komplett clientseitig läuft, ist kein komplexes Backend (Node.js/Python/DB) notwendig. 
+
+> **⚠️ Wichtiger Hinweis für die Ausführung im Browser:**
+> Da die Anwendung rein lokal und clientseitig ausgeführt wird, greifen die restriktiven Sicherheitsmechanismen moderner Browser (CORS - Cross-Origin Resource Sharing). Um die reibungslose Kommunikation mit externen APIs (z. B. für den Abruf von Live-Kursen) zu ermöglichen, muss CORS für den lokalen Zugriff ungeblockt werden. Am einfachsten lässt sich dies temporär über eine entsprechende Browser-Erweiterung (wie z. B. "Allow CORS: Access-Control-Allow-Origin") lösen.
+
+### Option 1: FinSPA Loader (Empfohlen)
+Nutzen Sie die beiliegende `FinSPA_Loader.html`, um das gepackte Projekt (`FinSPA.zip`) direkt im Browser zu entpacken und auszuführen – komplett offline und ohne Build-Prozess.
+
+### Option 2: Lokaler Development Server
+1. Repository klonen.
+2. Abhängigkeiten installieren: `npm install`
+3. Entwicklungsserver starten: `npm start`
+4. Im Browser unter `http://localhost:3000` aufrufen.
+
+---
+
+## ⚠️ Haftungsausschluss (Disclaimer)
+
+FinBundle Pro ist ein privates Software-Projekt zur Visualisierung und Verwaltung von eigenen Finanzdaten und stellt **keine finanzielle, steuerliche oder rechtliche Anlageberatung dar**. 
+
+Die Nutzung der Software erfolgt **vollständig auf eigene Gefahr**. Der Entwickler übernimmt keinerlei Gewähr oder Garantie für die Richtigkeit, Vollständigkeit oder Aktualität der abgerufenen Marktdaten, Berechnungen, Steuerreports oder Zukunftssimulationen. **Jegliche Haftung für direkte, indirekte oder beiläufig entstandene Schäden, Vermögensverluste, entgangene Gewinne oder Datenverluste, die durch die Nutzung dieser Software oder das Vertrauen auf die darin angezeigten Daten entstehen, wird vollumfänglich und ausdrücklich abgelehnt.** 
+
+Bitte prüfen Sie alle finanzrelevanten und steuerlichen Daten selbst oder ziehen Sie vor wichtigen finanziellen Entscheidungen einen qualifizierten Fachberater hinzu.
+
+---
+
+## Weiterentwicklung des Produkts
+
+Wenn Sie dieses Produkt sinnvoll finden, können sie unter folgendem Link, für die Weiterentwicklung des Produkts beitragen.
+
+[![Spenden mit PayPal](https://www.paypalobjects.com/de_DE/CH/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate/?hosted_button_id=ZSNNLBN67AE8J)
+
+
+## Bilder produziert mit Demo_Datensatz.json
+
+### Bild 1 - Budget Verwaltung
+
+
+<img width="2404" height="1176" alt="image" src="https://github.com/user-attachments/assets/ee476a86-c782-4aa1-84b8-131bd22c9ac3" />
+
+
+### Bild 2 - Asset Tracking
+
+
+<img width="2400" height="1174" alt="Bild 1" src="https://github.com/user-attachments/assets/6035c67b-ba41-476d-b006-6949985075fc" />
+
+### Bild 3 - Plugin Integration
+
+Die von FinBundle Pro erstellten AI-Abfragen können nahtlos in die Umgebung integriert werden
+
+
+<img width="2364" height="1316" alt="image" src="https://github.com/user-attachments/assets/f01fb519-de9e-4e12-9eeb-09c2b23a54ec" />
+
+### Bild 4 - Schnellzugriff Integration
+
+<img width="824" height="1162" alt="image" src="https://github.com/user-attachments/assets/365a0255-a483-4a9a-928c-e182ee9f984e" />
+
+
+### Planung nächster Releases (Windows)
+
+Der nächste Release Kandidat auf RC_3 ist auf den 26.Oktober 2026 geplant.
+
+Neue Features:
+- Live Plugins Integration von via KI erzeugten Abfragen auf den Datenbestand
+- neue PDF Engine zur Verbesserung der Anzeige von PDF-Exporten
+- verbesserte KI Integration
+- Rechtseitiges Fly-Out zur Schnellnavigation
+
+Korrekturen:
+- Oktober Problem: Der Oktober wird in manchen Reports nicht angezeigt
+- Sprachfixes
+- Berechnungsfixes
+- überarbeites Benutzermanual
+- verbesserte CSV Import Funktion
+- allgemeine Korrekturen
+
+Der RC_5 ist auf den 23. November geplant
+
+New Features:
+- Wirklich cool: Buchungen sind nun über die AI Integration möglich
+Bspw. Anweisung an KI: "Ich war schnell in der Migros und habe einen Einkauf für Lebensmittel über 56.70 getätigt. Kannst Du das auf meinem Privatkonto buchen?"
+- Löst automatische Buchung aus, ohne dass gross der normale Bearbeitungsweg gegangen werden muss.
+- always on Top Dialog (wird vielleicht auch nächster Release): KI schaltet sich nach wenigen Minuten Inaktivität mit einem Dialog ein und lässt direkt Fragen zu. 
