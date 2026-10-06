@@ -1,150 +1,345 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark scroll-smooth">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinBundle PRO – Offizielles Handbuch & Dokumentation</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinBundle PRO — Offizielles Handbuch &amp; Dokumentationsportal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .glass-nav {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    
+    .toc-active {
+      background-color: rgba(14, 165, 233, 0.12);
+      color: #38bdf8 !important;
+      font-weight: 700;
+      border-left: 3px solid #38bdf8;
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
-    <!-- Header -->
-    <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 p-2.5 rounded-xl shadow-lg shadow-indigo-500/20 text-white flex items-center justify-center">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h1 class="font-black text-lg tracking-tight text-white flex items-center gap-2">
-                        FinBundle <span class="bg-indigo-500/20 text-indigo-400 text-xs px-2 py-0.5 rounded-md border border-indigo-500/30 font-bold">PRO</span>
-                    </h1>
-                    <p class="text-xs text-slate-400 font-medium">Offline-First Wealth Architecture</p>
-                </div>
+<body class="bg-slate-950 text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Scroll Progress Bar -->
+  <div id="read-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-400 z-50 transition-all duration-75 w-0"></div>
+
+  <!-- Header Bar -->
+  <header id="header-bar" class="sticky top-0 z-40 w-full glass-nav bg-slate-950/85 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <div class="flex items-center gap-3">
+        <button id="toggle-mobile-sidebar" class="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none" aria-label="Menü einblenden">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-extrabold text-lg">
+            F
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold tracking-tight text-white text-lg">FinBundle <span class="text-sky-400">PRO</span></span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                v1.0.0 RC2.2 / RC3
+              </span>
             </div>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Offizielles Dokumentationsportal &amp; Handbuch-Übersicht</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="flex-1 max-w-md hidden md:block">
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </span>
+          <input type="text" id="manual-search-input" placeholder="Dokumentation durchsuchen (z.B. Copilot, PropertyEditor, Steuern)..." 
+                 class="w-full pl-9 pr-8 py-1.5 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+          <button id="clear-search-btn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white hidden">✕</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a href="https://github.com/thomkerle/Swiss-Asset-Pro" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-xs font-bold text-white shadow-md shadow-sky-500/25 flex items-center gap-1.5 transition">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span class="hidden sm:inline">GitHub Repository</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-8">
+
+    <!-- Sticky Sidebar Navigation -->
+    <aside id="sidebar" class="fixed lg:sticky top-20 left-0 h-[calc(100vh-5.5rem)] w-72 bg-slate-900/95 lg:bg-transparent backdrop-blur-lg lg:backdrop-blur-none p-4 rounded-xl border border-slate-800 lg:border-transparent z-30 overflow-y-auto hidden lg:block shrink-0 transition-all duration-200">
+      <div class="flex items-center justify-between mb-3 px-2">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Kapitel &amp; Guides</h2>
+        <span class="text-[11px] text-sky-400 font-semibold">14 Dokumente</span>
+      </div>
+      <nav id="toc-nav" class="space-y-1 text-xs">
+        <a href="#featured" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">⭐ Top-Empfehlungen</a>
+        <a href="#core-chapters" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">📖 Handbuch-Kapitel (Markdown)</a>
+        <a href="#html-edition" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-medium text-emerald-400">⚡ Autarke HTML-Handbücher</a>
+      </nav>
+
+      <div class="mt-6 p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400">
+        <div class="flex items-center gap-2 mb-1 text-emerald-400 font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          100% Autark &amp; Offline
+        </div>
+        Sämtliche Dokumente und Assets werden lokal verwaltet und über GitHub Pages ausgeliefert.
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 min-w-0 max-w-4xl space-y-16">
+
+      <!-- Hero Header Section with Cover SVG -->
+      <section class="space-y-6">
+        <div class="p-1 rounded-2xl bg-gradient-to-r from-sky-500/30 via-indigo-500/20 to-purple-500/30 border border-slate-800 shadow-2xl">
+          <svg viewBox="0 0 920 310" width="100%" height="auto" class="rounded-xl w-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bgCover" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#070a13"/>
+                <stop offset="40%" stop-color="#0f172a"/>
+                <stop offset="100%" stop-color="#1e1b4b"/>
+              </linearGradient>
+              <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#2563eb"/>
+                <stop offset="50%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#a855f7"/>
+              </linearGradient>
+            </defs>
+            <rect width="920" height="310" rx="14" fill="url(#bgCover)"/>
+            <rect x="2" y="2" width="916" height="306" rx="12" fill="none" stroke="#334155" stroke-width="1.5"/>
+            <circle cx="820" cy="70" r="140" fill="#2563eb" opacity="0.12"/>
+            <circle cx="120" cy="240" r="160" fill="#38bdf8" opacity="0.06"/>
+            <path d="M 430 250 C 580 160, 720 230, 890 90" fill="none" stroke="url(#accentGlow)" stroke-width="3.5" stroke-linecap="round" opacity="0.45"/>
+            <g transform="translate(48, 36)">
+              <rect width="160" height="26" rx="13" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+              <circle cx="13" cy="13" r="4.5" fill="#38bdf8"/>
+              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#e0f2fe" letter-spacing="1">OFFIZIELLLES WIKI</text>
+            </g>
+            <text x="48" y="104" font-family="sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-0.5">
+              FinBundle <tspan fill="url(#accentGlow)">PRO</tspan>
+            </text>
+            <text x="48" y="136" font-family="sans-serif" font-size="16" font-weight="500" fill="#94a3b8">
+              Zentrales Dokumentationsportal &amp; Handbuch-Übersicht
+            </text>
+            <text x="48" y="160" font-family="sans-serif" font-size="13" font-weight="400" fill="#64748b">
+              Offline-First Wealth Architecture, 15 Kern-Reports, Total Return &amp; AI-Plugin Injektor
+            </text>
+
+            <!-- 3 Mini Badges -->
+            <g transform="translate(48, 195)">
+              <rect width="260" height="72" rx="8" fill="#1e293b" fill-opacity="0.95" stroke="#334155"/>
+              <circle cx="20" cy="24" r="5" fill="#10b981"/>
+              <text x="35" y="28" font-family="sans-serif" font-size="12" font-weight="700" fill="#ffffff">100% Offline-First</text>
+              <text x="20" y="50" font-family="sans-serif" font-size="10" fill="#94a3b8">Lokaler AES-256 Vault &amp; W3C File API</text>
+
+              <g transform="translate(275, 0)">
+                <rect width="260" height="72" rx="8" fill="#1e293b" fill-opacity="0.95" stroke="#334155"/>
+                <circle cx="20" cy="24" r="5" fill="#38bdf8"/>
+                <text x="35" y="28" font-family="sans-serif" font-size="12" font-weight="700" fill="#ffffff">15 Reports &amp; Analytics</text>
+                <text x="20" y="50" font-family="sans-serif" font-size="10" fill="#94a3b8">Bestände, Cashflows &amp; FIRE-Simulation</text>
+              </g>
+
+              <g transform="translate(550, 0)">
+                <rect width="262" height="72" rx="8" fill="#1e293b" fill-opacity="0.95" stroke="#38bdf8" stroke-width="1.2"/>
+                <circle cx="20" cy="24" r="5" fill="#a855f7"/>
+                <text x="35" y="28" font-family="sans-serif" font-size="12" font-weight="700" fill="#ffffff">AI-Plugin Injektor</text>
+                <text x="20" y="50" font-family="sans-serif" font-size="10" fill="#cbd5e1">Isolierte Sandbox-DataEngine</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <!-- FEATURED HIGHLIGHTS -->
+      <section id="featured" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 font-mono font-bold text-sm border border-sky-500/20">⭐</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Wichtigste Kapitel &amp; Kern-Guides</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Card 1 -->
+          <div class="bg-slate-900/80 border border-slate-800 hover:border-sky-500/50 rounded-xl p-6 transition flex flex-col justify-between shadow-xl">
             <div>
-                <a href="https://github.com/thomkerle/Swiss-Asset-Pro" target="_blank" rel="noopener noreferrer" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-xl font-bold transition-all border border-slate-700 shadow-sm flex items-center gap-2">
-                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                    GitHub Repository
-                </a>
+              <div class="w-10 h-10 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold mb-4">🤖</div>
+              <h3 class="text-lg font-bold text-white mb-2">Arbeiten mit dem AI Copilot</h3>
+              <p class="text-slate-400 text-xs leading-relaxed mb-4">
+                Erfahren Sie, wie der Zero-Data-Leakage Copilot über natürliche Sprache interaktive Dashboards generiert und wie Sie lokale Modelle anbinden.
+              </p>
             </div>
+            <a href="./manualworkcopilot.html" class="text-sky-400 hover:text-sky-300 text-xs font-bold flex items-center gap-1">
+              Kapitel lesen &rarr;
+            </a>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="bg-slate-900/80 border border-slate-800 hover:border-emerald-500/50 rounded-xl p-6 transition flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold mb-4">📈</div>
+              <h3 class="text-lg font-bold text-white mb-2">API Integration &amp; Marktdaten</h3>
+              <p class="text-slate-400 text-xs leading-relaxed mb-4">
+                Konfiguration von EODHD und Alpha Vantage, Live-Metriken, historische EOD-Daten, Intraday-Charts und Preismodelle.
+              </p>
+            </div>
+            <a href="./apiintegration.html" class="text-emerald-400 hover:text-emerald-300 text-xs font-bold flex items-center gap-1">
+              Kapitel lesen &rarr;
+            </a>
+          </div>
         </div>
-    </header>
+      </section>
 
-    <!-- Hero Section -->
-    <main class="max-w-6xl mx-auto px-6 py-16 flex-1">
-        <div class="text-center max-w-3xl mx-auto mb-16">
-            <span class="inline-flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 text-xs font-bold px-3.5 py-1 rounded-full border border-indigo-500/20 uppercase tracking-wider mb-4 shadow-inner">
-                <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                Offizielles Handbuch & Wiki
-            </span>
-            <h2 class="text-4xl lg:text-6xl font-black tracking-tight text-white mb-6 leading-tight">
-                Dokumentation für <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-pink-400">FinBundle PRO</span>
-            </h2>
-            <p class="text-slate-400 text-base lg:text-lg leading-relaxed">
-                Das vollständige Kompendium zur autarken Offline-First Vermögensarchitektur. Erfahren Sie alles über lokale KI-Modelle, Live-Marktdatenanbindung und präzise steueroptimierte Reports.
-            </p>
-        </div>
-
-        <!-- Featured Highlights Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
-            <!-- Card 1: AI Copilot -->
-            <div class="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl p-7 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-all"></div>
-                <div>
-                    <div class="w-12 h-12 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold mb-5 text-xl border border-indigo-500/30 group-hover:scale-110 transition-transform">🤖</div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">AI Copilot & Code-Injektion</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Architektur des Zero-Data-Leakage Copiloten, Einbindung von Ollama oder Google Gemini, System-Prompts und der Workflow zur Fehlerbehebung.
-                    </p>
-                </div>
-                <a href="./manualworkcopilot.html" class="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
-                    <span>Kapitel lesen</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </a>
-            </div>
-
-            <!-- Card 2: API Integration -->
-            <div class="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-emerald-500/50 rounded-2xl p-7 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all"></div>
-                <div>
-                    <div class="w-12 h-12 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold mb-5 text-xl border border-emerald-500/30 group-hover:scale-110 transition-transform">📈</div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors">API Integration & Marktdaten</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Konfiguration von EODHD und Alpha Vantage, Live-Metriken, historische EOD-Daten, Intraday-Charts, Preismodelle und API-Limits.
-                    </p>
-                </div>
-                <a href="./apiintegration.html" class="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
-                    <span>Kapitel lesen</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </a>
-            </div>
+      <!-- ALL CORE CHAPTERS -->
+      <section id="core-chapters" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 font-mono font-bold text-sm border border-indigo-500/20">📖</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Handbuch-Kapitel (Markdown)</h2>
         </div>
 
-        <!-- Complete Documentation Index List -->
-        <div class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-8">
-            <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                Alle Dokumente & Handbuch-Kapitel im Überblick
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                <a href="./home.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Home / Dashboard
-                </a>
-                <a href="./manualeditor.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Struktur & Konten
-                </a>
-                <a href="./manualeditoraccount.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Editor & Kontoführung
-                </a>
-                <a href="./manualpropertyeditor.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Eigenschaften-Editor (PropertyEditor)
-                </a>
-                <a href="./manualimport.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Datenimport (CSV, CAMT, CAT)
-                </a>
-                <a href="./manualworkcopilot.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Arbeiten mit dem AI Copilot
-                </a>
-                <a href="./apiintegration.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> API Integration & Marktdaten
-                </a>
-                <a href="./fivezonelayout.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> UI-Architektur (5-Zonen Layout)
-                </a>
-                <a href="./configurationsandsettings.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Konfiguration & Einstellungen
-                </a>
-                <a href="./standardreports.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Reporting-Suite (15 Reports)
-                </a>
-                <a href="./importexportinterfaces.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Import & Export Schnittstellen
-                </a>
-                <a href="./aicopiltotesandbox.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> AI Copilot & Sandbox Architecture
-                </a>
-                <!-- Statische HTML-Dokumente -->
-                <a href="./finbundle_pro_einsteiger_handbuch.tml" class="p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Einsteiger-Handbuch (HTML)
-                </a>
-                <a href="./FinbundlePro_Referenzhandbuch%20%281%29.html" class="p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Referenzhandbuch (HTML)
-                </a>
-            </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+          <a href="./home.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🏠</span> Home / Dashboard
+          </a>
+          <a href="./manualeditor.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">📁</span> Struktur &amp; Konten
+          </a>
+          <a href="./manualeditoraccount.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">💳</span> Editor &amp; Kontoführung
+          </a>
+          <a href="./manualpropertyeditor.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">⚙️</span> Eigenschaften-Editor
+          </a>
+          <a href="./manualimport.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">📥</span> Datenimport (CSV/CAMT)
+          </a>
+          <a href="./manualworkcopilot.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🤖</span> AI Copilot Anleitung
+          </a>
+          <a href="./apiintegration.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">📈</span> API &amp; Marktdaten
+          </a>
+          <a href="./fivezonelayout.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">📐</span> 5-Zonen Layout Architektur
+          </a>
+          <a href="./configurationsandsettings.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🛠️</span> Konfiguration &amp; Settings
+          </a>
+          <a href="./standardreports.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">📊</span> Die 15 Standard-Reports
+          </a>
+          <a href="./importexportinterfaces.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🔄</span> Import &amp; Export Schnittstellen
+          </a>
+          <a href="./aicopiltotesandbox.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🔌</span> AI Plugin Sandbox Architecture
+          </a>
         </div>
+      </section>
+
+      <!-- HTML EDITIONS & FULL MANUALS -->
+      <section id="html-edition" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/20">⚡</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Autarke HTML-Handbücher &amp; Referenzen</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a href="./finbundle_pro_einsteiger_handbuch.html" class="p-5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 hover:border-emerald-500 transition flex items-start gap-4 text-slate-200 shadow-lg">
+            <div class="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-lg">📘</div>
+            <div>
+              <div class="font-bold text-white text-sm">Einsteiger-Handbuch (HTML Edition)</div>
+              <p class="text-xs text-slate-400 mt-1">Der ideale Leitfaden für neue Anwender zum schnellen Start in die Offline-Vermögensverwaltung.</p>
+            </div>
+          </a>
+
+          <a href="./FinbundlePro_Referenzhandbuch.html" class="p-5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-sky-500/30 hover:border-sky-500 transition flex items-start gap-4 text-slate-200 shadow-lg">
+            <div class="p-2.5 rounded-lg bg-sky-500/20 text-sky-400 text-lg">📙</div>
+            <div>
+              <div class="font-bold text-white text-sm">Vollständiges Referenzhandbuch (HTML Edition)</div>
+              <p class="text-xs text-slate-400 mt-1">Das umfassende Kompendium mit allen Formeln, SVG-Diagrammen und Injektor-Spezifikationen.</p>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="pt-6 border-t border-slate-800 text-center text-xs text-slate-400 pb-12">
+        <p>FinBundle PRO &bull; Version 1.0.0 RC2.2 / RC3 &bull; Enterprise Asset Management</p>
+        <p class="text-[11px] text-slate-500 mt-1">100% Offline-First Architecture &bull; Sandboxed DataEngine-Injektor</p>
+      </footer>
+
     </main>
+  </div>
 
-    <!-- Footer -->
-    <footer class="border-t border-slate-800/80 bg-slate-900/40 py-8 text-center text-xs text-slate-500">
-        <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p>&copy; 2026 FinBundle PRO. Open-Source Offline-First Wealth Architecture.</p>
-            <div class="flex gap-4">
-                <a href="https://github.com/thomkerle/Swiss-Asset-Pro" target="_blank" rel="noopener noreferrer" class="hover:text-slate-400 transition-colors">GitHub</a>
-                <a href="./" class="hover:text-slate-400 transition-colors">Dokumentation Start</a>
-            </div>
-        </div>
-    </footer>
+  <script>
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      const pb = document.getElementById("read-progress");
+      if (pb) pb.style.width = scrolled + "%";
+    });
+
+    const mobileBtn = document.getElementById('toggle-mobile-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    mobileBtn?.addEventListener('click', () => { sidebar?.classList.toggle('hidden'); });
+
+    const searchInput = document.getElementById('manual-search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const sections = document.querySelectorAll('section[id]');
+
+    searchInput?.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if (query.length > 0) clearSearchBtn?.classList.remove('hidden');
+      else clearSearchBtn?.classList.add('hidden');
+
+      sections.forEach(sec => {
+        sec.style.display = (query === '' || sec.innerText.toLowerCase().includes(query)) ? '' : 'none';
+      });
+    });
+
+    clearSearchBtn?.addEventListener('click', () => {
+      if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
+    });
+  </script>
 </body>
 </html>
