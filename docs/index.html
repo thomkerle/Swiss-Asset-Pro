@@ -47,16 +47,16 @@
             </p>
         </div>
 
-        <!-- Documentation Grid (Main Chapters) -->
+        <!-- Featured Highlights Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
             <!-- Card 1: AI Copilot -->
             <div class="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-indigo-500/50 rounded-2xl p-7 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-all"></div>
                 <div>
                     <div class="w-12 h-12 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold mb-5 text-xl border border-indigo-500/30 group-hover:scale-110 transition-transform">🤖</div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">AI Copilot & Sandboxed Plugins</h3>
+                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-indigo-300 transition-colors">AI Copilot & Code-Injektion</h3>
                     <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Erfahren Sie, wie der Zero-Data-Leakage Copilot über natürliche Sprache interaktive Dashboards generiert und wie Sie Ollama/Gemini anbinden.
+                        Architektur des Zero-Data-Leakage Copiloten, Einbindung von Ollama oder Google Gemini, System-Prompts und der Workflow zur Fehlerbehebung.
                     </p>
                 </div>
                 <a href="./FinBundle-PRO---Handbuch---Arbeiten-mit-dem-AI-Copilot.html" class="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
@@ -72,7 +72,7 @@
                     <div class="w-12 h-12 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold mb-5 text-xl border border-emerald-500/30 group-hover:scale-110 transition-transform">📈</div>
                     <h3 class="text-xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors">API Integration & Marktdaten</h3>
                     <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Detaillierte Anleitung zur Anbindung von EODHD und Alpha Vantage, Live-Metriken, historische EOD-Daten, Intraday-Charts und Preismodelle.
+                        Konfiguration von EODHD und Alpha Vantage, Live-Metriken, historische EOD-Daten, Intraday-Charts, Preismodelle und API-Limits.
                     </p>
                 </div>
                 <a href="./FinBundle-PRO---Handbuch---API-Integration-&-Marktdaten.html" class="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
@@ -80,55 +80,36 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </a>
             </div>
-
-            <!-- Card 3: PropertyEditor & Steuern -->
-            <div class="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-amber-500/50 rounded-2xl p-7 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all"></div>
-                <div>
-                    <div class="w-12 h-12 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold mb-5 text-xl border border-amber-500/30 group-hover:scale-110 transition-transform">🎯</div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-amber-300 transition-colors">Eigenschaften & Quellensteuer</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Verwaltung von Asset-Metadaten, Ticker-Konfiguration (z.B. Coca-Cola), Forward Yield sowie Berücksichtigung der Quellensteuer im Netto-Dividenden-Kalender.
-                    </p>
-                </div>
-                <a href="./FinBundle-PRO---Handbuch---Eigenschaften-Editor-(PropertyEditor).html" class="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
-                    <span>Kapitel lesen</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </a>
-            </div>
-
-            <!-- Card 4: Data Import -->
-            <div class="group bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-blue-500/50 rounded-2xl p-7 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all"></div>
-                <div>
-                    <div class="w-12 h-12 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold mb-5 text-xl border border-blue-500/30 group-hover:scale-110 transition-transform">📂</div>
-                    <h3 class="text-xl font-bold text-white mb-3 group-hover:text-blue-300 transition-colors">Datenimport & Journaling</h3>
-                    <p class="text-slate-400 text-sm leading-relaxed mb-8">
-                        Importieren Sie Transaktionen nahtlos über standardisierte CSV-Formate und CAMT-Bankdateien, um ein fehlerfreies lokales Buchungsjournal aufzubauen.
-                    </p>
-                </div>
-                <a href="./FinBundle-PRO---Handbuch---Datenimport-(CSV,-CAMT-und-CAT).html" class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-bold group-hover:translate-x-1 transition-transform">
-                    <span>Kapitel lesen</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </a>
-            </div>
         </div>
 
-        <!-- Full Documentation Index List -->
+        <!-- Complete Documentation Index List (All repository files included) -->
         <div class="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-8">
             <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
                 <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                Vollständige Dokumentations-Übersicht
+                Alle Dokumente & Handbuch-Kapitel im Überblick
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                <!-- Markdown Handbücher -->
                 <a href="./FinBundle-PRO---Handbuch---Struktur-und-Konten.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
                     <span class="text-indigo-400">&bull;</span> Struktur & Konten
                 </a>
                 <a href="./FinBundle-PRO---Handbuch---Editor-&-Kontoführung.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
                     <span class="text-indigo-400">&bull;</span> Editor & Kontoführung
                 </a>
+                <a href="./FinBundle-PRO---Handbuch---Eigenschaften-Editor-(PropertyEditor).html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> Eigenschaften-Editor (PropertyEditor)
+                </a>
+                <a href="./FinBundle-PRO---Handbuch---Datenimport-(CSV,-CAMT-und-CAT).html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> Datenimport (CSV, CAMT, CAT)
+                </a>
+                <a href="./FinBundle-PRO---Handbuch---Arbeiten-mit-dem-AI-Copilot.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> Arbeiten mit dem AI Copilot
+                </a>
+                <a href="./FinBundle-PRO---Handbuch---API-Integration-&-Marktdaten.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> API Integration & Marktdaten
+                </a>
                 <a href="./UI-Architektur-und-Bedienkonzept-(Das-5-Zonen-Layout).html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> UI-Architektur (5-Zonen)
+                    <span class="text-indigo-400">&bull;</span> UI-Architektur (5-Zonen Layout)
                 </a>
                 <a href="./Konfiguration-und-Einstellungen-(SettingsDialog).html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
                     <span class="text-indigo-400">&bull;</span> Konfiguration & Einstellungen
@@ -140,10 +121,17 @@
                     <span class="text-indigo-400">&bull;</span> Import & Export Schnittstellen
                 </a>
                 <a href="./AI-Copilot-&-Sandboxed-Plugin-Architecture.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
-                    <span class="text-indigo-400">&bull;</span> Plugin Architecture Deep-Dive
+                    <span class="text-indigo-400">&bull;</span> AI Copilot & Plugin Architecture
                 </a>
                 <a href="./Home.html" class="p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 text-slate-300 hover:text-white transition-colors flex items-center gap-2">
                     <span class="text-indigo-400">&bull;</span> Home / Dashboard
+                </a>
+                <!-- HTML Dokumente aus dem Repo -->
+                <a href="./finbundle_pro_einsteiger_handbuch%20%281%29.html" class="p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> Einsteiger-Handbuch (HTML)
+                </a>
+                <a href="./FinbundlePro_Referenzhandbuch%20%281%29.html" class="p-3 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 hover:text-white transition-colors flex items-center gap-2">
+                    <span class="text-indigo-400">&bull;</span> Referenzhandbuch (HTML)
                 </a>
             </div>
         </div>
