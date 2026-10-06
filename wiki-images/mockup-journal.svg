@@ -1,0 +1,55 @@
+<svg viewBox="0 0 600 320" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="320" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
+  
+  <!-- Header Bar -->
+  <rect x="0" y="0" width="600" height="50" rx="8" fill="#1e293b"/>
+  <text x="20" y="30" font-family="sans-serif" font-size="14" font-weight="bold" fill="#f8fafc">Apple Inc. (AAPL)</text>
+  <rect x="160" y="15" width="50" height="20" rx="10" fill="#334155"/>
+  <text x="168" y="29" font-family="sans-serif" font-size="10" font-weight="bold" fill="#cbd5e1">STOCK</text>
+  
+  <rect x="440" y="10" width="140" height="30" rx="6" fill="#2563eb"/>
+  <text x="455" y="30" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff">+ Transaktion erfassen</text>
+
+  <!-- Table Header -->
+  <rect x="0" y="50" width="600" height="30" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+  <text x="50" y="70" font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8">DATUM</text>
+  <text x="140" y="70" font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8">EINTRAG</text>
+  <text x="250" y="70" font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8">DETAIL / KOMMENTAR</text>
+  <text x="540" y="70" font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8" text-anchor="end">BETRAG</text>
+
+  <!-- Row 1: Hovered with Drag Indicator -->
+  <rect x="0" y="80" width="600" height="40" fill="#1e293b" opacity="0.6"/>
+  <text x="15" y="105" font-family="sans-serif" font-size="16" fill="#64748b">≡</text> <!-- Drag Handle -->
+  <rect x="35" y="94" width="10" height="10" rx="2" fill="none" stroke="#64748b"/>
+  <text x="50" y="105" font-family="sans-serif" font-size="12" fill="#cbd5e1">15.05.2026</text>
+  <rect x="140" y="90" width="65" height="20" rx="10" fill="#10b981" opacity="0.2" stroke="#10b981" stroke-width="1"/>
+  <text x="152" y="104" font-family="sans-serif" font-size="10" font-weight="bold" fill="#34d399">Dividende</text>
+  <text x="250" y="105" font-family="sans-serif" font-size="12" fill="#cbd5e1">Q2 Ausschüttung</text>
+  <rect x="350" y="92" width="60" height="16" rx="4" fill="#1e3a8a"/>
+  <text x="355" y="103" font-family="sans-serif" font-size="10" font-weight="bold" fill="#93c5fd">#Yield2026</text>
+  <text x="540" y="105" font-family="monospace" font-size="12" font-weight="bold" fill="#34d399" text-anchor="end">+ 125.50 USD</text>
+
+  <!-- Row 2: Selected & Inline Editing -->
+  <rect x="0" y="120" width="600" height="40" fill="#312e81" opacity="0.4"/>
+  <rect x="35" y="134" width="10" height="10" rx="2" fill="#6366f1"/>
+  <path d="M 37 139 L 39 142 L 43 136" stroke="#ffffff" stroke-width="2" fill="none"/>
+  <text x="50" y="145" font-family="sans-serif" font-size="12" fill="#cbd5e1">12.04.2026</text>
+  <rect x="140" y="130" width="45" height="20" rx="10" fill="#10b981" opacity="0.2" stroke="#10b981" stroke-width="1"/>
+  <text x="152" y="144" font-family="sans-serif" font-size="10" font-weight="bold" fill="#34d399">Kauf</text>
+  <text x="250" y="145" font-family="sans-serif" font-size="12" fill="#94a3b8">50 Stk. à 184.50</text>
+  <!-- Inline Edit Input -->
+  <rect x="345" y="130" width="140" height="20" rx="4" fill="#1e293b" stroke="#38bdf8"/>
+  <text x="350" y="144" font-family="sans-serif" font-size="11" fill="#e0f2fe">Nachkauf Dip|</text>
+  <text x="540" y="145" font-family="monospace" font-size="12" font-weight="bold" fill="#34d399" text-anchor="end">+ 9'225.00 USD</text>
+
+  <!-- Row 3: Auto-Valuation Lock -->
+  <rect x="0" y="160" width="600" height="40" fill="#0f172a"/>
+  <rect x="35" y="174" width="10" height="10" rx="2" fill="none" stroke="#64748b"/>
+  <text x="50" y="185" font-family="sans-serif" font-size="12" fill="#cbd5e1">12.04.2026</text>
+  <rect x="140" y="170" width="85" height="20" rx="10" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="1"/>
+  <text x="148" y="184" font-family="sans-serif" font-size="10" font-weight="bold" fill="#60a5fa">Wertanpassung</text>
+  <text x="250" y="185" font-family="sans-serif" font-size="12" fill="#cbd5e1">Auto-Anpassung (Kurs)</text>
+  <text x="540" y="185" font-family="monospace" font-size="12" font-weight="bold" fill="#60a5fa" text-anchor="end">+ 450.00 USD</text>
+  <circle cx="575" cy="180" r="8" fill="#1e293b"/>
+  <text x="571" y="184" font-family="sans-serif" font-size="10" fill="#64748b">🔒</text>
+</svg>
