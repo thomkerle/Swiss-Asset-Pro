@@ -28,12 +28,12 @@ Nach der Erstellung ist das neue Asset im Strukturbaum markiert und die rechte S
 4. Alle Anpassungen im PropertyEditor werden durch die **Auto-Save** Funktion verzugsfrei in den Tresor geschrieben[cite: 1, 10].
 
 
-![alt](https://github.com/thomkerle/Swiss-Asset-Pro/blob/wiki-images/mockup-tree-setup.svg)
+![alt](https://github.com/thomkerle/Swiss-Asset-Pro/blob/main/wiki-images/mockup-tree-setup.svg)
 
 #### 1.4 Das finale Resultat
 Der Strukturbaum aggregiert nun automatisch alle Ebenen. Wenn Sie weitere Banken und Assets (z.B. Ihr UBS Girokonto oder ein Aktien-Depot) hinzufügen, verdichtet FinBundle PRO die Werte in Echtzeit nach oben, während das neu erstellte 3a-Konto sauber in seiner Kategorie liegt.
 
-![alt](https://github.com/thomkerle/Swiss-Asset-Pro/blob/wiki-images/mockup-tree-final.svg)
+![alt](https://github.com/thomkerle/Swiss-Asset-Pro/blob/main/wiki-images/mockup-tree-final.svg)
 
 ### ⚠️ Troubleshooting: Die 3a Asset-Klassen im Vergleich
 
