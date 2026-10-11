@@ -85,7 +85,7 @@ Die Leiste befindet sich am oberen Bildschirmrand und bietet schnellen Zugriff a
 
 Durch Klick auf das Aktivitäts-Symbol öffnet sich der seitliche Drawer:
 
-![Mockup QuickAgentBar_Feature](./wiki-images/mockup-uickagentbar-feature.svg)
+![Mockup QuickAgentBar_Feature](./wiki-images/mockup-quickagentbar-feature.svg)
 
 ---
 
