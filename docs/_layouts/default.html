@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title | default: site.title | default: "FinBundle PRO" }}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased font-sans min-h-screen">
+
+  <!-- Header / Zurück zur Übersicht -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur border-b border-slate-800">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="./index.html" class="flex items-center gap-2 text-xs font-bold text-sky-400 hover:text-sky-300 transition">
+        ← Zurück zur Handbuch-Übersicht
+      </a>
+      <span class="text-xs text-slate-400 font-mono">FinBundle PRO Wiki</span>
+    </div>
+  </header>
+
+  <!-- Markdown Content mit Tailwind Typography -->
+  <main class="max-w-4xl mx-auto px-6 py-10">
+    <article class="prose prose-invert prose-slate max-w-none 
+                    prose-headings:text-white prose-headings:font-bold
+                    prose-h1:text-3xl prose-h2:text-2xl prose-h2:border-b prose-h2:border-slate-800 prose-h2:pb-2
+                    prose-a:text-sky-400 prose-a:no-underline hover:prose-a:underline
+                    prose-code:text-sky-300 prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                    prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-800
+                    prose-table:border prose-table:border-slate-800
+                    prose-th:bg-slate-900 prose-th:p-3 prose-td:p-3">
+      {{ content }}
+    </article>
+  </main>
+
+</body>
+</html>
