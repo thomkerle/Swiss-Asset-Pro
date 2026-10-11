@@ -1,0 +1,67 @@
+<svg viewBox="0 0 600 360" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="360" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
+  <rect x="0" y="0" width="600" height="40" rx="8" fill="#1e293b"/>
+  <text x="20" y="25" font-family="sans-serif" font-size="12" font-weight="bold" fill="#94a3b8">STRUKTURBAUM (ZONE 2)</text>
+  
+  <!-- Bank 1: UBS -->
+  <g transform="translate(20, 60)">
+    <circle cx="10" cy="10" r="10" fill="#ef4444"/>
+    <text x="30" y="14" font-family="sans-serif" font-size="14" font-weight="bold" fill="#f8fafc">UBS Switzerland</text>
+    <text x="480" y="14" font-family="monospace" font-size="12" font-weight="bold" fill="#94a3b8">212'000 CHF</text>
+  </g>
+
+  <!-- UBS Folders -->
+  <g transform="translate(40, 90)">
+    <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+    <rect x="15" y="-2" width="16" height="12" rx="2" fill="#f59e0b"/>
+    <text x="40" y="8" font-family="sans-serif" font-size="13" font-weight="bold" fill="#cbd5e1">Giro- &amp; Sparkonten</text>
+    
+    <g transform="translate(20, 30)">
+      <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+      <circle cx="15" cy="0" r="4" fill="#10b981"/>
+      <text x="28" y="4" font-family="sans-serif" font-size="13" fill="#cbd5e1">Privatkonto CHF</text>
+      <text x="420" y="4" font-family="monospace" font-size="12" fill="#10b981">24'100 CHF</text>
+    </g>
+  </g>
+
+  <g transform="translate(40, 150)">
+    <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+    <rect x="15" y="-2" width="16" height="12" rx="2" fill="#f59e0b"/>
+    <text x="40" y="8" font-family="sans-serif" font-size="13" font-weight="bold" fill="#cbd5e1">Wertschriften</text>
+    
+    <g transform="translate(20, 30)">
+      <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+      <circle cx="15" cy="0" r="4" fill="#38bdf8"/>
+      <text x="28" y="4" font-family="sans-serif" font-size="13" fill="#cbd5e1">Apple Inc. (AAPL)</text>
+      <text x="420" y="4" font-family="monospace" font-size="12" fill="#38bdf8">187'900 CHF</text>
+    </g>
+  </g>
+
+  <!-- Bank 2: VIAC -->
+  <g transform="translate(20, 230)">
+    <circle cx="10" cy="10" r="10" fill="#3b82f6"/>
+    <text x="30" y="14" font-family="sans-serif" font-size="14" font-weight="bold" fill="#f8fafc">VIAC / finpension</text>
+    <text x="488" y="14" font-family="monospace" font-size="12" font-weight="bold" fill="#94a3b8">48'500 CHF</text>
+  </g>
+
+  <g transform="translate(40, 260)">
+    <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+    <rect x="15" y="-2" width="16" height="12" rx="2" fill="#f59e0b"/>
+    <text x="40" y="8" font-family="sans-serif" font-size="13" font-weight="bold" fill="#cbd5e1">Vorsorge</text>
+    
+    <g transform="translate(20, 30)">
+      <path d="M 0 0 L 10 0" stroke="#475569" stroke-width="2"/>
+      <rect x="15" y="-2" width="16" height="12" rx="2" fill="#f59e0b"/>
+      <text x="40" y="8" font-family="sans-serif" font-size="13" font-weight="bold" fill="#cbd5e1">Konten</text>
+      
+      <!-- Highlighted Active Asset -->
+      <g transform="translate(20, 30)">
+        <rect x="12" y="-12" width="500" height="24" rx="4" fill="#3b82f6" opacity="0.2"/>
+        <path d="M 0 0 L 10 0" stroke="#3b82f6" stroke-width="2"/>
+        <circle cx="15" cy="0" r="4" fill="#a855f7"/>
+        <text x="28" y="4" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff">VIAC Global 100</text>
+        <text x="408" y="4" font-family="monospace" font-size="12" font-weight="bold" fill="#a855f7">48'500 CHF</text>
+      </g>
+    </g>
+  </g>
+</svg>
