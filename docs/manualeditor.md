@@ -7,7 +7,7 @@ Die korrekte Erfassung eines Vermögenswerts beginnt in FinBundle PRO immer mit 
 2. **Kategorie "Vorsorge" erstellen:** Klicken Sie neben der neu erstellten Bank auf das **+**, wählen Sie *Neue Kategorie* und nennen Sie diese "Vorsorge".
 3. **Unterkategorie "Konten" hinzufügen:** Um die Struktur weiter zu verfeinern, klicken Sie auf das **+** neben "Vorsorge" und erstellen Sie eine weitere Kategorie namens "Konten" oder "Depots".
 
-![Mockup Tree Setup](../wiki-images/mockup-tree-setup.svg)
+![Mockup Tree Setup](./wiki-images/mockup-tree-setup.svg)
 
 #### 1.2 Das 3a Asset erfassen (FormModal)
 Sobald die Ordnerstruktur steht, legen wir das eigentliche Finanzobjekt (Asset) an.
@@ -18,7 +18,7 @@ Sobald die Ordnerstruktur steht, legen wir das eigentliche Finanzobjekt (Asset) 
    * Wählen Sie **3a Fonds** (`pension_3a_fund`), wenn die Gelder in ein Wertschriften- oder ETF-Portfolio investiert sind. Diese Klassifizierung ist zwingend, damit das System später Kursgewinne korrekt berechnen kann.
 4. Klicken Sie auf **Speichern**.
 
-![Mockup Asset Form](../wiki-images/mockup-asset-form.svg)
+![Mockup Asset Form](./wiki-images/mockup-asset-form.svg)
 
 #### 1.3 Feinschliff im Eigenschaften-Editor (PropertyEditor)
 Nach der Erstellung ist das neue Asset im Strukturbaum markiert und die rechte Seitenleiste (Zone 4) öffnet sich automatisch.
@@ -27,12 +27,12 @@ Nach der Erstellung ist das neue Asset im Strukturbaum markiert und die rechte S
 3. Optional: Handelt es sich um einen 3a-Fonds, der an einer Börse gehandelt wird, können Sie im Feld **Ticker (API)** das entsprechende Symbol eintragen, um die Wertanpassungen später über den LiveEditor via EODHD zu synchronisieren.
 4. Alle Anpassungen im PropertyEditor werden durch die **Auto-Save** Funktion verzugsfrei in den Tresor geschrieben.
 
-![Mockup Tree Setup](../wiki-images/mockup-tree-setup.svg)
+![Mockup Tree Setup](./wiki-images/mockup-tree-setup.svg)
 
 #### 1.4 Das finale Resultat
 Der Strukturbaum aggregiert nun automatisch alle Ebenen. Wenn Sie weitere Banken und Assets (z.B. Ihr UBS Girokonto oder ein Aktien-Depot) hinzufügen, verdichtet FinBundle PRO die Werte in Echtzeit nach oben, während das neu erstellte 3a-Konto sauber in seiner Kategorie liegt.
 
-![Mockup Tree Final](../wiki-images/mockup-tree-final.svg)
+![Mockup Tree Final](./wiki-images/mockup-tree-final.svg)
 
 ### ⚠️ Troubleshooting: Die 3a Asset-Klassen im Vergleich
 
