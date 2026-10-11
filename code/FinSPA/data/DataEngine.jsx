@@ -1,8 +1,8 @@
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 const defaultBookingCategories = {
-    'Einzahlung': ['Lohn', 'Dividenden', 'Zinsen', 'Verkauf', 'Mieteinnahmen', 'Umbuchung Eingang', 'Sonstiges'],
-    'Auszahlung': ['Steuern', 'Gebühren', 'Lebensmittel', 'Telekommunikation', 'Versicherungen', 'Verkehr', 'Umbuchung Ausgang', 'Sonstiges'],
+    'Einzahlung': ['Lohn', 'Dividenden', 'Zinsen', 'Verkauf', 'Mieteinnahmen', 'Umbuchung Eingang', 'Kreditkartenabrechnung', 'Sonstiges'],
+    'Auszahlung': ['Steuern', 'Gebühren', 'Lebensmittel', 'Telekommunikation', 'Versicherungen', 'Verkehr', 'Umbuchung Ausgang', 'Kartenzahlung', 'Sonstiges'],
     'Kauf': ['Investition', 'Reinvestition'],
     'Verkauf': ['Liquidation', 'Teilverkauf'],
     'Dividende': ['Ausschüttung'],
@@ -17,9 +17,11 @@ const ensureDefaultAssetClasses = (loadedData) => {
     if (!loadedData) return loadedData;
     if (!loadedData.settings) loadedData.settings = {};
     if (!loadedData.settings.assetClasses) loadedData.settings.assetClasses = [];
+    if (!loadedData.alerts) loadedData.alerts = []; // Neu: Initialisierung des Alert-Speichers
 
     const defaultClasses = [
         { id: 'cash', name: 'Konto', description: 'Liquide Mittel und Girokonten' },
+        { id: 'credit_card', name: 'Kreditkarte', description: 'Kreditkarten, Kartenlimiten und laufende Monatsbelastungen' }, // NEU: Kreditkartenklasse
         { id: 'fund', name: 'Fonds / ETF', description: 'Investmentfonds und passive ETFs' },
         { id: 'stock', name: 'Aktie', description: 'Direktinvestitionen in Einzelaktien' },
         { id: 'crypto', name: 'Krypto', description: 'Kryptowährungen wie BTC, ETH' },
@@ -43,14 +45,25 @@ const ensureDefaultAssetClasses = (loadedData) => {
 };
 
 const initialData = {
-  version: "1.0.0 RC1", lastModified: new Date().toISOString(), 
+  version: "1.0.0 RC1", 
+  lastModified: new Date().toISOString(), 
   settings: { 
       baseCurrency: 'CHF', 
       showTaxesForDividends: true, 
       showFeesForSecurities: true,
       bookingCategories: defaultBookingCategories,
+      finApiKeys: {
+          alphavantage: '',
+          eodhd: ''
+      },
+      aiApiKeys: {
+          openai: '',
+          anthropic: '',
+          gemini: ''
+      },
       assetClasses: [
           { id: 'cash', name: 'Konto', description: 'Liquide Mittel und Girokonten' },
+          { id: 'credit_card', name: 'Kreditkarte', description: 'Kreditkarten, Kartenlimiten und laufende Monatsbelastungen' },
           { id: 'fund', name: 'Fonds / ETF', description: 'Investmentfonds und passive ETFs' },
           { id: 'stock', name: 'Aktie', description: 'Direktinvestitionen in Einzelaktien' },
           { id: 'crypto', name: 'Krypto', description: 'Kryptowährungen wie BTC, ETH' },
@@ -65,7 +78,9 @@ const initialData = {
   },
   banks: [],
   budget: { incomeSources: [], expenses: [], subscriptions: [] },
-  goals: { fire: { target: 500000, year: 2035 } }, scenarios: [],
+  goals: { fire: { target: 500000, year: 2035 } }, 
+  scenarios: [],
+  alerts: [], // Alert-Speicher für Kurs-Benachrichtigungen
   aiContext: { history: [], apiMessages: [] } 
 };
 
@@ -81,9 +96,11 @@ const isAssetLiquid = (asset) => {
     const name = (asset.name || '').toLowerCase();
     const isPension = ac.includes('pension') || name.includes('vorsorge') || name.includes('3a');
     
+    // Feste und langfristige Anlagen sind nicht liquide
     if (['stock', 'fund', 'managed_fund', 'crypto', 'realestate', 'mortgage'].includes(ac)) return false;
     if (isPension) return false;
     
+    // Konten und Kreditkarten (kurzfristige Verbindlichkeiten) zählen zur Liquidität
     return true; 
 };
 
@@ -130,7 +147,7 @@ const classifyBooking = (bk, asset) => {
         return classification;
     }
 
-    const isTransfer = catLower.includes('umbuchung') || catLower.includes('transfer');
+    const isTransfer = catLower.includes('umbuchung') || catLower.includes('transfer') || catLower.includes('ausgleich') || catLower.includes('abrechnung');
     if (isTransfer) {
         classification.type = 'shift';
         return classification;
@@ -147,7 +164,10 @@ const classifyBooking = (bk, asset) => {
 
 const getAllAssets = (nodes) => {
   let assets = [];
-  nodes.forEach(node => { if (node.type === 'asset') assets.push(node); if (node.children) assets = assets.concat(getAllAssets(node.children)); });
+  nodes.forEach(node => { 
+      if (node.type === 'asset') assets.push(node); 
+      if (node.children) assets = assets.concat(getAllAssets(node.children)); 
+  });
   return assets;
 };
 
@@ -269,7 +289,7 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
     return rawValue * parseRate(applicableRate || 1);
 };
 
-// --- NEUE FUNKTION: Investiertes Kapital berechnen (inkl. FX-Handhabung) ---
+// --- Investiertes Kapital berechnen (inkl. FX-Handhabung) ---
 const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
     let investedRaw = 0;
     
@@ -302,7 +322,7 @@ const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
             }
         });
     } else {
-        // Klassische Konten (Salden überschreiben alle vorherigen Buchungen)
+        // Klassische Konten und Kreditkarten (Salden überschreiben alle vorherigen Buchungen)
         let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
         let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
         let baseDate = '1970-01-01';
@@ -372,7 +392,9 @@ const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
 const getTotalWealthAtDate = (assets, date) => assets.reduce((sum, a) => sum + getAssetValueAtDate(a, date, assets), 0);
 
 const generateMonthEnds = (startStr, endStr) => {
-    let dates = []; let curr = new Date(startStr); let end = new Date(endStr);
+    let dates = []; 
+    let curr = new Date(startStr); 
+    let end = new Date(endStr);
     while (curr <= end) {
         let lastDay = new Date(curr.getFullYear(), curr.getMonth() + 1, 0);
         if (lastDay > end) lastDay = end;
@@ -384,21 +406,23 @@ const generateMonthEnds = (startStr, endStr) => {
 };
 
 const calcLinearRegression = (points) => {
-  const n = points.length; if(n<2) return (x)=>points[0]?.y||0;
-  let sX=0, sY=0, sXY=0, sXX=0;
-  points.forEach((p,i)=>{sX+=i; sY+=p.y; sXY+=i*p.y; sXX+=i*i;});
-  const slope = (n*sXY - sX*sY)/(n*sXX - sX*sX);
-  const inc = (sY - slope*sX)/n;
-  return (x) => slope*x + inc;
+  const n = points.length; 
+  if (n < 2) return (x) => points[0]?.y || 0;
+  let sX = 0, sY = 0, sXY = 0, sXX = 0;
+  points.forEach((p, i) => { sX += i; sY += p.y; sXY += i * p.y; sXX += i * i; });
+  const slope = (n * sXY - sX * sY) / (n * sXX - sX * sX);
+  const inc = (sY - slope * sX) / n;
+  return (x) => slope * x + inc;
 };
 
 const calcExpRegression = (points) => {
-  const n = points.length; if(n<2) return (x)=>points[0]?.y||0;
-  let sX=0, sLnY=0, sXLnY=0, sXX=0;
-  points.forEach((p,i)=>{ const lnY = Math.log(Math.max(p.y, 1)); sX+=i; sLnY+=lnY; sXLnY+=i*lnY; sXX+=i*i; });
-  const b = (n*sXLnY - sX*sLnY)/(n*sXX - sX*sX);
-  const a = Math.exp((sLnY - b*sX)/n);
-  return (x) => a * Math.exp(b*x);
+  const n = points.length; 
+  if (n < 2) return (x) => points[0]?.y || 0;
+  let sX = 0, sLnY = 0, sXLnY = 0, sXX = 0;
+  points.forEach((p, i) => { const lnY = Math.log(Math.max(p.y, 1)); sX += i; sLnY += lnY; sXLnY += i * lnY; sXX += i * i; });
+  const b = (n * sXLnY - sX * sLnY) / (n * sXX - sX * sX);
+  const a = Math.exp((sLnY - b * sX) / n);
+  return (x) => a * Math.exp(b * x);
 };
 
 const formatCurrency = (val, lang, currency = 'CHF') => {
@@ -412,7 +436,7 @@ const getNormalizedBookings = (assets) => {
         (asset.bookings || []).forEach(bk => {
             const classif = classifyBooking(bk, asset);
             
-            // KORREKTUR: FX-Rate der Einzelbuchung priorisieren!
+            // Priorisierung der FX-Rate der Einzelbuchung
             const bkRate = bk.bookingExchangeRate ? parseRate(bk.bookingExchangeRate) : 0;
             const assetRate = parseRate(asset.exchangeRate || 1);
             const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
@@ -437,7 +461,7 @@ module.exports = {
     getAssetPriceAtDate,
     getAssetRawValueAtDate, 
     getAssetValueAtDate, 
-    getInvestedCapitalAtDate, // NEU EXPORTIERT
+    getInvestedCapitalAtDate,
     getTotalWealthAtDate, 
     generateMonthEnds, 
     calcLinearRegression, 

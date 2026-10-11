@@ -9,7 +9,8 @@ const {
   getAllAssets = () => [], 
   generateId = () => Math.random().toString(36).substr(2, 9),
   defaultBookingCategories = {},
-  initialData = { settings: { assetClasses: [] } }
+  initialData = { settings: { assetClasses: [] } },
+  getAssetRawValueAtDate = () => 0
 } = DataEngine;
 
 const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, updateTreeData, syncExchangeRates, t }) => {
@@ -130,6 +131,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         
         const ac = selectedNode?.assetClass;
         const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
+        const isCreditCard = ac === 'credit_card';
 
         const handleBookingPropChange = (keyOrObj, val) => {
           const changes = typeof keyOrObj === 'object' ? keyOrObj : { [keyOrObj]: val };
@@ -168,14 +170,18 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <div>
                   <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('type', 'Typ')}</label>
                   <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
-                    <option value="Einzahlung">{safeT('typeDeposit', 'Einzahlung')}</option>
-                    <option value="Auszahlung">{safeT('typeWithdrawal', 'Auszahlung')}</option>
-                    <option value="Kauf">{safeT('typeBuy', 'Kauf')}</option>
-                    <option value="Verkauf">{safeT('typeSell', 'Verkauf')}</option>
-                    <option value="Dividende">{safeT('typeDividend', 'Dividende / Zins')}</option>
-                    <option value="Wertanpassung">{safeT('typeRevaluation', 'Wertanpassung')}</option>
+                    <option value="Auszahlung">{isCreditCard ? safeT('typeCardExpense', 'Kartenausgabe (Belastung)') : safeT('typeWithdrawal', 'Auszahlung')}</option>
+                    <option value="Einzahlung">{isCreditCard ? safeT('typeCardSettlement', 'Abrechnungsausgleich (Gutschrift)') : safeT('typeDeposit', 'Einzahlung')}</option>
                     <option value="Umbuchung">{safeT('typeTransfer', 'Umbuchung')}</option>
-                    <option value="Abzahlung">{safeT('typeAmortization', 'Abzahlung')}</option>
+                    {!isCreditCard && (
+                      <>
+                        <option value="Kauf">{safeT('typeBuy', 'Kauf')}</option>
+                        <option value="Verkauf">{safeT('typeSell', 'Verkauf')}</option>
+                        <option value="Dividende">{safeT('typeDividend', 'Dividende / Zins')}</option>
+                        <option value="Wertanpassung">{safeT('typeRevaluation', 'Wertanpassung')}</option>
+                        <option value="Abzahlung">{safeT('typeAmortization', 'Abzahlung')}</option>
+                      </>
+                    )}
                   </select>
                 </div>
               )}
@@ -202,7 +208,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)}>
                           <option value="">{safeT('optTargetAccount', '-- Optional: Zielkonto wählen --')}</option>
                           {data.banks.map(bank => {
-                              const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
+                              const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'credit_card', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
                               if (eligibleAssets.length === 0) return null;
                               return (
                                   <optgroup key={bank.id} label={bank.name}>
@@ -248,7 +254,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                                  setTransferTargetId('');
                                  if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT('msgTransferGenerated', "Gegenbuchung erfolgreich generiert"), "success");
                              }} 
-                             className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md text-sm"
+                             className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md text-sm cursor-pointer"
                            >
                                <Icon name="Send" size={14}/> {safeT('btnExecuteTransfer', 'Gegenbuchung ausführen')}
                            </button>
@@ -336,7 +342,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
               let liveRate = null;
               try {
-                  const res = await fetch(`https://api.frankfurter.dev/v1/latest?base={fromCurrency}&symbols=${baseCurrency}`);
+                  const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCurrency}&symbols=${baseCurrency}`);
                   if (res.ok) {
                       const json = await res.json();
                       liveRate = json.rates[baseCurrency];
@@ -379,6 +385,15 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           }
       };
 
+      const isCreditCard = selectedNode.assetClass === 'credit_card';
+      const allCashAssets = getAllAssets(data?.banks || []).filter(a => a.id !== selectedNode.id && a.assetClass === 'cash');
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      const cardBalanceRaw = isCreditCard ? Math.abs(getAssetRawValueAtDate(selectedNode, todayStr)) : 0;
+      const cardLimit = Number(selectedNode.cardLimit || 5000);
+      const availableCardAmount = Math.max(0, cardLimit - cardBalanceRaw);
+      const cardUsagePct = cardLimit > 0 ? Math.min(100, (cardBalanceRaw / cardLimit) * 100) : 0;
+
       return (
           <>
             <div>
@@ -401,16 +416,17 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   onChange={e => { 
                       const val = e.target.value; 
                       const updates = { assetClass: val };
-                      if (['pension_cash', 'pension_3a_cash', 'pension_fund', 'pension_3a_fund', 'realestate', 'mortgage', 'pension_3a_managed', 'managed_fund'].includes(val)) { updates.isLiquid = false; } 
+                      if (['pension_cash', 'pension_3a_cash', 'pension_fund', 'pension_3a_fund', 'realestate', 'mortgage', 'pension_3a_managed', 'managed_fund'].includes(val)) { 
+                        updates.isLiquid = false; 
+                      } 
                       handlePropChange(updates);
                   }}
               >
                 {(() => {
                     const titleMap = {
-                        'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
+                        'cash': 'acCash', 'credit_card': 'acCreditCard', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
                         'realestate': 'acRealEstate', 'mortgage': 'acMortgage', 
-                        'pension_cash': 'acPensionCash', 'pension_fund': 'acPensionFund', 
-                        'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund',
+                        'pension_cash': 'acPensionCash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund',
                         'managed_fund': 'acManagedFund', 'pension_3a_managed': 'acPension3aManaged'
                     };
                     
@@ -426,7 +442,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
                     return finalClasses.map(ac => {
                         const tKey = titleMap[ac.id];
-                        const fallbackName = ac.name || ac.fallback;
+                        const fallbackName = ac.name || ac.fallback || ac.id;
                         const displayName = tKey && safeT(tKey, fallbackName) !== tKey 
                                             ? safeT(tKey, fallbackName) 
                                             : fallbackName;
@@ -447,7 +463,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight" title={safeT('propTrackRateTitle', 'Genereller Tracking-Kurs')}>{safeT('propCurrentRate', 'Aktueller Kurs')}</label>
                 <div className="relative">
                     <input type="number" step="any" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums focus:ring-2 focus:ring-blue-500 outline-none" value={selectedNode.exchangeRate ?? ''} onChange={e => handlePropChange('exchangeRate', e.target.value)} onBlur={e => { if (syncExchangeRates) syncExchangeRates(selectedNode.currency, e.target.value); }} />
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={14} /></button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={14} /></button>
                 </div>
               </div>
             </div>
@@ -456,6 +472,99 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               <input type="checkbox" checked={selectedNode.isLiquid || false} onChange={e => handlePropChange('isLiquid', e.target.checked)} className="w-4 h-4 mt-0.5 text-blue-600 rounded focus:ring-blue-500" /> 
               <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200">{safeT('isLiquid', 'Liquides Mittel')}</span>
             </label>
+
+            {/* DEDIZIERTER KREDITKARTEN BLOCK */}
+            {isCreditCard && (
+              <div className="bg-indigo-50/70 dark:bg-slate-800/60 border border-indigo-200 dark:border-slate-700 p-4 rounded-xl space-y-4 mt-4 relative overflow-hidden shadow-xs">
+                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
+                 <h4 className="font-bold text-xs text-indigo-900 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                     <Icon name="CreditCard" size={14} className="text-indigo-600 dark:text-indigo-400" /> 
+                     {safeT('propCreditCardConfig', 'Kreditkarten-Konfiguration')}
+                 </h4>
+                 
+                 <div>
+                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                        {safeT('propCardLimit', 'Kreditlimite')} ({selectedNode.currency || 'CHF'})
+                    </label>
+                    <input 
+                      type="number" 
+                      step="100" 
+                      placeholder="z.B. 5000" 
+                      className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-sm font-mono tabular-nums" 
+                      value={selectedNode.cardLimit ?? ''} 
+                      onChange={e => handlePropChange('cardLimit', Number(e.target.value))} 
+                    />
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                          {safeT('propCardBrand', 'Kartenmarke')}
+                      </label>
+                      <select 
+                        value={selectedNode.cardBrand || 'VISA'} 
+                        onChange={e => handlePropChange('cardBrand', e.target.value)}
+                        className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                      >
+                        <option value="VISA">VISA</option>
+                        <option value="Mastercard">Mastercard</option>
+                        <option value="American Express">American Express</option>
+                        <option value="Sonstige">Sonstige</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                          {safeT('propCardLast4', 'Letzte 4 Ziffern')}
+                      </label>
+                      <input 
+                        type="text" 
+                        maxLength={4}
+                        placeholder="z.B. 4242" 
+                        className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-xs font-mono text-center" 
+                        value={selectedNode.cardLast4 || ''} 
+                        onChange={e => handlePropChange('cardLast4', e.target.value.replace(/\D/g, ''))} 
+                      />
+                    </div>
+                 </div>
+
+                 <div>
+                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                        {safeT('propLinkedBank', 'Verknüpftes Girokonto (Ausgleich)')}
+                    </label>
+                    <select 
+                      value={selectedNode.linkedBankAccountId || ''} 
+                      onChange={e => handlePropChange('linkedBankAccountId', e.target.value)}
+                      className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                    >
+                      <option value="">{safeT('optSelectBankAccount', '-- Bankkonto für Abrechnung wählen --')}</option>
+                      {allCashAssets.map(asset => (
+                        <option key={asset.id} value={asset.id}>{asset.name} ({asset.currency || 'CHF'})</option>
+                      ))}
+                    </select>
+                    <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1">
+                      {safeT('descLinkedBankNotice', 'Ermöglicht dem AI Agent den automatischen Ausgleich der Monatsrechnung.')}
+                    </p>
+                 </div>
+
+                 <div className="pt-2 border-t border-indigo-200/60 dark:border-slate-700/80">
+                    <div className="flex justify-between text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                       <span>{safeT('labelCardUsage', 'Aktuelle Auslastung:')}</span>
+                       <span className="font-mono">{cardBalanceRaw.toFixed(2)} / {cardLimit.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden mb-1">
+                       <div 
+                         className={`h-full rounded-full transition-all duration-300 ${cardUsagePct > 85 ? 'bg-rose-500' : 'bg-indigo-600 dark:bg-indigo-400'}`}
+                         style={{ width: `${cardUsagePct}%` }}
+                       />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                       <span>{cardUsagePct.toFixed(1)}% beansprucht</span>
+                       <span>Rest: {availableCardAmount.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
+                    </div>
+                 </div>
+              </div>
+            )}
 
             {['fund', 'stock', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(selectedNode.assetClass) && (
                 <div className="grid grid-cols-2 gap-3 mt-4">

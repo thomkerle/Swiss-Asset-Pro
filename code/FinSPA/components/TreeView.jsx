@@ -151,7 +151,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
 
   const filteredBanks = useMemo(() => {
     return filterTreeNodes(data?.banks || [], searchQuery);
-  }, [data?.banks, searchQuery,showArchived]);
+  }, [data?.banks, searchQuery, showArchived]);
 
   const filterBudgetList = (items) => {
     if (!searchQuery) return items;
@@ -165,12 +165,23 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
     const hasChildren = node.children && node.children.length > 0;
     
     const isForeignCurrency = node.type === 'asset' && node.currency && node.currency !== baseCurrency;
+    const isCreditCard = node.type === 'asset' && node.assetClass === 'credit_card';
     
     let iconName = 'DollarSign', iconColor = 'text-green-500';
-    if (node.type === 'bank') { iconName = 'Shield'; iconColor = 'text-slate-500 dark:text-slate-400'; }
-    else if (node.type === 'category') { iconName = isExpanded ? 'FolderOpen' : 'Folder'; iconColor = 'text-yellow-500'; }
+    if (node.type === 'bank') { 
+      iconName = 'Shield'; 
+      iconColor = 'text-slate-500 dark:text-slate-400'; 
+    }
+    else if (node.type === 'category') { 
+      iconName = isExpanded ? 'FolderOpen' : 'Folder'; 
+      iconColor = 'text-yellow-500'; 
+    }
     else if (node.type === 'asset') {
-       if (node.assetClass === 'realestate') iconName = 'Home';
+       if (isCreditCard) {
+         iconName = 'CreditCard';
+         iconColor = 'text-indigo-500 dark:text-indigo-400';
+       }
+       else if (node.assetClass === 'realestate') iconName = 'Home';
        else if (node.assetClass === 'mortgage') { iconName = 'Building'; iconColor = 'text-red-500'; }
        else if (node.assetClass?.includes('pension')) iconName = 'Lock';
        else if (node.assetClass === 'crypto') { iconName = 'Coins'; iconColor = 'text-orange-500'; }
@@ -251,6 +262,12 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
                <HighlightText text={node.name} highlight={searchQuery} />
             </span>
             
+            {isCreditCard && (
+              <span className="px-1 py-0.5 text-[8px] font-black uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 rounded shrink-0 pointer-events-none border border-indigo-200 dark:border-indigo-800/60">
+                Karte
+              </span>
+            )}
+
             {isForeignCurrency && (
               <span className="px-1 py-0.5 text-[9px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 rounded shrink-0 pointer-events-none">
                 {node.currency}
@@ -408,7 +425,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
 
       {contextMenu && (
         <div 
-          className="fixed bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl rounded-lg py-1 z-[10000] min-w-[170px] text-xs font-medium text-slate-700 dark:text-slate-200"
+          className="fixed bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xl rounded-lg py-1 z-[10000] min-w-[190px] text-xs font-medium text-slate-700 dark:text-slate-200"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -424,6 +441,9 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
               </button>
               <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2" onClick={() => { setModalObj({type: 'addAsset', parentId: contextMenu.node.id}); setContextMenu(null); }}>
                 <Icon name="Plus" size={13} className="text-green-500" /> {t ? t('addAsset') : 'Anlage hinzufügen'}
+              </button>
+              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2" onClick={() => { setModalObj({type: 'addAsset', parentId: contextMenu.node.id, defaultAssetClass: 'credit_card'}); setContextMenu(null); }}>
+                <Icon name="CreditCard" size={13} className="text-indigo-500" /> {t ? (t('addCreditCard') || 'Kreditkarte hinzufügen') : 'Kreditkarte hinzufügen'}
               </button>
             </>
           )}
