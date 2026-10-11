@@ -86,7 +86,7 @@
           <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </span>
-          <input type="text" id="manual-search-input" placeholder="Dokumentation durchsuchen (z.B. Copilot, PropertyEditor, Steuern)..." 
+          <input type="text" id="manual-search-input" placeholder="Dokumentation durchsuchen (z.B. Copilot, Mitteilungszentrale, Steuern)..." 
                  class="w-full pl-9 pr-8 py-1.5 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
           <button id="clear-search-btn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white hidden">✕</button>
         </div>
@@ -109,7 +109,7 @@
     <aside id="sidebar" class="fixed lg:sticky top-20 left-0 h-[calc(100vh-5.5rem)] w-72 bg-slate-900/95 lg:bg-transparent backdrop-blur-lg lg:backdrop-blur-none p-4 rounded-xl border border-slate-800 lg:border-transparent z-30 overflow-y-auto hidden lg:block shrink-0 transition-all duration-200">
       <div class="flex items-center justify-between mb-3 px-2">
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Kapitel &amp; Guides</h2>
-        <span class="text-[11px] text-sky-400 font-semibold">14 Dokumente</span>
+        <span class="text-[11px] text-sky-400 font-semibold">16 Dokumente</span>
       </div>
       <nav id="toc-nav" class="space-y-1 text-xs">
         <a href="#featured" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">⭐ Top-Empfehlungen</a>
@@ -153,7 +153,7 @@
             <g transform="translate(48, 36)">
               <rect width="160" height="26" rx="13" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
               <circle cx="13" cy="13" r="4.5" fill="#38bdf8"/>
-              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#e0f2fe" letter-spacing="1">OFFIZIELLLES WIKI</text>
+              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#e0f2fe" letter-spacing="1">OFFIZIELLES WIKI</text>
             </g>
             <text x="48" y="104" font-family="sans-serif" font-size="38" font-weight="800" fill="#ffffff" letter-spacing="-0.5">
               FinBundle <tspan fill="url(#accentGlow)">PRO</tspan>
@@ -239,6 +239,9 @@
           <a href="./home.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
             <span class="text-sky-400 text-base">🏠</span> Home / Dashboard
           </a>
+          <a href="./messagecentral.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-sky-500/30 hover:border-sky-500 transition flex items-center gap-3 text-slate-200">
+            <span class="text-sky-400 text-base">🔔</span> Mitteilungszentrale &amp; Copilot
+          </a>
           <a href="./manualeditor.html" class="p-4 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 transition flex items-center gap-3 text-slate-200">
             <span class="text-sky-400 text-base">📁</span> Struktur &amp; Konten
           </a>
@@ -282,20 +285,28 @@
           <h2 class="text-2xl font-bold tracking-tight text-white">Autarke HTML-Handbücher &amp; Referenzen</h2>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <a href="./finbundle_pro_einsteiger_handbuch.html" class="p-5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-emerald-500/30 hover:border-emerald-500 transition flex items-start gap-4 text-slate-200 shadow-lg">
             <div class="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-lg">📘</div>
             <div>
               <div class="font-bold text-white text-sm">Einsteiger-Handbuch (HTML Edition)</div>
-              <p class="text-xs text-slate-400 mt-1">Der ideale Leitfaden für neue Anwender zum schnellen Start in die Offline-Vermögensverwaltung.</p>
+              <p class="text-xs text-slate-400 mt-1">Der Leitfaden für neue Anwender zum schnellen Start in die Offline-Vermögensverwaltung.</p>
             </div>
           </a>
 
           <a href="./FinbundlePro_Referenzhandbuch.html" class="p-5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-sky-500/30 hover:border-sky-500 transition flex items-start gap-4 text-slate-200 shadow-lg">
             <div class="p-2.5 rounded-lg bg-sky-500/20 text-sky-400 text-lg">📙</div>
             <div>
-              <div class="font-bold text-white text-sm">Vollständiges Referenzhandbuch (HTML Edition)</div>
+              <div class="font-bold text-white text-sm">Vollständiges Referenzhandbuch</div>
               <p class="text-xs text-slate-400 mt-1">Das umfassende Kompendium mit allen Formeln, SVG-Diagrammen und Injektor-Spezifikationen.</p>
+            </div>
+          </a>
+
+          <a href="./KI-Sicherheitsaudit.html" class="p-5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-indigo-500/30 hover:border-indigo-500 transition flex items-start gap-4 text-slate-200 shadow-lg">
+            <div class="p-2.5 rounded-lg bg-indigo-500/20 text-indigo-400 text-lg">🛡️</div>
+            <div>
+              <div class="font-bold text-white text-sm">KI-Sicherheitsaudit (HTML Edition)</div>
+              <p class="text-xs text-slate-400 mt-1">Druckfertiger technischer Revisionsbericht (Zero-Knowledge, DSG &amp; DSGVO Konformität).</p>
             </div>
           </a>
         </div>
