@@ -79,13 +79,13 @@ Dieses Benutzerhandbuch beschreibt die Einrichtung, Funktionsweise und tägliche
 Die Leiste befindet sich am oberen Bildschirmrand und bietet schnellen Zugriff auf Diktat, Buchungseingabe und den Status der Mitteilungszentrale:
 
 
-![Mockup MessageCentral_Feature](./wiki-images/mockup-messagecentral_feature.svg)
+![Mockup MessageCentral_Feature](./wiki-images/mockup-messagecentral-feature.svg)
 
 ### Mitteilungszentrale (Slide-Over Drawer)
 
 Durch Klick auf das Aktivitäts-Symbol öffnet sich der seitliche Drawer:
 
-![Mockup QuickAgentBar_Feature](./wiki-images/mockup-uickagentbar_feature.svg)
+![Mockup QuickAgentBar_Feature](./wiki-images/mockup-uickagentbar-feature.svg)
 
 ---
 
