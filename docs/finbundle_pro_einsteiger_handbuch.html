@@ -30,7 +30,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     ::-webkit-scrollbar { width: 7px; height: 7px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -38,29 +38,37 @@
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
     
     .glass-nav {
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
     }
     
     .toc-active {
       background-color: rgba(34, 197, 94, 0.12);
       color: #4ade80 !important;
-      font-weight: 600;
+      font-weight: 700;
       border-left: 3px solid #22c55e;
     }
 
     .tip-box {
-      background: rgba(15, 23, 42, 0.8);
+      background: rgba(15, 23, 42, 0.85);
       border-left: 4px solid #22c55e;
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 10px 10px 0;
       padding: 14px 18px;
     }
 
     .warn-box {
-      background: rgba(30, 27, 75, 0.4);
+      background: rgba(30, 27, 75, 0.5);
       border-left: 4px solid #f59e0b;
-      border-radius: 0 8px 8px 0;
+      border-radius: 0 10px 10px 0;
       padding: 14px 18px;
+    }
+
+    .fixstern-box {
+      background: rgba(2, 44, 34, 0.4);
+      border-left: 4px solid #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      padding: 16px 20px;
     }
 
     .rule-card {
@@ -85,8 +93,10 @@
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-emerald-500 selection:text-white">
 
+  <!-- Top Scroll Progress Bar -->
   <div id="read-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-500 z-50 transition-all duration-75 w-0"></div>
 
+  <!-- Header Bar -->
   <header id="header-bar" class="sticky top-0 z-40 w-full glass-nav bg-slate-950/85 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       
@@ -104,10 +114,10 @@
             <div class="flex items-center gap-2">
               <span class="font-extrabold tracking-tight text-white text-lg">FinBundle <span class="text-emerald-400">PRO</span></span>
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Einsteiger-Guide
+                Praxis-Handbuch v1.0.0
               </span>
             </div>
-            <p class="text-[11px] text-slate-400 hidden sm:block">Schritt für Schritt zum eigenen, privaten Finanz-Cockpit</p>
+            <p class="text-[11px] text-slate-400 hidden sm:block">Lückenlos &bull; Fixsternpunkt-Methode &bull; 100% Offline-First</p>
           </div>
         </div>
       </div>
@@ -118,30 +128,25 @@
           <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           </span>
-          <input type="text" id="manual-search-input" placeholder="Suchst du Hilfe? (z.B. Lohn buchen, ETF kaufen, Auto-Save, Umbuchung)..." 
+          <input type="text" id="manual-search-input" placeholder="Dokumentation durchsuchen (z.B. Fixstern, Copilot, EODHD, Notgroschen)..." 
                  class="w-full pl-9 pr-8 py-1.5 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
-          <button id="clear-search-btn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white hidden">
-            ✕
-          </button>
+          <button id="clear-search-btn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white hidden">✕</button>
         </div>
       </div>
 
       <!-- Action Buttons -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <!-- Interactive Checklist Modal -->
         <button onclick="toggleModal('checklist-modal')" class="px-3 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/60 text-xs font-semibold text-emerald-300 border border-emerald-700/50 flex items-center gap-1.5 transition">
           <span>✓</span>
-          <span class="hidden sm:inline">7-Schritte-Checkliste</span>
+          <span class="hidden sm:inline">10-Schritte-Checkliste</span>
         </button>
 
-        <!-- Print / PDF -->
         <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition" title="Drucken oder als PDF sichern">
           <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
           <span class="hidden md:inline">PDF</span>
         </button>
 
-        <!-- Download Button -->
-        <button id="download-html-btn" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-xs font-bold text-white shadow-md shadow-emerald-500/25 flex items-center gap-1.5 transition transform active:scale-95" title="Dieses Handbuch offline als HTML speichern">
+        <button id="download-html-btn" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-xs font-bold text-white shadow-md shadow-emerald-500/25 flex items-center gap-1.5 transition transform active:scale-95" title="Dieses Handbuch als autarke HTML-Datei speichern">
           <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           <span>Herunterladen</span>
         </button>
@@ -155,32 +160,34 @@
     <!-- Sticky Sidebar Navigation (Left) -->
     <aside id="sidebar" class="fixed lg:sticky top-20 left-0 h-[calc(100vh-5.5rem)] w-72 bg-slate-900/95 lg:bg-transparent backdrop-blur-lg lg:backdrop-blur-none p-4 rounded-xl border border-slate-800 lg:border-transparent z-30 overflow-y-auto hidden lg:block shrink-0 transition-all duration-200">
       <div class="flex items-center justify-between mb-3 px-2">
-        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Einsteiger-Kapitel</h2>
-        <span class="text-[11px] text-emerald-400 font-semibold">10 Lektionen</span>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Kapitelübersicht</h2>
+        <span class="text-[11px] text-emerald-400 font-semibold">12 Abschnitte</span>
       </div>
       <nav id="toc-nav" class="space-y-1 text-xs">
-        <a href="#kapitel-1" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">1. Warum FinBundle? (Der 5-Minuten-Überblick)</a>
-        <a href="#kapitel-2" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">2. Die 3 Zonen der Oberfläche</a>
-        <a href="#kapitel-3" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-semibold text-emerald-400">3. Schritt 1: Erstes Bankkonto anlegen</a>
-        <a href="#kapitel-4" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">4. Schritt 2: Einnahmen &amp; Ausgaben buchen</a>
-        <a href="#kapitel-5" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">5. Schritt 3: Der Umbuchungs-Assistent</a>
-        <a href="#kapitel-6" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">6. Schritt 4: Depot, Aktien &amp; ETFs</a>
-        <a href="#kapitel-7" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">7. Keine Angst vor Kursgewinnen (Auto-Valuation)</a>
-        <a href="#kapitel-8" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">8. Schritt 5: Die ersten 3 Reports lesen</a>
-        <a href="#kapitel-9" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">9. Schritt 6: Die 50/30/20 Budget-Methode</a>
-        <a href="#kapitel-10" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">10. Häufige Anfänger-Fragen (FAQ)</a>
+        <a href="#kapitel-1" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">1. Philosophie: Offline-First &amp; Zero Leakage</a>
+        <a href="#kapitel-2" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">2. Die 5 Zonen der Benutzeroberfläche</a>
+        <a href="#kapitel-3" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">3. Das 3-Ebenen-Prinzip (Bank &bull; Ordner &bull; Asset)</a>
+        <a href="#kapitel-4" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition font-semibold text-emerald-400">4. Der Fixsternpunkt-Ansatz (Stichtags-Inventur)</a>
+        <a href="#kapitel-5" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">5. Buchungsarten &amp; Umbuchungs-Assistent</a>
+        <a href="#kapitel-6" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">6. KI-Buchungsassistent &amp; QuickAgentBar</a>
+        <a href="#kapitel-7" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">7. Belege &amp; Auszüge scannen (PDF-Scanner)</a>
+        <a href="#kapitel-8" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">8. Depots, Aktien &amp; Auto-Valuation v2</a>
+        <a href="#kapitel-9" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">9. Mitteilungszentrale &amp; Börsen-Radar</a>
+        <a href="#kapitel-10" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">10. LiveEditor &amp; Externe Marktdaten (EODHD)</a>
+        <a href="#kapitel-11" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">11. Budgetierung (50/30/20) &amp; FIRE-Rechner</a>
+        <a href="#kapitel-12" class="toc-link block px-2.5 py-1.5 rounded-md text-slate-300 hover:text-white hover:bg-slate-800/80 transition">12. Datensicherheit (AES-256) &amp; Troubleshooting</a>
       </nav>
 
-      <!-- Easy Mode Box -->
       <div class="mt-6 p-3 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-[11px] text-emerald-200">
         <div class="flex items-center gap-2 mb-1 text-emerald-400 font-bold">
-          <span>💡</span>
-          Kein Finanzstudium nötig!
+          <span>🛡️</span>
+          Unbestechliche Buchhaltung
         </div>
-        Dieses Handbuch erklärt dir alles in einfacher Sprache, ohne Bankchinesisch. In 15 Minuten hast du dein gesamtes Vermögen sicher im Griff.
+        Durch die Kombination aus Fixsternpunkten (Ankersalden) und KI-Sprachsteuerung behältst du die volle Kontrolle über jeden Cent.
       </div>
     </aside>
 
+    <!-- Main Content Area -->
     <main class="flex-1 min-w-0 max-w-4xl space-y-16">
 
       <!-- Hero Header Section with Cover SVG -->
@@ -210,40 +217,39 @@
             <path d="M 400 240 Q 560 160 740 220 T 880 120" fill="none" stroke="url(#accentGlow)" stroke-width="3.5" stroke-linecap="round" opacity="0.5"/>
             
             <g transform="translate(48, 36)">
-              <rect width="210" height="26" rx="13" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+              <rect width="230" height="26" rx="13" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
               <circle cx="13" cy="13" r="4.5" fill="#34d399"/>
-              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#d1fae5" letter-spacing="1">EINSTEIGER &amp; PRAXISGUIDE</text>
+              <text x="26" y="17" font-family="sans-serif" font-size="11" font-weight="700" fill="#d1fae5" letter-spacing="1">EINSTEIGER- &amp; PRAXISGUIDE</text>
             </g>
 
             <text x="48" y="102" font-family="sans-serif" font-size="36" font-weight="800" fill="#ffffff" letter-spacing="-0.5">
-              Dein Start mit <tspan fill="url(#accentGlow)">FinBundle PRO</tspan>
+              FinBundle <tspan fill="url(#accentGlow)">PRO</tspan> — Dein Cockpit
             </text>
             <text x="48" y="134" font-family="sans-serif" font-size="16" font-weight="500" fill="#94a3b8">
-              Schritt für Schritt: Vom ersten Girokonto bis zur automatischen Vermögensübersicht
+              Schritt für Schritt: Vom ersten Girokonto bis zur automatischen Vermögensanalyse
             </text>
             <text x="48" y="156" font-family="sans-serif" font-size="13" font-weight="400" fill="#64748b">
-              Keine komplizierte Buchhaltungs-Theorie. Einfach, privat auf deinem Computer und sofort verständlich.
+              Lückenlose Nachvollziehbarkeit &bull; Konstanter Fixsternpunkt-Ansatz &bull; Vollständige Privatsphäre
             </text>
 
-            <!-- 3 Simple Beginner Highlights -->
             <g transform="translate(48, 195)">
               <g transform="translate(0, 0)">
                 <rect width="260" height="74" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
-                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#4ade80">1. Keine Cloud, kein Abo</text>
-                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Deine Kontostände bleiben zu 100%</text>
-                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">auf deinem eigenen Laptop/PC.</text>
+                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#4ade80">1. Konstanter Fixsternpunkt</text>
+                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Stichtags-Salden als unbestechliche</text>
+                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Anker für jede Berechnung.</text>
               </g>
               <g transform="translate(280, 0)">
                 <rect width="260" height="74" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
-                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#38bdf8">2. Einfach wie ein Notizbuch</text>
-                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Du musst kein Buchhalter sein:</text>
-                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Einnahmen (+), Ausgaben (-) fertig.</text>
+                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#38bdf8">2. KI-Copilot mit Diktat</text>
+                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Freitext- &amp; Spracheingabe,</text>
+                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Batch-Buchungen &amp; Händler-Memory.</text>
               </g>
               <g transform="translate(560, 0)">
                 <rect width="264" height="74" rx="8" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
-                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#facc15">3. Automatische Diagramme</text>
-                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Das System zeichnet dir sofort bunte,</text>
-                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">präzise Grafiken und Zukunfts-Trends.</text>
+                <text x="18" y="28" font-family="sans-serif" font-size="13" font-weight="700" fill="#facc15">3. 100% Lokale Datenhoheit</text>
+                <text x="18" y="48" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Keine Cloud, kein Abo, AES-256 Vault,</text>
+                <text x="18" y="62" font-family="sans-serif" font-size="10.5" fill="#94a3b8">Funktioniert komplett offline.</text>
               </g>
             </g>
           </svg>
@@ -252,437 +258,494 @@
         <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-            <span>Zielgruppe: <strong>Privatanleger, Sparer &amp; Familien</strong> ohne Finanzvorwissen</span>
+            <span>Zielgruppe: <strong>Privatanleger, Sparer &amp; Familien</strong> ohne Buchhaltungsstudium</span>
           </div>
           <div>
-            <span>Lesezeit: <strong class="text-emerald-400">ca. 12 Minuten</strong></span>
+            <span>Architektur: <strong class="text-emerald-400">Zero-Data-Leakage &bull; AES-256 Vault</strong></span>
           </div>
         </div>
       </section>
 
+      <!-- KAPITEL 1 -->
       <section id="kapitel-1" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/20">01</span>
-          <h2 class="text-2xl font-bold tracking-tight text-white">Warum FinBundle? (Der 5-Minuten-Überblick)</h2>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Philosophie: Offline-First, Zero Leakage &amp; Datenhoheit</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Vielleicht hast du bisher versucht, deine Finanzen in einer <strong>Excel-Tabelle</strong> zu verwalten. Nach ein paar Monaten wurde die Tabelle unübersichtlich, Formeln gingen kaputt oder du hattest keine Lust mehr, Kurse von Hand einzutragen.
+            Traditionelle Finanzprogramme zwingen Nutzer häufig in zwei Sackgassen: Entweder verliert man sich in unübersichtlichen Tabellen mit kaputten Formeln, oder man vertraut sensible Bankverbindungen externen Cloud-FinTechs an, die Kontodaten auf Drittserver übertragen und monatliche Abogebühren verlangen.
           </p>
           <p>
-            Oder du hast moderne <strong>Smartphone-Apps</strong> getestet. Dort musst du dich registrieren, deine Bankkonten mit fremden Servern verbinden und monatliche Abogebühren zahlen. Viele Menschen haben dabei ein mulmiges Gefühl: <em>Warum sollte eine Firma im Silicon Valley wissen, wie viel Geld ich auf dem Sparkonto habe?</em>
+            <strong>FinBundle PRO schlägt ein drittes Kapitel auf:</strong> Eine professionelle Desktop- und Web-Applikation, die vollkommen autark auf deinem Rechner läuft. Sämtliche Buchungen, Salden und Vermögenswerte verbleiben als verschlüsselte JSON-Datei direkt auf deiner Festplatte.
           </p>
 
-          <div class="tip-box my-4">
-            <div class="font-bold text-emerald-400 mb-1">FinBundle PRO ist das Beste aus beiden Welten:</div>
-            <ul class="list-disc pl-5 space-y-1 text-slate-300 text-xs">
-              <li><strong>Einfach &amp; Automatisch:</strong> Schöne Diagramme, Live-Börsenkurse, automatische Umbuchungen und Auswertungen wie in einer modernen FinTech-App.</li>
-              <li><strong>100% Sicher &amp; Privat:</strong> Deine Datei liegt auf deiner eigenen Festplatte. Niemand schaut dir über die Schulter. Die Software funktioniert sogar im Flugmodus komplett offline!</li>
-            </ul>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+            <div class="rule-card p-4 space-y-2">
+              <div class="text-emerald-400 font-bold text-sm flex items-center gap-2">
+                <span>🔒</span> Zero-Knowledge-Architektur
+              </div>
+              <p class="text-xs text-slate-400">
+                Weder dein Gesamtvermögen noch einzelne Kontostände werden an externe Server übermittelt. KI-Modelle erhalten beim Buchen ausschliesslich neutrale Kontenbezeichnungen zur Zielauflösung.
+              </p>
+            </div>
+            <div class="rule-card p-4 space-y-2">
+              <div class="text-sky-400 font-bold text-sm flex items-center gap-2">
+                <span>✈️</span> Echte Offline-Fähigkeit
+              </div>
+              <p class="text-xs text-slate-400">
+                Die Anwendung funktioniert im Flugmodus, auf Reisen und ohne aktive Internetverbindung. Marktdaten werden nur dann synchronisiert, wenn du es explizit wünschst.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
+      <!-- KAPITEL 2 -->
       <section id="kapitel-2" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/20">02</span>
-          <h2 class="text-2xl font-bold tracking-tight text-white">Die 3 Zonen der Oberfläche ganz einfach erklärt</h2>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Die 5 Zonen der Benutzeroberfläche</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Wenn du FinBundle PRO öffnest, siehst du drei Bereiche. Du musst dir nur drei Dinge merken:
+            Das Interface von FinBundle PRO ist in fünf logische Arbeitsbereiche aufgeteilt, sodass du jederzeit den Überblick behältst:
           </p>
 
-          <!-- SVG: Visual Explanation of the 3 Zones -->
           <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
-            <svg viewBox="0 0 880 280" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
-              <rect width="880" height="280" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+            <svg viewBox="0 0 880 340" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="340" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
               
-              <!-- Zone 1: Top Bar -->
-              <rect x="20" y="20" width="840" height="42" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
-              <text x="35" y="45" font-family="sans-serif" font-size="12" font-weight="700" fill="#38bdf8">ZONE 1: DIE MENÜLEISTE (Oben)</text>
-              <text x="310" y="45" font-family="sans-serif" font-size="11" fill="#94a3b8">Umschalten zwischen Vermögen, Live-Börsenkursen, Reports, Budget &amp; Speichern</text>
+              <!-- Zone 1: Menüleiste & QuickAgentBar -->
+              <rect x="20" y="20" width="840" height="50" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+              <text x="35" y="42" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#38bdf8">ZONE 1: KOPFLEISTE &amp; QUICKAGENTBAR</text>
+              <text x="35" y="58" font-family="sans-serif" font-size="10" fill="#94a3b8">Navigation (Vermögen, Reports, Budget, LiveEditor) &bull; Diktat-Mikrofon &bull; Prompt-Eingabe &bull; Glocken-Signal</text>
 
-              <!-- Zone 2: TreeView (Left) -->
-              <rect x="20" y="75" width="260" height="185" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-              <text x="35" y="100" font-family="sans-serif" font-size="12" font-weight="700" fill="#10b981">ZONE 2: STRUKTURBAUM</text>
-              <text x="35" y="120" font-family="sans-serif" font-size="11" fill="#cbd5e1">Deine Banken &amp; Konten:</text>
-              <text x="40" y="145" font-family="sans-serif" font-size="10.5" fill="#94a3b8">🏛 UBS / Hausbank</text>
-              <text x="55" y="165" font-family="sans-serif" font-size="10.5" fill="#94a3b8">📁 Girokonten</text>
-              <text x="70" y="185" font-family="sans-serif" font-size="10.5" fill="#4ade80">💵 Hauptkonto (CHF 12'400)</text>
-              <text x="40" y="215" font-family="sans-serif" font-size="10" fill="#64748b">Klicke ein Konto an, um es zu öffnen!</text>
+              <!-- Zone 2: Strukturbaum -->
+              <rect x="20" y="85" width="230" height="235" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
+              <text x="35" y="110" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#10b981">ZONE 2: STRUKTURBAUM</text>
+              <text x="35" y="130" font-family="sans-serif" font-size="10.5" fill="#cbd5e1">Banken, Depots &amp; Konten:</text>
+              <text x="40" y="155" font-family="sans-serif" font-size="10" fill="#94a3b8">🏛 UBS Switzerland</text>
+              <text x="55" y="175" font-family="sans-serif" font-size="10" fill="#94a3b8">📁 Giro &amp; Sparen</text>
+              <text x="70" y="195" font-family="sans-serif" font-size="10" fill="#4ade80">💵 Hauptkonto (CHF 12'400)</text>
+              <text x="70" y="215" font-family="sans-serif" font-size="10" fill="#94a3b8">📈 Depot (VWRL.SW)</text>
+              <text x="35" y="250" font-family="sans-serif" font-size="9.5" fill="#64748b">Auswahl steuert den Arbeitsbereich</text>
 
-              <!-- Zone 3: Workspace (Right) -->
-              <rect x="295" y="75" width="565" height="185" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
-              <text x="315" y="100" font-family="sans-serif" font-size="12" font-weight="700" fill="#f59e0b">ZONE 3: DER ARBEITSBEREICH (Hauptfenster)</text>
-              <text x="315" y="125" font-family="sans-serif" font-size="11" fill="#cbd5e1">Hier passiert die eigentliche Arbeit:</text>
-              <text x="325" y="150" font-family="sans-serif" font-size="10.5" fill="#94a3b8">• Trage deine Ein- und Ausgaben ein (+ Buchung erfassen)</text>
-              <text x="325" y="172" font-family="sans-serif" font-size="10.5" fill="#94a3b8">• Sieh deine Kontotabelle mit fortlaufendem Saldo</text>
-              <text x="325" y="194" font-family="sans-serif" font-size="10.5" fill="#94a3b8">• Sieh die bunte Sparkline-Kurve deiner Vermögensentwicklung</text>
-              <text x="325" y="225" font-family="sans-serif" font-size="10" font-weight="600" fill="#38bdf8">Tipp: Wenn du im Menü "Reports" wählst, siehst du hier Diagramme!</text>
+              <!-- Zone 3: Arbeitsbereich -->
+              <rect x="260" y="85" width="370" height="235" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+              <text x="275" y="110" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#f59e0b">ZONE 3: HAUPT-ARBEITSBEREICH</text>
+              <text x="275" y="130" font-family="sans-serif" font-size="10" fill="#cbd5e1">Transaktionsjournal, PropertyEditor &amp; Reports</text>
+              <text x="285" y="155" font-family="sans-serif" font-size="9.5" fill="#94a3b8">&bull; Buchungsliste mit Stichtags-Salden</text>
+              <text x="285" y="175" font-family="sans-serif" font-size="9.5" fill="#94a3b8">&bull; Sparkline-Verlaufskurven je Konto</text>
+              <text x="285" y="195" font-family="sans-serif" font-size="9.5" fill="#94a3b8">&bull; 15 Auswertungen &amp; Wasserfall-Charts</text>
+              <text x="285" y="215" font-family="sans-serif" font-size="9.5" fill="#94a3b8">&bull; Inline-Bearbeitung per Mausklick</text>
+
+              <!-- Zone 4 & 5: Drawer & Widgets -->
+              <rect x="640" y="85" width="220" height="235" rx="6" fill="#1e293b" stroke="#a855f7" stroke-width="1.5"/>
+              <text x="655" y="110" font-family="sans-serif" font-size="11" font-weight="700" fill="#c084fc">ZONE 4 &amp; 5: DRAWER &amp; RADAR</text>
+              <text x="655" y="130" font-family="sans-serif" font-size="9.5" fill="#cbd5e1">Mitteilungszentrale &amp; KI-Widgets</text>
+              <text x="660" y="155" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Börsen-Radar (10-Min-Takt)</text>
+              <text x="660" y="175" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; 5% Signal-Pulsieren</text>
+              <text x="660" y="195" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Buchungs-Audit (letzte 2 Std.)</text>
+              <text x="660" y="215" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; 10-Elemente-Historie</text>
+              <text x="660" y="235" font-family="sans-serif" font-size="9" fill="#94a3b8">&bull; Dynamische Sandkasten-Widgets</text>
             </svg>
           </div>
         </div>
       </section>
 
+      <!-- KAPITEL 3 -->
       <section id="kapitel-3" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">03</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 1</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Dein erstes Bankkonto anlegen (Das 3-Ebenen-Prinzip)</h2>
-          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Das 3-Ebenen-Prinzip: Bank &bull; Ordner &bull; Asset</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            In FinBundle PRO ist alles wie in einem Dateisystem geordnet. Es gibt genau 3 Stufen:
+            Deine Vermögenswerte sind in einer klaren Hierarchie strukturiert. Diese Ordnung stellt sicher, dass Konten mit identischem Namen (z. B. *"Hauptkonto"*) eindeutig ihrer jeweiligen Bank zugeordnet werden:
           </p>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-3 text-xs">
             <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
-              <span class="text-blue-400 font-bold text-sm block mb-1">1. Das Haus (Bank)</span>
-              Wo liegt das Geld?<br>
-              <em>Beispiel: "UBS", "Raiffeisen" oder "Trade Republic"</em>
+              <span class="text-blue-400 font-bold text-sm block mb-1">Ebene 1: Das Institut (Bank)</span>
+              Übergeordneter Träger.<br>
+              <em>Beispiele: UBS, PostFinance, Raiffeisen, Degiro, Interactive Brokers</em>
             </div>
             <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
-              <span class="text-amber-400 font-bold text-sm block mb-1">2. Die Schublade (Kategorie)</span>
-              Wofür ist es gedacht?<br>
-              <em>Beispiel: "Girokonten", "Sparen", "Aktien"</em>
+              <span class="text-amber-400 font-bold text-sm block mb-1">Ebene 2: Der Ordner (Kategorie)</span>
+              Strukturierung nach Zweck.<br>
+              <em>Beispiele: Zahlungskonten, Sparkonten, Freie Wertschriften, Säule 3a</em>
             </div>
             <div class="p-3 bg-slate-900 border border-slate-800 rounded-lg">
-              <span class="text-emerald-400 font-bold text-sm block mb-1">3. Der Geldbeutel (Asset)</span>
-              Das eigentliche Konto!<br>
-              <em>Beispiel: "Haupt-Girokonto CHF"</em>
+              <span class="text-emerald-400 font-bold text-sm block mb-1">Ebene 3: Das Asset (Konto)</span>
+              Das reale Zielkonto mit Saldo.<br>
+              <em>Beispiele: Privatkonto CHF, Sparkonto Plus, Vanguard FTSE All-World</em>
             </div>
           </div>
 
-          <h3 class="text-base font-bold text-white mt-4">So erstellst du es in 3 Klicks:</h3>
+          <h3 class="text-base font-bold text-white mt-4">Konto in 3 Klicks erstellen:</h3>
           <ol class="list-decimal pl-5 space-y-2 text-xs">
-            <li>Klicke oben links im Strukturbaum auf das kleine <strong>blaue Plus-Zeichen (+)</strong>.</li>
-            <li>Tippe den Namen deiner Bank ein (z.B. <code class="text-emerald-400">UBS Switzerland</code>) und klicke auf <em>Speichern</em>.</li>
-            <li>Klicke mit der <strong>rechten Maustaste</strong> auf deine neue Bank und wähle <em>"Neues Asset hinzufügen"</em>.</li>
-            <li>Gib ihm den Namen <code class="text-emerald-400">Girokonto</code>, wähle bei Anlageklasse <strong>"Konto / Bargeld"</strong> und deine Währung (z.B. CHF oder EUR). Fertig!</li>
+            <li>Klicke oben links im Strukturbaum auf das <strong>blaue Plus-Symbol (+)</strong> und trage den Banknamen ein (z. B. <code>UBS</code>).</li>
+            <li>Klicke mit der <strong>rechten Maustaste</strong> auf den neuen Bankknoten und wähle <em>"Neues Asset hinzufügen"</em>.</li>
+            <li>Wähle die passende <strong>Anlageklasse</strong> (z. B. <em>Konto / Bargeld</em> für Girokonten oder <em>Aktien &amp; Fonds</em> für Depots) und bestimme die Basiswährung.</li>
           </ol>
-
-          <div class="tip-box">
-            <strong>Startguthaben eintragen:</strong> Klicke dein neues Girokonto an und drücke rechts auf den blauen Button <code>+ Buchung erfassen</code>. Wähle Typ <strong>Einzahlung</strong>, trage deinen aktuellen Kontostand (z.B. 4'500) ein und speichere. Schon strahlt dein Strukturbaum im ersten echten Saldo!
-          </div>
         </div>
       </section>
 
+      <!-- KAPITEL 4 -->
       <section id="kapitel-4" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">04</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 2</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Einnahmen &amp; Ausgaben buchen (Wie ein Profi)</h2>
-          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Der Fixsternpunkt-Ansatz: Unverrückbare Stichtags-Inventur</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Immer wenn du Geld einnimmst oder ausgibst, klickst du rechts oben auf <strong>"+ Buchung erfassen"</strong> (oder drückst einfach die Taste <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-sky-400 font-mono text-xs">Ctrl + N</kbd> bzw. <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-sky-400 font-mono text-xs">Cmd + N</kbd>).
+            Das Fundament von FinBundle PRO ist der <strong>konstante Fixsternpunkt-Ansatz</strong>. Er löst das grösste Problem privater Finanzaufzeichnungen: <em>Was tun, wenn eine Buchung vergessen wurde oder am Monatsende eine kleine Differenz zum Bankauszug entsteht?</em>
+          </p>
+
+          <div class="fixstern-box my-4">
+            <h4 class="text-emerald-300 font-bold text-sm mb-1 flex items-center gap-2">
+              <span>⭐</span> Wie der Fixsternpunkt funktioniert:
+            </h4>
+            <p class="text-xs text-slate-300 mb-2">
+              Ein <strong>Fixsternpunkt (Stichtags-Saldo)</strong> ist ein amtlich bestätigter Saldo zu einem konkreten Datum (z. B. der Auszugssaldo per 31. Oktober mit 5'240.00 CHF). Er bildet einen unverrückbaren Anker im System.
+            </p>
+            <ul class="list-disc pl-5 space-y-1 text-slate-300 text-xs">
+              <li><strong>Rückwärts- &amp; Vorwärts-Rechnung:</strong> Alle Buchungen vor und nach dem Fixsternpunkt werden mathematisch exakt aufgerechnet.</li>
+              <li><strong>Keine verlorene Zeit:</strong> Wenn dir Belege fehlen, musst du nicht tagelang nach Fehlern suchen: Setze einfach einen neuen Fixsternpunkt mit dem aktuellen Kontostand!</li>
+              <li><strong>Automatische Saldokorrektur:</strong> FinBundle ermittelt eventuelle Buchungslücken und schliesst sie bei Bedarf mit einer automatischen Wertanpassung.</li>
+            </ul>
+          </div>
+
+          <!-- SVG: Fixsternpunkt Diagramm -->
+          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
+            <svg viewBox="0 0 880 180" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+              <rect width="880" height="180" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+              
+              <!-- Zeitstrahl -->
+              <line x1="60" y1="90" x2="820" y2="90" stroke="#334155" stroke-width="3"/>
+              
+              <!-- Fixsternpunkt 1 -->
+              <circle cx="160" cy="90" r="12" fill="#10b981"/>
+              <text x="160" y="55" font-family="sans-serif" font-size="11" font-weight="900" fill="#34d399" text-anchor="middle">FIXSTERN 1 (01. Jan)</text>
+              <text x="160" y="70" font-family="monospace" font-size="10.5" fill="#ffffff" text-anchor="middle">Saldo: 4'000 CHF</text>
+
+              <!-- Buchungsfluss 1 -->
+              <rect x="250" y="115" width="120" height="34" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+              <text x="310" y="136" font-family="sans-serif" font-size="10" fill="#38bdf8" text-anchor="middle">+ Lohn: 5'000 CHF</text>
+
+              <!-- Buchungsfluss 2 -->
+              <rect x="420" y="115" width="120" height="34" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1"/>
+              <text x="480" y="136" font-family="sans-serif" font-size="10" fill="#f43f5e" text-anchor="middle">- Miete: 1'800 CHF</text>
+
+              <!-- Fixsternpunkt 2 -->
+              <circle cx="680" cy="90" r="14" fill="#f59e0b"/>
+              <polygon points="680,68 684,79 696,79 686,86 690,97 680,90 670,97 674,86 664,79 676,79" fill="#fef08a"/>
+              <text x="680" y="45" font-family="sans-serif" font-size="11" font-weight="900" fill="#fbbf24" text-anchor="middle">FIXSTERN 2 (31. Jan)</text>
+              <text x="680" y="60" font-family="monospace" font-size="10.5" fill="#ffffff" text-anchor="middle">Stichtags-Saldo: 7'200 CHF</text>
+
+              <!-- Verbindungsbogen -->
+              <path d="M 160 90 Q 420 10 680 90" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="4 4"/>
+              <text x="420" y="32" font-family="sans-serif" font-size="9.5" fill="#94a3b8" text-anchor="middle">Unbestechlicher Fluss: 4'000 + 5'000 - 1'800 = 7'200 CHF</text>
+            </svg>
+          </div>
+
+          <p class="text-xs">
+            <strong>In der Praxis:</strong> Klicke auf ein beliebiges Konto und drücke den Button <em>"Stichtags-Saldo setzen"</em>. Trage den aktuellen Auszugsbetrag ein. FinBundle verankert die Zahl dauerhaft im Kontoblatt.
+          </p>
+        </div>
+      </section>
+
+      <!-- KAPITEL 5 -->
+      <section id="kapitel-5" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">05</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Buchungsarten &amp; der Umbuchungs-Assistent</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Im Journal stehen dir vier Standard-Buchungstypen zur Verfügung:
           </p>
 
           <div class="overflow-x-auto my-3">
             <table class="w-full text-left text-xs border border-slate-800 rounded-lg overflow-hidden">
               <thead class="bg-slate-900 text-slate-300 font-semibold uppercase">
                 <tr>
-                  <th class="p-2.5 border-b border-slate-800">Eintragstyp</th>
-                  <th class="p-2.5 border-b border-slate-800">Wann benutzt du das?</th>
-                  <th class="p-2.5 border-b border-slate-800">Typisches Beispiel</th>
+                  <th class="p-2.5 border-b border-slate-800">Typ</th>
+                  <th class="p-2.5 border-b border-slate-800">Bedeutung</th>
+                  <th class="p-2.5 border-b border-slate-800">Effekt auf dein Vermögen</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800 text-slate-300">
                 <tr class="hover:bg-slate-900/50">
                   <td class="p-2.5 font-bold text-emerald-400">Einzahlung</td>
-                  <td>Geld kommt neu auf dein Konto.</td>
-                  <td>Monatslohn, Bonus, Geldgeschenk von Oma</td>
+                  <td>Echtes Neugeld (Lohn, Dividenden, Geschenke)</td>
+                  <td>Vermögen steigt (+)</td>
                 </tr>
                 <tr class="hover:bg-slate-900/50">
-                  <td class="p-2.5 font-bold text-red-400">Auszahlung</td>
-                  <td>Geld verlässt dein Konto für Ausgaben.</td>
-                  <td>Miete, Wocheneinkauf, Restaurant, Tanken</td>
+                  <td class="p-2.5 font-bold text-rose-400">Auszahlung</td>
+                  <td>Echter Konsum (Miete, Einkäufe, Steuern, Freizeit)</td>
+                  <td>Vermögen sinkt (-)</td>
                 </tr>
                 <tr class="hover:bg-slate-900/50">
-                  <td class="p-2.5 font-bold text-blue-400">Umbuchung</td>
-                  <td>Geld wandert von einem deiner Konten zu einem anderen.</td>
-                  <td>Vom Girokonto aufs Sparkonto oder Depot</td>
+                  <td class="p-2.5 font-bold text-sky-400">Umbuchung</td>
+                  <td>Verschiebung zwischen eigenen Konten (Giro ➔ Sparkonto)</td>
+                  <td>Neutral (&plusmn;0 CHF, kein Ausgabenverlust!)</td>
                 </tr>
                 <tr class="hover:bg-slate-900/50">
-                  <td class="p-2.5 font-bold text-amber-400">Gebühr</td>
-                  <td>Bankspesen oder Kartengebühren.</td>
-                  <td>Jahresgebühr Kreditkarte, Depotgebühr</td>
+                  <td class="p-2.5 font-bold text-amber-400">Wertanpassung</td>
+                  <td>Kursgewinn/Kursverlust bei Aktien oder Währungseffekte</td>
+                  <td>Passt den Buchwert an den realen Marktwert an</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <h3 class="text-base font-bold text-white mt-4">Der Geheimtipp: #SmartTags nutzen!</h3>
-          <p>
-            Im Feld <em>"Kommentar"</em> kannst du Wörter mit einer Raute (<code class="text-emerald-400">#</code>) schreiben, zum Beispiel:
-            <code class="text-sky-300 font-mono bg-slate-900 px-2 py-0.5 rounded">Miete Oktober #Fixkosten #Wohnen</code>
-          </p>
-          <p>
-            FinBundle verwandelt diese Tags sofort in bunte Klick-Buttons. Wenn du später in der Suche auf <code class="text-sky-300">#Fixkosten</code> klickst, siehst du auf die Sekunde genau, wie viel Geld du dieses Jahr dafür bezahlt hast!
-          </p>
-
-          <div class="tip-box">
-            <strong>Keine Lust jeden Kassenbon einzutippen?</strong><br>
-            Nutze einfach den Button <em>"Stichtags-Saldo setzen"</em>! Gib am Monatsende einfach deinen echten Bank-Kontostand ein. FinBundle rechnet die Differenz automatisch aus und verbucht sie für dich. So dauert dein Monatsabschluss genau 30 Sekunden!
-          </div>
-        </div>
-      </section>
-
-      <section id="kapitel-5" class="space-y-6 pt-4 border-t border-slate-800">
-        <div class="flex items-center gap-3">
-          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">05</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 3</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Geld transferieren (Der Umbuchungs-Assistent)</h2>
-          </div>
-        </div>
-
-        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
-          <p>
-            Wenn du 1'000 CHF von deinem Girokonto auf dein Sparkonto überweist, bist du nicht ärmer geworden — das Geld liegt nur woanders. Viele Einsteiger machen den Fehler, auf dem Girokonto eine "Ausgabe" zu erfassen. Das verfälscht deine Statistik!
-          </p>
-          <p>
-            In FinBundle wählst du stattdessen einfach den Buchungstyp <strong>Umbuchung</strong>:
-          </p>
-
-          <!-- SVG: Transfer Explanation -->
-          <div class="my-4 p-1 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden">
-            <svg viewBox="0 0 880 180" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
-              <rect width="880" height="180" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
-              
-              <g transform="translate(40, 35)">
-                <rect width="220" height="110" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
-                <text x="20" y="30" font-family="sans-serif" font-size="12" font-weight="700" fill="#f87171">Quellkonto: Girokonto</text>
-                <text x="20" y="60" font-family="sans-serif" font-size="20" font-weight="800" fill="#ffffff">-1'000 CHF</text>
-                <text x="20" y="88" font-family="sans-serif" font-size="10" fill="#94a3b8">Wird automatisch abgezogen</text>
-              </g>
-
-              <g transform="translate(300, 75)">
-                <path d="M 0 15 L 230 15" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6 6"/>
-                <polygon points="230,15 218,8 218,22" fill="#38bdf8"/>
-                <rect x="55" y="0" width="130" height="30" rx="15" fill="#0369a1"/>
-                <text x="70" y="20" font-family="sans-serif" font-size="10.5" font-weight="700" fill="#ffffff">Assistent verknüpft</text>
-              </g>
-
-              <g transform="translate(580, 35)">
-                <rect width="240" height="110" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5"/>
-                <text x="20" y="30" font-family="sans-serif" font-size="12" font-weight="700" fill="#34d399">Zielkonto: Sparkonto Plus</text>
-                <text x="20" y="60" font-family="sans-serif" font-size="20" font-weight="800" fill="#ffffff">+1'000 CHF</text>
-                <text x="20" y="88" font-family="sans-serif" font-size="10" fill="#94a3b8">Automatische Gegenbuchung!</text>
-              </g>
-            </svg>
-          </div>
-
+          <h3 class="text-base font-bold text-white mt-4">Automatischer Umbuchungs-Assistent:</h3>
           <p class="text-xs">
-            <strong>Der geniale Vorteil:</strong> FinBundle erstellt die Gegenbuchung im Sparkonto völlig von allein. Änderst du den Betrag später auf 1'200 CHF, aktualisiert sich das Sparkonto sofort mit. Du musst nie wieder doppelt buchen!
+            Wählst du beim Erfassen den Typ <strong>Umbuchung</strong>, blendet FinBundle ein Auswahlfeld für das <em>Gegenkonto</em> ein. Bestätigst du die Buchung, erzeugt das System spiegelbildlich auf beiden Konten die passende Zu- und Abgangsbuchung. Änderst du später den Betrag auf einem Konto, synchronisiert sich das Gegenkonto automatisch mit.
           </p>
         </div>
       </section>
 
+      <!-- KAPITEL 6 -->
       <section id="kapitel-6" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">06</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 4</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Dein erstes Wertpapierdepot (Aktien &amp; ETFs)</h2>
-          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">KI-Buchungsassistent &amp; QuickAgentBar (Sprachsteuerung)</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Möchtest du einen ETF (wie den Vanguard FTSE All-World) oder Einzelaktien (wie Apple oder Nestlé) verfolgen? Nichts leichter als das!
+            Die <strong>QuickAgentBar</strong> am oberen Bildschirmrand ermöglicht das Diktieren oder Tippen von Buchungen in natürlicher Alltagssprache.
           </p>
 
-          <ol class="list-decimal pl-5 space-y-2.5 text-xs">
-            <li>
-              <strong>Neues Asset anlegen:</strong> Klicke mit rechts auf deine Broker-Bank (z.B. Swissquote oder Trade Republic) und wähle <em>"Neues Asset hinzufügen"</em>.
-            </li>
-            <li>
-              <strong>Anlageklasse einstellen:</strong> Wähle <strong>"Aktien &amp; Fonds"</strong>.
-            </li>
-            <li>
-              <strong>Ticker eingeben:</strong> Trage das Börsenkürzel ein (z.B. <code class="text-sky-300 font-mono">VWRL.SW</code> für den Vanguard ETF an der Schweizer Börse oder <code class="text-sky-300 font-mono">AAPL.US</code> für Apple).
-            </li>
-            <li>
-              <strong>Kauf erfassen:</strong> Klicke auf <code>+ Buchung erfassen</code>, wähle Typ <strong>Kauf</strong> und trage die <strong>Stückzahl</strong> (z.B. 25 Stk.) sowie den <strong>Kaufpreis pro Stück</strong> ein.
-            </li>
-          </ol>
-
-          <div class="tip-box">
-            <strong>Was ist der "Ticker"?</strong><br>
-            Der Ticker ist das offizielle Namenskürzel an der Börse. In Kapitel 10 findest du eine praktische Spickzettel-Tabelle mit den beliebtesten Ticker-Kürzeln für Schweizer und europäische Anleger!
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+            <div class="font-bold text-white text-sm">Typischer Ablauf in 4 Schritten:</div>
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-1 rounded bg-blue-600 font-bold text-white">1</span>
+              <span>Klicke auf das <strong>Mikrofon-Symbol</strong> (Button pulsiert rot während der Aufnahme).</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-1 rounded bg-blue-600 font-bold text-white">2</span>
+              <span>Sprich deinen Beleg (z. B. <em>„Buche 23.85 bei der UBS auf Hauptkonto mit Valuta 08.10., Kategorie Lebensmittel, Text: Coop Einkauf“</em>).</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-1 rounded bg-blue-600 font-bold text-white">3</span>
+              <span>Klicke erneut aufs Mikrofon: Der Text erscheint zur Sichtprüfung im Textfeld.</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="px-2 py-1 rounded bg-blue-600 font-bold text-white">4</span>
+              <span>Drücke <strong>Enter</strong> oder klicke auf <strong>Buchen</strong>. Der Copilot bucht den Posten vollautomatisch ins Zielkonto.</span>
+            </div>
           </div>
+
+          <h3 class="text-base font-bold text-white mt-4">Unterstützte Prompt-Muster:</h3>
+          <ul class="list-disc pl-5 space-y-1.5 text-xs">
+            <li><strong>Einzelbuchung:</strong> <em>„45 Franken bei PostFinance auf Ausgabenkonto für Benzin #Mobilität“</em></li>
+            <li><strong>Sammelbeleg (Kreditkarte):</strong> <em>„Auf Kreditkarte buchen: Migros 64.20, SBB Ticket 18 Franken und Restaurant Bären 75 Franken“</em></li>
+            <li><strong>Kartenabrechnung ausgleichen:</strong> <em>„Kreditkartenabrechnung von 920 Franken via UBS Privatkonto begleichen“</em></li>
+            <li><strong>Relative Daten:</strong> <em>„Vorgestern 120 Franken für Gartengeräte bei Hornbach gebucht“</em> (wird automatisch in das exakte ISO-Datum umgerechnet).</li>
+          </ul>
         </div>
       </section>
 
+      <!-- KAPITEL 7 -->
       <section id="kapitel-7" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">07</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Das Geheimnis</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Keine Angst vor Kursgewinnen (Auto-Valuation)</h2>
-          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Belege &amp; Bankauszüge scannen (PDF-Scanner &amp; Privacy Sanitizer)</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            In vielen alten Finanzprogrammen muss man verzweifeln: Wenn deine Aktie von 100 auf 120 steigt, musstest du früher mühsam Buchungen schreiben, um den Gewinn darzustellen.
+            Über die Funktion <strong>Beleg-Scanner</strong> (Menü <em>Import ➔ PDF-Scan</em>) können Bankauszüge und Kreditkartenabrechnungen direkt eingelesen werden.
           </p>
           <p>
-            In FinBundle PRO übernimmt das die <strong>Auto-Valuation Engine v2</strong> vollautomatisch:
+            FinBundle PRO verfügt über eine integrierte <strong>Multi-Layer Privacy Sanitization Pipeline</strong>:
           </p>
-
-          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
-            <div class="text-white font-bold text-sm">Die einfache Zauberformel:</div>
-            <div class="font-mono text-sky-400">Dein Kapitaleinsatz = Was du eingezahlt hast (z.B. 10 Aktien à 100 = 1'000 CHF)</div>
-            <div class="font-mono text-emerald-400">Aktueller Börsenwert = 10 Aktien × aktueller Kurs 130 CHF = 1'300 CHF</div>
-            <div class="font-mono text-amber-300">Differenz (Gewinn) = +300 CHF (+30%)</div>
-          </div>
-
-          <p class="text-xs">
-            FinBundle passt den Saldo deines Depots im Hintergrund dynamisch an. Klickst du im Menü auf <strong>LiveEditor ➔ Markierte aktualisieren</strong>, lädt das System die neuesten Schlusskurse aus dem Internet — und dein Gesamtvermögen springt sofort auf den exakten Cent-Betrag!
-          </p>
+          <ul class="list-disc pl-5 space-y-1 text-xs">
+            <li><strong>Automatische Maskierung:</strong> Vor dem Senden an Cloud-Modelle werden IBANs, Kreditkartennummern, Telefonnummern und Wohnadressen durch Platzhalter (z. B. <code>[IBAN_ANONYMISIERT]</code>) ersetzt.</li>
+            <li><strong>Tokenisierung von Banknamen:</strong> Kontonamen werden als <code>[BANK_1]</code> übergeben und erst nach Rückgabe lokal auf deinem Rechner re-substituiert.</li>
+            <li><strong>Editierbarer Prüfschritt (Review-Box):</strong> Du siehst den maskierten Text vor der Analyse und kannst vertrauliche Passagen bei Bedarf manuell löschen.</li>
+            <li><strong>Lokale Offline-KI (Ollama):</strong> Alternativ kannst du ein lokal installiertes Modell (wie <em>Qwen 2.5 Coder</em> oder <em>Llama 3</em>) auswählen — in diesem Fall verlässt kein einziges Byte deinen Rechner.</li>
+          </ul>
         </div>
       </section>
 
+      <!-- KAPITEL 8 -->
       <section id="kapitel-8" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
           <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">08</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 5</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Die ersten 3 Reports verstehen (Grafiken genießen)</h2>
-          </div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Depots, Wertpapiere &amp; Auto-Valuation v2</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Klicke oben in der Menüleiste auf <strong>Reports</strong>. FinBundle bietet dir 15 Spezialreports. Als Einsteiger solltest du dir diese drei ansehen:
+            Wertschriften (Aktien, ETFs, Fonds, Krypto) werden in FinBundle nach dem <strong>Total-Return-Prinzip</strong> bewertet:
+          </p>
+          <ol class="list-decimal pl-5 space-y-2 text-xs">
+            <li><strong>Asset anlegen:</strong> Wähle die Klasse <em>Aktien &amp; Fonds</em> und hinterlege das offizielle Börsenkürzel im Feld <strong>Ticker</strong> (z. B. <code>VWRL.SW</code> für Vanguard FTSE All-World an der SIX).</li>
+            <li><strong>Kauf verbuchen:</strong> Erfasse eine Buchung vom Typ <strong>Kauf</strong> mit Stückzahl und Kaufpreis.</li>
+            <li><strong>Auto-Valuation v2:</strong> Das System errechnet den aktuellen Gesamtwert aus Stückzahl &times; aktuellem Börsenkurs &times; Wechselkurs. Nicht realisierte Kursgewinne werden im Vermögensbaum ohne manuelle Buchungsarbeit live reflektiert.</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- KAPITEL 9 -->
+      <section id="kapitel-9" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">09</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Mitteilungszentrale &amp; Börsen-Radar (10-Min-Takt)</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Ein Klick auf das Aktivitäts-Icon in der Menüleiste öffnet die <strong>Mitteilungszentrale</strong>. Sie bietet dreiTabs:
           </p>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-3 text-xs">
             <div class="rule-card p-4 space-y-2">
-              <div class="text-sky-400 font-bold text-sm flex items-center gap-1.5">
-                <span>📋</span> 1. Banken &amp; Kategorien
+              <div class="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+                <span>📈</span> Börsen-Radar
               </div>
               <p class="text-slate-300">
-                Die große Draufsicht: Wie viel Vermögen hast du insgesamt? Wie verteilt es sich auf Girokonten, Sparkonten und Depots?
+                Gleicht deine Buchungskurse alle 10 Minuten mit den EODHD-Live-Kursen ab. Kacheln zeigen Kursverlauf, prozentuale Abweichung und den realen Gesamteffekt in CHF.
               </p>
+              <div class="p-2 rounded bg-amber-950/40 border border-amber-800/40 text-[11px] text-amber-300 font-semibold">
+                ⚠️ Ab 5% Abweichung pulsiert die Kachel mit orangem Rand als klares Signal für Handlungsbedarf (Rebalancing oder Stop-Loss).
+              </div>
             </div>
 
             <div class="rule-card p-4 space-y-2">
-              <div class="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
-                <span>🌊</span> 2. Wasserfallfluss
+              <div class="text-sky-400 font-bold text-sm flex items-center gap-1.5">
+                <span>⏱️</span> Buchungs-Audit
               </div>
               <p class="text-slate-300">
-                Die Erklärung deines Erfolgs: Startvermögen ➔ +Was du gespart hast ➔ -Was du ausgegeben hast ➔ +Börsenkursgewinne = Heutiges Vermögen.
+                Listet alle Buchungen der letzten 2 Stunden auf. Ideal, um diktierte Transaktionen oder Belege unmittelbar nach der Erfassung gegenzuprüfen.
               </p>
             </div>
 
             <div class="rule-card p-4 space-y-2">
               <div class="text-purple-400 font-bold text-sm flex items-center gap-1.5">
-                <span>🔮</span> 3. Simulation (Zukunft)
+                <span>🧭</span> Nahtloser Verlauf
               </div>
               <p class="text-slate-300">
-                Der Motivations-Booster: Das System berechnet deine monatliche Sparrate und zeigt dir, wie viel Vermögen du in 1 bis 5 Jahren mit Zinseszins haben wirst!
+                Speichert die letzten 10 aufgerufenen Konten, Auswertungen und Budget-Kategorien. Ein Klick springt sofort an den exakten Ort im System zurück.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="kapitel-9" class="space-y-6 pt-4 border-t border-slate-800">
+      <!-- KAPITEL 10 -->
+      <section id="kapitel-10" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
-          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">09</span>
-          <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Schritt 6</span>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Budget planen nach der 50/30/20-Methode</h2>
-          </div>
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">10</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">LiveEditor &amp; Externe Marktdaten (EODHD &amp; Devisen)</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <p>
-            Klicke in der Menüleiste auf <strong>Budget</strong>. Hier planst du deine Zukunft, statt nur in die Vergangenheit zu schauen. Die weltbekannte 50/30/20-Regel teilt dein Netto-Einkommen in drei Töpfe:
+            Unter <strong>LiveEditor</strong> verwaltest du deine Wertpapiere tabellarisch:
           </p>
+          <ul class="list-disc pl-5 space-y-1 text-xs">
+            <li><strong>Massen-Update:</strong> Markiere mehrere Wertschriften und aktualisiere deren Kurse gebündelt über den Button <em>"Markierte aktualisieren"</em>.</li>
+            <li><strong>Fundamentaldaten:</strong> Rufe per Klick KGV, Dividendenrendite, Marktkapitalisierung und 52-Wochen-Spannweiten ab.</li>
+            <li><strong>Performance-Analyser:</strong> Vergleiche historische EOD-Verläufe, Intraday-Kerzencharts (5-Minuten-Takt) und technische Indikatoren (SMA 50, SMA 200, EMA 20).</li>
+            <li><strong>Automatische Währungsumrechnung:</strong> Devisenkurse (EUR/CHF, USD/CHF) werden über die offizielle Schnittstelle der Europäischen Zentralbank (Frankfurter API) bezogen.</li>
+          </ul>
+        </div>
+      </section>
 
+      <!-- KAPITEL 11 -->
+      <section id="kapitel-11" class="space-y-6 pt-4 border-t border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500 text-slate-950 font-mono font-black text-sm">11</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Budgetierung (50/30/20) &amp; FIRE-Rechner</h2>
+        </div>
+
+        <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
+          <p>
+            Im Bereich <strong>Budget</strong> planst du deine monatlichen Geldflüsse vorausschauend:
+          </p>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-3 text-xs">
             <div class="p-3.5 bg-blue-950/40 border border-blue-800/50 rounded-xl space-y-1">
-              <span class="text-blue-400 font-bold text-sm block">50% NEEDS (Fixkosten)</span>
-              <p class="text-slate-300">Alles, was du zum Überleben brauchst: Miete, Krankenkasse, Strom, Grundnahrungsmittel.</p>
-              <div class="text-[11px] text-blue-300 font-mono pt-1">Beispiel: 3'500 CHF bei 7'000 Lohn</div>
+              <span class="text-blue-400 font-bold text-sm block">50% Needs (Grundbedarf)</span>
+              <p class="text-slate-300">Wohnen, Grundnahrungsmittel, Krankenkasse, Versicherungen, Mobilität zur Arbeit.</p>
             </div>
-
             <div class="p-3.5 bg-amber-950/40 border border-amber-800/50 rounded-xl space-y-1">
-              <span class="text-amber-400 font-bold text-sm block">30% WANTS (Lifestyle)</span>
-              <p class="text-slate-300">Alles, was das Leben schön macht: Urlaub, Restaurant, Netflix-Abo, Hobbys, Shopping.</p>
-              <div class="text-[11px] text-amber-300 font-mono pt-1">Beispiel: 2'100 CHF bei 7'000 Lohn</div>
+              <span class="text-amber-400 font-bold text-sm block">30% Wants (Wünsche)</span>
+              <p class="text-slate-300">Restaurantbesuche, Ferien, Streaming-Abonnements, Hobbys, Shopping.</p>
             </div>
-
             <div class="p-3.5 bg-emerald-950/40 border border-emerald-800/50 rounded-xl space-y-1">
-              <span class="text-emerald-400 font-bold text-sm block">20% SAVINGS (Sparen)</span>
-              <p class="text-slate-300">Alles, was deine Zukunft absichert: ETF-Sparplan, Schweizer Säule 3a, Notgroschen.</p>
-              <div class="text-[11px] text-emerald-300 font-mono pt-1">Beispiel: 1'400 CHF bei 7'000 Lohn</div>
+              <span class="text-emerald-400 font-bold text-sm block">20% Savings (Vermögensaufbau)</span>
+              <p class="text-slate-300">ETF-Sparpläne, Schweizer Säule 3a, Notgroschen-Aufbau, Schuldentilgung.</p>
             </div>
           </div>
-
           <p class="text-xs">
-            <strong>Das Besondere in FinBundle:</strong> Zahlst du deine Autoversicherung oder Steuern einmal im Jahr? Trage sie einfach mit Frequenz <em>"Jährlich"</em> ein — FinBundle rechnet automatisch aus, wie viel Geld du jeden Monat dafür zurücklegen musst!
+            <strong>Frequenz-Automatik:</strong> Jährliche Zahlungen (wie Steuern oder Autoversicherungen) werden bei Auswahl der Frequenz <em>"Jährlich"</em> automatisch in monatliche Rückstellungsbeträge umgerechnet. Der <strong>FIRE-Rechner</strong> (Financial Independence, Retire Early) visualisiert auf Basis deiner Sparrate das prognostizierte Datum deiner finanziellen Freiheit.
           </p>
         </div>
       </section>
 
-      <section id="kapitel-10" class="space-y-6 pt-4 border-t border-slate-800">
+      <!-- KAPITEL 12 -->
+      <section id="kapitel-12" class="space-y-6 pt-4 border-t border-slate-800">
         <div class="flex items-center gap-3">
-          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/20">10</span>
-          <h2 class="text-2xl font-bold tracking-tight text-white">Häufige Anfänger-Fragen (FAQ) &amp; Ticker-Spickzettel</h2>
+          <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 font-mono font-bold text-sm border border-emerald-500/20">12</span>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Datensicherheit (AES-256 Vault) &amp; Troubleshooting</h2>
         </div>
 
         <div class="prose prose-invert max-w-none space-y-4 text-slate-300 text-sm leading-relaxed">
           <div class="space-y-3 text-xs">
             <details class="p-3.5 bg-slate-900 border border-slate-800 rounded-xl">
-              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Wo werden meine Daten gespeichert? Kann ich sie verlieren?</summary>
+              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Wie aktiviere ich die AES-256 Verschlüsselung?</summary>
               <p class="text-slate-300 mt-2">
-                Deine Daten liegen in der Datei, die du beim ersten Start angelegt hast (z.B. <code class="text-emerald-400">mein_vermoegen.json</code>). Jedes Mal, wenn du tippst, speichert FinBundle nach 500 Millisekunden automatisch. Wenn der Computer abstürzt, ist alles noch da. Mache dir am besten einmal im Monat eine Kopie dieser Datei auf einen USB-Stick!
+                Öffne <em>Einstellungen ➔ Sicherheit</em> und aktiviere die Option <strong>"Verschlüsselter AES-256 ZIP-Vault"</strong>. Vergib einen sicheren PIN. Deine Vermögensdaten werden ab diesem Zeitpunkt ausschliesslich militärisch verschlüsselt gespeichert. <em>Wichtig: Es gibt keine Hintertür oder Passwort-Zurücksetzen-Funktion!</em>
               </p>
             </details>
 
             <details class="p-3.5 bg-slate-900 border border-slate-800 rounded-xl">
-              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Was passiert, wenn ich eine Buchung falsch eingegeben habe?</summary>
+              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Mikrofon reagiert nicht / Permission Denied unter Windows</summary>
               <p class="text-slate-300 mt-2">
-                Keine Panik! In der Transaktionsliste hat jede Zeile ganz rechts ein kleines <strong>Stift-Symbol (Bearbeiten)</strong> und ein <strong>Mülleimer-Symbol (Löschen)</strong>. Klicke einfach darauf, um den Fehler zu beheben. Kommentare kannst du sogar direkt mit einem Klick in die Zelle ändern!
+                Öffne mit <code>Win + I</code> die Windows-Einstellungen und navigiere zu <em>Datenschutz und Sicherheit ➔ Mikrofon</em>. Stelle sicher, dass der Schalter <strong>"Desktop-Apps den Zugriff auf das Mikrofon erlauben"</strong> aktiviert ist und dein Browser (z. B. Chrome) Zugriff hat.
               </p>
             </details>
 
             <details class="p-3.5 bg-slate-900 border border-slate-800 rounded-xl">
-              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Was bedeutet das Schloss (AES-256 ZIP)?</summary>
+              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Devisen- oder Börsendaten laden nicht (CORS-Fehler bei file:///)</summary>
               <p class="text-slate-300 mt-2">
-                Wenn du nicht möchtest, dass jemand anderes an deinem Computer deine Finanzen sehen kann, kannst du unter <em>Datei ➔ Einstellungen</em> die Option <strong>"Verschlüsseltes ZIP"</strong> einschalten. Dann wählst du einen PIN. <strong>Achtung:</strong> Diesen PIN darfst du niemals vergessen, da es keine "Passwort vergessen"-Funktion gibt!
+                Wenn FinBundle direkt als lokale Datei im Browser geöffnet wird, blockiert Chromium externe Webabrufe. Installiere im Chrome Web Store eine CORS-Erweiterung (z. B. <em>CORS Unblock</em>) oder starte die Anwendung über einen lokalen Webserver (z. B. <code>npx serve .</code>).
+              </p>
+            </details>
+
+            <details class="p-3.5 bg-slate-900 border border-slate-800 rounded-xl">
+              <summary class="font-bold text-white cursor-pointer hover:text-emerald-400">❓ Was tun bei einer Buchungsdifferenz am Monatsende?</summary>
+              <p class="text-slate-300 mt-2">
+                Nutze den <strong>Fixsternpunkt-Ansatz</strong>: Klicke auf das Konto und wähle <em>"Stichtags-Saldo setzen"</em>. Trage den Betrag laut aktuellem Bankauszug ein. FinBundle gleicht die Differenz sauber aus, ohne dass du alte Belege suchen musst.
               </p>
             </details>
           </div>
 
           <!-- Ticker Cheat Sheet -->
-          <h3 class="text-base font-bold text-white mt-6">Spickzettel: Die beliebtesten Ticker-Kürzel</h3>
+          <h3 class="text-base font-bold text-white mt-6">Ticker-Spickzettel für EODHD:</h3>
           <div class="overflow-x-auto my-3">
             <table class="w-full text-left text-xs border border-slate-800 rounded-lg overflow-hidden">
               <thead class="bg-slate-900 text-slate-300 font-semibold uppercase">
                 <tr>
-                  <th class="p-2.5 border-b border-slate-800">Wertpapier / ETF</th>
-                  <th class="p-2.5 border-b border-slate-800">Ticker (für EODHD)</th>
-                  <th class="p-2.5 border-b border-slate-800">Börse / Währung</th>
+                  <th class="p-2.5 border-b border-slate-800">Titel / ETF</th>
+                  <th class="p-2.5 border-b border-slate-800">Ticker (EODHD)</th>
+                  <th class="p-2.5 border-b border-slate-800">Börsenplatz</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800 text-slate-300 font-mono">
                 <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">Vanguard FTSE All-World (Dist)</td><td class="p-2.5 text-emerald-400">VWRL.SW</td><td>SIX Swiss Exchange (CHF)</td></tr>
-                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">iShares Core MSCI World (Acc)</td><td class="p-2.5 text-emerald-400">SWDA.SW / EUNL.XETRA</td><td>SIX (CHF) / Xetra (EUR)</td></tr>
+                <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">iShares Core MSCI World (Acc)</td><td class="p-2.5 text-emerald-400">SWDA.SW</td><td>SIX Swiss Exchange (CHF)</td></tr>
                 <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">Nestlé SA</td><td class="p-2.5 text-emerald-400">NESN.SW</td><td>SIX Swiss Exchange (CHF)</td></tr>
                 <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">Novartis AG</td><td class="p-2.5 text-emerald-400">NOVN.SW</td><td>SIX Swiss Exchange (CHF)</td></tr>
                 <tr class="hover:bg-slate-900/50"><td class="p-2.5 font-sans font-medium text-white">Apple Inc.</td><td class="p-2.5 text-emerald-400">AAPL.US</td><td>NASDAQ (USD)</td></tr>
@@ -693,11 +756,12 @@
         </div>
       </section>
 
+      <!-- Checklist Modal -->
       <div id="checklist-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="text-base font-bold text-white flex items-center gap-2">
-              <span>🌱</span> Deine ersten 7 Schritte in FinBundle PRO
+              <span>🌱</span> Deine 10 Schritte zum perfekten Cockpit
             </h3>
             <button onclick="toggleModal('checklist-modal')" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
           </div>
@@ -712,66 +776,66 @@
             </div>
           </div>
 
-          <div class="space-y-2.5 text-xs text-slate-200">
+          <div class="space-y-2 text-xs text-slate-200">
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>1. Hausbank anlegen:</strong> Klicke auf (+) oben links und erstelle z.B. "UBS" oder "Sparkasse".
-              </div>
+              <div><strong>1. Erste Bank anlegen:</strong> Klicke auf (+) oben links und erstelle z.B. "UBS" oder "Raiffeisen".</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>2. Girokonto erstellen:</strong> Rechtsklick auf die Bank ➔ "Neues Asset hinzufügen" (Klasse: CASH).
-              </div>
+              <div><strong>2. Girokonto erstellen:</strong> Rechtsklick auf Bank ➔ "Neues Asset hinzufügen" (Klasse: KONTO).</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>3. Startguthaben verbuchen:</strong> Drücke <code>+ Buchung erfassen</code> und trage dein Kontoguthaben als "Einzahlung" ein.
-              </div>
+              <div><strong>3. Ersten Fixsternpunkt setzen:</strong> Drücke "Stichtags-Saldo setzen" und verankere den aktuellen Kontostand.</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>4. Erste Ausgabe mit #Tag erfassen:</strong> Trage z.B. einen Kaffee oder Einkauf mit <code>#Essen</code> ein.
-              </div>
+              <div><strong>4. Erste Ausgabe mit #Tag buchen:</strong> Erfasse einen Einkauf mit Kommentar <code>#Lebensmittel</code>.</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>5. Sparkonto &amp; Umbuchung testen:</strong> Erstelle ein Sparkonto und transferiere 100 CHF mit Typ "Umbuchung".
-              </div>
+              <div><strong>5. Umbuchungs-Assistent testen:</strong> Lege ein Sparkonto an und transferiere 100 CHF via Typ "Umbuchung".</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>6. Einen Report ansehen:</strong> Klicke oben auf "Reports" und staune über deinen Vermögensstatus!
-              </div>
+              <div><strong>6. KI-Sprachdiktat ausprobieren:</strong> Klicke auf das Mikrofon in der QuickAgentBar und diktiere eine Buchung.</div>
             </label>
             <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
               <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
-              <div>
-                <strong>7. Datei sichern:</strong> Drücke <code>Ctrl + S</code> bzw. <code>Cmd + S</code> und speichere deine Datei sicher ab.
-              </div>
+              <div><strong>7. Wertpapier-Depot anlegen:</strong> Erstelle ein Wertpapier-Asset mit Ticker (z.B. VWRL.SW) und erfasse einen Kauf.</div>
+            </label>
+            <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
+              <div><strong>8. Mitteilungszentrale öffnen:</strong> Öffne das Börsen-Radar und prüfe die Kacheln sowie das 5%-Handlungssignal.</div>
+            </label>
+            <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
+              <div><strong>9. 50/30/20 Budget konfigurieren:</strong> Trage deine Fixkosten und Sparziele im Budget-Tab ein.</div>
+            </label>
+            <label class="flex items-start gap-3 p-2.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+              <input type="checkbox" onchange="updateChecklist()" class="mt-0.5 rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4">
+              <div><strong>10. Datensicherung erstellen:</strong> Speichere die Datei (Ctrl + S) und lege dir ein Backup an.</div>
             </label>
           </div>
         </div>
       </div>
 
+      <!-- Download Banner -->
       <div id="download-banner" class="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/40 to-sky-950/40 border border-emerald-800/40 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h4 class="text-base font-bold text-white">Dieses Einsteiger-Handbuch offline mitnehmen</h4>
-          <p class="text-xs text-slate-400 mt-1">Lade dir diese Anleitung als eigenständige HTML-Datei auf dein Handy oder deinen Laptop herunter — 100% offline lesbar!</p>
+          <h4 class="text-base font-bold text-white">Dieses Handbuch offline speichern</h4>
+          <p class="text-xs text-slate-400 mt-1">Sichere dir diese Anleitung als eigenständige HTML-Datei für Laptop, Tablet oder Smartphone — vollständig offline lesbar!</p>
         </div>
         <button onclick="downloadSelf()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 whitespace-nowrap transition active:scale-95 flex items-center gap-2">
-          <span>📥</span> Jetzt als HTML speichern
+          <span>📥</span> Jetzt als HTML herunterladen
         </button>
       </div>
 
+      <!-- Footer -->
       <footer class="pt-6 border-t border-slate-800 text-center text-xs text-slate-400 pb-12">
         <p>FinBundle PRO &bull; Das offizielle Einsteiger-Handbuch &bull; Version 1.0.0 RC2.2 / RC3</p>
-        <p class="text-[11px] text-slate-500 mt-1">Privat &bull; Offline-First &bull; Keine Abos &bull; Dein persönliches Vermögens-Cockpit</p>
+        <p class="text-[11px] text-slate-500 mt-1">Konstanter Fixsternpunkt-Ansatz &bull; 100% Offline-First &bull; Private Vermögensverwaltung</p>
       </footer>
 
     </main>
@@ -792,18 +856,17 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "FinBundle_PRO_Anfaenger_Handbuch.html";
+        a.download = "FinBundle_PRO_Einsteiger_Handbuch.html";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast("✓ Einsteiger-Handbuch erfolgreich als HTML gespeichert!", "success");
+        showToast("✓ Handbuch erfolgreich als HTML gespeichert!", "success");
       }, 200);
     }
 
     document.getElementById('download-html-btn')?.addEventListener('click', downloadSelf);
 
-    // Reading progress bar
     window.addEventListener('scroll', () => {
       const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
       const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
@@ -812,7 +875,6 @@
       if (progressBar) progressBar.style.width = scrolled + "%";
     });
 
-    // Active TOC link highlighting
     const sections = document.querySelectorAll('section[id]');
     const navLinks = document.querySelectorAll('.toc-link');
 
@@ -832,14 +894,12 @@
       });
     });
 
-    // Mobile sidebar toggle
     const mobileBtn = document.getElementById('toggle-mobile-sidebar');
     const sidebar = document.getElementById('sidebar');
     mobileBtn?.addEventListener('click', () => {
       sidebar?.classList.toggle('hidden');
     });
 
-    // Search filter logic
     const searchInput = document.getElementById('manual-search-input');
     const clearSearchBtn = document.getElementById('clear-search-btn');
 
@@ -868,13 +928,11 @@
       }
     });
 
-    // Modal toggle
     function toggleModal(id) {
       const m = document.getElementById(id);
       if (m) m.classList.toggle('hidden');
     }
 
-    // Checklist calculation
     function updateChecklist() {
       const checkboxes = document.querySelectorAll('#checklist-modal input[type="checkbox"]');
       let checkedCount = 0;
@@ -887,11 +945,10 @@
       if (bar) bar.style.width = percent + '%';
       if (text) text.innerText = percent + '%';
       if (percent === 100) {
-        showToast("🎉 Großartig! Du bist jetzt offiziell startklar mit FinBundle PRO!", "success");
+        showToast("🎉 Großartig! Alle 10 Schritte gemeistert — dein Cockpit steht felsenfest!", "success");
       }
     }
 
-    // Toast helper
     function showToast(msg, type = "success") {
       const toast = document.getElementById('toast');
       const toastMsg = document.getElementById('toast-msg');
