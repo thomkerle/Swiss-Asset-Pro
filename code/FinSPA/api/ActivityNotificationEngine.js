@@ -59,6 +59,7 @@ class ActivityNotificationEngine {
   }
 
   // --- 1. HISTORIE: Speichert den vollen Navigations-Kontext ---
+
   static recordHistoryItem(item, context = {}) {
     if (!item) return;
     try {
@@ -68,14 +69,16 @@ class ActivityNotificationEngine {
       const id = item.id || context.activeReport || context.viewMode || 'home';
       const filtered = existing.filter(h => h.id !== id);
       
+      const isAssetOrNode = item.type === 'asset' || item.type === 'bank' || item.type === 'category' || Boolean(item.assetClass);
+
       const entry = {
         id: id,
         name: item.name || item.title || (context.activeReport ? `Report: ${context.activeReport}` : 'Ansicht'),
         type: item.type || (context.activeReport ? 'report' : 'view'),
-        assetClass: item.assetClass,
-        budgetType: item.budgetType,
-        viewMode: context.viewMode || 'vermoegen',
-        activeReport: context.activeReport || null,
+        assetClass: item.assetClass || null,
+        budgetType: item.budgetType || null,
+        viewMode: isAssetOrNode ? 'vermoegen' : (context.viewMode || 'vermoegen'),
+        activeReport: isAssetOrNode ? null : (context.activeReport || null),
         timestamp: Date.now()
       };
 

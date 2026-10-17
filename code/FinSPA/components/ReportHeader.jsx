@@ -12,35 +12,35 @@ const ReportHeader = ({
     children 
 }) => {
   return (
-    <div className="relative mb-8 border-b border-gray-200 dark:border-slate-800 pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4 overflow-hidden">
+    <div className="relative mb-5 md:mb-8 border-b border-gray-200 dark:border-slate-800 pb-4 md:pb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-3 md:gap-4 overflow-hidden">
       
       {/* Subtiler Glow-Effekt im Hintergrund für einen Premium-Look */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-900/10 dark:to-transparent rounded-full blur-3xl -z-10 pointer-events-none transform translate-x-1/4 -translate-y-1/4"></div>
 
-      <div className="flex items-start gap-4 z-10 w-full md:w-auto">
-         {/* Schicker Button zum Einblenden des Menüs */}
+      <div className="flex items-start gap-3 md:gap-4 z-10 w-full md:w-auto">
+         {/* Button zum Einblenden der Seitenleiste (auf Android ausgeblendet, da dort Top/Bottom-Bar übernimmt) */}
          {!isTreeVisible && (
              <button 
                 onClick={() => setIsTreeVisible(true)} 
-                className="mt-1.5 shrink-0 p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all group print-hide"
+                className="hidden md:flex mt-1.5 shrink-0 p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all group print-hide cursor-pointer"
                 title="Seitenleiste einblenden"
              >
                  <Icon name="ChevronRight" size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
              </button>
          )}
          
-         <div className="flex flex-col">
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+         <div className="flex flex-col min-w-0 flex-1">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5 md:gap-3">
                {/* Optionales Report-Icon */}
                {iconName && (
-                  <div className={`p-2 rounded-xl shadow-sm border border-white/60 dark:border-slate-700/50 ${iconBg} ${iconColor}`}>
-                     <Icon name={iconName} size={24} />
+                  <div className={`p-1.5 md:p-2 rounded-xl shadow-sm border border-white/60 dark:border-slate-700/50 shrink-0 ${iconBg} ${iconColor}`}>
+                     <Icon name={iconName} size={22} />
                   </div>
                )}
-               {title}
+               <span className="truncate">{title}</span>
             </h2>
             {subtitle && (
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2 max-w-2xl leading-relaxed">
+                <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mt-1.5 md:mt-2 max-w-2xl leading-relaxed">
                    {subtitle}
                 </p>
             )}
@@ -49,7 +49,7 @@ const ReportHeader = ({
 
       {/* Platz für Aktionen (wie DatePicker, Filter, Print-Buttons) auf der rechten Seite */}
       {children && (
-          <div className="flex items-center gap-3 z-10 print-hide w-full md:w-auto md:justify-end">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 z-10 print-hide w-full md:w-auto md:justify-end">
               {children}
           </div>
       )}

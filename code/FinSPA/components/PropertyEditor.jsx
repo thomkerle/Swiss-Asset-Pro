@@ -34,7 +34,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
   if (activeReport || !selectedNode) {
       return (
-          <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex items-center justify-center text-gray-400 shrink-0 text-center">
+          <div className="print-hide w-full md:w-80 md:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex items-center justify-center text-gray-400 shrink-0 text-center">
               {safeT('propEditorInactive', 'Eigenschaften inaktiv.')}
           </div>
       );
@@ -87,15 +87,15 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             <>
                  <div>
                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetName', 'Bezeichnung')}</label>
-                     <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.name || ''} onChange={e => handleBudgetPropChange('name', e.target.value)} />
+                     <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.name || ''} onChange={e => handleBudgetPropChange('name', e.target.value)} />
                  </div>
                  <div>
                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetAmount', 'Betrag')}</label>
-                     <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={selectedNode.amount || ''} onChange={e => handleBudgetPropChange('amount', e.target.value)} />
+                     <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={selectedNode.amount || ''} onChange={e => handleBudgetPropChange('amount', e.target.value)} />
                  </div>
                  <div>
                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetFreq', 'Frequenz')}</label>
-                     <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.frequency || 'monthly'} onChange={e => handleBudgetPropChange('frequency', e.target.value)}>
+                     <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.frequency || 'monthly'} onChange={e => handleBudgetPropChange('frequency', e.target.value)}>
                         <option value="monthly">{safeT('freqMonthly', 'Monatlich')}</option>
                         <option value="quarterly">{safeT('freqQuarterly', 'Vierteljährlich')}</option>
                         <option value="semi-annually">{safeT('freqSemiAnnually', 'Halbjährlich')}</option>
@@ -104,7 +104,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                  </div>
                  <div>
                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetRuleCat', '50/30/20 Kategorie')}</label>
-                     <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.ruleCategory || 'needs'} onChange={e => handleBudgetPropChange('ruleCategory', e.target.value)}>
+                     <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.ruleCategory || 'needs'} onChange={e => handleBudgetPropChange('ruleCategory', e.target.value)}>
                         <option value="needs">{safeT('ruleNeedsFix', 'Needs (Fixkosten)')}</option>
                         <option value="wants">{safeT('ruleWantsLife', 'Wants (Lifestyle)')}</option>
                         <option value="savings">{safeT('ruleSavingsSave', 'Savings (Sparen)')}</option>
@@ -112,7 +112,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                  </div>	
                  <div>
                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetNotice', 'Kündigungsfrist (Optional)')}</label>
-                     <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.noticePeriod || ''} onChange={e => handleBudgetPropChange('noticePeriod', e.target.value)} />
+                     <input type="text" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.noticePeriod || ''} onChange={e => handleBudgetPropChange('noticePeriod', e.target.value)} />
                  </div>
             </>
           );
@@ -161,15 +161,24 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
         return (
           <>
+              <button
+                type="button"
+                onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })}
+                className="w-full py-2 px-3 bg-gray-200/70 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Icon name="ChevronLeft" size={14} />
+                <span>{safeT('propEditor', 'Zurück zu Asset-Eigenschaften')}</span>
+              </button>
+
               <div>
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('date', 'Datum')}</label>
-                <input type="date" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
+                <input type="date" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
               </div>
 
               {!isBal && (
                 <div>
                   <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('type', 'Typ')}</label>
-                  <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
+                  <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
                     <option value="Auszahlung">{isCreditCard ? safeT('typeCardExpense', 'Kartenausgabe (Belastung)') : safeT('typeWithdrawal', 'Auszahlung')}</option>
                     <option value="Einzahlung">{isCreditCard ? safeT('typeCardSettlement', 'Abrechnungsausgleich (Gutschrift)') : safeT('typeDeposit', 'Einzahlung')}</option>
                     <option value="Umbuchung">{safeT('typeTransfer', 'Umbuchung')}</option>
@@ -189,7 +198,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               {!(isSecurities && booking.type === 'Wertanpassung') && (
                 <div>
                   <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('amount', 'Betrag')} ({selectedNode.currency || baseCurrency})</label>
-                  <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
+                  <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
                 </div>
               )}
 
@@ -198,14 +207,14 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">
                     {safeT('labelExchangeRateDate', 'Wechselkurs')} ({selectedNode.currency} → {baseCurrency})
                   </label>
-                  <input type="number" step="0.0001" className="w-full p-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.bookingExchangeRate ?? ''} onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} />
+                  <input type="number" step="0.0001" className="w-full p-2.5 md:p-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.bookingExchangeRate ?? ''} onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} />
                 </div>
               )}
 
               {!isBal && ['Dividende', 'Umbuchung'].includes(booking.type) && (
                   <div className="mt-4 p-3 bg-blue-50/60 dark:bg-slate-800/40 border border-blue-200 dark:border-slate-700 rounded-lg shadow-sm">
                       <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelTransferTargetAccount', 'Zielkonto für Gegenbuchung')}</label>
-                      <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)}>
+                      <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)}>
                           <option value="">{safeT('optTargetAccount', '-- Optional: Zielkonto wählen --')}</option>
                           {data.banks.map(bank => {
                               const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'credit_card', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
@@ -254,7 +263,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                                  setTransferTargetId('');
                                  if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT('msgTransferGenerated', "Gegenbuchung erfolgreich generiert"), "success");
                              }} 
-                             className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md text-sm cursor-pointer"
+                             className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-2.5 md:p-2 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md text-sm cursor-pointer"
                            >
                                <Icon name="Send" size={14}/> {safeT('btnExecuteTransfer', 'Gegenbuchung ausführen')}
                            </button>
@@ -268,7 +277,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   {['Kauf', 'Verkauf'].includes(booking.type) && (
                       <div>
                         <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelShares', 'Stücke')}</label>
-                        <input type="number" step="any" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.shares || ''} onChange={e => { const sh = Number(e.target.value); const pr = booking.price || 0; handleBookingPropChange({ shares: sh, amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount }); }} />
+                        <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.shares || ''} onChange={e => { const sh = Number(e.target.value); const pr = booking.price || 0; handleBookingPropChange({ shares: sh, amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount }); }} />
                       </div>
                   )}
 
@@ -276,7 +285,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     <label className={`block text-xs font-bold mb-1 uppercase leading-tight ${booking.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {booking.type === 'Wertanpassung' ? `${safeT('labelNewMarketPrice', 'Neuer Börsenkurs')} (${safeT('labelUntilNow', 'Bisher:')} ${actualPrice})` : safeT('labelMarketPrice', 'Börsenkurs')}
                     </label>
-                    <input type="number" step="any" className={`w-full p-2 border rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums ${booking.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} value={booking.price ?? ''} onChange={e => { const pr = e.target.value; const sh = booking.shares || 0; handleBookingPropChange({ price: pr === '' ? undefined : Number(pr), amount: ['Kauf', 'Verkauf'].includes(booking.type) && sh && pr ? Number((sh * pr).toFixed(2)) : (booking.type === 'Wertanpassung' ? 0 : booking.amount) }); }} />
+                    <input type="number" step="any" className={`w-full p-2.5 md:p-2 border rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums ${booking.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} value={booking.price ?? ''} onChange={e => { const pr = e.target.value; const sh = booking.shares || 0; handleBookingPropChange({ price: pr === '' ? undefined : Number(pr), amount: ['Kauf', 'Verkauf'].includes(booking.type) && sh && pr ? Number((sh * pr).toFixed(2)) : (booking.type === 'Wertanpassung' ? 0 : booking.amount) }); }} />
                   </div>
 
                   {booking.type === 'Wertanpassung' && (
@@ -292,7 +301,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   {availableSubCategories.length > 0 ? (
                     <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('category', 'Kategorie')}</label>
-                      <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)}>
+                      <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)}>
                         <option value="">{safeT('optOptional', '-- Keine --')}</option>
                         {availableSubCategories.map(c => <option key={c} value={c}>{safeT(c, c)}</option>)}
                       </select>
@@ -300,13 +309,13 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                   ) : (
                     <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('category', 'Kategorie')}</label>
-                      <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
+                      <input type="text" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
                     </div>
                   )}
 
                   <div>
                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelSetNewComment', 'Kommentar / Tags')}</label>
-                    <input type="text" placeholder={safeT('placeholderTaxExample', "#Steuererklärung2026")} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
+                    <input type="text" placeholder={safeT('placeholderTaxExample', "#Steuererklärung2026")} className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
                   </div>
                 </>
               )}
@@ -398,7 +407,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           <>
             <div>
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('propName', 'Name')}</label>
-                <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={selectedNode.name || ''} onChange={e => handlePropChange('name', e.target.value)} />
+                <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={selectedNode.name || ''} onChange={e => handlePropChange('name', e.target.value)} />
             </div>
             
             <label className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-sm hover:border-blue-500 transition-colors">
@@ -411,7 +420,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             <div>
               <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('assetClass', 'Anlageklasse')}</label>
               <select 
-                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" 
+                  className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" 
                   value={selectedNode.assetClass || 'cash'} 
                   onChange={e => { 
                       const val = e.target.value; 
@@ -455,15 +464,15 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             <div className="grid grid-cols-2 gap-3 items-end">
               <div className="flex flex-col justify-end h-full">
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('currency', 'Währung')}</label>
-                <select className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.currency || 'CHF'} onChange={e => handlePropChange('currency', e.target.value)}>
+                <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.currency || 'CHF'} onChange={e => handlePropChange('currency', e.target.value)}>
                   <option>CHF</option><option>USD</option><option>EUR</option>
                 </select>
               </div>
               <div className="flex flex-col justify-end h-full relative group">
                 <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight" title={safeT('propTrackRateTitle', 'Genereller Tracking-Kurs')}>{safeT('propCurrentRate', 'Aktueller Kurs')}</label>
                 <div className="relative">
-                    <input type="number" step="any" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums focus:ring-2 focus:ring-blue-500 outline-none" value={selectedNode.exchangeRate ?? ''} onChange={e => handlePropChange('exchangeRate', e.target.value)} onBlur={e => { if (syncExchangeRates) syncExchangeRates(selectedNode.currency, e.target.value); }} />
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={14} /></button>
+                    <input type="number" step="any" className="w-full p-2.5 md:p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums focus:ring-2 focus:ring-blue-500 outline-none" value={selectedNode.exchangeRate ?? ''} onChange={e => handlePropChange('exchangeRate', e.target.value)} onBlur={e => { if (syncExchangeRates) syncExchangeRates(selectedNode.currency, e.target.value); }} />
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer p-1" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={14} /></button>
                 </div>
               </div>
             </div>
@@ -490,7 +499,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       type="number" 
                       step="100" 
                       placeholder="z.B. 5000" 
-                      className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-sm font-mono tabular-nums" 
+                      className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-sm font-mono tabular-nums" 
                       value={selectedNode.cardLimit ?? ''} 
                       onChange={e => handlePropChange('cardLimit', Number(e.target.value))} 
                     />
@@ -504,7 +513,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       <select 
                         value={selectedNode.cardBrand || 'VISA'} 
                         onChange={e => handlePropChange('cardBrand', e.target.value)}
-                        className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                        className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
                       >
                         <option value="VISA">VISA</option>
                         <option value="Mastercard">Mastercard</option>
@@ -521,7 +530,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                         type="text" 
                         maxLength={4}
                         placeholder="z.B. 4242" 
-                        className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-xs font-mono text-center" 
+                        className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-xs font-mono text-center" 
                         value={selectedNode.cardLast4 || ''} 
                         onChange={e => handlePropChange('cardLast4', e.target.value.replace(/\D/g, ''))} 
                       />
@@ -535,7 +544,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     <select 
                       value={selectedNode.linkedBankAccountId || ''} 
                       onChange={e => handlePropChange('linkedBankAccountId', e.target.value)}
-                      className="w-full p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                      className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
                     >
                       <option value="">{safeT('optSelectBankAccount', '-- Bankkonto für Abrechnung wählen --')}</option>
                       {allCashAssets.map(asset => (
@@ -570,11 +579,11 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('ticker', 'Ticker (API)')}</label>
-                      <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
+                      <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
                   </div>
                   <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('isin', 'ISIN (Optional)')}</label>
-                      <input className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
+                      <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
                   </div>
                 </div>
             )}
@@ -613,21 +622,21 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                      <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
                          {safeT('propExpectedYield', 'Erw. Rendite (%)')}
                      </label>
-                     <input type="number" step="any" placeholder={safeT('placeholderEgYield', 'z.B. 3.5')} className="w-full p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.forwardYield ?? ''} onChange={e => handlePropChange('forwardYield', e.target.value)} />
+                     <input type="number" step="any" placeholder={safeT('placeholderEgYield', 'z.B. 3.5')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.forwardYield ?? ''} onChange={e => handlePropChange('forwardYield', e.target.value)} />
                    </div>
                    
                    <div className="flex flex-col justify-end h-full" title={safeT('titleTaxDeduction', 'Temporärer Steuerabzug am Zahltag (z.B. 35% Verrechnungssteuer, 30% US-Abzug)')}>
                       <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
                           {safeT('propTotalTaxes', 'Steuer-Total (%)')}
                       </label>
-                      <input type="number" step="any" placeholder={safeT('placeholderEgTaxes', 'z.B. 35')} className="w-full p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.totalTaxes ?? ''} onChange={e => handlePropChange('totalTaxes', e.target.value)} />
+                      <input type="number" step="any" placeholder={safeT('placeholderEgTaxes', 'z.B. 35')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.totalTaxes ?? ''} onChange={e => handlePropChange('totalTaxes', e.target.value)} />
                    </div>
 
                    <div className="flex flex-col justify-end h-full col-span-2 mt-1">
                      <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
                          {safeT('propPayoutMonths', 'Zahlmonate (1-12)')}
                      </label>
-                     <input type="text" placeholder={safeT('placeholderEgMonths', 'z.B. 3,6,9,12')} className="w-full p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm" value={selectedNode.payoutMonths ?? ''} onChange={e => handlePropChange('payoutMonths', e.target.value)} />
+                     <input type="text" placeholder={safeT('placeholderEgMonths', 'z.B. 3,6,9,12')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm" value={selectedNode.payoutMonths ?? ''} onChange={e => handlePropChange('payoutMonths', e.target.value)} />
                    </div>
                  </div>
                  <div className="text-[10px] text-blue-600/70 dark:text-blue-400/70 leading-tight">
@@ -649,17 +658,17 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         .custom-tree-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.6); }
       `}</style>
       
-      <div className="print-hide w-80 border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex flex-col gap-6 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner">
+      <div className="print-hide w-full md:w-80 md:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-5 md:p-6 flex flex-col gap-5 md:gap-6 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner">
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-3 shrink-0">
-            <div className="flex items-center gap-2">
-                <Icon name={selectedNode.selectedBooking ? "Edit" : "Settings"} className="text-gray-500" />
-                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-sm">
+            <div className="flex items-center gap-2 min-w-0 pr-2">
+                <Icon name={selectedNode.selectedBooking ? "Edit" : "Settings"} className="text-gray-500 shrink-0" />
+                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-xs md:text-sm truncate">
                     {selectedNode.budgetType ? safeT('budgetDetails', 'Budget Details') : 
                      selectedNode.selectedBooking ? (selectedNode.selectedBooking._isBal ? safeT('editBalance', 'Saldo bearbeiten') : safeT('editBooking', 'Buchung bearbeiten')) : 
                      safeT('propEditor', 'Eigenschaften')}
                 </h3>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
                <AutoSaveIndicator />
                {selectedNode.selectedBooking && (
                    <Icon name="X" size={18} className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} title={safeT('titleCloseEditor', "Editor schließen")} />
@@ -667,7 +676,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             </div>
         </div>
         
-        <div className="space-y-4 pb-12">
+        <div className="space-y-4 pb-16 md:pb-12">
           {renderContent()}
         </div>
       </div>

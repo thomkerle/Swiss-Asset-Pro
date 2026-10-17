@@ -45,6 +45,11 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
   const [centerData, setCenterData] = useState({ movers: [], fxAlerts: [], recentBookings: [], history: [], actionCount: 0, totalUnread: 0 });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fallbacks auf Window-Ebene, falls Props in Zwischen-Hierarchien fehlen
+  const doSetSelectedNode = setSelectedNode || (typeof window !== 'undefined' && window.__finspaSetSelectedNode);
+  const doSetActiveReport = setActiveReport || (typeof window !== 'undefined' && window.__finspaSetActiveReport);
+  const doSetViewMode = setViewMode || (typeof window !== 'undefined' && window.__finspaSetViewMode);
+
   const loadNotifications = async () => {
     setIsLoading(true);
     try {
@@ -73,29 +78,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
   const handleNavigateToHistoryItem = (item) => {
     if (!item) return;
 
-    // 1. Report aufrufen
-    if (item.activeReport) {
-      if (setViewMode) setViewMode('vermoegen');
-      if (setActiveReport) setActiveReport(item.activeReport);
-      if (setSelectedNode) setSelectedNode(null);
-      onClose();
-      return;
-    }
-
-    // 2. Budget-Position aufrufen
-    if (item.budgetType && data?.budget) {
-      const groupItems = data.budget[item.budgetType] || [];
-      const foundBudget = groupItems.find(b => b.id === item.id);
-      if (foundBudget) {
-        if (setViewMode) setViewMode('budget');
-        if (setActiveReport) setActiveReport(null);
-        if (setSelectedNode) setSelectedNode({ ...foundBudget, budgetType: item.budgetType });
-        onClose();
-        return;
-      }
-    }
-
-    // 3. Normales Asset oder Bankknoten aufrufen
+    // 1. Alle Nodes rekursiv durchsuchen (Assets, Kategorien, Banken)
     const getAllNodes = (nodes) => {
       let res = [];
       (nodes || []).forEach(n => {
@@ -108,19 +91,46 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
     const allNodes = getAllNodes(data?.banks || []);
     const targetNode = allNodes.find(n => n.id === item.id);
 
+    // Wenn es ein Asset oder Bankknoten ist: ZUERST ansteuern und Reports deaktivieren!
     if (targetNode) {
-      if (setViewMode) setViewMode(item.viewMode || 'vermoegen');
-      if (setActiveReport) setActiveReport(null);
-      if (setSelectedNode) setSelectedNode(targetNode);
+      if (doSetViewMode) doSetViewMode(item.viewMode || 'vermoegen');
+      if (doSetActiveReport) doSetActiveReport(null);
+      if (doSetSelectedNode) doSetSelectedNode(targetNode);
       onClose();
       return;
     }
 
-    // 4. Fallback für reine Ansichten
-    if (item.viewMode && setViewMode) {
-      setViewMode(item.viewMode);
-      if (setActiveReport) setActiveReport(null);
-      if (setSelectedNode) setSelectedNode(null);
+    // 2. Budget-Position aufrufen
+    if (item.budgetType && data?.budget) {
+      const groupItems = data.budget[item.budgetType] || [];
+      const foundBudget = groupItems.find(b => b.id === item.id);
+      if (foundBudget) {
+        if (doSetViewMode) doSetViewMode('budget');
+        if (doSetActiveReport) doSetActiveReport(null);
+        if (doSetSelectedNode) doSetSelectedNode({ ...foundBudget, budgetType: item.budgetType });
+        onClose();
+        return;
+      }
+    }
+
+    // 3. Reiner Report-Aufruf
+    const reportId = (item.id && String(item.id).startsWith('rep_')) 
+      ? String(item.id).replace('rep_', '') 
+      : (item.type === 'report' ? (item.activeReport || item.id) : null);
+
+    if (reportId) {
+      if (doSetViewMode) doSetViewMode('vermoegen');
+      if (doSetActiveReport) doSetActiveReport(reportId);
+      if (doSetSelectedNode) doSetSelectedNode(null);
+      onClose();
+      return;
+    }
+
+    // 4. Fallback für reine Ansichten (z.B. budget, ai, liveEditor, datensicht)
+    if (item.viewMode && doSetViewMode) {
+      doSetViewMode(item.viewMode);
+      if (doSetActiveReport) doSetActiveReport(null);
+      if (doSetSelectedNode) doSetSelectedNode(null);
       onClose();
     }
   };
@@ -137,9 +147,9 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
     const all = getAll(data?.banks || []);
     const target = all.find(a => a.id === assetId);
     if (target) {
-      if (setSelectedNode) setSelectedNode(target);
-      if (setActiveReport) setActiveReport(null);
-      if (setViewMode) setViewMode('vermoegen');
+      if (doSetSelectedNode) doSetSelectedNode(target);
+      if (doSetActiveReport) doSetActiveReport(null);
+      if (doSetViewMode) doSetViewMode('vermoegen');
       onClose();
     }
   };
@@ -256,7 +266,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto finspa-scrollbar p-5 space-y-4">
             
-            {/* TAB 1: BÖRSEN-RADAR (KACHELN MIT PULSIERENDEM SIGNAL) */}
+            {/* TAB 1: BÖRSEN-RADAR */}
             {activeTab === 'movers' && (
               <div className="space-y-4">
                 
@@ -334,7 +344,6 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                                   : 'border-rose-200/80 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/15 hover:border-rose-400')
                           }`}
                         >
-                          {/* Top: Header mit Ticker & Depot-Name */}
                           <div>
                             <div className="flex justify-between items-start gap-1 mb-1.5">
                               <div className="flex items-center gap-1.5 truncate">
@@ -360,7 +369,6 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                             </h5>
                           </div>
 
-                          {/* Mitte: Kursvergleich */}
                           <div className="my-3 py-2 px-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
                               <span className="text-[9px] text-gray-400 block uppercase font-mono">Buchungskurs</span>
@@ -382,7 +390,6 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                             </div>
                           </div>
 
-                          {/* Unten: Absoluter Effekt & Prozent-Abweichung */}
                           <div className="flex justify-between items-end text-xs font-mono pt-1">
                             <div>
                               <span className="text-[9px] text-gray-400 block font-sans">Effekt ({baseCur})</span>
@@ -449,7 +456,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                       <div 
                         key={`${b.id || 'b'}_${b.assetId || ''}_${idx}`}
                         onClick={() => handleSelectAssetById(b.assetId)}
-                        className="p-3 bg-white dark:bg-slate-850 rounded-xl border border-gray-200/80 dark:border-slate-700/80 hover:border-blue-400 cursor-pointer transition-all flex items-center justify-between text-xs"
+                        className="p-3 bg-white dark:bg-slate-855 rounded-xl border border-gray-200/80 dark:border-slate-700/80 hover:border-blue-400 cursor-pointer transition-all flex items-center justify-between text-xs"
                       >
                         <div className="min-w-0 pr-2">
                           <div className="font-bold text-slate-800 dark:text-slate-200 truncate flex items-center gap-1.5">

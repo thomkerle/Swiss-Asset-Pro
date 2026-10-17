@@ -1,5 +1,5 @@
 const React = require('react');
-const { useState, useEffect } = React;
+const { useState, useEffect, useMemo } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -11,15 +11,46 @@ const {
   getAllAssets = (banks) => []
 } = DataEngine;
 
-const PdfExportEngine = safeRequire('./print/PdfExportEngine.jsx') || safeRequire('../print/PdfExportEngine.jsx') || { 
-  exportReport: () => alert('PdfExportEngine konnte nicht geladen werden.') 
+const resolvePdfExporter = () => {
+  try {
+    const mod = require('./print/PdfToolkit.jsx');
+    if (mod && (mod.exportReport || mod.default?.exportReport)) return mod.default || mod;
+  } catch (e) {}
+  try {
+    const mod = require('../print/PdfToolkit.jsx');
+    if (mod && (mod.exportReport || mod.default?.exportReport)) return mod.default || mod;
+  } catch (e) {}
+  try {
+    const mod = require('./print/PdfExportEngine.jsx');
+    if (mod && (mod.exportReport || mod.default?.exportReport)) return mod.default || mod;
+  } catch (e) {}
+  try {
+    const mod = require('../print/PdfExportEngine.jsx');
+    if (mod && (mod.exportReport || mod.default?.exportReport)) return mod.default || mod;
+  } catch (e) {}
+  if (typeof window !== 'undefined') {
+    if (window.PdfToolkit && typeof window.PdfToolkit.exportReport === 'function') return window.PdfToolkit;
+    if (window.PdfExportEngine && typeof window.PdfExportEngine.exportReport === 'function') return window.PdfExportEngine;
+  }
+  return { exportReport: () => alert('PdfExportEngine konnte nicht geladen werden.') };
 };
 
 const safeT = (t, key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
 const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode, updateTreeData, t, defaultBookingCategories }) => {
     const baseCurrency = data?.settings?.baseCurrency || 'CHF';
-    const isForeignCurrency = selectedNode?.currency && selectedNode.currency !== baseCurrency;
+    const allAssets = useMemo(() => getAllAssets(data?.banks || []), [data?.banks]);
+
+    // Ziel-Asset zuverlässig über modalObj.assetId oder selectedNode auflösen
+    const targetAssetNode = useMemo(() => {
+        if (modalObj?.assetId) {
+            const found = allAssets.find(a => a.id === modalObj.assetId);
+            if (found) return found;
+        }
+        return selectedNode;
+    }, [modalObj?.assetId, selectedNode, allAssets]);
+
+    const isForeignCurrency = targetAssetNode?.currency && targetAssetNode.currency !== baseCurrency;
 
     const getActualShares = (node) => {
         if (!node) return 0;
@@ -44,29 +75,55 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         return p > 0 ? p : (node.price || 0);
     };
 
-    const [form, setForm] = useState(modalObj.item || { 
-        date: new Date().toISOString().split('T')[0], 
-        fromDate: `${new Date().getFullYear()}-01-01`, 
-        toDate: new Date().toISOString().split('T')[0],
-        filterType: 'all', 
-        type: modalObj.defaultType || 'Einzahlung', 
-        amount: '', subCategory: '', comment: '', shares: '', price: '', fees: '', taxes: '', 
-        bookingExchangeRate: isForeignCurrency ? (selectedNode?.exchangeRate || 1) : 1,
-        targetAssetId: '',
-        bulkOperation: 'delete',
-        ticker: '',
-        isin: ''
+    const initialAssetClass = modalObj?.item?.assetClass || modalObj?.defaultAssetClass || 'cash';
+    const initialDefaultType = modalObj?.defaultType || (targetAssetNode?.assetClass === 'credit_card' ? 'Auszahlung' : 'Einzahlung');
+
+    const [form, setForm] = useState(() => {
+        if (modalObj.item) {
+            return {
+                ...modalObj.item,
+                bookingExchangeRate: modalObj.item.bookingExchangeRate || (isForeignCurrency ? (targetAssetNode?.exchangeRate || 1) : 1),
+                targetAssetId: modalObj.item.targetAssetId || ''
+            };
+        }
+        return { 
+            date: new Date().toISOString().split('T')[0], 
+            fromDate: `${new Date().getFullYear()}-01-01`, 
+            toDate: new Date().toISOString().split('T')[0],
+            filterType: 'all', 
+            type: initialDefaultType, 
+            name: modalObj.type === 'editGoal' ? '' : '',
+            target: data?.goals?.fire?.target || 1000000,
+            year: data?.goals?.fire?.year || 2040,
+            assetClass: initialAssetClass,
+            currency: baseCurrency,
+            cardLimit: 5000,
+            amount: '', 
+            subCategory: '', 
+            comment: '', 
+            shares: '', 
+            price: '', 
+            fees: '', 
+            taxes: '', 
+            bookingExchangeRate: isForeignCurrency ? (targetAssetNode?.exchangeRate || 1) : 1,
+            targetAssetId: '',
+            bulkOperation: 'delete',
+            ticker: '',
+            isin: '',
+            frequency: 'monthly',
+            ruleCategory: 'needs'
+        };
     });
 
     const [suggestedFxRate, setSuggestedFxRate] = useState(null);
     const [isFetchingFx, setIsFetchingFx] = useState(false);
 
-    const fetchHistoricalRate = async (manualTrigger = false) => {
-        const dateToFetch = form.date;
-        const fromCur = selectedNode?.currency;
+    const fetchHistoricalRate = async (manualTrigger = false, customFromCur = null) => {
+        const dateToFetch = form.date || new Date().toISOString().split('T')[0];
+        const fromCur = customFromCur || (modalObj.type === 'addAsset' ? form.currency : targetAssetNode?.currency);
         const toCur = baseCurrency;
 
-        if (!isForeignCurrency || !fromCur || fromCur === toCur || !dateToFetch) {
+        if (!fromCur || fromCur === toCur || !dateToFetch) {
             setSuggestedFxRate(null);
             return;
         }
@@ -141,15 +198,18 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
     };
 
     useEffect(() => {
-        const timeoutId = setTimeout(() => fetchHistoricalRate(false), 500);
-        return () => clearTimeout(timeoutId);
-    }, [form.date, selectedNode?.currency, baseCurrency, isForeignCurrency]);
+        if (isForeignCurrency || (modalObj.type === 'addAsset' && form.currency !== baseCurrency)) {
+            const timeoutId = setTimeout(() => fetchHistoricalRate(false), 450);
+            return () => clearTimeout(timeoutId);
+        }
+    }, [form.date, form.currency, targetAssetNode?.currency, baseCurrency, isForeignCurrency]);
 
     const refreshActiveNode = (newBanks) => {
-        if (!selectedNode) return;
+        const refId = targetAssetNode?.id || selectedNode?.id;
+        if (!refId) return;
         const findNode = (nodes) => {
             for (let n of nodes) {
-                if (n.id === selectedNode.id) return n;
+                if (n.id === refId) return n;
                 if (n.children) {
                     let r = findNode(n.children);
                     if (r) return r;
@@ -158,20 +218,21 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             return null;
         };
         const updatedNode = findNode(newBanks);
-        if (updatedNode) setSelectedNode(updatedNode);
+        if (updatedNode && setSelectedNode) setSelectedNode(updatedNode);
     };
 
     const handlePrintAssetBookings = () => {
+        if (!targetAssetNode) return;
         const { fromDate, toDate, filterType } = form;
-        const items = [...(selectedNode.balances || []).map(b => ({ ...b, _isBal: true })), ...(selectedNode.bookings || [])];
+        const items = [...(targetAssetNode.balances || []).map(b => ({ ...b, _isBal: true })), ...(targetAssetNode.bookings || [])];
 
         const filtered = items.filter(item => {
             if (fromDate && item.date < fromDate) return false;
             if (toDate && item.date > toDate) return false;
             if (filterType !== 'all') {
                 if (item._isBal) return false; 
-                const isFlowIn = ['Einzahlung', 'Kauf', 'Dividende', 'Zinszahlung'].includes(item.type);
-                const isFlowOut = ['Auszahlung', 'Verkauf', 'Gebühr', 'Abzahlung', 'Schulderhöhung', 'Umbuchung'].includes(item.type);
+                const isFlowIn = ['Einzahlung', 'Kauf', 'Dividende', 'Zinszahlung', 'Abzahlung'].includes(item.type);
+                const isFlowOut = ['Auszahlung', 'Verkauf', 'Gebühr', 'Schulderhöhung', 'Umbuchung'].includes(item.type);
                 const isReval = item.type === 'Wertanpassung';
                 if (filterType === 'in' && !isFlowIn) return false;
                 if (filterType === 'out' && !isFlowOut) return false;
@@ -196,12 +257,12 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             if (item.comment) details += ` | ${item.comment}`; 
             if (!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares) details += ` (${item.shares} ${safeT(t, 'pcsAt', 'Stk. à')} ${item.price})`;
 
-            let displayAmount = Number(item.amount);
+            let displayAmount = Number(item.amount || 0);
             let isPositiveType = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(item.type);
             if (item.type === 'Wertanpassung' && displayAmount < 0) { isPositiveType = false; displayAmount = Math.abs(displayAmount); }
 
             const prefix = !item._isBal ? (isPositiveType ? '+' : '-') : '';
-            const currency = selectedNode?.currency || baseCurrency;
+            const currency = targetAssetNode?.currency || baseCurrency;
             const formattedAmount = `${prefix}${displayAmount.toLocaleString('de-CH', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ${currency}`;
 
             return [item.date, typeLabel, details, formattedAmount];
@@ -210,12 +271,12 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         if (tableBody.length === 0) {
             tableBody.push([{ text: safeT(t, 'noEntries', 'Keine Einträge.'), colSpan: 4, alignment: 'center' }, {}, {}, {}]);
         } else {
-            let totalIn = 0; let totalOut = 0; const currency = selectedNode?.currency || baseCurrency;
+            let totalIn = 0; let totalOut = 0; const currency = targetAssetNode?.currency || baseCurrency;
             filtered.forEach(item => {
-                if (item._isBal) return;
+                // Salden und reine Wertanpassungen nicht in den Cashflow-Summen mitzählen
+                if (item._isBal || item.type === 'Wertanpassung') return;
                 let amt = Number(item.amount || 0);
-                let isPositiveType = ['Einzahlung', 'Kauf', 'Wertanpassung', 'Dividende', 'Abzahlung'].includes(item.type);
-                if (item.type === 'Wertanpassung' && amt < 0) { isPositiveType = false; amt = Math.abs(amt); }
+                let isPositiveType = ['Einzahlung', 'Kauf', 'Dividende', 'Abzahlung'].includes(item.type);
                 if (isPositiveType) totalIn += amt; else totalOut += amt;
             });
 
@@ -231,7 +292,14 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         if (filterType === 'out') filterLabel = safeT(t, 'filterOut', "Nur Abflüsse/Auszahlungen");
         if (filterType === 'reval') filterLabel = safeT(t, 'filterReval', "Nur Wertanpassungen");
 
-        PdfExportEngine.exportReport({ title: `${safeT(t, 'bookingJournal', 'Buchungsjournal')} - ${selectedNode.name}`, subtitle: `${safeT(t, 'dateRangeTitle', 'Zeitraum:')} ${fromDate || 'Anfang'} ${safeT(t, 'wordTo', 'bis')} ${toDate || 'Heute'} | Filter: ${filterLabel} | Währung: ${selectedNode.currency || baseCurrency}`, tableHeaders, tableBody, data });
+        const exporter = resolvePdfExporter();
+        exporter.exportReport({ 
+            title: `${safeT(t, 'bookingJournal', 'Buchungsjournal')} - ${targetAssetNode.name}`, 
+            subtitle: `${safeT(t, 'dateRangeTitle', 'Zeitraum:')} ${fromDate || 'Anfang'} ${safeT(t, 'wordTo', 'bis')} ${toDate || 'Heute'} | Filter: ${filterLabel} | Währung: ${targetAssetNode.currency || baseCurrency}`, 
+            tableHeaders, 
+            tableBody, 
+            data 
+        });
         setModalObj(null);
     };
 
@@ -268,9 +336,11 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         }
 
         if (modalObj.type === 'editGoal') { 
+            if (!newData.goals) newData.goals = {};
             newData.goals.fire = { target: Number(form.target||0), year: Number(form.year||2040) }; 
         } 
         else if (modalObj.type === 'addScenario') { 
+            if (!newData.scenarios) newData.scenarios = [];
             newData.scenarios.push({ id: generateId(), name: form.name||safeT(t, 'newTargetName', 'Neu'), date: form.date, impact: Number(form.impact||0) }); 
         } 
         else if (modalObj.type === 'addBank') { 
@@ -291,13 +361,15 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         } 
         else if (['addBooking', 'editBooking', 'addBalance', 'editBalance'].includes(modalObj.type)) {
             const bookingRate = form.bookingExchangeRate ? parseFloat(String(form.bookingExchangeRate).replace(',', '.')) : 0;
-            const nodeRate = selectedNode?.exchangeRate ? parseFloat(String(selectedNode.exchangeRate).replace(',', '.')) : 1;
+            const nodeRate = targetAssetNode?.exchangeRate ? parseFloat(String(targetAssetNode.exchangeRate).replace(',', '.')) : 1;
             const sourceRate = isForeignCurrency ? (bookingRate || nodeRate || 1) : 1;
             const amountInBaseCurrency = (Number(form.amount) || 0) * sourceRate;
+            const isCreditCardSettlement = targetAssetNode?.assetClass === 'credit_card' && form.type === 'Einzahlung';
 
             const updateRecursive = (nodes) => nodes.map(n => {
                 let copy = {...n};
 
+                // Gegenbuchung auf Ziel- bzw. Belastungskonto (bei Dividende, Umbuchung oder Kreditkarten-Ausgleich)
                 if (form.targetAssetId && n.id === form.targetAssetId && modalObj.type === 'addBooking') {
                     if (!copy.bookings) copy.bookings = [];
                     const isTargetSecurity = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(copy.assetClass);
@@ -306,11 +378,30 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                     if (!isTargetForeign) targetRate = 1;
                     const finalTargetAmount = targetRate !== 0 ? (amountInBaseCurrency / targetRate) : amountInBaseCurrency;
 
-                    copy.bookings.push({
-                        id: generateId(), date: form.date, type: isTargetSecurity ? 'Kauf' : 'Einzahlung', 
-                        subCategory: form.type === 'Dividende' ? safeT(t, 'divIn', 'Dividenden Eingang') : safeT(t, 'transferIn', 'Umbuchung Eingang'),
-                        amount: Number(finalTargetAmount.toFixed(2)), bookingExchangeRate: isTargetForeign ? targetRate : 1
-                    });
+                    if (isCreditCardSettlement) {
+                        // Beim Ausgleich einer Kreditkartenabrechnung wird das gewählte Bankkonto belastet (Auszahlung)
+                        copy.bookings.push({
+                            id: generateId(),
+                            date: form.date,
+                            type: 'Auszahlung',
+                            subCategory: safeT(t, 'ccSettlementOut', `Kartenabrechnung ${targetAssetNode?.name || ''}`).trim(),
+                            comment: form.comment || `#Kreditkartenausgleich`,
+                            amount: Number(finalTargetAmount.toFixed(2)),
+                            bookingExchangeRate: isTargetForeign ? targetRate : 1,
+                            _timestamp: Date.now()
+                        });
+                    } else {
+                        copy.bookings.push({
+                            id: generateId(), 
+                            date: form.date, 
+                            type: isTargetSecurity ? 'Kauf' : 'Einzahlung', 
+                            subCategory: form.type === 'Dividende' ? safeT(t, 'divIn', 'Dividenden Eingang') : safeT(t, 'transferIn', 'Umbuchung Eingang'),
+                            comment: form.comment || '',
+                            amount: Number(finalTargetAmount.toFixed(2)), 
+                            bookingExchangeRate: isTargetForeign ? targetRate : 1,
+                            _timestamp: Date.now()
+                        });
+                    }
                 }
 
                 if (n.id === modalObj.assetId) {
@@ -318,39 +409,90 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                         if (!copy.bookings) copy.bookings = [];
                         if (modalObj.item) copy.bookings = copy.bookings.filter(b=>b.id !== modalObj.item.id);
                         
-                        let saveType = form.type; let saveCat = form.subCategory;
-                        if (form.type === 'Umbuchung') { saveType = 'Auszahlung'; saveCat = safeT(t, 'transferOut', 'Umbuchung Ausgang'); }
+                        let saveType = form.type; 
+                        let saveCat = form.subCategory;
+                        if (form.type === 'Umbuchung') { 
+                            saveType = 'Auszahlung'; 
+                            saveCat = safeT(t, 'transferOut', 'Umbuchung Ausgang'); 
+                        } else if (isCreditCardSettlement && !saveCat) {
+                            saveCat = safeT(t, 'ccSettlementIn', 'Kartenabrechnung Ausgleich');
+                        }
+
+                        // Bei Wertanpassung von Wertpapieren auch den Stamm-Preis aktualisieren
+                        if (saveType === 'Wertanpassung' && Number(form.price) > 0) {
+                            copy.price = Number(form.price);
+                        }
 
                         copy.bookings.push({ 
-                            id: modalObj.item?.id || generateId(), date: form.date, type: saveType, subCategory: saveCat, 
+                            id: modalObj.item?.id || generateId(), 
+                            date: form.date, 
+                            type: saveType, 
+                            subCategory: saveCat, 
                             comment: form.comment, 
-                            amount: Number(form.amount || 0), shares: saveType === 'Wertanpassung' ? undefined : (form.shares ? Number(form.shares) : undefined), 
-                            price: form.price ? Number(form.price) : undefined, fees: form.fees ? Number(form.fees) : undefined, 
-                            taxes: form.taxes ? Number(form.taxes) : undefined, bookingExchangeRate: form.bookingExchangeRate ? Number(form.bookingExchangeRate) : 1 
+                            amount: Number(form.amount || 0), 
+                            shares: saveType === 'Wertanpassung' ? undefined : (form.shares ? Number(form.shares) : undefined), 
+                            price: form.price ? Number(form.price) : undefined, 
+                            fees: form.fees ? Number(form.fees) : undefined, 
+                            taxes: form.taxes ? Number(form.taxes) : undefined, 
+                            bookingExchangeRate: form.bookingExchangeRate ? Number(form.bookingExchangeRate) : 1,
+                            _timestamp: modalObj.item?._timestamp || Date.now()
                         });
                     } else {
                         if (!copy.balances) copy.balances = [];
                         if (modalObj.item) copy.balances = copy.balances.filter(b=>b.id !== modalObj.item.id);
-                        copy.balances.push({ id: modalObj.item?.id || generateId(), date: form.date, amount: Number(form.amount), bookingExchangeRate: Number(form.bookingExchangeRate||1) });
+                        copy.balances.push({ 
+                            id: modalObj.item?.id || generateId(), 
+                            date: form.date, 
+                            amount: Number(form.amount || 0), 
+                            bookingExchangeRate: Number(form.bookingExchangeRate || 1) 
+                        });
                     }
                 }
-                if (n.children) copy.children = updateRecursive(n.children);
+                if (n.children) copy.children = updateRecursive(copy.children);
                 return copy;
             });
             newData.banks = updateRecursive(newData.banks);
             refreshActiveNode(newData.banks); 
         } 
-        else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset' || modalObj.type === 'addBank' || modalObj.type === 'addBudget' || modalObj.type === 'editBudget') {
+        else if (modalObj.type === 'addCategory' || modalObj.type === 'addAsset') {
             const updateRecursive = (nodes) => nodes.map(n => {
                 if (n.id === modalObj.parentId) {
                     let copy = {...n};
                     if (!copy.children) copy.children = [];
                     if (modalObj.type === 'addCategory') {
-                        copy.children.push({ id: generateId(), name: form.name || safeT(t, 'newCategoryName', 'Neue Kategorie'), type: 'category', isArchived: false, children: [] });
+                        copy.children.push({ 
+                            id: generateId(), 
+                            name: form.name || safeT(t, 'newCategoryName', 'Neue Kategorie'), 
+                            type: 'category', 
+                            isArchived: false, 
+                            children: [] 
+                        });
                     } else {
                         const ac = form.assetClass || 'cash';
-                        const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage', 'pension_3a_managed'].includes(ac);
-                        copy.children.push({ id: generateId(), name: form.name || safeT(t, 'newAssetName', 'Neues Asset'), type: 'asset', currency: 'CHF', exchangeRate: 1.0, isLiquid: isLiq, isArchived: false, assetClass: ac, balances: [], bookings: [], ticker: form.ticker || '', isin: form.isin || '' });
+                        const selectedCur = form.currency || baseCurrency;
+                        const fxRate = selectedCur === baseCurrency ? 1.0 : (Number(suggestedFxRate) || Number(form.bookingExchangeRate) || 1.0);
+                        const isLiq = !['pension_cash', 'pension_fund', 'realestate', 'mortgage', 'pension_3a_managed', 'pension_3a_cash', 'pension_3a_fund'].includes(ac);
+                        
+                        const newAssetObj = { 
+                            id: generateId(), 
+                            name: form.name || (ac === 'credit_card' ? safeT(t, 'newCreditCardName', 'Neue Kreditkarte') : safeT(t, 'newAssetName', 'Neues Asset')), 
+                            type: 'asset', 
+                            currency: selectedCur, 
+                            exchangeRate: fxRate, 
+                            isLiquid: isLiq, 
+                            isArchived: false, 
+                            assetClass: ac, 
+                            balances: [], 
+                            bookings: [], 
+                            ticker: form.ticker || '', 
+                            isin: form.isin || '' 
+                        };
+
+                        if (ac === 'credit_card') {
+                            newAssetObj.cardLimit = Number(form.cardLimit || 5000);
+                        }
+
+                        copy.children.push(newAssetObj);
                     }
                     return copy;
                 }
@@ -359,6 +501,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
             });
             newData.banks = updateRecursive(newData.banks);
         }
+
         if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT(t, 'msgSaveSuccess2', "Erfolgreich gespeichert"), "success");
         updateTreeData(newData); 
         setModalObj(null);
@@ -387,10 +530,11 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
     };
 
     let availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung'];
-    const ac = selectedNode?.assetClass;
-    if (modalObj.type?.includes('Booking') && selectedNode?.type === 'asset') {
+    const ac = targetAssetNode?.assetClass;
+    if (modalObj.type?.includes('Booking') && targetAssetNode?.type === 'asset') {
         if (ac === 'realestate') availableBookingTypes = ['Wertanpassung'];
         else if (ac === 'mortgage') availableBookingTypes = ['Abzahlung', 'Zinszahlung', 'Schulderhöhung'];
+        else if (ac === 'credit_card') availableBookingTypes = ['Auszahlung', 'Einzahlung', 'Gebühr', 'Umbuchung'];
         else if (['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac)) availableBookingTypes = ['Kauf', 'Verkauf', 'Dividende', 'Gebühr', 'Wertanpassung'];
         else if (['pension_cash', 'pension_3a_cash'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Zinszahlung', 'Gebühr'];
         else if (['managed_fund', 'pension_3a_managed'].includes(ac)) availableBookingTypes = ['Einzahlung', 'Auszahlung', 'Umbuchung', 'Wertanpassung', 'Gebühr'];
@@ -399,13 +543,29 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
     const activeBookingCategories = data.settings?.bookingCategories || defaultBookingCategories || {};
     const availableSubCategories = activeBookingCategories[form.type] || [];
     const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
+    const isCreditCardAsset = ac === 'credit_card';
 
-    const currentSh = getActualShares(selectedNode);
-    const currentPr = getActualPrice(selectedNode);
+    const currentSh = getActualShares(targetAssetNode);
+    const currentPr = getActualPrice(targetAssetNode);
 
     let modalTitle = modalObj.type.includes('edit') ? safeT(t, 'modalEdit', 'Bearbeiten') : safeT(t, 'modalNew', 'Neu');
+    if (modalObj.type === 'addAsset' && form.assetClass === 'credit_card') modalTitle = safeT(t, 'addCreditCard', 'Kreditkarte hinzufügen');
     if (modalObj.type === 'printAssetBookings') modalTitle = safeT(t, 'printTitle', 'Journal Drucken');
     if (modalObj.type === 'bulkAction') modalTitle = safeT(t, 'titleBulkAction', 'Massenbearbeitung');
+
+    const recalculateSecurityAmount = (shVal, prVal, feeVal, taxVal, txType) => {
+        if (!['Kauf', 'Verkauf'].includes(txType)) return form.amount;
+        const sh = Number(shVal || 0);
+        const pr = Number(prVal || 0);
+        const fee = Number(feeVal || 0);
+        const tax = Number(taxVal || 0);
+        if (sh > 0 && pr > 0) {
+            const base = sh * pr;
+            const total = txType === 'Kauf' ? (base + fee + tax) : Math.max(0, base - fee - tax);
+            return total.toFixed(2);
+        }
+        return form.amount;
+    };
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
@@ -414,9 +574,10 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
           <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 shrink-0">
             <h3 className="font-bold text-lg flex items-center gap-2">
                 {modalObj.type === 'bulkAction' && <Icon name="Layers" className="text-indigo-500" />}
+                {(modalObj.type === 'addAsset' && form.assetClass === 'credit_card') && <Icon name="CreditCard" className="text-indigo-500" />}
                 {modalTitle}
             </h3>
-            <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors p-1 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700"><Icon name="X" size={20}/></button>
+            <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors p-1 rounded-md hover:bg-gray-200 dark:hover:bg-slate-700 cursor-pointer"><Icon name="X" size={20}/></button>
           </div>
           
           <div className="p-6 space-y-5 text-sm text-gray-700 dark:text-gray-300 overflow-y-auto finspa-scrollbar">
@@ -529,8 +690,16 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                   <>
                       <div>
                           <label className="block font-bold mb-1">{safeT(t, 'propName', 'Name')}</label>
-                          <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent" value={form.name || ''} onChange={e=>setForm({...form, name: e.target.value})}/>
+                          <input 
+                              type="text" 
+                              autoFocus
+                              placeholder={modalObj.type === 'addAsset' && form.assetClass === 'credit_card' ? 'z.B. Cembra Mastercard / Viseca' : ''}
+                              className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" 
+                              value={form.name || ''} 
+                              onChange={e=>setForm({...form, name: e.target.value})}
+                          />
                       </div>
+
                       {(modalObj.type === 'addBudget' || modalObj.type === 'editBudget') && (
                           <>
                               <div>
@@ -554,33 +723,76 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                               </div>
                           </>
                       )}
+
                       {modalObj.type === 'addAsset' && (
-                          <div className="mt-3">
-                              <label className="block font-bold mb-1">{safeT(t, 'assetClass', 'Asset-Klasse')}</label>
-                              <select className="w-full p-2 border rounded dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" value={form.assetClass || 'cash'} onChange={e => setForm({...form, assetClass: e.target.value})}>
-                                  <option value="cash">{safeT(t, 'acCash', 'Bargeld')}</option>
-                                  <option value="fund">{safeT(t, 'acFund', 'Fonds')}</option>
-                                  <option value="stock">{safeT(t, 'acStock', 'Aktien')}</option>
-                                  <option value="crypto">{safeT(t, 'acCrypto', 'Krypto')}</option>
-                                  <option value="realestate">{safeT(t, 'acRealEstate', 'Immobilien')}</option>
-                                  <option value="mortgage">{safeT(t, 'acMortgage', 'Hypothek')}</option>
-                                  <option value="pension_cash">{safeT(t, 'acPensionCash', 'Pensionskasse')}</option>
-                                  <option value="pension_fund">{safeT(t, 'acPensionFund', 'Vorsorge Fonds')}</option>
-                                  <option value="pension_3a_cash">{safeT(t, 'acPension3aCash', '3a Cash')}</option>
-                                  <option value="pension_3a_fund">{safeT(t, 'acPension3aFund', '3a Fonds')}</option>
-                                  <option value="managed_fund">{safeT(t, 'acManagedFund', 'Verwaltetes Portfolio (Robo-Advisor)')}</option>
-                                  <option value="pension_3a_managed">{safeT(t, 'acPension3aManaged', '3a Fonds (Gesamtwert)')}</option>
-                              </select>
+                          <div className="space-y-3 mt-3">
+                              <div className="grid grid-cols-3 gap-3">
+                                  <div className="col-span-2">
+                                      <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'assetClass', 'Asset-Klasse')}</label>
+                                      <select 
+                                          className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent" 
+                                          value={form.assetClass || 'cash'} 
+                                          onChange={e => setForm({...form, assetClass: e.target.value})}
+                                      >
+                                          <option value="cash">{safeT(t, 'acCash', 'Bargeld / Bankkonto')}</option>
+                                          <option value="credit_card">{safeT(t, 'acCreditCard', 'Kreditkarte')}</option>
+                                          <option value="fund">{safeT(t, 'acFund', 'Fonds / ETF')}</option>
+                                          <option value="stock">{safeT(t, 'acStock', 'Aktien')}</option>
+                                          <option value="crypto">{safeT(t, 'acCrypto', 'Krypto')}</option>
+                                          <option value="realestate">{safeT(t, 'acRealEstate', 'Immobilien')}</option>
+                                          <option value="mortgage">{safeT(t, 'acMortgage', 'Hypothek')}</option>
+                                          <option value="pension_cash">{safeT(t, 'acPensionCash', 'Pensionskasse (PK)')}</option>
+                                          <option value="pension_fund">{safeT(t, 'acPensionFund', 'Vorsorge Fonds')}</option>
+                                          <option value="pension_3a_cash">{safeT(t, 'acPension3aCash', 'Säule 3a Cash')}</option>
+                                          <option value="pension_3a_fund">{safeT(t, 'acPension3aFund', 'Säule 3a Fonds')}</option>
+                                          <option value="managed_fund">{safeT(t, 'acManagedFund', 'Verwaltetes Portfolio (Robo-Advisor)')}</option>
+                                          <option value="pension_3a_managed">{safeT(t, 'acPension3aManaged', '3a Fonds (Gesamtwert)')}</option>
+                                      </select>
+                                  </div>
+
+                                  <div>
+                                      <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'currency', 'Währung')}</label>
+                                      <select 
+                                          className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 text-slate-800 dark:text-slate-100 bg-transparent font-mono font-bold"
+                                          value={form.currency || baseCurrency}
+                                          onChange={e => setForm({...form, currency: e.target.value})}
+                                      >
+                                          <option value="CHF">CHF</option>
+                                          <option value="EUR">EUR</option>
+                                          <option value="USD">USD</option>
+                                          <option value="GBP">GBP</option>
+                                      </select>
+                                  </div>
+                              </div>
+
+                              {form.assetClass === 'credit_card' && (
+                                  <div className="p-3.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 space-y-2">
+                                      <label className="block font-bold text-xs uppercase text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                          <Icon name="CreditCard" size={13} />
+                                          {safeT(t, 'labelCardLimit', 'Kreditkarten-Limite')} ({form.currency || baseCurrency})
+                                      </label>
+                                      <input 
+                                          type="number" 
+                                          step="100"
+                                          className="w-full p-2 border border-indigo-300 dark:border-indigo-700 rounded-lg bg-white dark:bg-slate-900 font-mono font-bold tabular-nums"
+                                          value={form.cardLimit ?? 5000}
+                                          onChange={e => setForm({...form, cardLimit: e.target.value})}
+                                      />
+                                      <p className="text-[11px] text-indigo-600/80 dark:text-indigo-300/80">
+                                          {safeT(t, 'descCreditCardLimit', 'Kartenausgaben werden als Verbindlichkeit gebucht und reduzieren das verfügbare Kartenlimit.')}
+                                      </p>
+                                  </div>
+                              )}
 
                               {['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(form.assetClass || 'cash') && (
-                                  <div className="grid grid-cols-2 gap-3 mt-3">
+                                  <div className="grid grid-cols-2 gap-3 pt-1">
                                       <div>
                                           <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'ticker', 'Ticker (API)')}</label>
-                                          <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. AAPL.US" value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
+                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder="z.B. O.US / NESN.SW" value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
                                       </div>
                                       <div>
                                           <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'isin', 'ISIN')}</label>
-                                          <input type="text" className="w-full p-2 border rounded dark:bg-slate-800 bg-transparent uppercase text-sm" placeholder="z.B. CH123456789" value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
+                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder="z.B. CH0038863350" value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
                                       </div>
                                   </div>
                               )}
@@ -597,12 +809,12 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
                       </div>
                       <div>
-                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'labelAbsoluteBalance', 'Saldo')} ({selectedNode?.currency || baseCurrency})</label>
+                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'labelAbsoluteBalance', 'Saldo')} ({targetAssetNode?.currency || baseCurrency})</label>
                           <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold tabular-nums" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
                       </div>
                       {isForeignCurrency && (
                           <div>
-                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Kurs')} ({selectedNode?.currency} -> {baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Kurs')} ({targetAssetNode?.currency} → {baseCurrency})</label>
                               <div className="relative">
                                  <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
                                  <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={safeT(t, 'titleUpdateRate', "Kurs ermitteln")}>
@@ -628,6 +840,21 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
               {modalObj.type.includes('Booking') && modalObj.type !== 'printAssetBookings' && (
                   <>
+                      {isCreditCardAsset && (
+                          <div className={`p-3 rounded-xl border text-xs font-medium flex items-center gap-2.5 ${
+                              form.type === 'Einzahlung' 
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+                                  : 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/60 text-indigo-800 dark:text-indigo-300'
+                          }`}>
+                              <Icon name={form.type === 'Einzahlung' ? 'CheckCircle' : 'CreditCard'} size={15} />
+                              <span>
+                                  {form.type === 'Einzahlung'
+                                      ? safeT(t, 'infoCcSettle', 'Abrechnungs-Ausgleich / Gutschrift: Reduziert den offenen Kartensaldo.')
+                                      : safeT(t, 'infoCcExpense', 'Kartenausgabe / Einkauf: Erhöht den offenen Kartensaldo.')}
+                              </span>
+                          </div>
+                      )}
+
                       <div>
                           <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'date', 'Datum')}</label>
                           <input type="date" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.date} onChange={e=>setForm({...form, date: e.target.value})}/>
@@ -639,14 +866,17 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                               {availableBookingTypes.map(tOption => {
                                   const typeMap = { 'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee', 'Umbuchung': 'typeTransfer' };
                                   const translationKey = typeMap[tOption] || tOption;
-                                  return <option key={tOption} value={tOption}>{safeT(t, translationKey, tOption)}</option>;
+                                  let label = safeT(t, translationKey, tOption);
+                                  if (isCreditCardAsset && tOption === 'Auszahlung') label = `${label} (Kartenbelastung)`;
+                                  if (isCreditCardAsset && tOption === 'Einzahlung') label = `${label} (Abrechnung ausgleichen)`;
+                                  return <option key={tOption} value={tOption}>{label}</option>;
                               })}
                           </select>
                       </div>
 
                       {!(isSecurities && form.type === 'Wertanpassung') && (
                           <div>
-                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'amount', 'Betrag')} ({selectedNode?.currency || baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'amount', 'Betrag')} ({targetAssetNode?.currency || baseCurrency})</label>
                               <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent font-bold tabular-nums" value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})}/>
                           </div>
                       )}
@@ -657,7 +887,17 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                               {['Kauf', 'Verkauf'].includes(form.type) && (
                                   <div>
                                       <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'shares', 'Stücke')}</label>
-                                      <input type="number" step="any" className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" value={form.shares || ''} onChange={e => { const sh = e.target.value; const pr = form.price || 0; setForm({ ...form, shares: sh, amount: sh && pr ? (Number(sh) * Number(pr)).toFixed(2) : form.amount }); }}/>
+                                      <input 
+                                          type="number" 
+                                          step="any" 
+                                          className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums" 
+                                          value={form.shares || ''} 
+                                          onChange={e => { 
+                                              const sh = e.target.value; 
+                                              const newAmt = recalculateSecurityAmount(sh, form.price, form.fees, form.taxes, form.type);
+                                              setForm({ ...form, shares: sh, amount: newAmt }); 
+                                          }}
+                                      />
                                   </div>
                               )}
                               
@@ -665,17 +905,54 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                   <label className={`block font-bold mb-1 text-xs uppercase ${form.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500'}`}>
                                       {form.type === 'Wertanpassung' ? safeT(t, 'labelNewMarketPrice', 'Neuer Börsenkurs') : safeT(t, 'labelMarketPriceOpt', 'Börsenkurs (Optional)')}
                                   </label>
-                                  <input type="number" step="any" className={`w-full p-2.5 border rounded-lg dark:bg-slate-800 bg-transparent tabular-nums ${form.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-700 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} 
+                                  <input 
+                                      type="number" 
+                                      step="any" 
+                                      className={`w-full p-2.5 border rounded-lg dark:bg-slate-800 bg-transparent tabular-nums ${form.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-700 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} 
                                       placeholder={currentPr ? `${safeT(t, 'labelUntilNow', 'Bisher:')} ${currentPr}` : ''}
                                       value={form.price || ''} 
                                       onChange={e => { 
                                           const pr = e.target.value; 
-                                          const sh = form.shares || 0; 
-                                          const newAmt = (['Kauf', 'Verkauf'].includes(form.type) && sh && pr) ? (Number(sh) * Number(pr)).toFixed(2) : (form.type === 'Wertanpassung' ? 0 : form.amount);
+                                          const newAmt = form.type === 'Wertanpassung' ? 0 : recalculateSecurityAmount(form.shares, pr, form.fees, form.taxes, form.type);
                                           setForm({ ...form, price: pr, amount: newAmt }); 
                                       }}
                                   />
                               </div>
+
+                              {['Kauf', 'Verkauf'].includes(form.type) && (
+                                  <>
+                                      <div>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'fees', 'Gebühren (Opt.)')}</label>
+                                          <input 
+                                              type="number" 
+                                              step="any" 
+                                              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums text-xs" 
+                                              placeholder="0.00"
+                                              value={form.fees || ''} 
+                                              onChange={e => {
+                                                  const f = e.target.value;
+                                                  const newAmt = recalculateSecurityAmount(form.shares, form.price, f, form.taxes, form.type);
+                                                  setForm({ ...form, fees: f, amount: newAmt });
+                                              }}
+                                          />
+                                      </div>
+                                      <div>
+                                          <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'taxes', 'Steuern/Stempel (Opt.)')}</label>
+                                          <input 
+                                              type="number" 
+                                              step="any" 
+                                              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent tabular-nums text-xs" 
+                                              placeholder="0.00"
+                                              value={form.taxes || ''} 
+                                              onChange={e => {
+                                                  const tx = e.target.value;
+                                                  const newAmt = recalculateSecurityAmount(form.shares, form.price, form.fees, tx, form.type);
+                                                  setForm({ ...form, taxes: tx, amount: newAmt });
+                                              }}
+                                          />
+                                      </div>
+                                  </>
+                              )}
 
                               {form.type === 'Wertanpassung' && (
                                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 mt-1">
@@ -685,13 +962,24 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           </div>
                       )}
 
-                      {['Dividende', 'Umbuchung'].includes(form.type) && !modalObj.item && (
+                      {(['Dividende', 'Umbuchung'].includes(form.type) || (isCreditCardAsset && form.type === 'Einzahlung')) && !modalObj.item && (
                           <div>
-                              <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">{safeT(t, 'targetAccount', 'Zielkonto')}</label>
+                              <label className="block font-bold mb-1 mt-3 text-xs uppercase text-gray-500">
+                                  {isCreditCardAsset && form.type === 'Einzahlung'
+                                      ? safeT(t, 'debitAccountOpt', 'Belastungskonto für Ausgleich (Optional)')
+                                      : safeT(t, 'targetAccount', 'Zielkonto')}
+                              </label>
                               <select className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-slate-800 dark:text-slate-100" value={form.targetAssetId || ''} onChange={e=>setForm({...form, targetAssetId: e.target.value})}>
-                                  <option value="">{safeT(t, 'optTargetAccount', '-- Optional: Zielkonto wählen --')}</option>
+                                  <option value="">
+                                      {isCreditCardAsset && form.type === 'Einzahlung'
+                                          ? safeT(t, 'optDebitAccount', '-- Optional: Bankkonto direkt mitbelasten --')
+                                          : safeT(t, 'optTargetAccount', '-- Optional: Zielkonto wählen --')}
+                                  </option>
                                   {data.banks.map(bank => {
-                                      const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
+                                      const eligibleAssets = getAllAssets([bank]).filter(a => 
+                                          a.id !== targetAssetNode?.id && 
+                                          ['cash', 'credit_card', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass)
+                                      );                
                                       if (eligibleAssets.length === 0) return null;
                                       return (
                                           <optgroup key={bank.id} label={bank.name}>
@@ -720,7 +1008,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                       {isForeignCurrency && (
                           <div>
-                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Wechselkurs')} ({selectedNode?.currency} -> {baseCurrency})</label>
+                              <label className="block font-bold mb-1 text-[10px] uppercase text-gray-500">{safeT(t, 'labelExchangeRateDate', 'Wechselkurs')} ({targetAssetNode?.currency} → {baseCurrency})</label>
                               <div className="relative">
                                  <input type="number" step="0.0001" className="w-full p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-900 bg-white tabular-nums" value={form.bookingExchangeRate} onChange={e=>setForm({...form, bookingExchangeRate: e.target.value})}/>
                                  <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={() => fetchHistoricalRate(true)} className={`absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-700 transition-colors ${isFetchingFx ? 'animate-spin text-gray-400' : ''}`} title={safeT(t, 'titleUpdateRate', "Kurs ermitteln")}>
@@ -749,18 +1037,18 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
           <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between gap-3 shrink-0 rounded-b-2xl">
             {modalObj.item ? (
-                <button onClick={handleItemDelete} className="px-4 py-2.5 text-red-600 font-bold hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors flex items-center gap-2">
+                <button onClick={handleItemDelete} className="px-4 py-2.5 text-red-600 font-bold hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors flex items-center gap-2 cursor-pointer">
                     <Icon name="Trash" size={16}/> {safeT(t, 'btnDelete', 'Löschen')}
                 </button>
             ) : <div></div>}
             
             <div className="flex gap-2 w-full justify-end">
-                <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors">
+                <button onClick={() => setModalObj(null)} className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-200 rounded-lg dark:text-gray-300 dark:hover:bg-slate-700 transition-colors cursor-pointer">
                     {safeT(t, 'btnCancel', 'Abbrechen')}
                 </button>
                 <button 
                     onClick={modalObj.type === 'printAssetBookings' ? handlePrintAssetBookings : handleSave} 
-                    className="px-6 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="px-6 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer"
                 >
                     {modalObj.type === 'bulkAction' ? <><Icon name="Check" size={18}/> {safeT(t, 'btnExecute', 'Ausführen')}</> : <><Icon name="Save" size={18}/> {safeT(t, 'btnSave', 'Speichern')}</>}
                 </button>

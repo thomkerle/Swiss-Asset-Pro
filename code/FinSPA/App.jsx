@@ -40,11 +40,19 @@ window.PdfExportEngine = PdfExportEngine;
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
-// --- HYBRID ENVIRONMENT CHECK ---
+// --- HYBRID ENVIRONMENT & ANDROID CHECK ---
 const Env = {
-    isCapacitor: () => typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform(),
-    isWebView: () => typeof window !== 'undefined' && window.chrome && window.chrome.webview,
-    isWeb: () => typeof window !== 'undefined' && !window.Capacitor?.isNativePlatform() && !(window.chrome && window.chrome.webview)
+    isCapacitor: () => typeof window !== 'undefined' && Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
+    isAndroid: () => {
+        if (typeof window === 'undefined') return false;
+        const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+        const capAndroid = window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android';
+        const urlForce = new URLSearchParams(window.location.search).get('android') === 'true';
+        return /android/i.test(ua) || Boolean(capAndroid) || urlForce;
+    },
+    isWebView: () => typeof window !== 'undefined' && Boolean(window.chrome && window.chrome.webview),
+    isElectron: () => typeof window !== 'undefined' && Boolean(window.finspaHostAPI || (window.navigator && window.navigator.userAgent.includes('Electron'))),
+    isWeb: () => typeof window !== 'undefined' && !window.Capacitor?.isNativePlatform?.() && !(window.chrome && window.chrome.webview)
 };
 
 const FinBundleLogo = ({ className = "h-24 w-24" }) => (
@@ -126,7 +134,7 @@ const AboutDialog = ({ setModalObj, t }) => {
                                 </p>
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed mt-2">
-                                {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop & Tablet mit einem konsequenten Privacy-First Ansatz.'}
+                                {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop, Tablet & Android mit einem konsequenten Privacy-First Ansatz.'}
                             </p>
                             <div className="pt-4 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50 flex flex-col items-center">
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">© {new Date().getFullYear()} {t('legalImprintTextName') || 'Thomas Kerle'}</p>
@@ -185,7 +193,7 @@ const AboutDialog = ({ setModalObj, t }) => {
                                     {t('legalMarketDataText') || 'Die bereitgestellten Markt- und Wechselkurse stammen von Drittanbietern...'}
                                 </p>
                             </div>
-                            <div className="pt-4 border-t border-gray-200 dark:border-slate-700/50">
+                            <div className="pt-4 border-t border-gray-200 dark:border-slate-800/50">
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalImprintTitle') || 'Impressum / Kontakt'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalImprintTextName') || 'Thomas Kerle'}<br/>
@@ -223,12 +231,27 @@ const App = () => {
     return initialData;
   });
 
+  // --- RESPONSIVE & ANDROID RUNTIME DETECTION ---
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Env.isAndroid() || window.innerWidth < 768;
+  });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileReportsOpen, setIsMobileReportsOpen] = useState(false);
+  const [isMobilePropsOpen, setIsMobilePropsOpen] = useState(false);
+  const [mobileMenuSection, setMobileMenuSection] = useState('main'); // 'main', 'file', 'reports', 'plugins'
+
   const [lang, setLang] = useState(() => data?.settings?.language || 'de');
   const [theme, setTheme] = useState('light');
   const [viewMode, setViewMode] = useState('vermoegen');
   const [activeReport, setActiveReport] = useState('allocation');
   const [selectedNode, setSelectedNode] = useState(null);
-  const [isTreeVisible, setIsTreeVisible] = useState(true);
+  const [isTreeVisible, setIsTreeVisible] = useState(() => {
+    if (typeof window !== 'undefined' && (Env.isAndroid() || window.innerWidth < 768)) {
+      return false; // Auf Android standardmäßig eingeklappt für freien Blick aufs Dashboard
+    }
+    return true;
+  });
   const [showArchived, setShowArchived] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState({'root': true, 'bank_ubs': true, 'cat_ubs_alltag': true, 'cat_ubs_immo': true, 'broker_ibkr': true});
   const [toasts, setToasts] = useState([]);
@@ -240,6 +263,48 @@ const App = () => {
     to: new Date().toISOString().split('T')[0] 
   });
   const [modalObj, setModalObj] = useState(null);
+
+  // Überwacht Bildschirmgröße & Android-Umgebung zur Laufzeit
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      const mobileDetected = Env.isAndroid() || window.innerWidth < 768;
+      setIsMobile(prev => {
+        if (!prev && mobileDetected) {
+          setIsTreeVisible(false);
+        } else if (prev && !mobileDetected) {
+          setIsTreeVisible(true);
+          setIsMobileMenuOpen(false);
+          setIsMobileReportsOpen(false);
+          setIsMobilePropsOpen(false);
+        }
+        return mobileDetected;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Wrapper für Node- und Report-Auswahl, damit sich auf Android der Tree-Drawer automatisch schließt
+  const handleSelectNode = (node) => {
+    setSelectedNode(node);
+    if (isMobile && node) {
+      setIsTreeVisible(false);
+      // Wenn eine konkrete Buchung angeklickt wurde, öffne auf Mobilgeräten direkt den PropertyEditor-Drawer
+      if (node.selectedBooking) {
+        setIsMobilePropsOpen(true);
+      }
+    }
+  };
+
+  const handleSelectReport = (rep) => {
+    setActiveReport(rep);
+    if (isMobile && rep) {
+      setIsTreeVisible(false);
+      setIsMobileReportsOpen(false);
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   // Synchronisiert State und Datenstruktur bei Sprachwechsel
   const handleSetLang = (newLang) => {
@@ -255,6 +320,10 @@ const App = () => {
   };
 
   const t = (key) => i18n[lang]?.[key] || i18n['de']?.[key] || key;
+  const safeT = (key, fallback) => {
+    const res = t(key);
+    return (res && res !== key) ? res : fallback;
+  };
   
   const fCur = (val, cur = data.settings?.baseCurrency || 'CHF') => {
     if (val === null || val === undefined || isNaN(Number(val))) return val;
@@ -343,7 +412,7 @@ const App = () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, [isTreeVisible, activeReport, viewMode]);
+  }, [isTreeVisible, activeReport, viewMode, isMobile]);
 
   useEffect(() => {
     try {
@@ -379,6 +448,12 @@ const App = () => {
       setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          window.showToast = showToast;
+      }
+  }, []);
+
   const handlePrint = () => {
       if (typeof window !== 'undefined') {
           if (window.finspaHostAPI && typeof window.finspaHostAPI.send === 'function') {
@@ -398,6 +473,39 @@ const App = () => {
       }
       showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
       window.dispatchEvent(new CustomEvent('triggerPdfExport'));
+  };
+
+  const handleExportExcel = async () => {
+      try {
+          showToast(safeT('msgExportingExcel', "Excel-Export gestartet..."), "info");
+          let ExcelExportEngine;
+          if (typeof window !== 'undefined' && window.__FinSPAModules) {
+              const keys = Object.keys(window.__FinSPAModules);
+              const foundKey = keys.find(k => k.endsWith('ExcelExportEngine.jsx'));
+              if (foundKey && typeof window.require === 'function') ExcelExportEngine = window.require(foundKey);
+          }
+          if (!ExcelExportEngine) {
+              try { ExcelExportEngine = safeRequire('./components/print/ExcelExportEngine.jsx'); } 
+              catch(err) { ExcelExportEngine = safeRequire('./print/ExcelExportEngine.jsx'); }
+          }
+          if (!ExcelExportEngine || typeof ExcelExportEngine.exportPortfolio !== 'function') {
+              throw new Error("ExcelExportEngine.jsx konnte nicht gefunden oder geladen werden.");
+          }
+          const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
+          const fileName = `FinBundle_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(safeT('msgExportExcelSuccess', "Excel-Export erfolgreich!"), "success");
+      } catch (err) {
+          console.error("[FinBundle] Excel Export Error:", err);
+          showToast(safeT('msgExportExcelError', "Fehler beim Excel-Export: ") + err.message, "error");
+      }
   };
 
   const handleNewProject = () => {
@@ -570,7 +678,7 @@ const App = () => {
 
     let targetHandle = saveAs ? null : fileHandle;
 
-    if ((saveAs || !targetHandle) && window.showSaveFilePicker) {
+    if ((saveAs || !targetHandle) && window.showSaveFilePicker && !Env.isAndroid()) {
         try {
             targetHandle = await window.showSaveFilePicker({
                 suggestedName: targetHandle ? targetHandle.name : `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`,
@@ -824,7 +932,7 @@ const App = () => {
       }
 
       if (modalObj.type === 'pdfImport') {
-          return <PdfScanner setModalObj={setModalObj} data={data} updateTreeData={updateTreeData} selectedNode={selectedNode} setSelectedNode={setSelectedNode} fCur={fCur} t={t} />;
+          return <PdfScanner setModalObj={setModalObj} data={data} updateTreeData={updateTreeData} selectedNode={selectedNode} setSelectedNode={handleSelectNode} fCur={fCur} t={t} />;
       }
 
       if (modalObj.type === 'csvImport') {
@@ -857,14 +965,14 @@ const App = () => {
                       </div>
                       <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col gap-2">
                           {!node.isArchived && !node.budgetType && (
-                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived') || 'Archiviert', "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">
+                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived') || 'Archiviert', "success"); }} className="w-full py-2.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">
                                   {t('btnArchiveOnly') || 'Archivieren'}
                               </button>
                           )}
-                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent') || 'Gelöscht', "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
+                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent') || 'Gelöscht', "success"); }} className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
                               {t('btnDeletePermanent') || 'Löschen'}
                           </button>
-                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">
+                          <button onClick={() => setModalObj(null)} className="w-full py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">
                                   {t('btnCancel') || 'Abbrechen'}
                           </button>
                       </div>
@@ -878,7 +986,7 @@ const App = () => {
           modalObj={modalObj} 
           setModalObj={setModalObj} 
           selectedNode={selectedNode} 
-          setSelectedNode={setSelectedNode} 
+          setSelectedNode={handleSelectNode} 
           updateTreeData={updateTreeData} 
           t={t} 
           defaultBookingCategories={defaultBookingCategories} 
@@ -911,6 +1019,597 @@ const App = () => {
   const budgetNet = budgetIn - budgetOut;
 
   const lastModTime = lastAutoSave ? lastAutoSave.toLocaleTimeString(lang === 'de' ? 'de-CH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
+
+  // --- MOBILE REPORTS KATALOG FÜR ANDROID ---
+  const reportCategories = [
+    {
+      title: safeT('menuHeaderStockReports', 'Bestandesreports'),
+      items: [
+        { id: 'overview', label: safeT('repOverview', 'Banken & Kategorien'), icon: 'List' },
+        { id: 'allocation', label: safeT('repAlloc', 'Allokation nach Banken'), icon: 'PieChart' },
+        { id: 'liquidity', label: safeT('repLiq', 'Liquiditätsrisiko'), icon: 'Droplet' },
+        { id: 'history', label: safeT('repHist', 'Historischer Verlauf'), icon: 'TrendingUp' },
+        { id: 'tax', label: safeT('repTax', 'Steuerreport (31.12)'), icon: 'FileText' },
+        { id: 'pension3a', label: safeT('repPension3a', 'Säule 3a Performance'), icon: 'Lock' },
+        { id: 'securities', label: safeT('repSecurities', 'Aktien & Fonds Performance'), icon: 'TrendingUp' }
+      ]
+    },
+    {
+      title: safeT('menuHeaderFlowReports', 'Bewegungsreports'),
+      items: [
+        { id: 'categoryFlow', label: safeT('repCatFlow', 'Kategorienfluss'), icon: 'BarChart' },
+        { id: 'waterfall', label: safeT('repWaterfall', 'Wasserfallfluss'), icon: 'BarChart2' },
+        { id: 'passive', label: safeT('repPassive', 'Passives Einkommen'), icon: 'DollarSign' },
+        { id: 'topFlow', label: safeT('repTopFlow', 'Top Flow Assets'), icon: 'ArrowUpRight' },
+        { id: 'bookingAnalysis', label: safeT('repBookAna', 'Buchungsanalyse'), icon: 'Activity' }
+      ]
+    },
+    {
+      title: safeT('menuHeaderFutureReports', 'Zukunftsreports'),
+      items: [
+        { id: 'dividendCalendar', label: safeT('repDividendCalendar', 'Dividenden-Kalender'), icon: 'Calendar' },
+        { id: 'future', label: safeT('repSimReg', 'Simulation & Regression'), icon: 'FastForward' },
+        { id: 'scenarios', label: safeT('repScenFire', 'Szenarien & FIRE'), icon: 'Target' }
+      ]
+    }
+  ];
+
+  // --- ANDROID / MOBILE TOP BAR ---
+  const renderMobileTopBar = () => {
+    if (!isMobile) return null;
+    return (
+      <div className="print-hide flex items-center justify-between bg-slate-900 text-white px-3 h-14 border-b border-slate-800 shrink-0 z-50 select-none">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setMobileMenuSection('main');
+              setIsMobileMenuOpen(true);
+            }}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800/80 active:bg-blue-600 text-slate-200 transition-colors"
+            title="Menü"
+          >
+            <Icon name="Menu" size={20} />
+          </button>
+
+          {viewMode !== 'liveEditor' && (
+            <button
+              onClick={() => setIsTreeVisible(!isTreeVisible)}
+              className={`h-10 px-3 flex items-center gap-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                isTreeVisible
+                  ? 'bg-blue-600 border-blue-500 text-white'
+                  : 'bg-slate-800/80 border-slate-700 text-slate-200'
+              }`}
+            >
+              <Icon name="FolderOpen" size={15} className={isTreeVisible ? "text-white" : "text-yellow-400"} />
+              <span className="truncate max-w-[90px]">
+                {selectedNode ? selectedNode.name : (viewMode === 'budget' ? safeT('menuBudget', 'Budget') : safeT('tree', 'Struktur'))}
+              </span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5" onClick={() => { setViewMode('vermoegen'); handleSelectReport('allocation'); handleSelectNode(null); }}>
+          <span className="text-sm font-black tracking-wider uppercase text-white">
+            FinBundle <span className="text-sky-400">PRO</span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="text-right hidden xs:block">
+            <div className="text-[9px] uppercase font-bold text-slate-400 leading-none">
+              {viewMode === 'budget' ? safeT('labelCashflow', 'Cashflow') : safeT('labelTotalShort', 'Total')}
+            </div>
+            <div className="text-xs font-mono font-bold text-emerald-400 leading-tight">
+              {viewMode === 'budget'
+                ? `${budgetNet >= 0 ? '+' : ''}${fCur(budgetNet, baseCur)}`
+                : fCur(totalWealth, baseCur)}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800/80 text-slate-300 active:bg-slate-700"
+          >
+            <Icon name={theme === 'light' ? "Moon" : "Sun"} size={17} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // --- ANDROID / MOBILE VOLLMENÜ DRAWER ---
+  const renderMobileMenuDrawer = () => {
+    if (!isMobile || !isMobileMenuOpen) return null;
+    const plugins = data?.plugins || [];
+
+    return (
+      <div className="fixed inset-0 z-[150] flex">
+        <div
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs animate-fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        <div className="relative w-[86vw] max-w-sm bg-white dark:bg-slate-900 h-full shadow-2xl border-r border-gray-200 dark:border-slate-800 flex flex-col z-10 overflow-hidden">
+          
+          {/* Drawer Header */}
+          <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
+                <FinBundleLogo className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="font-black text-base tracking-wide leading-none">FinBundle <span className="text-sky-400">PRO</span></div>
+                <div className="text-[10px] text-emerald-400 font-mono mt-1">{fCur(totalWealth, baseCur)}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-300"
+            >
+              <Icon name="X" size={18} />
+            </button>
+          </div>
+
+          {/* Sub-Navigation Tabs im Drawer */}
+          <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 p-1.5 gap-1 shrink-0">
+            {[
+              { id: 'main', label: safeT('menuViews', 'Ansichten'), icon: 'Layers' },
+              { id: 'file', label: safeT('menuFile', 'Datei'), icon: 'FolderOpen' },
+              { id: 'reports', label: safeT('menuReports', 'Reports'), icon: 'PieChart' },
+              { id: 'plugins', label: 'Plugins', icon: 'Box' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setMobileMenuSection(tab.id)}
+                className={`flex-1 py-2 px-1 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                  mobileMenuSection === tab.id
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Icon name={tab.icon} size={14} />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Drawer Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 finspa-scrollbar">
+            
+            {/* SEKTION 1: HAUPTANSICHTEN & SYSTEM */}
+            {mobileMenuSection === 'main' && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  {safeT('menuViews', 'Ansichten')}
+                </div>
+                {[
+                  { id: 'vermoegen', rep: 'allocation', label: safeT('viewWealth', 'Vermögensverwaltung'), icon: 'Shield' },
+                  { id: 'budget', rep: null, label: safeT('viewBudget', 'Budgetverwaltung'), icon: 'DollarSign' },
+                  { id: 'liveEditor', rep: null, label: safeT('viewLiveEditor', 'API LiveEditor'), icon: 'Cloud' },
+                  { id: 'datensicht', rep: null, label: safeT('viewData', 'Datensicht'), icon: 'Code' },
+                  ...(data?.settings?.aiEnabled !== false ? [{ id: 'ai', rep: null, label: safeT('menuAiAssistant', 'KI-Assistent (Copilot)'), icon: 'Cpu' }] : [])
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setViewMode(item.id);
+                      handleSelectReport(item.rep);
+                      handleSelectNode(null);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold text-sm transition-colors ${
+                      viewMode === item.id
+                        ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                        : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon name={item.icon} size={18} />
+                      <span>{item.label}</span>
+                    </div>
+                    {viewMode === item.id && <Icon name="CheckCircle" size={16} className="text-blue-500" />}
+                  </button>
+                ))}
+
+                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  Sprache / Language
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {['de', 'en', 'fr', 'it'].map(l => (
+                    <button
+                      key={l}
+                      onClick={() => handleSetLang(l)}
+                      className={`py-2.5 rounded-xl font-bold text-xs uppercase border ${
+                        lang === l
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'settings' }); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Settings" size={18} className="text-slate-500" />
+                  <span>{safeT('fileSettings', 'Einstellungen')}</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'help' }); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Info" size={18} className="text-blue-500" />
+                  <span>{safeT('helpManual', 'Benutzerhandbuch')}</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'about' }); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Star" size={18} className="text-amber-500" />
+                  <span>{safeT('helpAbout', 'Über FinBundle')}</span>
+                </button>
+              </div>
+            )}
+
+            {/* SEKTION 2: DATEI, IMPORT & EXPORT */}
+            {mobileMenuSection === 'file' && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  Projektverwaltung
+                </div>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleNewProject(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="FilePlus" size={18} className="text-blue-500" />
+                  <span>{safeT('fileNew', 'Neu (Leeres Projekt)')}</span>
+                </button>
+
+                <label className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm cursor-pointer">
+                  <Icon name="FolderOpen" size={18} className="text-amber-500" />
+                  <span>{safeT('fileOpen', 'Projekt öffnen (.json / .zip)')}</span>
+                  <input type="file" accept=".json,.zip" className="hidden" onChange={(e) => { setIsMobileMenuOpen(false); handleOpenProject(e); }} />
+                </label>
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleSaveProject(false); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-sm"
+                >
+                  <Icon name="Save" size={18} />
+                  <span>{safeT('fileSave', 'Speichern')}</span>
+                </button>
+
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleSaveProject(true); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Copy" size={18} className="text-indigo-500" />
+                  <span>{safeT('fileSaveAs', 'Speichern unter...')}</span>
+                </button>
+
+                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  {safeT('fileImport', 'Importieren')}
+                </div>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'csvImport' }); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="List" size={18} className="text-emerald-500" />
+                  <span>{safeT('fileImportStandard', 'Buchungen (CSV Wizard)')}</span>
+                </button>
+
+                <label className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm cursor-pointer">
+                  <Icon name="TrendingUp" size={18} className="text-purple-500" />
+                  <span>{safeT('fileImportParqet', 'Parqet CSV importieren')}</span>
+                  <input type="file" accept=".csv" className="hidden" onChange={(e) => { setIsMobileMenuOpen(false); handleImportParqetCSV(e); }} />
+                </label>
+
+                {data?.settings?.aiEnabled !== false && (
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'pdfImport' }); }}
+                    className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  >
+                    <Icon name="FileText" size={18} className="text-rose-500" />
+                    <span>{safeT('fileImportPdfKI', 'PDF Rechnung scannen (KI)')}</span>
+                  </button>
+                )}
+
+                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  {safeT('fileExportTitle', 'Exportieren & Drucken')}
+                </div>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleExportCSV(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="List" size={18} className="text-blue-500" />
+                  <span>{safeT('fileExportCsv', 'Buchungen als CSV')}</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleExportPDF(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="FileText" size={18} className="text-rose-500" />
+                  <span>{safeT('filePrintPdf', 'Aktueller Report als PDF')}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    showToast(safeT('msgExportFullPdfStarted', "Generiere Gesamtreport im Hintergrund..."), "info");
+                    window.dispatchEvent(new Event('triggerFullPdfBatch'));
+                  }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Layers" size={18} className="text-indigo-500" />
+                  <span>{safeT('fileExportFullPdf', 'Gesamtreport als PDF')}</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleExportExcel(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="FileExcel" size={18} className="text-emerald-600" />
+                  <span>{safeT('fileExportExcel', 'Als Excel (.xlsx) exportieren')}</span>
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handlePrint(); }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Printer" size={18} className="text-slate-500" />
+                  <span>{safeT('filePrint', 'Drucken')}</span>
+                </button>
+              </div>
+            )}
+
+            {/* SEKTION 3: ALLE REPORTS */}
+            {mobileMenuSection === 'reports' && (
+              <div className="space-y-4">
+                {reportCategories.map((group, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                      {group.title}
+                    </div>
+                    {group.items.map(rep => (
+                      <button
+                        key={rep.id}
+                        onClick={() => {
+                          setViewMode('vermoegen');
+                          handleSelectNode(null);
+                          handleSelectReport(rep.id);
+                        }}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold transition-colors ${
+                          activeReport === rep.id && viewMode === 'vermoegen'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon name={rep.icon} size={16} />
+                          <span>{rep.label}</span>
+                        </div>
+                        <Icon name="ChevronRight" size={14} className="opacity-60" />
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* SEKTION 4: PLUGINS */}
+            {mobileMenuSection === 'plugins' && (
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    setViewMode('ai');
+                    handleSelectNode(null);
+                    handleSelectReport(null);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-sm"
+                >
+                  <Icon name="PlusCircle" size={18} />
+                  <span>{safeT('menuNewPluginCopilot', 'Neues Plugin (AI Copilot)...')}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode('managePlugins');
+                    handleSelectNode(null);
+                    handleSelectReport(null);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                >
+                  <Icon name="Settings" size={18} />
+                  <span>{safeT('menuManagePlugins', 'Plugins verwalten...')}</span>
+                </button>
+
+                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+
+                {plugins.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-gray-400 italic">
+                    {safeT('menuNoPluginsPresent', 'Keine Plugins vorhanden')}
+                  </div>
+                ) : (
+                  plugins.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setViewMode('plugin');
+                        handleSelectReport(p.id);
+                        handleSelectNode(null);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3.5 rounded-xl text-sm font-bold ${
+                        viewMode === 'plugin' && activeReport === p.id
+                          ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200'
+                          : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <Icon name="Sparkles" size={16} className="text-amber-500 shrink-0" />
+                        <span className="truncate">{p.title || p.name}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 shrink-0 ml-2">
+                        {p.category || 'Allgemein'}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+          </div>
+
+          {/* Drawer Footer */}
+          <div className="p-3 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-between items-center text-[11px] text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Auto-Save: {lastModTime}
+            </span>
+            <span>v1.0.0 RC3</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- ANDROID BOTTOM SHEET FÜR SCHNELLE REPORT-AUSWAHL ---
+  const renderMobileReportsSheet = () => {
+    if (!isMobile || !isMobileReportsOpen) return null;
+    return (
+      <div className="fixed inset-0 z-[140] flex flex-col justify-end">
+        <div
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
+          onClick={() => setIsMobileReportsOpen(false)}
+        />
+        <div className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[80vh] flex flex-col z-10 shadow-2xl border-t border-gray-200 dark:border-slate-800 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+            <h3 className="font-black text-base flex items-center gap-2">
+              <Icon name="PieChart" className="text-blue-500" size={18} />
+              <span>{safeT('menuReports', 'Reports & Analysen')}</span>
+            </h3>
+            <button
+              onClick={() => setIsMobileReportsOpen(false)}
+              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-500"
+            >
+              <Icon name="X" size={16} />
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto space-y-4 finspa-scrollbar pb-8">
+            {reportCategories.map((group, idx) => (
+              <div key={idx}>
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 px-1">
+                  {group.title}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {group.items.map(rep => (
+                    <button
+                      key={rep.id}
+                      onClick={() => {
+                        setViewMode('vermoegen');
+                        handleSelectNode(null);
+                        handleSelectReport(rep.id);
+                      }}
+                      className={`flex items-center gap-2.5 p-3 rounded-xl text-left text-xs font-bold border transition-all ${
+                        activeReport === rep.id && viewMode === 'vermoegen'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-gray-50 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 border-gray-200/60 dark:border-slate-700'
+                      }`}
+                    >
+                      <Icon name={rep.icon} size={15} className="shrink-0" />
+                      <span className="truncate">{rep.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- ANDROID BOTTOM NAVIGATION BAR ---
+  const renderMobileBottomNav = () => {
+    if (!isMobile) return null;
+    return (
+      <div className="print-hide bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-around items-center h-16 px-1 shrink-0 z-50 select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <button
+          onClick={() => setIsTreeVisible(!isTreeVisible)}
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+            isTreeVisible ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <Icon name="FolderOpen" size={19} />
+          <span className="text-[10px] tracking-tight">{safeT('tree', 'Struktur')}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode('vermoegen');
+            setIsTreeVisible(false);
+            if (!selectedNode && !activeReport) handleSelectReport('allocation');
+          }}
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+            viewMode === 'vermoegen' && !isTreeVisible && !isMobileReportsOpen ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <Icon name="Shield" size={19} />
+          <span className="text-[10px] tracking-tight">{safeT('menuWealth', 'Vermögen')}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode('budget');
+            handleSelectReport(null);
+            handleSelectNode(null);
+            setIsTreeVisible(false);
+          }}
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+            viewMode === 'budget' && !isTreeVisible ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <Icon name="DollarSign" size={19} />
+          <span className="text-[10px] tracking-tight">{safeT('menuBudget', 'Budget')}</span>
+        </button>
+
+        <button
+          onClick={() => setIsMobileReportsOpen(true)}
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+            isMobileReportsOpen || (viewMode === 'vermoegen' && activeReport && !selectedNode) ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <Icon name="PieChart" size={19} />
+          <span className="text-[10px] tracking-tight">{safeT('menuReports', 'Reports')}</span>
+        </button>
+
+        {data?.settings?.aiEnabled !== false && (
+          <button
+            onClick={() => {
+              setViewMode('ai');
+              handleSelectReport(null);
+              handleSelectNode(null);
+              setIsTreeVisible(false);
+            }}
+            className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+              viewMode === 'ai' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <Icon name="Sparkles" size={19} />
+            <span className="text-[10px] tracking-tight">Copilot</span>
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div id="app-container" className="h-screen w-screen flex flex-col font-sans bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
@@ -987,36 +1686,77 @@ const App = () => {
           }
         }
       `}</style>
-      <MenuBar 
-        data={data} 
-        lang={lang} 
-        setLang={handleSetLang} 
-        viewMode={viewMode} 
-        setViewMode={setViewMode} 
-        setActiveReport={setActiveReport} 
-        setSelectedNode={setSelectedNode} 
-        theme={theme} 
-        setTheme={setTheme} 
-        setModalObj={setModalObj} 
-        updateTreeData={updateTreeData} 
-        t={t} 
-        handleNewProject={handleNewProject} 
-        handleOpenProject={handleOpenProject} 
-        handleSaveProject={handleSaveProject} 
-        handleExportCSV={handleExportCSV} 
-        handleImportCSV={handleImportCSV} 
-        handleImportParqetCSV={handleImportParqetCSV} 
-        handlePrint={handlePrint} 
-        handleExportPDF={handleExportPDF} 
-      />
+
+      {/* Desktop MenuBar bleibt immer gemountet (für globale Event-Listener), wird auf Android aber ausgeblendet */}
+      <div className={isMobile ? "hidden" : "block w-full shrink-0"}>
+        <MenuBar 
+          data={data} 
+          lang={lang} 
+          setLang={handleSetLang} 
+          viewMode={viewMode} 
+          setViewMode={setViewMode} 
+          activeReport={activeReport}
+          setActiveReport={handleSelectReport} 
+          setSelectedNode={handleSelectNode} 
+          theme={theme} 
+          setTheme={setTheme} 
+          setModalObj={setModalObj} 
+          updateTreeData={updateTreeData} 
+          t={t} 
+          handleNewProject={handleNewProject} 
+          handleOpenProject={handleOpenProject} 
+          handleSaveProject={handleSaveProject} 
+          handleExportCSV={handleExportCSV} 
+          handleImportCSV={handleImportCSV} 
+          handleImportParqetCSV={handleImportParqetCSV} 
+          handlePrint={handlePrint} 
+          handleExportPDF={handleExportPDF} 
+        />
+      </div>
+
+      {/* Mobile Top App Bar (Nur auf Android / kleinen Screens sichtbar) */}
+      {renderMobileTopBar()}
+      {renderMobileMenuDrawer()}
+      {renderMobileReportsSheet()}
       
       <div className="flex-1 flex overflow-hidden relative">
-        <TreeView 
+        
+        {/* TreeView: Auf Desktop normal links angedockt, auf Android als Slide-Over Overlay */}
+        {isMobile ? (
+          isTreeVisible && viewMode !== 'liveEditor' && (
+            <div className="fixed inset-0 z-[120] flex">
+              <div
+                className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
+                onClick={() => setIsTreeVisible(false)}
+              />
+              <div className="relative z-10 h-full bg-white dark:bg-slate-900 shadow-2xl flex">
+                <TreeView 
+                  data={data} 
+                  viewMode={viewMode} 
+                  selectedNode={selectedNode} 
+                  setSelectedNode={handleSelectNode} 
+                  setActiveReport={handleSelectReport} 
+                  isTreeVisible={true} 
+                  setIsTreeVisible={setIsTreeVisible} 
+                  showArchived={showArchived} 
+                  setShowArchived={setShowArchived} 
+                  expandedNodes={expandedNodes} 
+                  toggleExpand={toggleExpand} 
+                  deleteNode={requestDeleteNode} 
+                  setModalObj={setModalObj} 
+                  updateTreeData={updateTreeData}
+                  t={t} 
+                />
+              </div>
+            </div>
+          )
+        ) : (
+          <TreeView 
             data={data} 
             viewMode={viewMode} 
             selectedNode={selectedNode} 
-            setSelectedNode={setSelectedNode} 
-            setActiveReport={setActiveReport} 
+            setSelectedNode={handleSelectNode} 
+            setActiveReport={handleSelectReport} 
             isTreeVisible={isTreeVisible} 
             setIsTreeVisible={setIsTreeVisible} 
             showArchived={showArchived} 
@@ -1027,7 +1767,8 @@ const App = () => {
             setModalObj={setModalObj} 
             updateTreeData={updateTreeData}
             t={t} 
-        />
+          />
+        )}
 
         <div className="flex-1 relative overflow-auto" id="printable-editor">
           <EditorArea 
@@ -1036,9 +1777,9 @@ const App = () => {
             viewMode={viewMode} 
             setViewMode={setViewMode} 
             activeReport={activeReport} 
-            setActiveReport={setActiveReport} 
+            setActiveReport={handleSelectReport} 
             selectedNode={selectedNode} 
-            setSelectedNode={setSelectedNode} 
+            setSelectedNode={handleSelectNode} 
             isTreeVisible={isTreeVisible} 
             setIsTreeVisible={setIsTreeVisible} 
             showArchived={showArchived} 
@@ -1052,60 +1793,111 @@ const App = () => {
           />
         </div>
 
+        {/* PropertyEditor: Auf Desktop rechts angedockt, auf Android als aufrufbares Slide-Over-Sheet */}
         {!activeReport && selectedNode && viewMode !== 'liveEditor' && (
-          <PropertyEditor 
+          isMobile ? (
+            <>
+              <button
+                onClick={() => setIsMobilePropsOpen(true)}
+                className="print-hide fixed bottom-20 right-4 z-[90] flex items-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold text-xs shadow-xl shadow-blue-600/30 active:scale-95 transition-transform"
+              >
+                <Icon name="Edit" size={16} />
+                <span>{selectedNode.selectedBooking ? safeT('btnEdit', 'Buchung bearbeiten') : safeT('fileSettings', 'Eigenschaften')}</span>
+              </button>
+
+              {isMobilePropsOpen && (
+                <div className="fixed inset-0 z-[130] flex justify-end">
+                  <div
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
+                    onClick={() => setIsMobilePropsOpen(false)}
+                  />
+                  <div className="relative z-10 h-full max-w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
+                    <div className="p-3 bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                        {selectedNode.name} – Details
+                      </span>
+                      <button
+                        onClick={() => setIsMobilePropsOpen(false)}
+                        className="p-1.5 rounded-lg bg-gray-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                      >
+                        <Icon name="X" size={16} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto flex">
+                      <PropertyEditor 
+                        data={data} 
+                        activeReport={activeReport} 
+                        selectedNode={selectedNode} 
+                        setSelectedNode={handleSelectNode} 
+                        updateTreeData={updateTreeData} 
+                        syncExchangeRates={syncExchangeRates} 
+                        t={t} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <PropertyEditor 
               data={data} 
               activeReport={activeReport} 
               selectedNode={selectedNode} 
-              setSelectedNode={setSelectedNode} 
+              setSelectedNode={handleSelectNode} 
               updateTreeData={updateTreeData} 
               syncExchangeRates={syncExchangeRates} 
               t={t} 
-          />
+            />
+          )
         )}
       </div>
 
-      <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-[11px] md:text-xs text-gray-600 dark:text-gray-400 z-50 select-none">
-          <div className="flex items-center gap-4 md:gap-6">
-              <span className="flex items-center gap-1.5" title={t('titleReadySaveActive') || "System ist bereit & Auto-Save aktiv"}>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  {t('statusReady') || 'Bereit'}
-              </span>
-              <span className="hidden sm:inline-flex items-center gap-1" title={t('titleLastSaveTime') || "Uhrzeit des letzten Auto-Saves"}>
-                  <Icon name="Save" size={10} className="opacity-70" /> {lastModTime}
-              </span>
-              <span className="hidden md:inline">
-                  {t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong>
-              </span>
-          </div>
+      {/* Android Bottom Navigation vs. Desktop Status Bar */}
+      {isMobile ? (
+        renderMobileBottomNav()
+      ) : (
+        <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-[11px] md:text-xs text-gray-600 dark:text-gray-400 z-50 select-none">
+            <div className="flex items-center gap-4 md:gap-6">
+                <span className="flex items-center gap-1.5" title={t('titleReadySaveActive') || "System ist bereit & Auto-Save aktiv"}>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    {t('statusReady') || 'Bereit'}
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1" title={t('titleLastSaveTime') || "Uhrzeit des letzten Auto-Saves"}>
+                    <Icon name="Save" size={10} className="opacity-70" /> {lastModTime}
+                </span>
+                <span className="hidden md:inline">
+                    {t('statusBarMode') || 'Modus'}: <strong className="uppercase">{t(viewMode) || viewMode}</strong>
+                </span>
+            </div>
 
-          <div className="hidden lg:flex items-center gap-4 opacity-80">
-              <span className="flex items-center gap-1" title={t('titleBankCatCount') || "Anzahl Banken / Hauptkategorien"}><Icon name="Shield" size={10} /> {banksCount}</span>
-              <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} Assets</span>
-              <span className="flex items-center gap-1" title={t('titleBaseCurrency') || "Basiswährung der Anwendung"}><Icon name="Globe" size={10} /> {baseCur}</span>
-          </div>
+            <div className="hidden lg:flex items-center gap-4 opacity-80">
+                <span className="flex items-center gap-1" title={t('titleBankCatCount') || "Anzahl Banken / Hauptkategorien"}><Icon name="Shield" size={10} /> {banksCount}</span>
+                <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} Assets</span>
+                <span className="flex items-center gap-1" title={t('titleBaseCurrency') || "Basiswährung der Anwendung"}><Icon name="Globe" size={10} /> {baseCur}</span>
+            </div>
 
-          <div className="flex items-center gap-4 md:gap-6">
-              {viewMode === 'vermoegen' && (
-                  <span className="flex items-center gap-2 bg-gray-200 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200" title={`${t('titleNetWealth') || "Aktuelles Nettovermögen in"} ${baseCur}`}>
-                      <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelTotalShort') || 'Total'}</span>
-                      <strong className="font-mono tracking-tight text-sm">{fCur ? fCur(totalWealth, baseCur) : totalWealth}</strong>
-                  </span>
-              )}
-              {viewMode === 'budget' && (
-                  <span className={`flex items-center gap-2 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200 ${budgetNet >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-red-100 dark:bg-red-900/30'}`} title={`${t('titleNetCashflow') || "Monatlicher Net Cashflow in"} ${baseCur}`}>
-                      <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelCashflow') || 'Cashflow'}</span>
-                      <strong className={`font-mono tracking-tight text-sm ${budgetNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
-                          {budgetNet >= 0 ? '+' : ''}{fCur ? fCur(budgetNet, baseCur) : budgetNet}
-                      </strong>
-                  </span>
-              )}
-              <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC3</span>
-          </div>
-      </div>
+            <div className="flex items-center gap-4 md:gap-6">
+                {viewMode === 'vermoegen' && (
+                    <span className="flex items-center gap-2 bg-gray-200 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200" title={`${t('titleNetWealth') || "Aktuelles Nettovermögen in"} ${baseCur}`}>
+                        <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelTotalShort') || 'Total'}</span>
+                        <strong className="font-mono tracking-tight text-sm">{fCur ? fCur(totalWealth, baseCur) : totalWealth}</strong>
+                    </span>
+                )}
+                {viewMode === 'budget' && (
+                    <span className={`flex items-center gap-2 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200 ${budgetNet >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-red-100 dark:bg-red-900/30'}`} title={`${t('titleNetCashflow') || "Monatlicher Net Cashflow in"} ${baseCur}`}>
+                        <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelCashflow') || 'Cashflow'}</span>
+                        <strong className={`font-mono tracking-tight text-sm ${budgetNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
+                            {budgetNet >= 0 ? '+' : ''}{fCur ? fCur(budgetNet, baseCur) : budgetNet}
+                        </strong>
+                    </span>
+                )}
+                <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC3</span>
+            </div>
+        </div>
+      )}
 
       <FullPdfOrchestrator 
           data={data} 
@@ -1117,7 +1909,7 @@ const App = () => {
       
       {ModalHandler()}
       
-      <div className="fixed bottom-4 right-4 z-[200] space-y-2 pointer-events-none">
+      <div className={`fixed ${isMobile ? 'bottom-20' : 'bottom-4'} right-4 z-[200] space-y-2 pointer-events-none`}>
           {toasts.map(toast => (
               <div key={toast.id} className="px-4 py-3 rounded-lg shadow-xl border bg-slate-800 text-white border-slate-700">
                   {toast.message}

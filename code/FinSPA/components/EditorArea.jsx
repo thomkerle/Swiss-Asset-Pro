@@ -1,5 +1,5 @@
 const React = require('react');
-const { useState, useEffect, useRef } = React; 
+const { useState, useEffect, useRef, useMemo } = React; 
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -95,10 +95,24 @@ const safeT = (t, key, fallback) => {
     return (res && res !== key) ? res : fallback;
 };
 
-const JsonNode = ({ label, data, depth = 0, t }) => {
+const matchesJsonSearch = (key, val, query) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    if (String(key).toLowerCase().includes(q)) return true;
+    if (val === null || val === undefined) return false;
+    if (typeof val !== 'object') return String(val).toLowerCase().includes(q);
+    return Object.entries(val).some(([k, v]) => matchesJsonSearch(k, v, q));
+};
+
+const JsonNode = ({ label, data, depth = 0, t, searchQuery = '' }) => {
     const [isOpen, setIsOpen] = useState(depth < 2);
     const isObject = data !== null && typeof data === 'object';
+    const effectiveOpen = searchQuery ? true : isOpen;
     
+    if (searchQuery && !matchesJsonSearch(label, data, searchQuery)) {
+        return null;
+    }
+
     const handleCopy = (payload) => {
         navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
         if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT(t, 'msgCopied', "In Zwischenablage kopiert"), "success");
@@ -126,7 +140,7 @@ const JsonNode = ({ label, data, depth = 0, t }) => {
     return (
         <div className="ml-4 border-l border-gray-200 dark:border-slate-800 pl-2 my-1">
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
-                <Icon name={isOpen ? "ChevronDown" : "ChevronRight"} size={10} className="text-gray-400" />
+                <Icon name={effectiveOpen ? "ChevronDown" : "ChevronRight"} size={10} className="text-gray-400" />
                 <span className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-tighter italic">
                     {label} <span className="text-[10px] text-gray-400 font-normal">({childCount} {isArray ? safeT(t, 'labelEntries', 'Einträge') : safeT(t, 'labelFields', 'Felder')})</span>
                 </span>
@@ -138,10 +152,10 @@ const JsonNode = ({ label, data, depth = 0, t }) => {
                     <Icon name="Copy" size={10} className="text-blue-500" />
                 </button>
             </div>
-            {isOpen && (
+            {effectiveOpen && (
                 <div className="mt-1">
                     {Object.entries(data).map(([key, value]) => (
-                        <JsonNode key={key} label={key} data={value} depth={depth + 1} t={t} />
+                        <JsonNode key={key} label={key} data={value} depth={depth + 1} t={t} searchQuery={searchQuery} />
                     ))}
                 </div>
             )}
@@ -359,7 +373,6 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
 
-      // Passendes MIME-Type für Chromium / WebView2 wählen
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4');
@@ -373,7 +386,6 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
       };
 
       recorder.onstop = async () => {
-        // Mikrofon-Spuren sofort wieder sauber schliessen
         stream.getTracks().forEach(t => t.stop());
 
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
@@ -444,15 +456,339 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
               ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
               : 'bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-700')
       }`}
-      title={isRecording ? "Aufnahme stoppen & transkribieren" : (busy ? "Transkribiere..." : "Mikrofon starten")}
+      title={isRecording ? "Aufnahme stoppen & transkribieren" : (busy ? "Transkribiere..." : "Spracheingabe starten (Mikrofon)")}
     >
-      <Icon name={busy ? "Loader" : (isRecording ? "Square" : "Activity")} size={14} className={busy ? "animate-spin" : ""} />
+      <Icon name={busy ? "Loader" : (isRecording ? "Square" : "Mic")} size={14} className={busy ? "animate-spin" : ""} />
     </button>
   );
 };
 
-// --- QUICK AGENT BAR MIT ALERT-CENTER & EDITIER-WORKFLOW ---
-const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSelectedNode, setActiveReport, setViewMode, fCur }) => {
+// --- GLOBALE SUCHE MODAL (ÜBER ALLE ASSETS, BANKEN, BUCHUNGEN, BUDGETS & REPORTS) ---
+const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, setActiveReport, setViewMode, fCur, t }) => {
+  const [query, setQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const inputRef = useRef(null);
+  const baseCur = data?.settings?.baseCurrency || 'CHF';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    } else {
+      setQuery('');
+      setCategoryFilter('ALL');
+    }
+  }, [isOpen]);
+
+  const indexedData = useMemo(() => {
+    if (!isOpen) return { assets: [], bookings: [], nodes: [], budgets: [] };
+    const assetsWithPath = [];
+    const bookingsList = [];
+    const nodesList = [];
+
+    const traverse = (nodes, pathArr = []) => {
+      (nodes || []).forEach(n => {
+        const currentPath = [...pathArr, n.name];
+        if (n.type === 'bank' || n.type === 'category') {
+          nodesList.push({
+            ...n,
+            pathStr: pathArr.join(' → ') || (n.type === 'bank' ? 'Institut / Bank' : 'Kategorie')
+          });
+        }
+        if (n.type === 'asset') {
+          const valBase = getAssetValueAtDate(n, todayStr, allAssets);
+          const valRaw = getAssetRawValueAtDate(n, todayStr);
+          const pathStr = pathArr.join(' → ');
+          assetsWithPath.push({
+            ...n,
+            pathStr,
+            valBase,
+            valRaw
+          });
+          (n.bookings || []).forEach(b => {
+            if (!b._isAutoValuation) {
+              bookingsList.push({
+                booking: b,
+                asset: n,
+                pathStr
+              });
+            }
+          });
+        }
+        if (n.children) traverse(n.children, currentPath);
+      });
+    };
+
+    traverse(data?.banks || []);
+
+    const budgets = [];
+    if (data?.budget) {
+      [
+        { key: 'incomeSources', label: safeT(t, 'incomeSources', 'Einnahmen') },
+        { key: 'expenses', label: safeT(t, 'expensePositions', 'Ausgaben') },
+        { key: 'subscriptions', label: safeT(t, 'subscriptions', 'Abonnements') }
+      ].forEach(grp => {
+        (data.budget[grp.key] || []).forEach(item => {
+          budgets.push({ ...item, budgetType: grp.key, groupLabel: grp.label });
+        });
+      });
+    }
+
+    return { assets: assetsWithPath, bookings: bookingsList, nodes: nodesList, budgets };
+  }, [isOpen, data?.banks, data?.budget, allAssets, todayStr]);
+
+  if (!isOpen) return null;
+
+  const q = query.trim().toLowerCase();
+
+  const matchedAssets = indexedData.assets.filter(a => {
+    if (!q) return true;
+    return (
+      (a.name || '').toLowerCase().includes(q) ||
+      (a.ticker || '').toLowerCase().includes(q) ||
+      (a.isin || '').toLowerCase().includes(q) ||
+      (a.assetClass || '').toLowerCase().includes(q) ||
+      (a.currency || '').toLowerCase().includes(q) ||
+      (a.pathStr || '').toLowerCase().includes(q)
+    );
+  }).slice(0, q ? 25 : 8);
+
+  const matchedBookings = q ? indexedData.bookings.filter(({ booking, asset }) => {
+    return (
+      (booking.comment || '').toLowerCase().includes(q) ||
+      (booking.subCategory || '').toLowerCase().includes(q) ||
+      (booking.type || '').toLowerCase().includes(q) ||
+      String(booking.amount || '').toLowerCase().includes(q) ||
+      (booking.date || '').includes(q) ||
+      (asset.name || '').toLowerCase().includes(q)
+    );
+  }).slice(0, 20) : [];
+
+  const matchedNodes = q ? indexedData.nodes.filter(n => (n.name || '').toLowerCase().includes(q) || (n.pathStr || '').toLowerCase().includes(q)).slice(0, 10) : [];
+  const matchedBudgets = q ? indexedData.budgets.filter(b => (b.name || '').toLowerCase().includes(q) || (b.groupLabel || '').toLowerCase().includes(q)).slice(0, 10) : [];
+
+  const totalHits = matchedAssets.length + matchedBookings.length + matchedNodes.length + matchedBudgets.length;
+
+  return (
+    <div className="fixed inset-0 z-[180] flex items-start justify-center pt-12 sm:pt-20 px-4">
+      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-fade-in" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden z-10 flex flex-col max-h-[80vh]">
+        
+        <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center gap-3 bg-gray-50/70 dark:bg-slate-800/50">
+          <Icon name="Search" size={18} className="text-blue-500 shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Escape') onClose();
+              if (e.key === 'Enter' && matchedAssets.length > 0 && categoryFilter !== 'BOOKINGS') {
+                setSelectedNode(matchedAssets[0]);
+                setActiveReport(null);
+                setViewMode('vermoegen');
+                onClose();
+              }
+            }}
+            placeholder={safeT(t, 'globalSearchPlaceholder', 'Globale Suche: Asset, Ticker, ISIN, Bank, #Tag, Buchungsnotiz oder Betrag...')}
+            className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none"
+          />
+          {query && (
+            <button onClick={() => setQuery('')} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">
+              <Icon name="X" size={14} />
+            </button>
+          )}
+          <button onClick={onClose} className="px-2 py-1 text-[10px] font-mono font-bold bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
+            ESC
+          </button>
+        </div>
+
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto text-xs bg-white dark:bg-slate-900 shrink-0">
+          {[
+            { id: 'ALL', label: `Alle (${totalHits})` },
+            { id: 'ASSETS', label: `Assets (${matchedAssets.length})` },
+            { id: 'BOOKINGS', label: `Buchungen (${matchedBookings.length})` },
+            { id: 'NODES', label: `Banken & Kategorien (${matchedNodes.length})` },
+            { id: 'BUDGET', label: `Budget (${matchedBudgets.length})` }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setCategoryFilter(tab.id)}
+              className={`px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                categoryFilter === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 finspa-scrollbar">
+          
+          {(categoryFilter === 'ALL' || categoryFilter === 'ASSETS') && matchedAssets.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                <Icon name="Wallet" size={12} /> {q ? `Gefundene Assets (${matchedAssets.length})` : 'Alle Assets (Schnellübersicht)'}
+              </div>
+              <div className="space-y-1.5">
+                {matchedAssets.map(asset => (
+                  <div
+                    key={asset.id}
+                    onClick={() => {
+                      setSelectedNode(asset);
+                      setActiveReport(null);
+                      setViewMode('vermoegen');
+                      onClose();
+                    }}
+                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all group"
+                  >
+                    <div className="min-w-0 pr-3">
+                      <div className="flex items-center gap-2">
+                        <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={14} className="text-blue-500 shrink-0" />
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">{asset.name}</span>
+                        {asset.ticker && <span className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-bold">{asset.ticker}</span>}
+                        {asset.isin && <span className="text-[10px] font-mono text-gray-400 hidden sm:inline">{asset.isin}</span>}
+                      </div>
+                      <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                        {asset.pathStr} • <span className="uppercase">{asset.assetClass || 'cash'}</span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+                        {fCur ? fCur(asset.valBase, baseCur) : asset.valBase}
+                      </div>
+                      {asset.currency && asset.currency !== baseCur && (
+                        <div className="text-[10px] font-mono text-gray-400">
+                          {fCur ? fCur(asset.valRaw, asset.currency) : `${asset.valRaw} ${asset.currency}`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(categoryFilter === 'ALL' || categoryFilter === 'BOOKINGS') && matchedBookings.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                <Icon name="List" size={12} /> Gefundene Buchungen ({matchedBookings.length})
+              </div>
+              <div className="space-y-1.5">
+                {matchedBookings.map(({ booking, asset, pathStr }) => {
+                  const flow = getBookingFlow(booking);
+                  return (
+                    <div
+                      key={`${asset.id}_${booking.id}`}
+                      onClick={() => {
+                        setSelectedNode({ ...asset, selectedBooking: booking });
+                        setActiveReport(null);
+                        setViewMode('vermoegen');
+                        onClose();
+                      }}
+                      className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                    >
+                      <div className="min-w-0 pr-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                          <span className="font-mono text-[11px] text-gray-500">{booking.date}</span>
+                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{booking.type}</span>
+                          <span className="truncate">{booking.subCategory || '-'}</span>
+                        </div>
+                        {booking.comment && (
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate mt-0.5">{booking.comment}</div>
+                        )}
+                        <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                          Asset: <strong>{asset.name}</strong> ({pathStr})
+                        </div>
+                      </div>
+                      <div className={`font-mono text-xs font-bold shrink-0 ${flow.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {flow.isPositive ? '+' : '-'}{fCur ? fCur(flow.amount, asset.currency || baseCur) : flow.amount}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(categoryFilter === 'ALL' || categoryFilter === 'NODES') && matchedNodes.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                <Icon name="Shield" size={12} /> Banken & Kategorien ({matchedNodes.length})
+              </div>
+              <div className="space-y-1.5">
+                {matchedNodes.map(node => (
+                  <div
+                    key={node.id}
+                    onClick={() => {
+                      setSelectedNode(node);
+                      setActiveReport(null);
+                      setViewMode('vermoegen');
+                      onClose();
+                    }}
+                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon name={node.type === 'bank' ? 'Shield' : 'FolderOpen'} size={14} className={node.type === 'bank' ? 'text-slate-500' : 'text-yellow-500'} />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{node.name}</div>
+                        <div className="text-[10px] text-gray-400">{node.pathStr}</div>
+                      </div>
+                    </div>
+                    <Icon name="ArrowRight" size={12} className="text-gray-400" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(categoryFilter === 'ALL' || categoryFilter === 'BUDGET') && matchedBudgets.length > 0 && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                <Icon name="PiggyBank" size={12} /> Budget-Positionen ({matchedBudgets.length})
+              </div>
+              <div className="space-y-1.5">
+                {matchedBudgets.map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      setSelectedNode({ ...b, budgetType: b.budgetType });
+                      setActiveReport(null);
+                      setViewMode('budget');
+                      onClose();
+                    }}
+                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{b.name}</div>
+                      <div className="text-[10px] text-gray-400">{b.groupLabel}</div>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {fCur ? fCur(b.amount || 0, baseCur) : b.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {q && totalHits === 0 && (
+            <div className="p-10 text-center text-gray-400">
+              <Icon name="Search" size={28} className="mx-auto mb-2 opacity-40 text-blue-500" />
+              <div className="text-sm font-bold">Keine Ergebnisse für „{query}“ gefunden</div>
+              <div className="text-xs mt-1">Suche nach Asset-Namen, Ticker, ISIN, Buchungstext, Betrag oder #Tag.</div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- QUICK AGENT BAR MIT GLOBALER SUCHE, ALERT-CENTER & EDITIER-WORKFLOW ---
+const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selectedNode, setSelectedNode, setActiveReport, setViewMode, fCur, onOpenGlobalSearch }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -461,14 +797,16 @@ const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSe
 
   const inputRef = useRef(null);
 
-  // Periodischer Check (alle 5 Minuten oder beim Start)
   useEffect(() => {
     const checkBadge = async () => {
       try {
         if (ActivityNotificationEngine) {
           const engine = new ActivityNotificationEngine(data, updateTreeData);
           const dataPack = await engine.compileCenterData();
-          setUnreadCount(dataPack.movers.length + dataPack.recentBookings.length);
+          const signalCount = typeof dataPack.actionCount === 'number'
+            ? dataPack.actionCount
+            : (dataPack.movers || []).filter(m => m.requiresAction).length;
+          setUnreadCount(signalCount + (dataPack.recentBookings?.length || 0));
         }
       } catch (e) {}
     };
@@ -495,8 +833,8 @@ const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSe
 
   return (
     <>
-      <div className="print-hide border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-6 py-2 z-30 transition-all shadow-xs shrink-0 relative">
-        <div className="flex items-center justify-between gap-3">
+      <div className="print-hide border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 sm:px-6 py-2 z-30 transition-all shadow-xs shrink-0 relative">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           
           <div className="flex items-center gap-2 shrink-0">
             <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xs">
@@ -551,7 +889,7 @@ const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSe
                 }`}
               >
                 <Icon name={isLoading ? "Loader" : "Send"} size={12} className={isLoading ? "animate-spin" : ""} />
-                <span>{isLoading ? "Bucht..." : "Buchen"}</span>
+                <span className="hidden xs:inline">{isLoading ? "Bucht..." : "Buchen"}</span>
               </button>
             </div>
           ) : (
@@ -560,19 +898,34 @@ const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSe
             </div>
           )}
 
-          {/* RECHTS: MITTEILUNGSZENTRALE BUTTON MIT BADGE */}
-          {/* MITTEILUNGSZENTRALE BUTTON MIT SIGNAL-PULS */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenGlobalSearch}
+              className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 text-xs font-bold border border-gray-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+              title="Globale Suche über alle Assets & Buchungen (Strg + K)"
+            >
+              <Icon name="Search" size={13} className="text-blue-500" />
+              <span className="hidden md:inline">Suche</span>
+              <span className="hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 bg-white dark:bg-slate-900 rounded text-gray-400 border border-gray-200 dark:border-slate-700">
+                Ctrl+K
+              </span>
+            </button>
+
             <button 
               onClick={() => setIsCenterOpen(true)}
-              className={`p-1.5 rounded-xl relative cursor-pointer transition-all ${
+              className={`p-2 rounded-xl relative cursor-pointer transition-all ${
                 unreadCount > 0
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/40 animate-pulse'
+                  ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-xs'
                   : 'text-gray-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
               }`}
-              title={unreadCount > 0 ? `${unreadCount} Positionen mit ≥ 5% Kursabweichung!` : "Mitteilungszentrale öffnen"}
+              title={unreadCount > 0 ? `${unreadCount} aktive Mitteilung(en) / Kurssignale` : "Mitteilungszentrale öffnen"}
             >
-              <Icon name="Activity" size={15} />
+              <Icon 
+                name="Bell" 
+                size={15} 
+                className={unreadCount > 0 ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} 
+              />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
                   {unreadCount}
@@ -592,7 +945,6 @@ const QuickAgentBar = ({ data, updateTreeData, showToast, t, selectedNode, setSe
         </div>
       </div>
 
-      {/* MITTEILUNGSZENTRALE DRAWER */}
       {NotificationCenterDrawer && (
         <NotificationCenterDrawer 
           data={data}
@@ -614,6 +966,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
   const allAssets = getAllAssets(data?.banks || []) || [];
   const activeAssets = showArchived ? allAssets : allAssets.filter(a => !a?.isArchived);
   const activeChartEngine = data?.settings?.chartEngine || 'echarts';
+  const baseCurrency = data?.settings?.baseCurrency || 'CHF';
   
   const detectLanguage = () => {
     if (lang) return lang;
@@ -641,6 +994,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
   const [dragOverRowId, setDragOverRowId] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [tempComment, setTempComment] = useState('');
+  const cancelCommentEditRef = useRef(false);
 
   const [selectedDataPath, setSelectedDataPath] = useState('root');
   const [dataSearch, setDataSearch] = useState('');
@@ -652,8 +1006,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
   const [pluginCategoryFilter, setPluginCategoryFilter] = useState('ALL');
   const pluginFileInputRef = useRef(null);
 
-  // States für das Fly-In (Rechte Seitenleiste)
+  // States für das Fly-In (Rechte Seitenleiste) & Globale Suche
   const [isFlyInOpen, setIsFlyInOpen] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [flyInActivePluginId, setFlyInActivePluginId] = useState(null);
   const [flyInSearch, setFlyInSearch] = useState('');
   const flyInSearchInputRef = useRef(null);
@@ -669,7 +1024,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     }
   });
 
-useEffect(() => {
+  useEffect(() => {
     if (ActivityNotificationEngine?.recordHistoryItem) {
       if (selectedNode && selectedNode.id) {
         ActivityNotificationEngine.recordHistoryItem(selectedNode, { viewMode, activeReport });
@@ -678,7 +1033,6 @@ useEffect(() => {
       }
     }
   }, [selectedNode?.id, activeReport, viewMode]);
-
 
   useEffect(() => {
     if (selectedNode && selectedNode.type === 'asset' && selectedNode.id) {
@@ -712,23 +1066,18 @@ useEffect(() => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isFlyInOpen) {
-        setIsFlyInOpen(false);
+      if (e.key === 'Escape') {
+        if (isGlobalSearchOpen) setIsGlobalSearchOpen(false);
+        if (isFlyInOpen) setIsFlyInOpen(false);
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setIsFlyInOpen(prev => {
-          const next = !prev;
-          if (next) {
-            setTimeout(() => flyInSearchInputRef.current?.focus(), 100);
-          }
-          return next;
-        });
+        setIsGlobalSearchOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFlyInOpen]);
+  }, [isFlyInOpen, isGlobalSearchOpen]);
 
   useEffect(() => {
     if (isFlyInOpen) {
@@ -771,8 +1120,8 @@ useEffect(() => {
   };
 
   const applyAutoValuation = (assetNode) => {
-      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetNode.assetClass);
-      if (!isSecurities || !assetNode.bookings) return assetNode;
+      const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(assetNode?.assetClass);
+      if (!isSecurities || !assetNode?.bookings) return assetNode;
 
       let copy = { ...assetNode, bookings: [...assetNode.bookings] };
       const localizedAutoString = safeT(t, 'autoAdjustment', 'Auto-Anpassung');
@@ -784,7 +1133,11 @@ useEffect(() => {
           return !(b._isAutoValuation || isLegacyAuto);
       });
 
-      copy.bookings.sort((a,b) => new Date(a.date) - new Date(b.date));
+      copy.bookings.sort((a, b) => {
+          const dateDiff = new Date(a.date) - new Date(b.date);
+          if (dateDiff === 0) return (a.customOrder || 0) - (b.customOrder || 0);
+          return dateDiff;
+      });
 
       let totalShares = 0; 
       let runningPrincipalRaw = 0; 
@@ -794,7 +1147,7 @@ useEffect(() => {
       const safePrice = (val) => parseFloat(String(val || '0').replace(',', '.'));
       let latestPrice = 0;
 
-      copy.bookings.forEach(b => {
+      copy.bookings.forEach((b, idx) => {
           finalBookings.push(b); 
           if (b.date > lastBookingDate) lastBookingDate = b.date;
 
@@ -811,6 +1164,8 @@ useEffect(() => {
               runningPrincipalRaw += Number(b.amount || 0);
           }
 
+          if (Math.abs(totalShares) < 1e-8) totalShares = 0;
+
           const bPrice = safePrice(b.price);
           if (bPrice > 0) latestPrice = bPrice;
 
@@ -821,7 +1176,7 @@ useEffect(() => {
               if (Math.abs(diff) > 0.01) {
                   const adjAmount = Number(diff.toFixed(2));
                   finalBookings.push({
-                      id: Math.random().toString(36).substr(2, 9), 
+                      id: `auto_val_${b.id || idx}`, 
                       date: b.date, 
                       type: 'Wertanpassung',
                       subCategory: `${localizedAutoString} (Kurs)`,
@@ -831,11 +1186,23 @@ useEffect(() => {
                   });
                   runningPrincipalRaw += adjAmount; 
               }
+          } else if (totalShares === 0 && Math.abs(runningPrincipalRaw) > 0.01) {
+              const adjAmount = Number((-runningPrincipalRaw).toFixed(2));
+              finalBookings.push({
+                  id: `auto_val_close_${b.id || idx}`,
+                  date: b.date,
+                  type: 'Wertanpassung',
+                  subCategory: `${localizedAutoString} (Realisiert)`,
+                  amount: adjAmount,
+                  bookingExchangeRate: b.bookingExchangeRate || assetNode.exchangeRate || 1,
+                  _isAutoValuation: true
+              });
+              runningPrincipalRaw = 0;
           }
       });
 
       const nodePrice = safePrice(assetNode.price);
-      const currentPriceToUse = nodePrice > 0 ? nodePrice : latestPrice;
+      const currentPriceToUse = latestPrice > 0 ? latestPrice : nodePrice;
 
       if (totalShares > 0 && currentPriceToUse > 0) {
           const expectedCurrentValue = totalShares * currentPriceToUse;
@@ -844,7 +1211,7 @@ useEffect(() => {
           if (Math.abs(diff) > 0.01) {
               const todayStr = new Date().toISOString().split('T')[0];
               finalBookings.push({
-                  id: Math.random().toString(36).substr(2, 9), 
+                  id: `auto_val_latest_${assetNode.id}`, 
                   date: todayStr > lastBookingDate ? todayStr : lastBookingDate, 
                   type: 'Wertanpassung',
                   subCategory: `${localizedAutoString} (Aktueller Kurs)`,
@@ -855,8 +1222,89 @@ useEffect(() => {
           }
       }
 
-      copy.bookings = finalBookings.sort((a,b) => new Date(b.date) - new Date(a.date));
+      copy.bookings = finalBookings.sort((a, b) => {
+          const dateDiff = new Date(b.date) - new Date(a.date);
+          if (dateDiff === 0) return (a.customOrder || 0) - (b.customOrder || 0);
+          return dateDiff;
+      });
       return copy;
+  };
+
+  useEffect(() => {
+    if (!selectedNode || selectedNode.type !== 'asset' || !updateTreeData) return;
+    const isSec = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(selectedNode.assetClass);
+    if (!isSec) return;
+
+    const evaluated = applyAutoValuation(selectedNode);
+    const currentBookings = selectedNode.bookings || [];
+    const evalBookings = evaluated.bookings || [];
+
+    const sumCurrent = currentBookings.reduce((s, b) => s + Number(b.amount || 0), 0);
+    const sumEval = evalBookings.reduce((s, b) => s + Number(b.amount || 0), 0);
+
+    if (Math.abs(sumCurrent - sumEval) > 0.01 || currentBookings.length !== evalBookings.length) {
+      const updateRecursive = (nodes) => (nodes || []).map(n => {
+        if (n.id === selectedNode.id) return { ...n, bookings: evalBookings };
+        if (n.children) return { ...n, children: updateRecursive(n.children) };
+        return n;
+      });
+      updateTreeData({ banks: updateRecursive(data.banks) });
+    }
+  }, [selectedNode?.id, selectedNode?.bookings?.length, selectedNode?.price]);
+
+  const syncLivePriceForAsset = async (targetAsset) => {
+      if (!targetAsset) return;
+      const finKeys = data?.settings?.finApiKeys || {};
+      const result = await ApiSyncEngine.fetchAssetPrice({
+          assetNode: targetAsset,
+          finKeys,
+          baseCurrency,
+          showToast,
+          safeT,
+          t
+      });
+
+      if (result && result.price > 0) {
+          const { price, provider, apiDate, currentFxRate } = result;
+          const fromCurrency = targetAsset.currency;
+          const isForeignCurrencyCheck = fromCurrency && fromCurrency !== baseCurrency;
+          
+          let updatedNode = { ...targetAsset, price: price, exchangeRate: currentFxRate };
+          let bookings = [...(updatedNode.bookings || [])];
+          
+          const existingSyncIdx = bookings.findIndex(b => b.date === apiDate && b.type === 'Wertanpassung' && b.subCategory === 'API Kurs-Sync');
+          
+          const newBooking = {
+              id: existingSyncIdx >= 0 ? bookings[existingSyncIdx].id : generateId(),
+              date: apiDate,
+              type: 'Wertanpassung',
+              subCategory: 'API Kurs-Sync',
+              price: price,
+              amount: 0,
+              bookingExchangeRate: currentFxRate,
+              comment: `#${provider.replace(/\s+/g, '')} EOD-Kurs (FX: 1 ${fromCurrency} = ${currentFxRate} ${baseCurrency})`
+          };
+
+          if (existingSyncIdx >= 0) bookings[existingSyncIdx] = newBooking;
+          else bookings.push(newBooking);
+
+          updatedNode.bookings = bookings;
+          const finalNode = applyAutoValuation(updatedNode);
+
+          const updateRecursive = (nodes) => nodes.map(n => {
+              if (n.id === targetAsset.id) return finalNode;
+              if (n.children) return { ...n, children: updateRecursive(n.children) };
+              return n;
+          });
+          
+          updateTreeData({ banks: updateRecursive(data.banks) });
+          if (selectedNode?.id === targetAsset.id) setSelectedNode(finalNode);
+          
+          const fxNotice = isForeignCurrencyCheck ? ` | FX: ${currentFxRate}` : '';
+          if (showToast) showToast(safeT(t, 'msgPriceUpdated', `EOD Kurs (${apiDate}) via ${provider} synchronisiert: ${price} ${fromCurrency}${fxNotice}`), 'success');
+      } else if (result !== null) {
+          if (showToast) showToast(safeT(t, 'msgPriceFetchFailed', 'Kursabruf fehlgeschlagen. Ticker/ISIN überprüfen oder API-Limit erreicht.'), 'error');
+      }
   };
 
   const renderSmartTags = (text) => {
@@ -933,7 +1381,7 @@ useEffect(() => {
   };
 
   // =========================================================================
-  // RECHTER FLY-IN DRAWER
+  // RECHTER FLY-IN DRAWER (INKL. GLOBALER ASSET- & BUCHUNGSSUCHE)
   // =========================================================================
   const renderFlyInDrawer = () => {
     const allPlugins = data?.plugins || [];
@@ -954,20 +1402,41 @@ useEffect(() => {
     ];
 
     const query = flyInSearch.trim().toLowerCase();
+    const matchedBookingsInFlyIn = [];
+    if (query) {
+      allAssets.forEach(asset => {
+        (asset.bookings || []).forEach(b => {
+          if (!b._isAutoValuation && (
+            (b.comment || '').toLowerCase().includes(query) ||
+            (b.subCategory || '').toLowerCase().includes(query) ||
+            String(b.amount || '').includes(query)
+          )) {
+            matchedBookingsInFlyIn.push({ booking: b, asset });
+          }
+        });
+      });
+    }
+
     const searchResults = {
-      assets: query ? allAssets.filter(a => (a.name || '').toLowerCase().includes(query) || (a.assetClass || '').toLowerCase().includes(query)).slice(0, 5) : [],
+      assets: query ? allAssets.filter(a =>
+        (a.name || '').toLowerCase().includes(query) ||
+        (a.ticker || '').toLowerCase().includes(query) ||
+        (a.isin || '').toLowerCase().includes(query) ||
+        (a.assetClass || '').toLowerCase().includes(query)
+      ).slice(0, 8) : [],
+      bookings: matchedBookingsInFlyIn.slice(0, 6),
       plugins: query ? allPlugins.filter(p => (p.title || p.name || '').toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query)).slice(0, 4) : [],
       reports: query ? quickReports.filter(r => r.title.toLowerCase().includes(query)) : []
     };
 
-    const hasSearchResults = query && (searchResults.assets.length > 0 || searchResults.plugins.length > 0 || searchResults.reports.length > 0);
+    const hasSearchResults = query && (searchResults.assets.length > 0 || searchResults.bookings.length > 0 || searchResults.plugins.length > 0 || searchResults.reports.length > 0);
 
     return (
       <>
         <div 
           onClick={() => setIsFlyInOpen(true)}
           className="fixed right-0 top-1/2 -translate-y-1/2 z-40 group cursor-pointer transition-all duration-300"
-          title={safeT(t, 'flyInOpenTooltip', 'Schnellzugriff & Command-Center öffnen (Strg + K)')}
+          title={safeT(t, 'flyInOpenTooltip', 'Schnellzugriff & Command-Center öffnen')}
         >
           <div className="bg-slate-900/90 hover:bg-blue-600 text-white backdrop-blur-md py-4 px-2.5 rounded-l-2xl shadow-2xl flex flex-col items-center gap-2 border-y border-l border-slate-700/80 hover:border-blue-400/80 transition-all hover:pr-3.5">
             <div className="relative">
@@ -1029,7 +1498,7 @@ useEffect(() => {
                       type="text"
                       value={flyInSearch}
                       onChange={e => setFlyInSearch(e.target.value)}
-                      placeholder={safeT(t, 'flyInSearchPlaceholder', 'Asset, Plugin oder Bericht suchen...')}
+                      placeholder={safeT(t, 'flyInSearchPlaceholder', 'Asset, Ticker, Buchung, Plugin oder Bericht suchen...')}
                       className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                     {flyInSearch && (
@@ -1070,14 +1539,47 @@ useEffect(() => {
                                   <div className="flex items-center gap-2 truncate">
                                     <Icon name="CheckCircle" size={13} className="text-blue-500 shrink-0" />
                                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{asset.name}</span>
+                                    {asset.ticker && <span className="text-[10px] font-mono text-blue-500 font-bold">{asset.ticker}</span>}
                                     <span className="text-[10px] text-gray-400 uppercase">({asset.assetClass})</span>
                                   </div>
                                   <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 ml-2">
-                                    {fCur ? fCur(val, data?.settings?.baseCurrency || 'CHF') : val}
+                                    {fCur ? fCur(val, baseCurrency) : val}
                                   </span>
                                 </div>
                               );
                             })}
+                          </div>
+                        </div>
+                      )}
+
+                      {searchResults.bookings.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                            <Icon name="List" size={12} /> Gefundene Buchungen ({searchResults.bookings.length})
+                          </div>
+                          <div className="space-y-1.5">
+                            {searchResults.bookings.map(({ booking, asset }) => (
+                              <div
+                                key={`${asset.id}_${booking.id}`}
+                                onClick={() => {
+                                  setIsFlyInOpen(false);
+                                  setSelectedNode({ ...asset, selectedBooking: booking });
+                                  setActiveReport(null);
+                                  setViewMode('vermoegen');
+                                }}
+                                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
+                              >
+                                <div className="min-w-0 pr-2">
+                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                    {booking.date} • {booking.subCategory || booking.type} ({asset.name})
+                                  </div>
+                                  {booking.comment && <div className="text-[10px] text-gray-400 truncate">{booking.comment}</div>}
+                                </div>
+                                <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                                  {fCur ? fCur(booking.amount, asset.currency || baseCurrency) : booking.amount}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -1204,11 +1706,9 @@ useEffect(() => {
                             onClick={() => {
                               setIsFlyInOpen(false);
                               if (isAssetSelected && ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(selectedNode.assetClass)) {
-                                const fetchBtn = document.querySelector('button[title*="Alpha Vantage"]');
-                                if (fetchBtn) fetchBtn.click();
-                                else if (showToast) showToast(`${safeT(t, 'msgSyncingPriceFor', 'Aktualisiere Kurs für')} ${selectedNode.name}...`, 'info');
+                                syncLivePriceForAsset(applyAutoValuation(selectedNode));
                               } else {
-                                if (showToast) showToast(safeT(t, 'msgSyncAllSecuritiesStarted', "Marktdaten-Sync für alle aktiven Wertschriften gestartet..."), "info");
+                                navigate('liveEditor', null);
                               }
                             }}
                             className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-indigo-300 text-left transition-all cursor-pointer group"
@@ -1347,7 +1847,7 @@ useEffect(() => {
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0 pr-2">
                                     <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:text-blue-500 transition-colors shrink-0">
-                                      <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'DollarSign'))} size={13} />
+                                      <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={13} />
                                     </div>
                                     <div className="min-w-0">
                                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -1360,7 +1860,7 @@ useEffect(() => {
                                   </div>
                                   <div className="text-right shrink-0">
                                     <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 block">
-                                      {fCur ? fCur(val, data?.settings?.baseCurrency || 'CHF') : val}
+                                      {fCur ? fCur(val, baseCurrency) : val}
                                     </span>
                                     {isSelected && (
                                       <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{safeT(t, 'flyInSelectedBadge', 'Ausgewählt')}</span>
@@ -1451,7 +1951,7 @@ useEffect(() => {
     );
   };
 
-  // --- HAUPTANSICHTS-ROUTER ---
+// --- HAUPTANSICHTS-ROUTER ---
   const renderMainView = () => {
     // 1. PLUGINS VERWALTEN
     if (viewMode === 'managePlugins') {
@@ -1785,7 +2285,7 @@ useEffect(() => {
       );
     }
 
-    // 3. DATENSICHT
+    // 3. DATENSICHT (MIT FUNKTIONIERENDER LIVE-SUCHE)
     if (viewMode === 'datensicht') {
       const handleCopy = (payload) => {
           navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
@@ -1855,11 +2355,16 @@ useEffect(() => {
                                   onChange={e => setDataSearch(e.target.value)}
                                   className="bg-transparent border-none outline-none text-xs w-full text-gray-700 dark:text-gray-200"
                               />
+                              {dataSearch && (
+                                <button onClick={() => setDataSearch('')} className="text-gray-400 hover:text-gray-600">
+                                  <Icon name="X" size={11} />
+                                </button>
+                              )}
                            </div>
                       </div>
                       <div className="flex-1 overflow-auto p-4 finspa-scrollbar font-mono">
                           <div className="bg-gray-50 dark:bg-slate-950/50 rounded-2xl border dark:border-slate-800 p-6 min-h-full">
-                              <JsonNode label={selectedDataPath.toUpperCase()} data={getActiveData()} t={t} />
+                              <JsonNode label={selectedDataPath.toUpperCase()} data={getActiveData()} t={t} searchQuery={dataSearch.trim()} />
                           </div>
                       </div>
                   </div>
@@ -2070,14 +2575,14 @@ useEffect(() => {
                       <Sparkline 
                           dataSeries={historyData} 
                           dateSeries={sortedDates} 
-                          title={`${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${data?.settings?.baseCurrency || 'CHF'})`} 
+                          title={`${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${baseCurrency})`} 
                       />
                   )}
                   
                   <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0 min-w-[180px]">
                     <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">{safeT(t, 'totalValue', 'Gesamtwert')}</span>
                     <span className="text-3xl font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-xl block shadow-sm whitespace-nowrap">
-                      {fCur ? fCur(totalBankValue, 'CHF') : totalBankValue}
+                      {fCur ? fCur(totalBankValue, baseCurrency) : totalBankValue}
                     </span>
                   </div>
               </div>
@@ -2095,20 +2600,27 @@ useEffect(() => {
                           <Icon name="FolderOpen" className="text-yellow-500" size={18} /> {categoryName}
                         </h3>
                         <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-3 py-1 rounded-md border text-sm shadow-sm">
-                          {fCur ? fCur(categoryTotal, 'CHF') : categoryTotal} ({totalBankValue > 0 ? ((categoryTotal / totalBankValue) * 100).toFixed(1) : 0}%)
+                          {fCur ? fCur(categoryTotal, baseCurrency) : categoryTotal} ({totalBankValue > 0 ? ((categoryTotal / totalBankValue) * 100).toFixed(1) : 0}%)
                         </span>
                       </div>
 
                       <div className="space-y-3">
                         {categoryItems.map(asset => (
-                          <div key={asset.id} className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-gray-100 dark:border-slate-800 flex justify-between items-center hover:shadow-sm transition-shadow">
+                          <div 
+                            key={asset.id} 
+                            onClick={() => {
+                              const found = allAssets.find(a => a.id === asset.id);
+                              if (found) setSelectedNode(found);
+                            }}
+                            className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-gray-100 dark:border-slate-800 flex justify-between items-center hover:shadow-sm hover:border-blue-400 cursor-pointer transition-all"
+                          >
                             <div>
                               <div className="font-bold text-sm text-slate-900 dark:text-white">{asset.name}</div>
                               <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5"><span className="uppercase font-semibold tracking-wider px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px]">{asset.subCategory}</span></div>
                             </div>
                             <div className="text-right">
-                              <div className="font-black font-mono text-slate-900 dark:text-white">{fCur ? fCur(asset.valueInBase, 'CHF') : asset.valueInBase}</div>
-                              {asset.currency !== 'CHF' && <div className="text-xs text-gray-400 font-mono">{fCur ? fCur(asset.originalValue, asset.currency) : `${asset.originalValue} ${asset.currency}`}</div>}
+                              <div className="font-black font-mono text-slate-900 dark:text-white">{fCur ? fCur(asset.valueInBase, baseCurrency) : asset.valueInBase}</div>
+                              {asset.currency && asset.currency !== baseCurrency && <div className="text-xs text-gray-400 font-mono">{fCur ? fCur(asset.originalValue, asset.currency) : `${asset.originalValue} ${asset.currency}`}</div>}
                             </div>
                           </div>
                         ))}
@@ -2130,7 +2642,7 @@ useEffect(() => {
                       datasets={[{ 
                           label: safeT(t, 'totalValue', 'Gesamtwert'), 
                           data: chartDataCategories.map(d => d.value),
-                          valueFormatter: (val) => fCur ? fCur(val, 'CHF') : Number(val).toFixed(2)
+                          valueFormatter: (val) => fCur ? fCur(val, baseCurrency) : Number(val).toFixed(2)
                       }]} 
                     />
                   ) : <div className="text-gray-400 py-12 text-center text-sm">{safeT(t, 'noValuedAssets', 'Keine bewerteten Assets vorhanden.')}</div>}
@@ -2142,7 +2654,7 @@ useEffect(() => {
                     {Object.keys(subCategoryMap).sort((a,b) => subCategoryMap[b] - subCategoryMap[a]).map(subKey => (
                       <div key={subKey} className="flex justify-between items-center pt-2 first:pt-0">
                         <span className="text-gray-600 dark:text-gray-400 font-medium">{subKey}</span>
-                        <span className="font-mono font-bold text-slate-900 dark:text-white">{fCur ? fCur(subCategoryMap[subKey], 'CHF') : subCategoryMap[subKey]}</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">{fCur ? fCur(subCategoryMap[subKey], baseCurrency) : subCategoryMap[subKey]}</span>
                       </div>
                     ))}
                   </div>
@@ -2155,7 +2667,6 @@ useEffect(() => {
 
       if (selectedNode.type === 'asset') {
         const adjustedNode = applyAutoValuation(selectedNode);
-        const baseCurrency = data?.settings?.baseCurrency || 'CHF';
         const isForeignCurrency = adjustedNode.currency && adjustedNode.currency !== baseCurrency;
         const isCreditCard = adjustedNode.assetClass === 'credit_card';
         
@@ -2173,60 +2684,7 @@ useEffect(() => {
         const isSecurities = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac);
         const currentShares = typeof getAssetSharesAtDate === 'function' ? getAssetSharesAtDate(adjustedNode, todayStr) : 0;
 
-        const handleFetchLivePrice = async () => {
-            const finKeys = data?.settings?.finApiKeys || {};
-
-            const result = await ApiSyncEngine.fetchAssetPrice({
-                assetNode: adjustedNode,
-                finKeys,
-                baseCurrency,
-                showToast,
-                safeT,
-                t
-            });
-
-            if (result && result.price > 0) {
-                const { price, provider, apiDate, currentFxRate } = result;
-                const fromCurrency = adjustedNode.currency;
-                const isForeignCurrencyCheck = fromCurrency && fromCurrency !== baseCurrency;
-                
-                let updatedNode = { ...selectedNode, exchangeRate: currentFxRate };
-                let bookings = [...(updatedNode.bookings || [])];
-                
-                const existingSyncIdx = bookings.findIndex(b => b.date === apiDate && b.type === 'Wertanpassung' && b.subCategory === 'API Kurs-Sync');
-                
-                const newBooking = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    date: apiDate,
-                    type: 'Wertanpassung',
-                    subCategory: 'API Kurs-Sync',
-                    price: price,
-                    amount: 0,
-                    bookingExchangeRate: currentFxRate,
-                    comment: `#${provider.replace(/\s+/g, '')} EOD-Kurs (FX: 1 ${fromCurrency} = ${currentFxRate} ${baseCurrency})`
-                };
-
-                if (existingSyncIdx >= 0) bookings[existingSyncIdx] = newBooking;
-                else bookings.push(newBooking);
-
-                updatedNode.bookings = bookings;
-                const finalNode = applyAutoValuation(updatedNode);
-
-                const updateRecursive = (nodes) => nodes.map(n => {
-                    if (n.id === selectedNode.id) return finalNode;
-                    if (n.children) return { ...n, children: updateRecursive(n.children) };
-                    return n;
-                });
-                
-                updateTreeData({ banks: updateRecursive(data.banks) });
-                setSelectedNode(finalNode);
-                
-                const fxNotice = isForeignCurrencyCheck ? ` | FX: ${currentFxRate}` : '';
-                if (showToast) showToast(safeT(t, 'msgPriceUpdated', `EOD Kurs (${apiDate}) via ${provider} synchronisiert: ${price} ${fromCurrency}${fxNotice}`), 'success');
-            } else if (result !== null) {
-                if (showToast) showToast(safeT(t, 'msgPriceFetchFailed', 'Kursabruf fehlgeschlagen. Ticker/ISIN überprüfen oder API-Limit erreicht.'), 'error');
-            }
-        };
+        const handleFetchLivePrice = () => syncLivePriceForAsset(adjustedNode);
 
         const handleRowDrop = (draggedId, targetId) => {
             if (draggedId === targetId) return;
@@ -2254,18 +2712,26 @@ useEffect(() => {
             });
 
             updatedNode.bookings = bookings;
+            const evaluated = applyAutoValuation(updatedNode);
             
             const updateRecursive = (nodes) => nodes.map(n => {
-                if (n.id === selectedNode.id) return applyAutoValuation(updatedNode);
+                if (n.id === selectedNode.id) return evaluated;
                 if (n.children) return { ...n, children: updateRecursive(n.children) };
                 return n;
             });
 
             updateTreeData({ banks: updateRecursive(data.banks) });
-            setSelectedNode(applyAutoValuation(updatedNode));
+            setSelectedNode(evaluated);
         };
 
         const saveInlineComment = (item) => {
+            if (cancelCommentEditRef.current) {
+                cancelCommentEditRef.current = false;
+                setEditingCommentId(null);
+                return;
+            }
+            if (editingCommentId !== item.id) return;
+
             let updatedNode = { ...selectedNode };
             let isBal = item._isBal;
 
@@ -2445,7 +2911,7 @@ useEffect(() => {
                <div className="flex flex-col justify-between">
                  <h2 className="text-3xl font-black flex items-center gap-3">
                    {!isTreeVisible && <Icon name="ChevronRight" size={24} className="cursor-pointer text-gray-400 print-hide" onClick={() => setIsTreeVisible(true)} />}
-                   <Icon name={isCreditCard ? "CreditCard" : "DollarSign"} className={isCreditCard ? "text-indigo-500" : "text-green-500"}/>
+                   <Icon name={isCreditCard ? "CreditCard" : (adjustedNode.currency === 'USD' ? 'DollarSign' : (adjustedNode.currency === 'EUR' ? 'EuroSign' : 'Wallet'))} className={isCreditCard ? "text-indigo-500" : "text-emerald-500"}/>
                    {adjustedNode.name} {adjustedNode.isArchived && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">{safeT(t, 'isArchived', 'Archiviert')}</span>}
                  </h2>
                  <div className="flex flex-wrap gap-4 sm:gap-6 mt-3 text-sm items-center">
@@ -2464,9 +2930,9 @@ useEffect(() => {
 
                    {isCreditCard && (
                       <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold">
-                         <span>Limite: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} CHF`}</span>
+                         <span>Limite: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} ${adjustedNode.currency || baseCurrency}`}</span>
                          <span className="opacity-60">•</span>
-                         <span>Verfügbar: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(currentVal)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(currentVal)).toFixed(2)} CHF`}</span>
+                         <span>Verfügbar: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)} ${adjustedNode.currency || baseCurrency}`}</span>
                       </div>
                    )}
                  </div>
@@ -2572,7 +3038,7 @@ useEffect(() => {
 
                                       if (!existingReval) {
                                           bookings.push({
-                                              id: Math.random().toString(36).substr(2, 9),
+                                              id: generateId(),
                                               date: tx.date,
                                               type: 'Wertanpassung',
                                               subCategory: safeT(t, 'catPriceFromTransaction', 'Kurs aus Transaktion'),
@@ -2714,7 +3180,7 @@ useEffect(() => {
                         let flowInBase = 0; let flowOutBase = 0;
                         
                         items.forEach(item => {
-                          if (!item._isBal) {
+                          if (!item._isBal && item.type !== 'Wertanpassung') {
                             const flow = getBookingFlow(item);
                             const bRate = item.bookingExchangeRate ? parseRate(item.bookingExchangeRate) : (parseRate(adjustedNode.exchangeRate) || 1);
                             if (flow.isPositive) {
@@ -2775,7 +3241,7 @@ useEffect(() => {
                               const bookingRate = item.bookingExchangeRate ? parseFloat(String(item.bookingExchangeRate).replace(',', '.')) : 0;
                               const nodeRate = adjustedNode.exchangeRate ? parseFloat(String(adjustedNode.exchangeRate).replace(',', '.')) : 1;
                               let usedRate = bookingRate;
-                              if ((!usedRate || usedRate === 1) && (adjustedNode.currency && adjustedNode.currency !== (data?.settings?.baseCurrency || 'CHF'))) usedRate = nodeRate;
+                              if ((!usedRate || usedRate === 1) && (adjustedNode.currency && adjustedNode.currency !== baseCurrency)) usedRate = nodeRate;
                               if (!usedRate) usedRate = 1;
 
                               const runningShares = getAssetSharesAtDate(adjustedNode, item.date);
@@ -2809,7 +3275,7 @@ useEffect(() => {
 
                               let categoryDisplay = item._isBal ? safeT(t, 'systemManual', 'System/Manuell') : (item.subCategory || '-');
                               if (isSecurities && item.type === 'Wertanpassung') {
-                                  categoryDisplay = `${safeT(t, 'typeReval', 'Wertanpassung')}: ${item.price ? `${item.price}${adjustedNode.currency}` : safeT(t, 'catManualAdjustment', 'Manuelle Anpassung')}`;
+                                  categoryDisplay = `${safeT(t, 'typeReval', 'Wertanpassung')}: ${item.price ? `${item.price} ${adjustedNode.currency}` : safeT(t, 'catManualAdjustment', 'Manuelle Anpassung')}`;
                               }
                               
                               let bonusInfo = '';
@@ -2832,7 +3298,7 @@ useEffect(() => {
                                     e.dataTransfer.effectAllowed = 'move';
                                 }}
                                 onDragOver={(e) => {
-                                    e.preventDefault();
+                                    e.preventDefault(); 
                                     e.stopPropagation();
                                     if (draggedRowId && draggedRowId !== item.id && !item._isBal) {
                                         setDragOverRowId(item.id);
@@ -2889,7 +3355,16 @@ useEffect(() => {
                                                     value={tempComment}
                                                     onChange={e => setTempComment(e.target.value)}
                                                     onBlur={() => saveInlineComment(item)}
-                                                    onKeyDown={e => { if(e.key === 'Enter') saveInlineComment(item); if(e.key === 'Escape') setEditingCommentId(null); }}
+                                                    onKeyDown={e => { 
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            e.currentTarget.blur();
+                                                        }
+                                                        if (e.key === 'Escape') {
+                                                            cancelCommentEditRef.current = true;
+                                                            setEditingCommentId(null);
+                                                        }
+                                                    }}
                                                     onClick={e => e.stopPropagation()}
                                                     className="w-full text-xs p-1 mt-1 border border-blue-300 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500"
                                                     placeholder={safeT(t, 'placeholderNoteTag', 'Notiz/Tag eingeben...')}
@@ -2897,7 +3372,7 @@ useEffect(() => {
                                             ) : (
                                                 <span 
                                                     className="text-xs text-gray-500 cursor-text hover:text-blue-500 transition-colors py-0.5 border border-transparent hover:border-gray-200 dark:hover:border-slate-700 rounded px-1 -ml-1"
-                                                    onClick={(e) => { e.stopPropagation(); setTempComment(item.comment || ''); setEditingCommentId(item.id); }}
+                                                    onClick={(e) => { e.stopPropagation(); cancelCommentEditRef.current = false; setTempComment(item.comment || ''); setEditingCommentId(item.id); }}
                                                     title={safeT(t, 'titleClickToEdit', 'Klicken zum Bearbeiten')}
                                                 >
                                                     {item.comment ? renderSmartTags(item.comment) : <span className="opacity-40 italic flex items-center gap-1"><Icon name="Edit3" size={10}/> {safeT(t, 'labelAddNote', 'Notiz hinzufügen...')}</span>}
@@ -2920,9 +3395,9 @@ useEffect(() => {
                                   ) : (
                                     <>
                                       <span className="tracking-tight">{prefix}{fCur ? fCur(displayAmount, adjustedNode.currency) : displayAmount}</span>
-                                      {(adjustedNode.currency && adjustedNode.currency !== (data?.settings?.baseCurrency || 'CHF')) && !isCompactMode && (
+                                      {(adjustedNode.currency && adjustedNode.currency !== baseCurrency) && !isCompactMode && (
                                           <span className="text-[10px] opacity-60 font-medium tracking-wider mt-0.5 text-gray-500 tabular-nums">
-                                              ≈ {fCur ? fCur(displayAmount * usedRate, data?.settings?.baseCurrency || 'CHF') : (displayAmount * usedRate)}
+                                              ≈ {fCur ? fCur(displayAmount * usedRate, baseCurrency) : (displayAmount * usedRate)}
                                           </span>
                                       )}
                                     </>
@@ -3007,10 +3482,27 @@ useEffect(() => {
     <div className="h-full w-full flex flex-col overflow-hidden relative">
       <QuickAgentBar 
         data={data} 
+        allAssets={allAssets}
         updateTreeData={updateTreeData} 
         showToast={showToast} 
         t={t} 
         selectedNode={selectedNode} 
+        setSelectedNode={setSelectedNode}
+        setActiveReport={setActiveReport}
+        setViewMode={setViewMode}
+        fCur={fCur}
+        onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+      />
+      <GlobalSearchModal
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        data={data}
+        allAssets={allAssets}
+        setSelectedNode={setSelectedNode}
+        setActiveReport={setActiveReport}
+        setViewMode={setViewMode}
+        fCur={fCur}
+        t={t}
       />
       <div className="flex-1 overflow-hidden relative">
         {renderMainView()}

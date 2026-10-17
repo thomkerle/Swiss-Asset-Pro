@@ -3,7 +3,7 @@ const React = require('react');
 const Icon = ({ name, className = "", size = 16, onClick, title }) => {
     // Mapping der Icon-Namen zu FontAwesome Klassen
     const map = {
-        File: 'fa-file', // Neu hinzugefügt
+        File: 'fa-file', 
         Printer: 'fa-print', 
         Save: 'fa-save', 
         FilePlus: 'fa-file-circle-plus', 
@@ -29,6 +29,9 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Calendar: 'fa-calendar-alt',
         Activity: 'fa-heartbeat', 
         DollarSign: 'fa-dollar-sign', 
+        EuroSign: 'fa-euro-sign',
+        Euro: 'fa-euro-sign',
+        MoneyBill: 'fa-money-bill-wave',
         Shield: 'fa-shield-alt', 
         Target: 'fa-bullseye',
         Menu: 'fa-bars', 
@@ -66,7 +69,7 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Copy: 'fa-copy',
         PlusCircle: 'fa-circle-plus', 
         BookOpen: 'fa-book-open', 
-        Box: 'fa-box',
+        Box: 'fa-box', 
         
         // PDF Scanner, Settings & Report Icons
         Scan: 'fa-expand', 
@@ -114,14 +117,23 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Loader: 'fa-spinner', 
         AlertTriangle: 'fa-triangle-exclamation',
 
-	Bookmark: 'fa-bookmark',
-    	Pin: 'fa-thumbtack',
-    	ExternalLink: 'fa-arrow-up-right-from-square'
+        Bookmark: 'fa-bookmark',
+        Pin: 'fa-thumbtack',
+        ExternalLink: 'fa-arrow-up-right-from-square',
+
+        // --- HINZUGEFÜGT FÜR MOBILE & NOTIFICATION DRAWER ---
+        MoreVertical: 'fa-ellipsis-vertical',
+        Clock: 'fa-clock',
+
+        // --- NEU: MITTEILUNGSZENTRALE & MIKROFON ---
+        Bell: 'fa-bell',
+        Mic: 'fa-microphone',
+        Microphone: 'fa-microphone'
     };
 
     // Standardfarben für jedes Icon definieren
     const defaultColors = {
-        File: 'text-gray-500 dark:text-gray-400', // Neu hinzugefügt
+        File: 'text-gray-500 dark:text-gray-400',
         Printer: 'text-gray-500 dark:text-gray-400',
         Save: 'text-blue-500',
         FilePlus: 'text-green-500',
@@ -147,6 +159,9 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Calendar: 'text-blue-500',
         Activity: 'text-red-400',
         DollarSign: 'text-green-600 dark:text-green-400',
+        EuroSign: 'text-blue-600 dark:text-blue-400',
+        Euro: 'text-blue-600 dark:text-blue-400',
+        MoneyBill: 'text-emerald-500',
         Shield: 'text-slate-600 dark:text-slate-400',
         Target: 'text-red-500',
         Menu: 'text-gray-500',
@@ -224,9 +239,16 @@ const Icon = ({ name, className = "", size = 16, onClick, title }) => {
         Loader: 'text-gray-500',
         AlertTriangle: 'text-amber-500',
 
-	Bookmark: 'text-amber-500',
-    	Pin: 'text-amber-500',
-    	ExternalLink: 'text-blue-500 dark:text-blue-400'
+        Bookmark: 'text-amber-500',
+        Pin: 'text-amber-500',
+        ExternalLink: 'text-blue-500 dark:text-blue-400',
+        MoreVertical: 'text-gray-400',
+        Clock: 'text-gray-400 dark:text-gray-500',
+
+        // --- NEU DEFAULTS ---
+        Bell: 'text-amber-500',
+        Mic: 'text-blue-500',
+        Microphone: 'text-blue-500'
     };
 
     const hasCustomColor = /\btext-(white|black|[a-z]+-[1-9]00)\b/.test(className);
