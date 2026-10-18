@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinBundle PRO</title>
+    
+    <script>
+        if (typeof module === 'object') {
+            window.__electronModule = module;
+            module = undefined;
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof tailwind !== 'undefined') {
+                tailwind.config = { 
+                    darkMode: 'class', 
+                    theme: { 
+                        extend: {
+                            fontFamily: {
+                                sans: ['Poppins', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                            },
+                            animation: {
+                                'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                                'spin-slow': 'spin 3s linear infinite',
+                            }
+                        } 
+                    } 
+                };
+            }
+        });
+    </script>
+    
+    <!-- Lokale Abhängigkeiten -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />    
+    <script src="./libs/react.development.js" crossorigin></script>
+    <script src="./libs/react-dom.development.js" crossorigin></script>
+    <script src="./libs/babel.min.js"></script>
+    <script src="./libs/jszip.min.js"></script>
+    <script src="./libs/crypto-js.min.js"></script>
+    <script src="./libs/chart.js"></script>
+    <script src="./libs/plotly-2.35.2.min.js"></script>
+    <script src="./libs/echarts.min.js"></script>
+    <script src="./libs/pdf.min.js"></script>
+
+    <script>
+        if (window.__electronModule) {
+            window.module = window.__electronModule;
+            delete window.__electronModule;
+        }
+    </script>
+
+    <style>
+        body.splash-active {
+            /* Dunkles Blaugrau für maximalen Kontrast zur weißen Karte */
+            background-color: #475569; 
+            background-image: radial-gradient(circle at 50% 0%, #64748b 0%, transparent 70%);
+            color: #0f172a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        /* Weiche Transitions für Text & Balken */
+        .fade-text {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .fade-out {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        .fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="splash-active font-sans m-0 p-0 overflow-hidden select-none relative">
+
+    <!-- Haupt Loader Card -->
+    <div id="loader-ui" class="relative z-10 bg-white rounded-[2rem] shadow-2xl max-w-[480px] w-full px-10 py-10 flex flex-col items-center text-center transition-all duration-700 transform scale-100 opacity-100">
+        
+        <!-- Trust Badge (Finanzsoftware!) -->
+        <div class="absolute top-6 flex items-center gap-2 bg-slate-50 border border-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase mb-6 shadow-sm">
+            <i class="fa-solid fa-lock text-emerald-500"></i>
+            <span id="trust-badge-text">Lokale & sichere Umgebung</span>
+        </div>
+
+        <!-- Spacer für Badge -->
+        <div class="mt-8"></div>
+        
+        <!-- FinSPA Variante 1 Icon Container (Modern & Abstrakt) -->
+        <div class="relative w-28 h-28 mb-6 bg-slate-900 rounded-[1.75rem] shadow-[0_12px_40px_rgba(15,23,42,0.4)] flex items-center justify-center overflow-hidden border border-slate-700">
+            <!-- Statischer Hintergrund-Ring -->
+            <div class="absolute inset-2 border-[3px] border-blue-500 rounded-full opacity-20"></div>
+            <!-- Animierter Ladering -->
+            <div class="absolute inset-2 border-t-[3px] border-l-[3px] border-blue-500 rounded-full transform -rotate-45 animate-spin-slow"></div>
+            
+            <!-- Original SVG Icon aus dem Logo Creator -->
+            <svg class="w-14 h-14 text-emerald-400 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10c.5 0 1-.5 1-1V5c0-.5-.5-1-1-1s-1 .5-1 1v4c0 .5.5 1 1 1zm8-4c.5 0 1-.5 1-1V2c0-.5-.5-1-1-1s-1 .5-1 1v3c0 .5.5 1 1 1z"></path>
+            </svg>
+        </div>
+        
+        <!-- Titel & Version -->
+        <h1 class="text-4xl leading-none font-black tracking-tight text-slate-800 mb-3">
+            FinBundle <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400 font-bold">Pro</span>
+        </h1>
+        <div class="bg-gradient-to-r from-[#e6fcf5] to-[#f0fdf4] text-[#059669] font-bold px-4 py-1 rounded-full text-xs mb-10 border border-[#a7f3d0]/60 shadow-sm">
+            VERSION 1.0.0 RC3
+        </div>
+        
+        <!-- Status Texte -->
+        <div class="h-16 w-full flex flex-col justify-end items-center mb-6">
+            <p id="main-status" class="text-[15px] text-slate-700 font-semibold mb-1 fade-text">
+                System wird hochgefahren...
+            </p>
+            <p id="sub-status" class="text-xs text-slate-400 font-medium tracking-wide fade-text">
+                Initialisiere Boot-Sequenz
+            </p>
+        </div>
+        
+        <!-- Progress Bar Area -->
+        <div class="w-full mt-auto flex flex-col items-center">
+            <div class="flex justify-between w-full text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">
+                <span id="progress-label">INITIALISIERUNG</span>
+                <span id="progress-percent" class="text-blue-500">0%</span>
+            </div>
+            
+            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-6 shadow-inner">
+                <div id="progress-fill" class="h-full w-0 bg-gradient-to-r from-blue-500 to-teal-400 rounded-full transition-all duration-300 ease-out relative">
+                    <div class="absolute top-0 right-0 bottom-0 left-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:1rem_1rem] animate-[progress_1s_linear_infinite]"></div>
+                </div>
+            </div>
+            
+            <div class="w-full h-px bg-slate-100 mb-4"></div>
+            <p class="text-[10px] font-bold text-slate-300 tracking-widest uppercase">
+                © 2026 THOMAS KERLE
+            </p>
+        </div>
+    </div>
+
+    <!-- Error Overlay & React Root Container -->
+    <div id="error-overlay" class="hidden"></div>
+    <div id="app-root" class="w-full h-full hidden"></div>
+
+    <script>
+        // --- Mehrsprachigkeit (i18n) Setup ---
+        const translations = {
+            en: {
+                badge: "Secure Local Environment",
+                label: "STARTUP SEQUENCE",
+                phases: [
+                    { main: "Authenticating secure environment...", sub: "Verifying local certificates" },
+                    { main: "Loading Enterprise modules...", sub: "Extracting FinBundle.zip" },
+                    { main: "Compiling system architecture...", sub: "Babel/React transformation in progress" },
+                    { main: "Initializing cryptographic engines...", sub: "Securing data pipelines" },
+                    { main: "Warming up visualization modules...", sub: "Loading ECharts & Plotly engines" },
+                    { main: "Establishing API gateways...", sub: "Preparing market data connections" },
+                    { main: "System operational.", sub: "Mounting Virtual DOM" }
+                ],
+                errorCrit: "Critical loading error"
+            },
+            de: {
+                badge: "Lokale & sichere Umgebung",
+                label: "STARTSEQUENZ",
+                phases: [
+                    { main: "Sicherheitsumgebung wird verifiziert...", sub: "Lokale Zertifikate werden geprüft" },
+                    { main: "Enterprise-Module werden geladen...", sub: "Entpacke FinBundle.zip" },
+                    { main: "Systemarchitektur wird kompiliert...", sub: "Babel/React Transformation läuft" },
+                    { main: "Kryptografische Engines initialisiert...", sub: "Sichere Datenpipelines werden aufgebaut" },
+                    { main: "Visualisierungsmodule werden gestartet...", sub: "Lade ECharts & Plotly Engines" },
+                    { main: "API-Gateways werden etabliert...", sub: "Bereite Marktdaten-Schnittstellen vor" },
+                    { main: "System einsatzbereit.", sub: "Virtual DOM wird gemountet" }
+                ],
+                errorCrit: "Kritischer Fehler beim Laden"
+            },
+            fr: {
+                badge: "Environnement local sécurisé",
+                label: "SÉQUENCE DE DÉMARRAGE",
+                phases: [
+                    { main: "Authentification de l'environnement...", sub: "Vérification des certificats locaux" },
+                    { main: "Chargement des modules Enterprise...", sub: "Extraction de FinBundle.zip" },
+                    { main: "Compilation de l'architecture...", sub: "Transformation Babel/React en cours" },
+                    { main: "Initialisation des moteurs cryptographiques...", sub: "Sécurisation des pipelines" },
+                    { main: "Démarrage des modules visuels...", sub: "Chargement des moteurs ECharts & Plotly" },
+                    { main: "Établissement des passerelles API...", sub: "Préparation des connexions de marché" },
+                    { main: "Système opérationnel.", sub: "Montage du DOM virtuel" }
+                ],
+                errorCrit: "Erreur critique de chargement"
+            },
+            it: {
+                badge: "Ambiente locale sicuro",
+                label: "SEQUENZA DI AVVIO",
+                phases: [
+                    { main: "Autenticazione dell'ambiente sicuro...", sub: "Verifica dei certificati locali" },
+                    { main: "Caricamento moduli Enterprise...", sub: "Estrazione di FinBundle.zip" },
+                    { main: "Compilazione architettura di sistema...", sub: "Trasformazione Babel/React in corso" },
+                    { main: "Inizializzazione motori crittografici...", sub: "Messa in sicurezza delle pipeline" },
+                    { main: "Avvio moduli di visualizzazione...", sub: "Caricamento motori ECharts e Plotly" },
+                    { main: "Creazione gateway API...", sub: "Preparazione connessioni dati di mercato" },
+                    { main: "Sistema operativo.", sub: "Montaggio del DOM virtuale" }
+                ],
+                errorCrit: "Errore critico di caricamento"
+            }
+        };
+
+        const userLang = (navigator.language || navigator.userLanguage || 'en').substring(0, 2);
+        const t = translations[userLang] || translations['de'];
+
+        // UI Elemente referenzieren
+        const elMain = document.getElementById('main-status');
+        const elSub = document.getElementById('sub-status');
+        const elFill = document.getElementById('progress-fill');
+        const elPct = document.getElementById('progress-percent');
+        
+        document.getElementById('trust-badge-text').innerText = t.badge;
+        document.getElementById('progress-label').innerText = t.label;
+
+        // UI Update Funktion mit weichen Übergängen
+        function updateLoaderUI(phaseIndex, percent) {
+            const phase = t.phases[phaseIndex];
+            
+            // Balken updaten
+            elFill.style.width = percent + '%';
+            elPct.innerText = Math.round(percent) + '%';
+            
+            // Texte weich wechseln (sofern sie sich ändern)
+            if (elMain.innerText !== phase.main) {
+                elMain.classList.add('fade-out');
+                elSub.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    elMain.innerText = phase.main;
+                    elSub.innerText = phase.sub;
+                    elMain.classList.remove('fade-out');
+                    elSub.classList.remove('fade-out');
+                }, 400); // Erhöht auf 400ms für weicheren Übergang
+            }
+        }
+
+        // Hilfsfunktion: Lässt den Browser kurz atmen, damit das UI aktualisiert wird
+        const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 15));
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        // --- Original Electron / Modul-Logik ---
+        const nativeRequire = typeof window.require === 'function' ? window.require : null;
+
+        if (nativeRequire) {
+            try {
+                const { ipcRenderer } = nativeRequire('electron');
+                window.finspaHostAPI = {
+                    send: (channel, action) => {
+                        if (channel === 'window-control') {
+                            ipcRenderer.send(channel, action);
+                        }
+                    }
+                };
+            } catch (e) {
+                console.log("Keine Electron-Umgebung erkannt.");
+            }
+        }
+
+        window.__FinSPAModules = {};
+
+        function resolveRelativePath(callingFilePath, targetPath) {
+            if (!targetPath.startsWith('.')) return targetPath;
+            const dirParts = callingFilePath.split('/'); dirParts.pop();
+            const targetParts = targetPath.split('/');
+            for (const part of targetParts) {
+                if (part === '.' || part === '') continue;
+                else if (part === '..') dirParts.pop();
+                else dirParts.push(part);
+            }
+            return dirParts.filter(Boolean).join('/');
+        }
+
+        function showDiagnosticError(callingPath, requiredName, resolvedPath) {
+            document.getElementById('loader-ui').classList.add('hidden');
+            const overlay = document.getElementById('error-overlay');
+            const availableFiles = Object.keys(window.__FinSPAModules);
+            const fileListHTML = availableFiles.map(f => `<li class="py-1 px-2 text-xs font-mono text-slate-700">${f}</li>`).join('');
+            overlay.innerHTML = `
+                <div class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <div class="bg-white rounded-[2rem] border border-slate-200 max-w-lg w-full p-8 text-sm text-slate-800 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-4 text-red-500">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                            <h3 class="font-bold text-xl">Modul nicht gefunden</h3>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
+                            <p class="mb-1"><span class="text-slate-500">Von:</span> <code class="text-blue-500">${callingPath}</code></p>
+                            <p class="mb-1"><span class="text-slate-500">Gesucht:</span> <code class="text-emerald-500">${requiredName}</code></p>
+                            <p><span class="text-slate-500">Aufgelöst als:</span> <code class="text-purple-500">${resolvedPath}</code></p>
+                        </div>
+                        <h4 class="font-bold mb-2 text-slate-700">Verfügbare Dateien im ZIP:</h4>
+                        <ul class="h-40 overflow-auto bg-slate-50 p-3 border border-slate-100 rounded-xl space-y-1">${fileListHTML}</ul>
+                    </div>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        }
+
+        function makeRequire(callingPath) {
+            return function(name) {
+                if (name === 'react') return React;
+                if (name === 'react-dom') return ReactDOM;
+
+                if (name === 'react/jsx-runtime') {
+                    return { 
+                        jsx: React.createElement, 
+                        jsxs: React.createElement, 
+                        Fragment: React.Fragment 
+                    };
+                }
+
+                const nodeCoreModules = [
+                    'electron', 'fs', 'path', 'crypto', 'stream', 
+                    'util', 'buffer', 'events', 'zlib', 'os', 'http', 'https'
+                ];
+
+                if (nodeCoreModules.includes(name) && nativeRequire) {
+                    return nativeRequire(name);
+                }
+
+                let resolvedPath = resolveRelativePath(callingPath, name);
+                
+                if (!resolvedPath.match(/\.(js|jsx|json)$/)) {
+                    if (window.__FinSPAModules[resolvedPath + '.jsx']) resolvedPath += '.jsx';
+                    else if (window.__FinSPAModules[resolvedPath + '.js']) resolvedPath += '.js';
+                    else if (window.__FinSPAModules[resolvedPath + '.json']) resolvedPath += '.json';
+                }
+
+                const mod = window.__FinSPAModules[resolvedPath];
+                if (!mod) { showDiagnosticError(callingPath, name, resolvedPath); return null; }
+
+                if (!mod.loaded) {
+                    mod.loaded = true;
+                    const localRequire = makeRequire(resolvedPath);
+                    mod.factory(localRequire, mod, mod.exports);
+                }
+                return mod.exports;
+            };
+        }
+
+        window.require = makeRequire('index.html');
+
+        async function loadFinSPAAutomatically() {
+            if (typeof window['pdfjs-dist/build/pdf'] !== 'undefined') {
+                window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = './libs/pdf.worker.min.js';
+            }
+
+            try {
+                // Phase 0: Start (0% bis 15%)
+                updateLoaderUI(0, 5);
+                await sleep(800); // Längere Pause für Lesbarkeit
+                updateLoaderUI(0, 15);
+                
+                // Phase 1: Lade ZIP
+                updateLoaderUI(1, 20);
+                await sleep(1000); // Zeit zum Lesen geben
+                
+                let zipData;
+
+                if (nativeRequire && typeof process !== 'undefined' && process.type === 'renderer') {
+                    const fs = nativeRequire('fs');
+                    const path = nativeRequire('path');
+                    
+                    let basePath = typeof __dirname !== 'undefined' ? __dirname : path.dirname(decodeURIComponent(window.location.pathname).replace(/^\/([A-Za-z]:)/, '$1'));
+                    const zipPath = path.join(basePath, 'FinBundle.zip');
+                    
+                    if (!fs.existsSync(zipPath)) {
+                        throw new Error(`FinBundle.zip wurde lokal nicht gefunden unter:\n${zipPath}`);
+                    }
+                    zipData = fs.readFileSync(zipPath);
+                    
+                } else {
+                    const response = await fetch('FinBundle.zip');
+                    if (!response.ok) throw new Error(`Konnte FinBundle.zip nicht laden (Status: ${response.status}).`);
+                    zipData = await response.arrayBuffer();
+                }
+
+                const zip = await JSZip.loadAsync(zipData);
+                window.__FinSPAModules = {};
+                
+                const fileNames = Object.keys(zip.files).filter(name => !zip.files[name].dir && (name.endsWith('.js') || name.endsWith('.jsx') || name.endsWith('.json')));
+                
+                let commonPrefix = "";
+                if (fileNames.length > 0) {
+                    const firstPath = fileNames[0];
+                    const slashIdx = firstPath.indexOf('/');
+                    if (slashIdx !== -1) {
+                        const potentialPrefix = firstPath.substring(0, slashIdx + 1);
+                        if (fileNames.every(p => p.startsWith(potentialPrefix))) commonPrefix = potentialPrefix;
+                    }
+                }
+
+                // Phase 2: Kompilierung
+                updateLoaderUI(2, 35);
+                await sleep(800); // Zeit zum Lesen geben
+                
+                const totalFiles = fileNames.length;
+                let processed = 0;
+
+                for (const relativePath of fileNames) {
+                    let content = await zip.file(relativePath).async('string');
+                    let factory;
+                    
+                    if (relativePath.endsWith('.json')) {
+                        factory = new Function('require', 'module', 'exports', `module.exports = ${content};`);
+                    } else {
+                        content = content.replace(/^\s*return\s+(module\.)?exports\s*;?\s*$/gm, '').replace(/return\s+(module\.)?exports\s*;?\s*$/, '');
+                        content = content.replace(/ -> /g, ' \u2192 ');
+                        
+                        const transpiled = Babel.transform(content, { 
+                            presets: [
+                                ['react', { runtime: 'classic' }] 
+                            ],
+                            plugins: ['transform-modules-commonjs'] 
+                        }).code;
+                        
+                        const wrappedCode = `"use strict";\n${transpiled}\nreturn module.exports;`;
+                        factory = new Function('require', 'module', 'exports', wrappedCode);
+                    }
+                    
+                    const cleanPath = relativePath.substring(commonPrefix.length).replace(/^\//, '');
+                    window.__FinSPAModules[cleanPath] = { exports: {}, factory: factory, loaded: false };
+                    
+                    // Ladebalken während der Dateiverarbeitung wachsen lassen
+                    processed++;
+                    if (processed % 5 === 0) {
+                        let pct = 35 + ((processed / totalFiles) * 35);
+                        updateLoaderUI(2, pct);
+                        // WICHTIG: Erlaubt dem Browser, das UI (Text & Balken) zu rendern!
+                        await yieldToMain();
+                    }
+                }
+
+                const entryPoint = ['main.jsx', 'App.jsx', 'index.jsx'].find(p => window.__FinSPAModules[p]);
+
+                if (entryPoint) {
+                    // Phase 3-6: DIE SUPERLOADER CHOREOGRAFIE (Signifikant verlangsamt)
+                    // Durch die sleep() Erhöhungen hat der Nutzer genug Zeit, jede Phase zu erfassen.
+                    
+                    updateLoaderUI(3, 75);
+                    await sleep(1500); 
+                    
+                    updateLoaderUI(4, 85);
+                    await sleep(1500);
+                    
+                    updateLoaderUI(5, 95);
+                    await sleep(1500);
+                    
+                    updateLoaderUI(6, 100);
+                    await sleep(1000); 
+
+                    // Fade Out Loader & Fade In App
+                    const loader = document.getElementById('loader-ui');
+                    loader.style.opacity = '0';
+                    loader.style.transform = 'scale(0.95)';
+                    
+                    setTimeout(() => {
+                        document.body.classList.remove('splash-active');
+                        document.body.style = ""; 
+                        loader.classList.add('hidden');
+                        
+                        const appRoot = document.getElementById('app-root');
+                        appRoot.classList.remove('hidden');
+                        appRoot.style.animation = 'fadeIn 0.5s ease-out forwards';
+                        
+                        // Dynamisches Keyframe für das Einblenden der App einfügen
+                        if(!document.getElementById('app-keyframes')) {
+                            const style = document.createElement('style');
+                            style.id = 'app-keyframes';
+                            style.innerHTML = `@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }`;
+                            document.head.appendChild(style);
+                        }
+                        
+                        const rootRequire = makeRequire('index.html');
+                        const entryExports = rootRequire(entryPoint);
+                        const AppComp = entryExports.default || entryExports; 
+                        ReactDOM.createRoot(appRoot).render(React.createElement(AppComp));
+                    }, 500);
+
+                } else {
+                    throw new Error("Kein Einstiegspunkt (main.jsx, App.jsx, index.jsx) in der ZIP gefunden!");
+                }
+            } catch (err) {
+                console.error(err); 
+                document.getElementById('main-status').innerText = t.errorCrit;
+                document.getElementById('main-status').classList.add('text-red-500');
+                document.getElementById('sub-status').classList.add('hidden');
+                document.getElementById('progress-fill').classList.replace('from-blue-500', 'from-red-500');
+                document.getElementById('progress-fill').classList.replace('to-teal-400', 'to-orange-500');
+                
+                document.getElementById('loader-ui').innerHTML += `
+                    <div class="mt-4 p-4 bg-red-50 text-red-600 rounded-xl text-sm text-left border border-red-200 overflow-auto max-h-32 w-full">
+                        <div class="font-mono text-xs">${err.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", loadFinSPAAutomatically);
+    </script>
+</body>
+</html>
