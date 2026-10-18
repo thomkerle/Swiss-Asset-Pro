@@ -287,18 +287,18 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   }, [startVal, sumInc, sumExp, marketPerf, marketPerfPercent, netCashflow, endVal, dateRange, fCur, t, repTitle, repSub, lblStart, lblIn, lblOut, lblMarket, lblEnd, flowBreakdown, data]);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       
       {/* KPI Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
          {/* KPI 1: Startwert */}
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Calendar" size={14} className="text-slate-500"/>
                 <span>{lblStart}</span>
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate">
                 {fCur(startVal)}
             </div>
             <div className="text-xs text-gray-400 mt-2">
@@ -318,7 +318,7 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     <span>NETTO-CASHFLOW</span>
                 </span>
             </div>
-            <div className={`text-2xl font-black truncate ${netCashflow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            <div className={`text-lg sm:text-2xl font-black truncate ${netCashflow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                 {netCashflow >= 0 ? '+' : ''}{fCur(netCashflow)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -341,7 +341,7 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                     {marketPerfPercent >= 0 ? '+' : ''}{marketPerfPercent.toFixed(2)}%
                 </span>
             </div>
-            <div className={`text-2xl font-black truncate ${marketPerf >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+            <div className={`text-lg sm:text-2xl font-black truncate ${marketPerf >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {marketPerf >= 0 ? '+' : ''}{fCur(marketPerf)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -350,12 +350,12 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
          </div>
 
          {/* KPI 4: Endwert */}
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-600 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-600 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="CheckCircle" size={14} className="text-blue-600"/>
                 <span>{lblEnd}</span>
             </div>
-            <div className="text-2xl font-black text-blue-700 dark:text-blue-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-blue-700 dark:text-blue-400 truncate">
                 {fCur(endVal)}
             </div>
             <div className="text-xs text-gray-400 mt-2">
@@ -365,10 +365,10 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
       </div>
 
       {/* Diagramm-Sektion (2 Diagramme) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 mb-6 sm:mb-10">
         
         {/* Chart 1: Wasserfall-Überleitung */}
-        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title="Wasserfall Vermögensbrücke">
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title="Wasserfall Vermögensbrücke">
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="BarChart" className="text-blue-500" /> Vermögensbrücke (Überleitung)
             </h3>
@@ -387,12 +387,18 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         }
                     }]}
                     height="100%"
-                />
+                    options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
             </div>
         </div>
 
         {/* Chart 2: Cashflow-Treiber & Kategorien */}
-        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title="Grösste Cashflow-Treiber">
+        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title="Grösste Cashflow-Treiber">
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="List" className="text-emerald-500" /> Grösste Cashflow-Treiber
             </h3>
@@ -410,6 +416,12 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                             valueFormatter: (val) => `${val > 0 ? '+' : ''}${fCur(val)}`
                         }]}
                         height="100%"
+                        options={{
+                            grid: { top: 16, bottom: 28, left: '3%', right: '6%', containLabel: true },
+                            legend: { show: false },
+                            xAxis: { axisLabel: { hideOverlap: true, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 11 } }
+                        }}
                     />
                 </div>
             ) : (
@@ -423,7 +435,7 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
       {/* Detaillierte Überleitungstabelle */}
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+          <div className="p-3.5 sm:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-wrap justify-between items-center gap-2">
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <Icon name="Layers" className="text-slate-500" /> Detaillierte Brückenrechnung (Überleitungs-Tabelle)
               </h3>
@@ -436,58 +448,58 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
               <table className="w-full text-left text-sm">
                   <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
                       <tr>
-                          <th className="p-4">Überleitungs-Position</th>
-                          <th className="p-4">Kategorie / Treiber</th>
-                          <th className="p-4 text-right">Zufluss (+)</th>
-                          <th className="p-4 text-right">Abfluss (-)</th>
-                          <th className="p-4 text-right">Effekt auf Vermögen</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap">Überleitungs-Position</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap">Kategorie / Treiber</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">Zufluss (+)</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">Abfluss (-)</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">Effekt auf Vermögen</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
                       
                       {/* Startvermögen */}
                       <tr className="bg-slate-50/50 dark:bg-slate-800/20 font-bold">
-                          <td className="p-4 font-sans text-slate-900 dark:text-white uppercase">{lblStart}</td>
-                          <td className="p-4 font-sans text-gray-500 font-normal">Stand am {new Date(dateRange.from).toLocaleDateString('de-CH')}</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
-                          <td className="p-4 text-right font-black text-slate-900 dark:text-white">{fCur(startVal)}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-slate-900 dark:text-white uppercase">{lblStart}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-gray-500 font-normal">Stand am {new Date(dateRange.from).toLocaleDateString('de-CH')}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-slate-900 dark:text-white">{fCur(startVal)}</td>
                       </tr>
 
                       {/* Zuflüsse */}
                       {Object.keys(flowBreakdown.positive).map((cat, i) => (
                           <tr key={`pos-${i}`} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                              <td className="p-4 pl-8 font-sans text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap pl-8 font-sans text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                                   {cat}
                               </td>
-                              <td className="p-4 font-sans text-xs text-gray-400">Einzahlung / Ersparnis</td>
-                              <td className="p-4 text-right text-emerald-600 dark:text-emerald-400">+{fCur(flowBreakdown.positive[cat])}</td>
-                              <td className="p-4 text-right text-gray-400">-</td>
-                              <td className="p-4 text-right text-emerald-600 dark:text-emerald-400">+{fCur(flowBreakdown.positive[cat])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-xs text-gray-400">Einzahlung / Ersparnis</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-emerald-600 dark:text-emerald-400">+{fCur(flowBreakdown.positive[cat])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-emerald-600 dark:text-emerald-400">+{fCur(flowBreakdown.positive[cat])}</td>
                           </tr>
                       ))}
 
                       {/* Abflüsse */}
                       {Object.keys(flowBreakdown.negative).map((cat, i) => (
                           <tr key={`neg-${i}`} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                              <td className="p-4 pl-8 font-sans text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap pl-8 font-sans text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
                                   {cat}
                               </td>
-                              <td className="p-4 font-sans text-xs text-gray-400">Entnahme / Aufwand</td>
-                              <td className="p-4 text-right text-gray-400">-</td>
-                              <td className="p-4 text-right text-rose-600 dark:text-rose-400">-{fCur(flowBreakdown.negative[cat])}</td>
-                              <td className="p-4 text-right text-rose-600 dark:text-rose-400">-{fCur(flowBreakdown.negative[cat])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-xs text-gray-400">Entnahme / Aufwand</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-rose-600 dark:text-rose-400">-{fCur(flowBreakdown.negative[cat])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-rose-600 dark:text-rose-400">-{fCur(flowBreakdown.negative[cat])}</td>
                           </tr>
                       ))}
 
                       {/* Netto Cashflow Zwischenzeile */}
                       <tr className="bg-slate-100/60 dark:bg-slate-800/60 font-bold border-t border-b border-slate-200 dark:border-slate-700">
-                          <td className="p-4 font-sans text-slate-800 dark:text-slate-200">SALDO NETTO-CASHFLOW</td>
-                          <td className="p-4 font-sans text-xs text-gray-500 font-normal">Kapitalveränderung aus eigener Kraft</td>
-                          <td className="p-4 text-right text-emerald-600 dark:text-emerald-400">+{fCur(sumInc)}</td>
-                          <td className="p-4 text-right text-rose-600 dark:text-rose-400">-{fCur(sumExp)}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-slate-800 dark:text-slate-200">SALDO NETTO-CASHFLOW</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-xs text-gray-500 font-normal">Kapitalveränderung aus eigener Kraft</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-emerald-600 dark:text-emerald-400">+{fCur(sumInc)}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-rose-600 dark:text-rose-400">-{fCur(sumExp)}</td>
                           <td className={`p-4 text-right font-black ${netCashflow >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
                               {netCashflow >= 0 ? '+' : ''}{fCur(netCashflow)}
                           </td>
@@ -495,13 +507,13 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
                       {/* Markteffekt */}
                       <tr className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                          <td className="p-4 font-sans font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                               <Icon name="Activity" size={14} className={marketPerf >= 0 ? "text-blue-500" : "text-amber-500"} />
                               {lblMarket}
                           </td>
-                          <td className="p-4 font-sans text-xs text-gray-400">Kursgewinne, Zinsen, Dividenden & FX</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-xs text-gray-400">Kursgewinne, Zinsen, Dividenden & FX</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
                           <td className={`p-4 text-right font-black ${marketPerf >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600'}`}>
                               {marketPerf >= 0 ? '+' : ''}{fCur(marketPerf)} <span className="text-xs font-normal opacity-75">({marketPerfPercent.toFixed(2)}%)</span>
                           </td>
@@ -509,11 +521,11 @@ const WaterfallReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
                       {/* Endvermögen */}
                       <tr className="bg-blue-50/60 dark:bg-slate-800/80 font-bold border-t-2 border-blue-500">
-                          <td className="p-4 font-sans text-blue-900 dark:text-white uppercase">{lblEnd}</td>
-                          <td className="p-4 font-sans text-gray-500 font-normal">Stand am {new Date(dateRange.to).toLocaleDateString('de-CH')}</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
-                          <td className="p-4 text-right text-gray-400">-</td>
-                          <td className="p-4 text-right font-black text-xl text-blue-700 dark:text-blue-400">{fCur(endVal)}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-blue-900 dark:text-white uppercase">{lblEnd}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-gray-500 font-normal">Stand am {new Date(dateRange.to).toLocaleDateString('de-CH')}</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-xl text-blue-700 dark:text-blue-400">{fCur(endVal)}</td>
                       </tr>
 
                   </tbody>

@@ -264,16 +264,16 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
   }, [sortedExpCategories, sortedIncCategories, expenses, incomes, dateRange, fCur, t, totalIncomes, totalExpenses, savingsRate, cashflow, wealthShiftsIn, wealthShiftsOut, repTitle, repSub, data, targetAssets]);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
-         <div className="bg-emerald-50/60 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-600 overflow-hidden">
+         <div className="bg-emerald-50/60 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-600 overflow-hidden">
             <div className="text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="PlusCircle" size={14} className="text-emerald-600" />
                 {safeT(t, 'kpiRealIncomes', 'ECHTE EINNAHMEN')}
             </div>
-            <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate">
                 {fCur(totalIncomes)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -281,12 +281,12 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             </div>
          </div>
 
-         <div className="bg-rose-50/60 dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-600 overflow-hidden">
+         <div className="bg-rose-50/60 dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-rose-600 overflow-hidden">
             <div className="text-rose-800 dark:text-rose-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Trash2" size={14} className="text-rose-600" />
                 {safeT(t, 'kpiRealExpenses', 'ECHTE AUSGABEN')}
             </div>
-            <div className="text-2xl font-black text-rose-700 dark:text-rose-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-rose-700 dark:text-rose-400 truncate">
                 {fCur(totalExpenses)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -303,7 +303,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                 <Icon name="Activity" size={14} className={cashflow >= 0 ? "text-blue-500" : "text-amber-500"} />
                 {safeT(t, 'labelNetCashflow', 'NETTO CASHFLOW')}
             </div>
-            <div className={`text-2xl font-black truncate ${cashflow >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
+            <div className={`text-lg sm:text-2xl font-black truncate ${cashflow >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
                 {cashflow >= 0 ? '+' : ''}{fCur(cashflow)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -311,12 +311,12 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             </div>
          </div>
 
-         <div className="bg-purple-50/60 dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-600 overflow-hidden">
+         <div className="bg-purple-50/60 dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-600 overflow-hidden">
             <div className="text-purple-800 dark:text-purple-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Target" size={14} className="text-purple-600" />
                 {safeT(t, 'labelSavingsRate', 'SPARQUOTE')}
             </div>
-            <div className="text-2xl font-black text-purple-700 dark:text-purple-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-purple-700 dark:text-purple-400 truncate">
                 {savingsRate.toFixed(1)} %
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -325,9 +325,9 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
          </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 mb-6 sm:mb-10">
         
-        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title={safeT(t, 'titleExpenseDistByCat', 'Ausgabenverteilung nach Kategorien')}>
+        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block self-start xl:sticky xl:top-8" data-pdf-title={safeT(t, 'titleExpenseDistByCat', 'Ausgabenverteilung nach Kategorien')}>
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="PieChart" className="text-rose-500" /> {safeT(t, 'titleExpensesByCat', 'Ausgaben nach Kategorien')}
             </h3>
@@ -344,6 +344,10 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                             valueFormatter: fCur
                         }]}
                         height="100%"
+                        options={{
+                            legend: { type: 'scroll', bottom: 0, itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            series: [{ center: ['50%', '43%'], radius: ['38%', '66%'] }]
+                        }}
                     />
                 </div>
             ) : (
@@ -354,7 +358,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
             )}
         </div>
 
-        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleMonthlyCashflowTrend', 'Monatlicher Cashflow-Trend')}>
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleMonthlyCashflowTrend', 'Monatlicher Cashflow-Trend')}>
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="BarChart" className="text-blue-500" /> {safeT(t, 'titleMonthlyCashflowTrend', 'Monatlicher Cashflow-Trend')}
             </h3>
@@ -384,13 +388,19 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                         }
                     ]}
                     height="100%"
-                />
+                    options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
             </div>
         </div>
 
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
           
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
               <div className="bg-emerald-50/50 dark:bg-slate-800/50 p-4 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center">
@@ -410,7 +420,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                                   const percentage = totalIncomes > 0 ? (incomes[cat] / totalIncomes) * 100 : 0;
                                   return (
                                       <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                          <td className="p-4 pl-5 text-gray-700 dark:text-gray-200 w-full">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap pl-5 text-gray-700 dark:text-gray-200 w-full">
                                               <div className="flex justify-between items-center mb-1.5">
                                                   <span className="font-medium">{cat}</span>
                                                   <span className="text-xs text-gray-400 font-mono">{percentage.toFixed(1)}%</span>
@@ -419,7 +429,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                                                   <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${percentage}%` }}></div>
                                               </div>
                                           </td>
-                                          <td className="p-4 pr-5 text-right align-middle">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap pr-5 text-right align-middle">
                                               <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                                                   +{fCur(incomes[cat])}
                                               </span>
@@ -457,7 +467,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                                   
                                   return (
                                       <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                          <td className="p-4 pl-5 text-gray-700 dark:text-gray-200 w-full">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap pl-5 text-gray-700 dark:text-gray-200 w-full">
                                               <div className="flex justify-between items-center mb-1.5">
                                                   <span className="font-medium">{cat}</span>
                                                   <span className="text-xs text-gray-400 font-mono">{percentage.toFixed(1)}%</span>
@@ -466,7 +476,7 @@ const BookingAnalysisReport = ({ activeAssets, dateRange, isTreeVisible, setIsTr
                                                   <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: barColor }}></div>
                                               </div>
                                           </td>
-                                          <td className="p-4 pr-5 text-right align-middle">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap pr-5 text-right align-middle">
                                               <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
                                                   -{fCur(expenses[cat])}
                                               </span>

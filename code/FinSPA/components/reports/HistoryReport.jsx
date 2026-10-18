@@ -215,7 +215,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
 
   if (rawData.length === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'noDataForPeriod', 'Keine Daten für den gewählten Zeitraum gefunden.')}</p>
@@ -225,17 +225,17 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
   }
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       <div className="w-full bg-white dark:bg-transparent">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Calendar" size={14} className="text-slate-500"/>
                     <span>{safeT(t, 'labelStartVolumeHeader', 'STARTVERMÖGEN')}</span>
                  </div>
-                 <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+                 <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate">
                     {fCur(startValue)}
                  </div>
                  <div className="text-xs text-gray-400 mt-2 font-medium">
@@ -243,12 +243,12 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                  </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Target" size={14} className="text-blue-500"/>
                     <span>{safeT(t, 'labelEndVolumeHeader', 'ENDVERMÖGEN')}</span>
                  </div>
-                 <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+                 <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate">
                     {fCur(endValue)}
                  </div>
                  <div className="text-xs text-gray-400 mt-2 font-medium">
@@ -256,7 +256,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                  </div>
              </div>
              
-             <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 overflow-hidden ${isPositive ? 'border-b-emerald-500' : 'border-b-rose-500'}`}>
+             <div className={`bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 overflow-hidden ${isPositive ? 'border-b-emerald-500' : 'border-b-rose-500'}`}>
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                         <Icon name={isPositive ? 'TrendingUp' : 'TrendingDown'} size={14} className={isPositive ? 'text-emerald-500' : 'text-rose-500'}/>
@@ -266,7 +266,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                         {isPositive ? '+' : ''}{percentChange.toFixed(2)}%
                     </span>
                  </div>
-                 <div className={`font-black text-2xl truncate ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                 <div className={`font-black text-lg sm:text-2xl truncate ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {isPositive ? '+' : ''}{fCur(diff)}
                  </div>
                  <div className="mt-2 text-xs text-gray-400 truncate">
@@ -274,12 +274,12 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                  </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                  <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Activity" size={14} className="text-amber-500"/>
                     <span>{safeT(t, 'labelPeakAllTimeHeader', 'ALL-TIME HIGH (PEAK)')}</span>
                  </div>
-                 <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+                 <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate">
                     {fCur(peakValue)}
                  </div>
                  <div className="text-xs text-gray-400 mt-2 truncate">
@@ -288,10 +288,10 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
              </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
             
             <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" 
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" 
                data-pdf-title={safeT(t, 'titleWealthCurvePdf', 'Gesamtvermögensverlauf')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -309,12 +309,18 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                             valueFormatter: fCur
                         }]} 
                         height="100%"
+                        options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
                     />
                 </div>
             </div>
 
             <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" 
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" 
                data-pdf-title={safeT(t, 'titleCompHistPdf', 'Historische Zusammensetzung')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -356,12 +362,18 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                             }
                         ]} 
                         height="100%"
+                        options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
                     />
                 </div>
             </div>
 
             <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block xl:col-span-2" 
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block xl:col-span-2" 
                data-pdf-title={safeT(t, 'titleMonthlyDeltaPdf', 'Monatliche Wertveränderung')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -379,6 +391,12 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                             valueFormatter: (val) => `${val >= 0 ? '+' : ''}${fCur(val)}`
                         }]} 
                         height="100%"
+                        options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
                     />
                 </div>
             </div>
@@ -386,7 +404,7 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-              <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+              <div className="p-3.5 sm:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-wrap justify-between items-center gap-2">
                   <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <Icon name="Calendar" className="text-slate-500" /> {safeT(t, 'titleMonthlyHistClassTable', 'Monatliche Historie & Klassenaufschlüsselung')}
                   </h3>
@@ -399,13 +417,13 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                   <table className="w-full text-left text-sm">
                       <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold sticky top-0 z-10 shadow-sm">
                           <tr>
-                              <th className="p-4">{safeT(t, 'labelDateAt', 'Stichtag')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'labelTotalWealth', 'Gesamtvermögen')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'colMomDelta', 'MoM Delta')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'catCashShort', 'Cash')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'catSecuritiesShort', 'Wertpapiere')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'catPensionShort', 'Vorsorge')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'catRealEstateShort', 'Immobilien')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'labelDateAt', 'Stichtag')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'labelTotalWealth', 'Gesamtvermögen')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colMomDelta', 'MoM Delta')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'catCashShort', 'Cash')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'catSecuritiesShort', 'Wertpapiere')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'catPensionShort', 'Vorsorge')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'catRealEstateShort', 'Immobilien')}</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
@@ -413,25 +431,25 @@ const HistoryReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTree
                               const isPositiveMoM = d.momDelta >= 0;
                               return (
                                   <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
-                                      <td className="p-4 font-bold font-sans text-slate-800 dark:text-slate-200">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap font-bold font-sans text-slate-800 dark:text-slate-200">
                                           {new Date(d.date).toLocaleDateString('de-CH')}
                                       </td>
-                                      <td className="p-4 text-right font-black text-slate-900 dark:text-white">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-slate-900 dark:text-white">
                                           {fCur(d.total)}
                                       </td>
                                       <td className={`p-4 text-right font-bold ${isPositiveMoM ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                           {isPositiveMoM ? '+' : ''}{fCur(d.momDelta)} <span className="text-xs opacity-75 font-normal">({isPositiveMoM ? '+' : ''}{d.momPct.toFixed(1)}%)</span>
                                       </td>
-                                      <td className="p-4 text-right text-gray-600 dark:text-gray-300">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
                                           {fCur(d.cash)}
                                       </td>
-                                      <td className="p-4 text-right text-gray-600 dark:text-gray-300">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
                                           {fCur(d.securities)}
                                       </td>
-                                      <td className="p-4 text-right text-gray-600 dark:text-gray-300">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
                                           {fCur(d.pension)}
                                       </td>
-                                      <td className="p-4 text-right text-gray-600 dark:text-gray-300">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
                                           {fCur(d.realestate)}
                                       </td>
                                   </tr>

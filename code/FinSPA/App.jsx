@@ -33,16 +33,23 @@ const Icon = getModule('Icons.jsx', () => safeRequire('./components/Icons.jsx'))
 const PdfScanner = getModule('PdfScanner.jsx', () => safeRequire('./components/pdf/PdfScanner.jsx'));
 const FormModal = getModule('FormModal.jsx', () => safeRequire('./components/FormModal.jsx'));
 const FullPdfOrchestrator = getModule('FullPdfOrchestrator.jsx', () => safeRequire('./components/reports/FullPdfOrchestrator.jsx')) || (() => null);
-const PdfExportEngine = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
+
+// Stellt sicher, dass PdfToolkit.jsx Vorrang vor einer älteren PdfExportEngine hat
+const PdfToolkitModule = getModule('PdfToolkit.jsx', () => safeRequire('./components/print/PdfToolkit.jsx'));
+const PdfExportEngineModule = getModule('PdfExportEngine.js', () => safeRequire('./components/print/PdfExportEngine.jsx'));
+const PdfExportEngine = (PdfToolkitModule && typeof PdfToolkitModule.exportReport === 'function') ? PdfToolkitModule : PdfExportEngineModule;
 const CsvImportWizard = getModule('CsvImportWizard.jsx', () => safeRequire('./components/CsvImportWizard.jsx'));
 
-window.PdfExportEngine = PdfExportEngine; 
+if (typeof window !== 'undefined') {
+  window.PdfToolkit = PdfExportEngine;
+  window.PdfExportEngine = PdfExportEngine;
+}
 
 const importParqetCSV = ParqetModule.importParqetCSV || ParqetModule;
 
 // --- HYBRID ENVIRONMENT & ANDROID CHECK ---
 const Env = {
-    isCapacitor: () => typeof window !== 'undefined' && Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()),
+    isCapacitor: () => typeof window !== 'undefined' && Boolean(window.Capacitor && (window.Capacitor.isNativePlatform?.() || window.Capacitor.Plugins)),
     isAndroid: () => {
         if (typeof window === 'undefined') return false;
         const ua = navigator.userAgent || navigator.vendor || window.opera || '';
@@ -54,6 +61,163 @@ const Env = {
     isElectron: () => typeof window !== 'undefined' && Boolean(window.finspaHostAPI || (window.navigator && window.navigator.userAgent.includes('Electron'))),
     isWeb: () => typeof window !== 'undefined' && !window.Capacitor?.isNativePlatform?.() && !(window.chrome && window.chrome.webview)
 };
+
+// --- GLOBALE DATEI-EXPORT & SHARE ENGINE FÜR ANDROID, CAPACITOR & DESKTOP ---
+const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+        const res = String(reader.result || '');
+        resolve(res.includes(',') ? res.split(',')[1] : res);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+});
+
+// Zeigt auf Android ein direktes Touch-Modal, damit navigator.share() / Öffnen garantiert einen frischen User-Gesture-Token hat
+const showAndroidExportModal = (blob, fileName, mimeType, savedUri = null) => {
+    if (typeof document === 'undefined') return;
+    const existing = document.getElementById('finbundle-android-export-modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'finbundle-android-export-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.75);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,sans-serif;';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#ffffff;color:#0f172a;border-radius:20px;max-width:400px;width:100%;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);text-align:center;';
+
+    card.innerHTML = `
+        <div style="width:52px;height:52px;border-radius:14px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;font-size:24px;font-weight:bold;">📄</div>
+        <h3 style="margin:0 0 6px 0;font-size:18px;font-weight:800;color:#0f172a;">Datei bereit!</h3>
+        <p style="margin:0 0 16px 0;font-size:12px;color:#64748b;word-break:break-all;font-family:monospace;background:#f1f5f9;padding:8px;border-radius:8px;">${fileName}</p>
+        ${savedUri ? `<p style="margin:0 0 16px 0;font-size:11px;color:#10b981;font-weight:700;">✓ Auf Gerät vorbereitet</p>` : ''}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <button id="fb-btn-share-now" style="width:100%;padding:14px;border:none;border-radius:12px;background:#2563eb;color:white;font-weight:700;font-size:14px;cursor:pointer;">
+                📤 Jetzt Teilen / Mit App öffnen
+            </button>
+            <button id="fb-btn-close-modal" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:12px;background:transparent;color:#475569;font-weight:700;font-size:13px;cursor:pointer;">
+                Schließen
+            </button>
+        </div>
+    `;
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    document.getElementById('fb-btn-close-modal').onclick = () => overlay.remove();
+    document.getElementById('fb-btn-share-now').onclick = async () => {
+        try {
+            const capShare = window.Capacitor?.Plugins?.Share;
+            if (capShare && typeof capShare.share === 'function' && savedUri) {
+                await capShare.share({ title: fileName, url: savedUri, dialogTitle: fileName });
+                overlay.remove();
+                return;
+            }
+            if (navigator.share) {
+                const file = new File([blob], fileName, { type: mimeType });
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                    await navigator.share({ title: fileName, files: [file] });
+                    overlay.remove();
+                    return;
+                }
+            }
+            const base64Data = await blobToBase64(blob);
+            const dataUrl = `data:${mimeType};base64,${base64Data}`;
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = fileName;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            overlay.remove();
+        } catch (err) {
+            if (err?.name !== 'AbortError') {
+                alert('Hinweis beim Öffnen: ' + (err?.message || err));
+            }
+        }
+    };
+};
+
+if (typeof window !== 'undefined') {
+    window.finbundleSaveOrShare = async (blobOrData, fileName, mimeType = 'application/pdf') => {
+        const blob = blobOrData instanceof Blob ? blobOrData : new Blob([blobOrData], { type: mimeType });
+        let savedUri = null;
+
+        if (Env.isCapacitor() || Env.isAndroid()) {
+            try {
+                let Filesystem = window.Capacitor?.Plugins?.Filesystem;
+                if (!Filesystem) {
+                    try {
+                        const mod = await import('@capacitor/filesystem');
+                        Filesystem = mod.Filesystem;
+                    } catch (e) {}
+                }
+
+                if (Filesystem && typeof Filesystem.writeFile === 'function') {
+                    const base64Data = await blobToBase64(blob);
+                    try {
+                        const res = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: 'DOCUMENTS'
+                        });
+                        savedUri = res?.uri || null;
+                    } catch (docErr) {
+                        const resCache = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: 'CACHE'
+                        });
+                        savedUri = resCache?.uri || null;
+                    }
+
+                    let Share = window.Capacitor?.Plugins?.Share;
+                    if (!Share) {
+                        try {
+                            const sMod = await import('@capacitor/share');
+                            Share = sMod.Share;
+                        } catch (e) {}
+                    }
+                    if (Share && typeof Share.share === 'function' && savedUri) {
+                        await Share.share({ title: fileName, url: savedUri, dialogTitle: fileName });
+                        return true;
+                    }
+                }
+            } catch (capErr) {
+                console.warn('[FinBundle Android Export] Capacitor Plugin Fehler:', capErr);
+            }
+        }
+
+        if (Env.isAndroid()) {
+            try {
+                if (navigator.share && navigator.canShare) {
+                    const file = new File([blob], fileName, { type: mimeType });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ title: fileName, files: [file] });
+                        return true;
+                    }
+                }
+            } catch (shareErr) {
+                if (shareErr && shareErr.name === 'AbortError') return false;
+                console.warn('[FinBundle Android] Direktes Share blockiert, öffne Touch-Dialog:', shareErr);
+            }
+
+            showAndroidExportModal(blob, fileName, mimeType, savedUri);
+            return true;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        return true;
+    };
+}
 
 const FinBundleLogo = ({ className = "h-24 w-24" }) => (
   <svg viewBox="0 0 100 100" className={`overflow-visible ${className}`}>
@@ -83,118 +247,110 @@ const AboutDialog = ({ setModalObj, t }) => {
     ];
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-[0_0_50px_rgba(37,99,235,0.15)] w-full max-w-lg border border-gray-200 dark:border-slate-700/60 overflow-hidden transform transition-all flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-[200] p-3 animate-fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_0_50px_rgba(37,99,235,0.15)] w-full max-w-md border border-gray-200 dark:border-slate-700/60 overflow-hidden transform transition-all flex flex-col">
 
-                {/* Header */}
-                <div className="px-6 py-5 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800/80 dark:to-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between z-10 relative">
-                    <div className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl shadow-inner border border-blue-200 dark:border-blue-800/50">
-                            <Icon name="Shield" className="text-blue-600 dark:text-blue-400" size={18} />
+                <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-white dark:from-slate-800/80 dark:to-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between z-10 relative">
+                    <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-100">
+                        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-lg shadow-inner border border-blue-200 dark:border-blue-800/50">
+                            <Icon name="Shield" className="text-blue-600 dark:text-blue-400" size={16} />
                         </div>
-                        <h3 className="font-black text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
+                        <h3 className="font-black text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">
                             {t('helpAbout') || 'Über FinBundle'}
                         </h3>
                     </div>
-                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-all p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 hover:rotate-90">
-                        <Icon name="X" size={20}/>
+                    <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white transition-all p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
+                        <Icon name="X" size={18}/>
                     </button>
                 </div>
 
-                {/* Logo Section */}
-                <div className="relative pt-8 pb-5 flex justify-center bg-white dark:bg-slate-900">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/10 dark:bg-emerald-500/10 blur-3xl rounded-full pointer-events-none"></div>
-                    <div className="relative p-5 bg-white dark:bg-slate-800/60 rounded-[2rem] shadow-xl border border-gray-100 dark:border-slate-700/50 backdrop-blur-md">
-                        <FinBundleLogo className="h-20 w-20" />
+                <div className="relative pt-4 pb-3 flex justify-center bg-white dark:bg-slate-900">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-blue-500/10 dark:bg-emerald-500/10 blur-2xl rounded-full pointer-events-none"></div>
+                    <div className="relative p-3.5 bg-white dark:bg-slate-800/60 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700/50 backdrop-blur-md">
+                        <FinBundleLogo className="h-14 w-14" />
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 px-6 pt-2 mb-3 relative z-10">
+                <div className="flex gap-1.5 px-4 pt-1 mb-2 relative z-10">
                     {['about', 'licenses', 'legal'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-2.5 font-bold text-[11px] uppercase tracking-wider rounded-xl transition-all duration-300 ${activeTab === tab ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30 scale-100' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 scale-95 hover:scale-100 border border-transparent dark:hover:border-slate-700'}`}>
+                            className={`flex-1 py-2 font-bold text-[10px] uppercase tracking-wider rounded-lg transition-all duration-200 ${activeTab === tab ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md shadow-blue-500/20' : 'text-gray-500 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 border border-transparent dark:hover:border-slate-700'}`}>
                             {tab === 'about' ? (t('tabAbout') || 'Über') : tab === 'licenses' ? (t('tabLicenses') || 'Lizenzen') : (t('tabLegal') || 'Rechtliches')}
                         </button>
                     ))}
                 </div>
 
-                {/* Content Area */}
-                <div className="px-6 pb-6 h-[260px] overflow-y-auto finspa-scrollbar relative z-10">
-                    
-                    {/* Ansicht: Über */}
+                <div className="px-4 pb-4 h-[230px] overflow-y-auto finspa-scrollbar relative z-10">
                     {activeTab === 'about' && (
-                        <div className="text-center space-y-4 mt-2 flex flex-col items-center h-full justify-center animate-fade-in">
+                        <div className="text-center space-y-3 mt-1 flex flex-col items-center h-full justify-center animate-fade-in">
                             <div>
-                                <h2 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Pro</span></h2>
-                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 py-1 px-4 rounded-full inline-block mt-3 border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
+                                <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Pro</span></h2>
+                                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 py-0.5 px-3 rounded-full inline-block mt-2 border border-emerald-100 dark:border-emerald-800/50 shadow-xs">
                                     Version 1.0.0 RC3
                                 </p>
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 px-4 leading-relaxed mt-2">
+                            <p className="text-xs text-gray-600 dark:text-gray-300 px-3 leading-relaxed">
                                 {t('aboutDesc') || 'Ganzheitliche Finanzplanung für moderne Nutzer. Optimiert für Desktop, Tablet & Android mit einem konsequenten Privacy-First Ansatz.'}
                             </p>
-                            <div className="pt-4 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50 flex flex-col items-center">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">© {new Date().getFullYear()} {t('legalImprintTextName') || 'Thomas Kerle'}</p>
+                            <div className="pt-3 mt-auto w-full border-t border-gray-100 dark:border-slate-800/50 flex flex-col items-center">
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">© {new Date().getFullYear()} {t('legalImprintTextName') || 'Thomas Kerle'}</p>
                             </div>
                         </div>
                     )}
 
-                    {/* Ansicht: Lizenzen */}
                     {activeTab === 'licenses' && (
-                        <div className="space-y-2 pr-1 animate-fade-in">
+                        <div className="space-y-1.5 pr-1 animate-fade-in">
                             {licenses.map((lib, i) => (
-                                <div key={i} className="flex justify-between items-center py-2.5 px-3 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent dark:hover:border-slate-700">
+                                <div key={i} className="flex justify-between items-center py-2 px-2.5 bg-gray-50 dark:bg-slate-800/40 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent dark:hover:border-slate-700">
                                     <span className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                                        <Icon name="Box" size={12} className="text-gray-400 dark:text-gray-500" />
+                                        <Icon name="Box" size={11} className="text-gray-400 dark:text-gray-500" />
                                         {lib.name}
                                     </span>
-                                    <span className="text-[10px] bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-md font-mono font-bold shadow-sm border border-gray-100 dark:border-slate-800">{lib.license}</span>
+                                    <span className="text-[10px] bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded font-mono font-bold shadow-xs border border-gray-100 dark:border-slate-800">{lib.license}</span>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {/* Ansicht: Rechtliches */}
                     {activeTab === 'legal' && (
-                        <div className="text-xs text-gray-600 dark:text-gray-300 space-y-4 pr-2 text-justify animate-fade-in leading-relaxed">
-                            <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl shadow-sm">
-                                <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 flex items-center gap-2">
-                                    <Icon name="AlertTriangle" size={14} /> {t('legalDisclaimerTitle') || 'Haftungsausschluss / Disclaimer'}
+                        <div className="text-xs text-gray-600 dark:text-gray-300 space-y-3 pr-2 text-justify animate-fade-in leading-relaxed">
+                            <div className="p-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-lg shadow-xs">
+                                <h4 className="font-bold text-amber-800 dark:text-amber-500 mb-1 flex items-center gap-1.5">
+                                    <Icon name="AlertTriangle" size={13} /> {t('legalDisclaimerTitle') || 'Haftungsausschluss / Disclaimer'}
                                 </h4>
                                 <p className="text-[11px] text-amber-700 dark:text-amber-400">
                                     {t('legalDisclaimerIntro') || 'Diese Software stellt explizit keine Finanzberatung dar...'}
                                 </p>
                             </div>
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalSwissEuTitle') || 'Schweizerisches & Europäisches Recht'}</h4>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-0.5">{t('legalSwissEuTitle') || 'Schweizerisches & Europäisches Recht'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalSwissEuText') || 'Die Nutzung von FinBundle Pro erfolgt ausschliesslich auf eigenes Risiko...'}
                                 </p>
                             </div>
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalUsComplianceTitle') || 'US Law Compliance'}</h4>
-                                <p className="text-[10px] font-mono opacity-80 uppercase leading-tight bg-gray-50 dark:bg-slate-950 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-0.5">{t('legalUsComplianceTitle') || 'US Law Compliance'}</h4>
+                                <p className="text-[10px] font-mono opacity-80 uppercase leading-tight bg-gray-50 dark:bg-slate-950 p-2 rounded border border-gray-200 dark:border-slate-800">
                                     {t('legalUsComplianceText') || 'THE SOFTWARE IS PROVIDED "AS IS"...'}
                                 </p>
                             </div>
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalDataPrivacyTitle') || 'Datenschutz & Externe APIs'}</h4>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-0.5">{t('legalDataPrivacyTitle') || 'Datenschutz & Externe APIs'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalDataPrivacyText1') || 'FinBundle Pro ist als lokale Anwendung konzipiert...'} <br/><br/>
                                     <strong>{t('legalLiveRatesNote') || 'Hinweis zu Live-Kursen:'}</strong> {t('legalDataPrivacyText2') || 'Um aktuelle Währungskurse...'}
                                 </p>
                             </div>
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalMarketDataTitle') || 'Marktdaten & Quellen'}</h4>
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-0.5">{t('legalMarketDataTitle') || 'Marktdaten & Quellen'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalMarketDataText') || 'Die bereitgestellten Markt- und Wechselkurse stammen von Drittanbietern...'}
                                 </p>
                             </div>
-                            <div className="pt-4 border-t border-gray-200 dark:border-slate-800/50">
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{t('legalImprintTitle') || 'Impressum / Kontakt'}</h4>
+                            <div className="pt-3 border-t border-gray-200 dark:border-slate-800/50">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-0.5">{t('legalImprintTitle') || 'Impressum / Kontakt'}</h4>
                                 <p className="text-[11px]">
                                     {t('legalImprintTextName') || 'Thomas Kerle'}<br/>
                                     {t('legalImprintTextStreet') || 'Schlossmatten 15'}<br/>
@@ -264,7 +420,6 @@ const App = () => {
   });
   const [modalObj, setModalObj] = useState(null);
 
-  // Überwacht Bildschirmgröße & Android-Umgebung zur Laufzeit
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleResize = () => {
@@ -285,12 +440,10 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Wrapper für Node- und Report-Auswahl, damit sich auf Android der Tree-Drawer automatisch schließt
   const handleSelectNode = (node) => {
     setSelectedNode(node);
     if (isMobile && node) {
       setIsTreeVisible(false);
-      // Wenn eine konkrete Buchung angeklickt wurde, öffne auf Mobilgeräten direkt den PropertyEditor-Drawer
       if (node.selectedBooking) {
         setIsMobilePropsOpen(true);
       }
@@ -306,7 +459,6 @@ const App = () => {
     }
   };
 
-  // Synchronisiert State und Datenstruktur bei Sprachwechsel
   const handleSetLang = (newLang) => {
     setLang(newLang);
     setData(prev => ({
@@ -393,6 +545,27 @@ const App = () => {
               bolditalics: 'Roboto-MediumItalic.ttf' 
             }
           };
+
+          if (!window.pdfMake.__finbundleAndroidPatched) {
+            const origCreatePdf = window.pdfMake.createPdf.bind(window.pdfMake);
+            window.pdfMake.createPdf = function(...args) {
+              const pdfInstance = origCreatePdf(...args);
+              const origDownload = pdfInstance.download.bind(pdfInstance);
+              pdfInstance.download = function(defaultFileName = 'FinBundle_Export.pdf', cb, options) {
+                if (Env.isAndroid() && typeof window.finbundleSaveOrShare === 'function' && typeof pdfInstance.getBlob === 'function') {
+                  pdfInstance.getBlob(async (blob) => {
+                    const finalName = String(defaultFileName).endsWith('.pdf') ? defaultFileName : `${defaultFileName}.pdf`;
+                    await window.finbundleSaveOrShare(blob, finalName, 'application/pdf');
+                    if (typeof cb === 'function') cb();
+                  }, options);
+                } else {
+                  origDownload(defaultFileName, cb, options);
+                }
+              };
+              return pdfInstance;
+            };
+            window.pdfMake.__finbundleAndroidPatched = true;
+          }
         }
       } catch (err) {
         console.error("[FinBundle Core] Fehler beim Laden der externen Kernbibliotheken:", err);
@@ -456,7 +629,9 @@ const App = () => {
 
   const handlePrint = () => {
       if (typeof window !== 'undefined') {
-          if (window.finspaHostAPI && typeof window.finspaHostAPI.send === 'function') {
+          if (Env.isAndroid()) {
+              handleExportPDF();
+          } else if (window.finspaHostAPI && typeof window.finspaHostAPI.send === 'function') {
               window.finspaHostAPI.send('window-control', 'print');
           } else if (window.chrome && window.chrome.webview) {
               window.chrome.webview.postMessage({ command: 'print' });
@@ -467,8 +642,25 @@ const App = () => {
   };
 
   const handleExportPDF = () => {
+      if (!activeReport && selectedNode && selectedNode.type === 'asset') {
+          const allIds = [
+              ...(selectedNode.balances || []).map(b => b.id),
+              ...(selectedNode.bookings || []).map(b => b.id)
+          ];
+          setModalObj({ type: 'printAssetBookings', assetId: selectedNode.id, filteredIds: allIds });
+          return;
+      }
+      if (viewMode === 'plugin') {
+          const iframe = document.getElementById('active-plugin-iframe');
+          if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({ type: 'TRIGGER_PLUGIN_PDF' }, '*');
+              showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
+              return;
+          }
+      }
       if (!activeReport) {
-          showToast(t('msgNoActiveReport') || "Bitte öffnen Sie einen Report für den PDF-Export.", "error");
+          showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
+          window.dispatchEvent(new CustomEvent('triggerPdfExport'));
           return;
       }
       showToast(t('msgExportingPdf') || "PDF-Generierung gestartet...", "success");
@@ -493,14 +685,18 @@ const App = () => {
           }
           const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
           const fileName = `FinBundle_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+              await window.finbundleSaveOrShare(blob, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+          } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = fileName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+          }
           showToast(safeT('msgExportExcelSuccess', "Excel-Export erfolgreich!"), "success");
       } catch (err) {
           console.error("[FinBundle] Excel Export Error:", err);
@@ -697,12 +893,18 @@ const App = () => {
 
     const jsonStr = JSON.stringify(data, null, 2);
 
-    const triggerBrowserDownload = (content, zipped) => {
-        const blob = new Blob([content], { type: zipped ? "application/zip" : "application/json" });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${zipped ? 'zip' : 'json'}`;
-        a.click();
+    const triggerBrowserDownload = async (content, zipped) => {
+        const mime = zipped ? "application/zip" : "application/json";
+        const fileName = `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${zipped ? 'zip' : 'json'}`;
+        const blob = new Blob([content], { type: mime });
+        if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+            await window.finbundleSaveOrShare(blob, fileName, mime);
+        } else {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName;
+            a.click();
+        }
         showToast(zipped ? (t('msgZipExportSuccess') || "Projekt verschlüsselt exportiert") : (t('msgSaveSuccess2') || "Projekt erfolgreich exportiert"), "success");
         setLastAutoSave(new Date());
     };
@@ -722,30 +924,8 @@ const App = () => {
                 finalContent = jsonStr;
             }
 
-            if (Env.isCapacitor()) {
-                try {
-                    const { Filesystem, Directory } = await import('@capacitor/filesystem');
-                    const fileName = targetHandle ? targetHandle.name : `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`;
-                    
-                    let dataToWrite = finalContent;
-                    if (isZip) {
-                       const base64String = btoa(String.fromCharCode.apply(null, finalContent));
-                       dataToWrite = base64String;
-                    }
-
-                    await Filesystem.writeFile({
-                        path: fileName,
-                        data: dataToWrite,
-                        directory: Directory.Documents,
-                        encoding: isZip ? undefined : 'utf8' 
-                    });
-                    
-                    showToast(isZip ? "Projekt verschlüsselt auf Gerät gespeichert" : "Projekt auf Gerät gespeichert", "success");
-                    setLastAutoSave(new Date());
-                } catch (capErr) {
-                    console.warn("Capacitor Filesystem nicht verfügbar. Nutze Fallback.", capErr);
-                    triggerBrowserDownload(finalContent, isZip);
-                }
+            if (Env.isCapacitor() || Env.isAndroid()) {
+                await triggerBrowserDownload(finalContent, isZip);
             } 
             else if (targetHandle && window.showSaveFilePicker) {
                 const opts = { mode: 'readwrite' };
@@ -763,7 +943,7 @@ const App = () => {
                 setLastAutoSave(new Date());
             } 
             else {
-                triggerBrowserDownload(finalContent, isZip);
+                await triggerBrowserDownload(finalContent, isZip);
             }
         } catch (error) {
             console.error("[FinBundle Diagnose] Speicherfehler:", error);
@@ -785,13 +965,20 @@ const App = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
       try {
           const csvStr = CsvEngine.exportCSV(data);
+          const fileName = `FinBundle_Buchungen_${new Date().toISOString().split('T')[0]}.csv`;
           const blob = new Blob([csvStr], { type: "text/csv;charset=utf-8;" });
-          const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-          a.download = `FinBundle_Buchungen_${new Date().toISOString().split('T')[0]}.csv`;
-          a.click(); showToast(t('msgCsvSuccess') || 'Export erfolgreich', "success");
+          if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+              await window.finbundleSaveOrShare(blob, fileName, "text/csv;charset=utf-8;");
+          } else {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = fileName;
+              a.click();
+          }
+          showToast(t('msgCsvSuccess') || 'Export erfolgreich', "success");
        } catch (e) { showToast(t('msgCsvError') || 'Export Fehler', "error"); }
   };
 
@@ -891,26 +1078,26 @@ const App = () => {
           return (
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                   <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                      <div className="p-3.5 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
                           <Icon name="Lock" className="text-blue-500" />
-                          <h3 className="font-bold text-lg">
+                          <h3 className="font-bold text-base">
                               {modalObj.action === 'save' ? (t('titleZipEncrypt') || 'Projekt verschlüsseln') : (t('titleZipDecrypt') || 'Projekt entschlüsseln')}
                           </h3>
                       </div>
-                      <div className="p-6">
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{t('labelEnterPin') || 'Bitte PIN eingeben:'}</p>
+                      <div className="p-5">
+                          <p className="text-xs text-gray-700 dark:text-gray-300 mb-2.5">{t('labelEnterPin') || 'Bitte PIN eingeben:'}</p>
                           <input 
                               type="password" 
                               id="zip-pin-input"
                               autoFocus
-                              className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" 
+                              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent text-sm" 
                               onKeyDown={(e) => {
                                   if (e.key === 'Enter') document.getElementById('btn-submit-pin').click();
                               }}
                           />
                       </div>
-                      <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-2">
-                          <button onClick={() => setModalObj(null)} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">
+                      <div className="p-3.5 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-2">
+                          <button onClick={() => setModalObj(null)} className="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors text-xs">
                               {t('btnCancel') || 'Abbrechen'}
                           </button>
                           <button 
@@ -922,7 +1109,7 @@ const App = () => {
                                       modalObj.onConfirm(pin); 
                                   }
                               }} 
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors">
+                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors text-xs">
                               {t('btnConfirm') || 'Bestätigen'}
                           </button>
                       </div>
@@ -956,23 +1143,23 @@ const App = () => {
           return (
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                   <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-                      <div className="p-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
+                      <div className="p-3.5 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex items-center gap-2">
                           <Icon name="Trash" className="text-red-500" />
-                          <h3 className="font-bold text-lg">{t('deleteNodeTitle') || 'Löschen'}</h3>
+                          <h3 className="font-bold text-base">{t('deleteNodeTitle') || 'Löschen'}</h3>
                       </div>
-                      <div className="p-6 text-sm text-gray-700 dark:text-gray-300">
+                      <div className="p-5 text-xs text-gray-700 dark:text-gray-300">
                           <p>{t('deleteNodeConfirmPrefix') || 'Möchten Sie'} <strong>{node.name}</strong> {t('deleteNodeConfirmSuffix') || 'wirklich löschen?'}</p>
                       </div>
-                      <div className="p-4 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col gap-2">
+                      <div className="p-3.5 border-t border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col gap-1.5">
                           {!node.isArchived && !node.budgetType && (
-                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived') || 'Archiviert', "success"); }} className="w-full py-2.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors">
+                              <button onClick={() => { handlePropChangeTree(node.id, 'isArchived', true); setModalObj(null); showToast(t('msgArchived') || 'Archiviert', "success"); }} className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded-lg transition-colors text-xs">
                                   {t('btnArchiveOnly') || 'Archivieren'}
                               </button>
                           )}
-                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent') || 'Gelöscht', "success"); }} className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
+                          <button onClick={() => { actuallyDeleteNode(node); setModalObj(null); showToast(t('msgDeletedPermanent') || 'Gelöscht', "success"); }} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-xs">
                               {t('btnDeletePermanent') || 'Löschen'}
                           </button>
-                          <button onClick={() => setModalObj(null)} className="w-full py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors">
+                          <button onClick={() => setModalObj(null)} className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-gray-200 font-bold rounded-lg transition-colors text-xs">
                                   {t('btnCancel') || 'Abbrechen'}
                           </button>
                       </div>
@@ -1020,7 +1207,6 @@ const App = () => {
 
   const lastModTime = lastAutoSave ? lastAutoSave.toLocaleTimeString(lang === 'de' ? 'de-CH' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--';
 
-  // --- MOBILE REPORTS KATALOG FÜR ANDROID ---
   const reportCategories = [
     {
       title: safeT('menuHeaderStockReports', 'Bestandesreports'),
@@ -1054,70 +1240,83 @@ const App = () => {
     }
   ];
 
-  // --- ANDROID / MOBILE TOP BAR ---
+  // --- KOMPAKTE ANDROID / TABLET TOP BAR (h-10 statt h-14) ---
   const renderMobileTopBar = () => {
     if (!isMobile) return null;
+    const showPropsBtn = !activeReport && selectedNode && viewMode !== 'liveEditor';
+
     return (
-      <div className="print-hide flex items-center justify-between bg-slate-900 text-white px-3 h-14 border-b border-slate-800 shrink-0 z-50 select-none">
-        <div className="flex items-center gap-2">
+      <div className="print-hide flex items-center justify-between bg-slate-900 text-white px-2.5 h-10 border-b border-slate-800 shrink-0 z-50 select-none">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => {
               setMobileMenuSection('main');
               setIsMobileMenuOpen(true);
             }}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800/80 active:bg-blue-600 text-slate-200 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800/90 active:bg-blue-600 text-slate-200 transition-colors cursor-pointer"
             title="Menü"
           >
-            <Icon name="Menu" size={20} />
+            <Icon name="Menu" size={16} />
           </button>
 
           {viewMode !== 'liveEditor' && (
             <button
               onClick={() => setIsTreeVisible(!isTreeVisible)}
-              className={`h-10 px-3 flex items-center gap-1.5 rounded-xl text-xs font-bold border transition-colors ${
+              className={`h-7 px-2.5 flex items-center gap-1.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
                 isTreeVisible
                   ? 'bg-blue-600 border-blue-500 text-white'
-                  : 'bg-slate-800/80 border-slate-700 text-slate-200'
+                  : 'bg-slate-800/90 border-slate-700 text-slate-200'
               }`}
             >
-              <Icon name="FolderOpen" size={15} className={isTreeVisible ? "text-white" : "text-yellow-400"} />
-              <span className="truncate max-w-[90px]">
-                {selectedNode ? selectedNode.name : (viewMode === 'budget' ? safeT('menuBudget', 'Budget') : safeT('tree', 'Struktur'))}
+              <Icon name="FolderOpen" size={13} className={isTreeVisible ? "text-white" : "text-yellow-400"} />
+              <span className="truncate max-w-[120px] sm:max-w-[180px]">
+                {selectedNode ? selectedNode.name : (viewMode === 'budget' ? safeT('menuBudget', 'Budget') : safeT('tree', 'Strukturbaum'))}
               </span>
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5" onClick={() => { setViewMode('vermoegen'); handleSelectReport('allocation'); handleSelectNode(null); }}>
-          <span className="text-sm font-black tracking-wider uppercase text-white">
+        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => { setViewMode('vermoegen'); handleSelectReport('allocation'); handleSelectNode(null); }}>
+          <span className="text-xs font-black tracking-wider uppercase text-white">
             FinBundle <span className="text-sky-400">PRO</span>
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="text-right hidden xs:block">
-            <div className="text-[9px] uppercase font-bold text-slate-400 leading-none">
+        <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 px-2 py-0.5 rounded-lg">
+            <span className="text-[9px] uppercase font-bold text-slate-400">
               {viewMode === 'budget' ? safeT('labelCashflow', 'Cashflow') : safeT('labelTotalShort', 'Total')}
-            </div>
-            <div className="text-xs font-mono font-bold text-emerald-400 leading-tight">
+            </span>
+            <span className="text-[11px] font-mono font-bold text-emerald-400">
               {viewMode === 'budget'
                 ? `${budgetNet >= 0 ? '+' : ''}${fCur(budgetNet, baseCur)}`
                 : fCur(totalWealth, baseCur)}
-            </div>
+            </span>
           </div>
+
+          {showPropsBtn && (
+            <button
+              onClick={() => setIsMobilePropsOpen(true)}
+              className="h-7 px-2.5 flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold shadow-xs cursor-pointer"
+              title={selectedNode.selectedBooking ? safeT('btnEdit', 'Buchung bearbeiten') : safeT('fileSettings', 'Eigenschaften')}
+            >
+              <Icon name="Edit" size={12} />
+              <span className="hidden xs:inline">{selectedNode.selectedBooking ? safeT('btnEdit', 'Buchung') : safeT('fileSettings', 'Details')}</span>
+            </button>
+          )}
 
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800/80 text-slate-300 active:bg-slate-700"
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800/90 text-slate-300 active:bg-slate-700 cursor-pointer"
           >
-            <Icon name={theme === 'light' ? "Moon" : "Sun"} size={17} />
+            <Icon name={theme === 'light' ? "Moon" : "Sun"} size={14} />
           </button>
         </div>
       </div>
     );
   };
 
-  // --- ANDROID / MOBILE VOLLMENÜ DRAWER ---
+  // --- KOMPAKTER ANDROID / TABLET VOLLMENÜ DRAWER ---
   const renderMobileMenuDrawer = () => {
     if (!isMobile || !isMobileMenuOpen) return null;
     const plugins = data?.plugins || [];
@@ -1128,29 +1327,27 @@ const App = () => {
           className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs animate-fade-in"
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        <div className="relative w-[86vw] max-w-sm bg-white dark:bg-slate-900 h-full shadow-2xl border-r border-gray-200 dark:border-slate-800 flex flex-col z-10 overflow-hidden">
+        <div className="relative w-[82vw] max-w-xs bg-white dark:bg-slate-900 h-full shadow-2xl border-r border-gray-200 dark:border-slate-800 flex flex-col z-10 overflow-hidden">
           
-          {/* Drawer Header */}
-          <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md">
-                <FinBundleLogo className="w-7 h-7" />
+          <div className="p-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
+                <FinBundleLogo className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-black text-base tracking-wide leading-none">FinBundle <span className="text-sky-400">PRO</span></div>
-                <div className="text-[10px] text-emerald-400 font-mono mt-1">{fCur(totalWealth, baseCur)}</div>
+                <div className="font-black text-sm tracking-wide leading-none">FinBundle <span className="text-sky-400">PRO</span></div>
+                <div className="text-[10px] text-emerald-400 font-mono mt-0.5">{fCur(totalWealth, baseCur)}</div>
               </div>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(false)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-300"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 text-slate-300"
             >
-              <Icon name="X" size={18} />
+              <Icon name="X" size={15} />
             </button>
           </div>
 
-          {/* Sub-Navigation Tabs im Drawer */}
-          <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 p-1.5 gap-1 shrink-0">
+          <div className="flex border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 p-1 gap-1 shrink-0">
             {[
               { id: 'main', label: safeT('menuViews', 'Ansichten'), icon: 'Layers' },
               { id: 'file', label: safeT('menuFile', 'Datei'), icon: 'FolderOpen' },
@@ -1160,25 +1357,22 @@ const App = () => {
               <button
                 key={tab.id}
                 onClick={() => setMobileMenuSection(tab.id)}
-                className={`flex-1 py-2 px-1 rounded-lg text-[11px] font-bold flex flex-col items-center gap-1 transition-all ${
+                className={`flex-1 py-1.5 px-1 rounded-md text-[10px] font-bold flex flex-col items-center gap-0.5 transition-all ${
                   mobileMenuSection === tab.id
                     ? 'bg-blue-600 text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
-                <Icon name={tab.icon} size={14} />
+                <Icon name={tab.icon} size={13} />
                 <span className="truncate">{tab.label}</span>
               </button>
             ))}
           </div>
 
-          {/* Drawer Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 finspa-scrollbar">
-            
-            {/* SEKTION 1: HAUPTANSICHTEN & SYSTEM */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 finspa-scrollbar">
             {mobileMenuSection === 'main' && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+              <div className="space-y-1.5">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                   {safeT('menuViews', 'Ansichten')}
                 </div>
                 {[
@@ -1196,31 +1390,31 @@ const App = () => {
                       handleSelectNode(null);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold text-sm transition-colors ${
+                    className={`w-full flex items-center justify-between p-2.5 rounded-lg font-bold text-xs transition-colors ${
                       viewMode === item.id
                         ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
                         : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon name={item.icon} size={18} />
+                    <div className="flex items-center gap-2.5">
+                      <Icon name={item.icon} size={15} />
                       <span>{item.label}</span>
                     </div>
-                    {viewMode === item.id && <Icon name="CheckCircle" size={16} className="text-blue-500" />}
+                    {viewMode === item.id && <Icon name="CheckCircle" size={14} className="text-blue-500" />}
                   </button>
                 ))}
 
-                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+                <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                   Sprache / Language
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-1.5">
                   {['de', 'en', 'fr', 'it'].map(l => (
                     <button
                       key={l}
                       onClick={() => handleSetLang(l)}
-                      className={`py-2.5 rounded-xl font-bold text-xs uppercase border ${
+                      className={`py-1.5 rounded-lg font-bold text-[11px] uppercase border ${
                         lang === l
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-gray-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-gray-200 dark:border-slate-700'
@@ -1231,83 +1425,82 @@ const App = () => {
                   ))}
                 </div>
 
-                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+                <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'settings' }); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Settings" size={18} className="text-slate-500" />
+                  <Icon name="Settings" size={15} className="text-slate-500" />
                   <span>{safeT('fileSettings', 'Einstellungen')}</span>
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'help' }); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Info" size={18} className="text-blue-500" />
+                  <Icon name="Info" size={15} className="text-blue-500" />
                   <span>{safeT('helpManual', 'Benutzerhandbuch')}</span>
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'about' }); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Star" size={18} className="text-amber-500" />
+                  <Icon name="Star" size={15} className="text-amber-500" />
                   <span>{safeT('helpAbout', 'Über FinBundle')}</span>
                 </button>
               </div>
             )}
 
-            {/* SEKTION 2: DATEI, IMPORT & EXPORT */}
             {mobileMenuSection === 'file' && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+              <div className="space-y-1.5">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                   Projektverwaltung
                 </div>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleNewProject(); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="FilePlus" size={18} className="text-blue-500" />
+                  <Icon name="FilePlus" size={15} className="text-blue-500" />
                   <span>{safeT('fileNew', 'Neu (Leeres Projekt)')}</span>
                 </button>
 
-                <label className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm cursor-pointer">
-                  <Icon name="FolderOpen" size={18} className="text-amber-500" />
+                <label className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer">
+                  <Icon name="FolderOpen" size={15} className="text-amber-500" />
                   <span>{safeT('fileOpen', 'Projekt öffnen (.json / .zip)')}</span>
                   <input type="file" accept=".json,.zip" className="hidden" onChange={(e) => { setIsMobileMenuOpen(false); handleOpenProject(e); }} />
                 </label>
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleSaveProject(false); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-blue-600 text-white font-bold text-xs shadow-xs"
                 >
-                  <Icon name="Save" size={18} />
+                  <Icon name="Save" size={15} />
                   <span>{safeT('fileSave', 'Speichern')}</span>
                 </button>
 
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleSaveProject(true); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Copy" size={18} className="text-indigo-500" />
+                  <Icon name="Copy" size={15} className="text-indigo-500" />
                   <span>{safeT('fileSaveAs', 'Speichern unter...')}</span>
                 </button>
 
-                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+                <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                   {safeT('fileImport', 'Importieren')}
                 </div>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'csvImport' }); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="List" size={18} className="text-emerald-500" />
+                  <Icon name="List" size={15} className="text-emerald-500" />
                   <span>{safeT('fileImportStandard', 'Buchungen (CSV Wizard)')}</span>
                 </button>
 
-                <label className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm cursor-pointer">
-                  <Icon name="TrendingUp" size={18} className="text-purple-500" />
+                <label className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer">
+                  <Icon name="TrendingUp" size={15} className="text-purple-500" />
                   <span>{safeT('fileImportParqet', 'Parqet CSV importieren')}</span>
                   <input type="file" accept=".csv" className="hidden" onChange={(e) => { setIsMobileMenuOpen(false); handleImportParqetCSV(e); }} />
                 </label>
@@ -1315,30 +1508,30 @@ const App = () => {
                 {data?.settings?.aiEnabled !== false && (
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); setModalObj({ type: 'pdfImport' }); }}
-                    className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                    className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                   >
-                    <Icon name="FileText" size={18} className="text-rose-500" />
+                    <Icon name="FileText" size={15} className="text-rose-500" />
                     <span>{safeT('fileImportPdfKI', 'PDF Rechnung scannen (KI)')}</span>
                   </button>
                 )}
 
-                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+                <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                   {safeT('fileExportTitle', 'Exportieren & Drucken')}
                 </div>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleExportCSV(); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="List" size={18} className="text-blue-500" />
+                  <Icon name="List" size={15} className="text-blue-500" />
                   <span>{safeT('fileExportCsv', 'Buchungen als CSV')}</span>
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleExportPDF(); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="FileText" size={18} className="text-rose-500" />
+                  <Icon name="FileText" size={15} className="text-rose-500" />
                   <span>{safeT('filePrintPdf', 'Aktueller Report als PDF')}</span>
                 </button>
                 <button
@@ -1347,34 +1540,33 @@ const App = () => {
                     showToast(safeT('msgExportFullPdfStarted', "Generiere Gesamtreport im Hintergrund..."), "info");
                     window.dispatchEvent(new Event('triggerFullPdfBatch'));
                   }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Layers" size={18} className="text-indigo-500" />
+                  <Icon name="Layers" size={15} className="text-indigo-500" />
                   <span>{safeT('fileExportFullPdf', 'Gesamtreport als PDF')}</span>
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleExportExcel(); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="FileExcel" size={18} className="text-emerald-600" />
+                  <Icon name="FileExcel" size={15} className="text-emerald-600" />
                   <span>{safeT('fileExportExcel', 'Als Excel (.xlsx) exportieren')}</span>
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handlePrint(); }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Printer" size={18} className="text-slate-500" />
+                  <Icon name="Printer" size={15} className="text-slate-500" />
                   <span>{safeT('filePrint', 'Drucken')}</span>
                 </button>
               </div>
             )}
 
-            {/* SEKTION 3: ALLE REPORTS */}
             {mobileMenuSection === 'reports' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {reportCategories.map((group, idx) => (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2">
+                  <div key={idx} className="space-y-1">
+                    <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
                       {group.title}
                     </div>
                     {group.items.map(rep => (
@@ -1385,17 +1577,17 @@ const App = () => {
                           handleSelectNode(null);
                           handleSelectReport(rep.id);
                         }}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl text-sm font-bold transition-colors ${
+                        className={`w-full flex items-center justify-between p-2.5 rounded-lg text-xs font-bold transition-colors ${
                           activeReport === rep.id && viewMode === 'vermoegen'
-                            ? 'bg-blue-600 text-white shadow-sm'
+                            ? 'bg-blue-600 text-white shadow-xs'
                             : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Icon name={rep.icon} size={16} />
+                        <div className="flex items-center gap-2.5">
+                          <Icon name={rep.icon} size={14} />
                           <span>{rep.label}</span>
                         </div>
-                        <Icon name="ChevronRight" size={14} className="opacity-60" />
+                        <Icon name="ChevronRight" size={13} className="opacity-60" />
                       </button>
                     ))}
                   </div>
@@ -1403,9 +1595,8 @@ const App = () => {
               </div>
             )}
 
-            {/* SEKTION 4: PLUGINS */}
             {mobileMenuSection === 'plugins' && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <button
                   onClick={() => {
                     setViewMode('ai');
@@ -1413,9 +1604,9 @@ const App = () => {
                     handleSelectReport(null);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-blue-600 text-white font-bold text-xs shadow-xs"
                 >
-                  <Icon name="PlusCircle" size={18} />
+                  <Icon name="PlusCircle" size={15} />
                   <span>{safeT('menuNewPluginCopilot', 'Neues Plugin (AI Copilot)...')}</span>
                 </button>
                 <button
@@ -1425,16 +1616,16 @@ const App = () => {
                     handleSelectReport(null);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-sm"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs"
                 >
-                  <Icon name="Settings" size={18} />
+                  <Icon name="Settings" size={15} />
                   <span>{safeT('menuManagePlugins', 'Plugins verwalten...')}</span>
                 </button>
 
-                <hr className="border-gray-200 dark:border-slate-800 my-3" />
+                <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
                 {plugins.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-gray-400 italic">
+                  <div className="p-4 text-center text-xs text-gray-400 italic">
                     {safeT('menuNoPluginsPresent', 'Keine Plugins vorhanden')}
                   </div>
                 ) : (
@@ -1447,17 +1638,17 @@ const App = () => {
                         handleSelectNode(null);
                         setIsMobileMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl text-sm font-bold ${
+                      className={`w-full flex items-center justify-between p-2.5 rounded-lg text-xs font-bold ${
                         viewMode === 'plugin' && activeReport === p.id
                           ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-200'
                           : 'bg-gray-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200'
                       }`}
                     >
-                      <div className="flex items-center gap-3 truncate">
-                        <Icon name="Sparkles" size={16} className="text-amber-500 shrink-0" />
+                      <div className="flex items-center gap-2 truncate">
+                        <Icon name="Sparkles" size={14} className="text-amber-500 shrink-0" />
                         <span className="truncate">{p.title || p.name}</span>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 shrink-0 ml-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 shrink-0 ml-2">
                         {p.category || 'Allgemein'}
                       </span>
                     </button>
@@ -1465,13 +1656,11 @@ const App = () => {
                 )}
               </div>
             )}
-
           </div>
 
-          {/* Drawer Footer */}
-          <div className="p-3 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-between items-center text-[11px] text-gray-400">
+          <div className="p-2.5 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-gray-400">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
               Auto-Save: {lastModTime}
             </span>
             <span>v1.0.0 RC3</span>
@@ -1481,7 +1670,7 @@ const App = () => {
     );
   };
 
-  // --- ANDROID BOTTOM SHEET FÜR SCHNELLE REPORT-AUSWAHL ---
+  // --- KOMPAKTES ANDROID BOTTOM SHEET FÜR SCHNELLE REPORT-AUSWAHL ---
   const renderMobileReportsSheet = () => {
     if (!isMobile || !isMobileReportsOpen) return null;
     return (
@@ -1490,26 +1679,26 @@ const App = () => {
           className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
           onClick={() => setIsMobileReportsOpen(false)}
         />
-        <div className="relative bg-white dark:bg-slate-900 rounded-t-3xl max-h-[80vh] flex flex-col z-10 shadow-2xl border-t border-gray-200 dark:border-slate-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
-            <h3 className="font-black text-base flex items-center gap-2">
-              <Icon name="PieChart" className="text-blue-500" size={18} />
+        <div className="relative bg-white dark:bg-slate-900 rounded-t-2xl max-h-[82vh] flex flex-col z-10 shadow-2xl border-t border-gray-200 dark:border-slate-800 overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+            <h3 className="font-black text-sm flex items-center gap-2">
+              <Icon name="PieChart" className="text-blue-500" size={16} />
               <span>{safeT('menuReports', 'Reports & Analysen')}</span>
             </h3>
             <button
               onClick={() => setIsMobileReportsOpen(false)}
-              className="p-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-500"
+              className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500"
             >
-              <Icon name="X" size={16} />
+              <Icon name="X" size={14} />
             </button>
           </div>
-          <div className="p-4 overflow-y-auto space-y-4 finspa-scrollbar pb-8">
+          <div className="p-3 overflow-y-auto space-y-3 finspa-scrollbar pb-5">
             {reportCategories.map((group, idx) => (
               <div key={idx}>
-                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 px-1">
+                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1.5 px-1">
                   {group.title}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {group.items.map(rep => (
                     <button
                       key={rep.id}
@@ -1518,13 +1707,13 @@ const App = () => {
                         handleSelectNode(null);
                         handleSelectReport(rep.id);
                       }}
-                      className={`flex items-center gap-2.5 p-3 rounded-xl text-left text-xs font-bold border transition-all ${
+                      className={`flex items-center gap-2 p-2.5 rounded-xl text-left text-xs font-bold border transition-all ${
                         activeReport === rep.id && viewMode === 'vermoegen'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                           : 'bg-gray-50 dark:bg-slate-800/70 text-slate-700 dark:text-slate-200 border-gray-200/60 dark:border-slate-700'
                       }`}
                     >
-                      <Icon name={rep.icon} size={15} className="shrink-0" />
+                      <Icon name={rep.icon} size={14} className="shrink-0" />
                       <span className="truncate">{rep.label}</span>
                     </button>
                   ))}
@@ -1537,19 +1726,19 @@ const App = () => {
     );
   };
 
-  // --- ANDROID BOTTOM NAVIGATION BAR ---
+  // --- KOMPAKTE ANDROID BOTTOM NAVIGATION BAR (h-11 statt h-16) ---
   const renderMobileBottomNav = () => {
     if (!isMobile) return null;
     return (
-      <div className="print-hide bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-around items-center h-16 px-1 shrink-0 z-50 select-none shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <div className="print-hide bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-around items-center h-11 px-1 shrink-0 z-50 select-none shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
         <button
           onClick={() => setIsTreeVisible(!isTreeVisible)}
-          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${
             isTreeVisible ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
-          <Icon name="FolderOpen" size={19} />
-          <span className="text-[10px] tracking-tight">{safeT('tree', 'Struktur')}</span>
+          <Icon name="FolderOpen" size={15} />
+          <span className="text-[9px] tracking-tight leading-none">{safeT('tree', 'Strukturbaum')}</span>
         </button>
 
         <button
@@ -1558,12 +1747,12 @@ const App = () => {
             setIsTreeVisible(false);
             if (!selectedNode && !activeReport) handleSelectReport('allocation');
           }}
-          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${
             viewMode === 'vermoegen' && !isTreeVisible && !isMobileReportsOpen ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
-          <Icon name="Shield" size={19} />
-          <span className="text-[10px] tracking-tight">{safeT('menuWealth', 'Vermögen')}</span>
+          <Icon name="Shield" size={15} />
+          <span className="text-[9px] tracking-tight leading-none">{safeT('menuWealth', 'Vermögen')}</span>
         </button>
 
         <button
@@ -1573,22 +1762,22 @@ const App = () => {
             handleSelectNode(null);
             setIsTreeVisible(false);
           }}
-          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${
             viewMode === 'budget' && !isTreeVisible ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
-          <Icon name="DollarSign" size={19} />
-          <span className="text-[10px] tracking-tight">{safeT('menuBudget', 'Budget')}</span>
+          <Icon name="DollarSign" size={15} />
+          <span className="text-[9px] tracking-tight leading-none">{safeT('menuBudget', 'Budget')}</span>
         </button>
 
         <button
           onClick={() => setIsMobileReportsOpen(true)}
-          className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+          className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${
             isMobileReportsOpen || (viewMode === 'vermoegen' && activeReport && !selectedNode) ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
           }`}
         >
-          <Icon name="PieChart" size={19} />
-          <span className="text-[10px] tracking-tight">{safeT('menuReports', 'Reports')}</span>
+          <Icon name="PieChart" size={15} />
+          <span className="text-[9px] tracking-tight leading-none">{safeT('menuReports', 'Reports')}</span>
         </button>
 
         {data?.settings?.aiEnabled !== false && (
@@ -1599,12 +1788,12 @@ const App = () => {
               handleSelectNode(null);
               setIsTreeVisible(false);
             }}
-            className={`flex flex-col items-center justify-center flex-1 h-full gap-1 ${
+            className={`flex flex-col items-center justify-center flex-1 h-full gap-0.5 cursor-pointer ${
               viewMode === 'ai' ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-500 dark:text-gray-400'
             }`}
           >
-            <Icon name="Sparkles" size={19} />
-            <span className="text-[10px] tracking-tight">Copilot</span>
+            <Icon name="Sparkles" size={15} />
+            <span className="text-[9px] tracking-tight leading-none">Copilot</span>
           </button>
         )}
       </div>
@@ -1622,8 +1811,8 @@ const App = () => {
           scrollbar-color: #475569 transparent;
         }
         .finspa-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
         }
         .finspa-scrollbar::-webkit-scrollbar-track {
           background: transparent;
@@ -1631,8 +1820,6 @@ const App = () => {
         .finspa-scrollbar::-webkit-scrollbar-thumb {
           background-color: #cbd5e1;
           border-radius: 9999px;
-          border: 2px solid transparent;
-          background-clip: content-box;
         }
         .dark .finspa-scrollbar::-webkit-scrollbar-thumb {
           background-color: #475569;
@@ -1714,7 +1901,7 @@ const App = () => {
         />
       </div>
 
-      {/* Mobile Top App Bar (Nur auf Android / kleinen Screens sichtbar) */}
+      {/* Mobile Top App Bar */}
       {renderMobileTopBar()}
       {renderMobileMenuDrawer()}
       {renderMobileReportsSheet()}
@@ -1793,15 +1980,15 @@ const App = () => {
           />
         </div>
 
-        {/* PropertyEditor: Auf Desktop rechts angedockt, auf Android als aufrufbares Slide-Over-Sheet */}
+        {/* PropertyEditor: Auf Desktop rechts angedockt, auf Android als zentrierter kompakter Pill-Button + Slide-Over-Sheet (verdeckt niemals die Netto-Summe rechts!) */}
         {!activeReport && selectedNode && viewMode !== 'liveEditor' && (
           isMobile ? (
             <>
               <button
                 onClick={() => setIsMobilePropsOpen(true)}
-                className="print-hide fixed bottom-20 right-4 z-[90] flex items-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-bold text-xs shadow-xl shadow-blue-600/30 active:scale-95 transition-transform"
+                className="print-hide fixed bottom-12 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600/95 hover:bg-blue-700 text-white font-bold text-[11px] shadow-lg shadow-blue-600/30 active:scale-95 transition-transform cursor-pointer border border-blue-400/40 backdrop-blur-xs"
               >
-                <Icon name="Edit" size={16} />
+                <Icon name="Edit" size={13} />
                 <span>{selectedNode.selectedBooking ? safeT('btnEdit', 'Buchung bearbeiten') : safeT('fileSettings', 'Eigenschaften')}</span>
               </button>
 
@@ -1811,16 +1998,16 @@ const App = () => {
                     className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
                     onClick={() => setIsMobilePropsOpen(false)}
                   />
-                  <div className="relative z-10 h-full max-w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
-                    <div className="p-3 bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  <div className="relative z-10 h-full w-[88vw] max-w-sm bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center shrink-0">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 truncate pr-2">
                         {selectedNode.name} – Details
                       </span>
                       <button
                         onClick={() => setIsMobilePropsOpen(false)}
-                        className="p-1.5 rounded-lg bg-gray-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        className="p-1 rounded-lg bg-gray-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
                       >
-                        <Icon name="X" size={16} />
+                        <Icon name="X" size={15} />
                       </button>
                     </div>
                     <div className="flex-1 overflow-y-auto flex">
@@ -1856,7 +2043,7 @@ const App = () => {
       {isMobile ? (
         renderMobileBottomNav()
       ) : (
-        <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1.5 text-[11px] md:text-xs text-gray-600 dark:text-gray-400 z-50 select-none">
+        <div className="print-hide flex justify-between items-center bg-gray-100 dark:bg-slate-900 border-t border-gray-300 dark:border-slate-800 px-4 py-1 text-[11px] text-gray-600 dark:text-gray-400 z-50 select-none">
             <div className="flex items-center gap-4 md:gap-6">
                 <span className="flex items-center gap-1.5" title={t('titleReadySaveActive') || "System ist bereit & Auto-Save aktiv"}>
                     <span className="relative flex h-2 w-2">
@@ -1883,13 +2070,13 @@ const App = () => {
                 {viewMode === 'vermoegen' && (
                     <span className="flex items-center gap-2 bg-gray-200 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200" title={`${t('titleNetWealth') || "Aktuelles Nettovermögen in"} ${baseCur}`}>
                         <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelTotalShort') || 'Total'}</span>
-                        <strong className="font-mono tracking-tight text-sm">{fCur ? fCur(totalWealth, baseCur) : totalWealth}</strong>
+                        <strong className="font-mono tracking-tight text-xs">{fCur ? fCur(totalWealth, baseCur) : totalWealth}</strong>
                     </span>
                 )}
                 {viewMode === 'budget' && (
                     <span className={`flex items-center gap-2 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200 ${budgetNet >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-red-100 dark:bg-red-900/30'}`} title={`${t('titleNetCashflow') || "Monatlicher Net Cashflow in"} ${baseCur}`}>
                         <span className="font-bold uppercase tracking-wider text-[9px] opacity-70 mt-0.5">{t('labelCashflow') || 'Cashflow'}</span>
-                        <strong className={`font-mono tracking-tight text-sm ${budgetNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
+                        <strong className={`font-mono tracking-tight text-xs ${budgetNet >= 0 ? 'text-blue-700 dark:text-blue-400' : 'text-red-700 dark:text-red-400'}`}>
                             {budgetNet >= 0 ? '+' : ''}{fCur ? fCur(budgetNet, baseCur) : budgetNet}
                         </strong>
                     </span>
@@ -1909,9 +2096,9 @@ const App = () => {
       
       {ModalHandler()}
       
-      <div className={`fixed ${isMobile ? 'bottom-20' : 'bottom-4'} right-4 z-[200] space-y-2 pointer-events-none`}>
+      <div className={`fixed ${isMobile ? 'bottom-14' : 'bottom-4'} right-4 z-[200] space-y-1.5 pointer-events-none`}>
           {toasts.map(toast => (
-              <div key={toast.id} className="px-4 py-3 rounded-lg shadow-xl border bg-slate-800 text-white border-slate-700">
+              <div key={toast.id} className="px-3.5 py-2 rounded-lg shadow-xl border bg-slate-800 text-white border-slate-700 text-xs font-medium">
                   {toast.message}
               </div>
           ))}

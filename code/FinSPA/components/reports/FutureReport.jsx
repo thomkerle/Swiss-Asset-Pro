@@ -255,7 +255,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
 
   if (currentWealth === 0) {
       return (
-          <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+          <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative">
              <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
                 <Icon name="AlertCircle" size={32} className="mx-auto mb-3 opacity-50"/>
                 <p>{safeT(t, 'msgNotEnoughAssetsForProj', 'Nicht genügend Vermögenswerte zum Stichtag vorhanden, um eine Projektion zu berechnen.')}</p>
@@ -282,16 +282,16 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
   ];
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Target" size={14} className="text-blue-500"/>
                 {safeT(t, 'labelStartCapitalHeader', 'STARTKAPITAL (HEUTE)')}
             </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate">
                 {fCur(currentWealth)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -299,12 +299,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Activity" size={14} className="text-emerald-500"/>
                 {safeT(t, 'labelAssumedSavingsRateHeader', 'ANGENOMMENE SPARQUOTE')}
             </div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate">
                 ~{fCur(monthlySavingsRate)}/Mt.
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -312,12 +312,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="TrendingUp" size={14} className="text-amber-500"/>
                 {safeT(t, 'labelProj5Y6PctHeader', 'PROGNOSE 5J (6% P.A.)')}
             </div>
-            <div className="text-2xl font-black text-amber-600 dark:text-amber-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400 truncate">
                 {fCur(endResults5Years.final6)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -325,12 +325,12 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Zap" size={14} className="text-purple-500"/>
                 {safeT(t, 'labelCompoundLeverageHeader', 'ZINSESZINS-HEBEL (6%)')}
             </div>
-            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-purple-600 dark:text-purple-400 truncate">
                 +{fCur(endResults5Years.compoundLeverage6)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -339,9 +339,9 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
          </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 mb-6 sm:mb-10">
         
-        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleProj5YPdf', 'Vermögensprojektion 5 Jahre')}>
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleProj5YPdf', 'Vermögensprojektion 5 Jahre')}>
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="TrendingUp" className="text-blue-500" /> {safeT(t, 'titleGrowthCurves5Y', 'Wachstumskurven (5-Jahres-Projektion)')}
             </h3>
@@ -357,11 +357,22 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                         valueFormatter: fCur
                     }))}
                     options={{
+                        grid: { top: 28, bottom: 72, left: '3%', right: '3%', containLabel: true },
                         legend: {
-                            type: 'plain',
+                            type: 'scroll',
                             bottom: 0,
                             itemGap: 12,
+                            itemWidth: 10,
+                            itemHeight: 10,
                             textStyle: { fontSize: 11 }
+                        },
+                        xAxis: {
+                            axisLabel: {
+                                interval: 5,
+                                hideOverlap: true,
+                                margin: 10,
+                                fontSize: 10.5
+                            }
                         }
                     }}
                     height="100%"
@@ -369,7 +380,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
             </div>
         </div>
 
-        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleComp5YPdf', 'Zusammensetzung nach 5 Jahren')}>
+        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleComp5YPdf', 'Zusammensetzung nach 5 Jahren')}>
             <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                 <Icon name="Layers" className="text-emerald-500" /> {safeT(t, 'titleEndWealth5YBuilding', 'Endvermögens-Aufbau nach 5 Jahren')}
             </h3>
@@ -405,8 +416,9 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
                         grid: {
                             top: 25,
                             bottom: 65,
-                            left: '12%',
-                            right: '4%'
+                            left: '3%',
+                            right: '3%',
+                            containLabel: true
                         },
                         legend: {
                             type: 'plain',
@@ -433,7 +445,7 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+          <div className="p-3.5 sm:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-wrap justify-between items-center gap-2">
               <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <Icon name="Calendar" className="text-slate-500" /> {safeT(t, 'titleMilestoneProjTable', 'Meilenstein-Projektion & Zinseszins-Hebel')}
               </h3>
@@ -446,27 +458,27 @@ const FutureReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeV
               <table className="w-full text-left text-sm">
                   <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
                       <tr>
-                          <th className="p-4">{safeT(t, 'colTimeHorizon', 'Zeithorizont')}</th>
-                          <th className="p-4 text-right">{safeT(t, 'scen0Percent', '0% (Nur Sparen)')}</th>
-                          <th className="p-4 text-right">2% p.a.</th>
-                          <th className="p-4 text-right">4% p.a.</th>
-                          <th className="p-4 text-right">6% p.a.</th>
-                          <th className="p-4 text-right">8% p.a.</th>
-                          <th className="p-4 text-right text-purple-600 dark:text-purple-400">{safeT(t, 'colCompound6Pct', 'Zinseszins (6%)')}</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'colTimeHorizon', 'Zeithorizont')}</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'scen0Percent', '0% (Nur Sparen)')}</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">2% p.a.</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">4% p.a.</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">6% p.a.</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">8% p.a.</th>
+                          <th className="p-2.5 sm:p-4 whitespace-nowrap text-right text-purple-600 dark:text-purple-400">{safeT(t, 'colCompound6Pct', 'Zinseszins (6%)')}</th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
                       {milestonesTable.map((row, idx) => (
                           <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
-                              <td className="p-4 font-bold font-sans text-slate-800 dark:text-slate-200">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap font-bold font-sans text-slate-800 dark:text-slate-200">
                                   {row.label}
                               </td>
-                              <td className="p-4 text-right text-gray-500">{fCur(row['0%'])}</td>
-                              <td className="p-4 text-right text-sky-600 dark:text-sky-400">{fCur(row['2%'])}</td>
-                              <td className="p-4 text-right text-emerald-600 dark:text-emerald-400">{fCur(row['4%'])}</td>
-                              <td className="p-4 text-right font-bold text-amber-600 dark:text-amber-400">{fCur(row['6%'])}</td>
-                              <td className="p-4 text-right text-rose-600 dark:text-rose-400">{fCur(row['8%'])}</td>
-                              <td className="p-4 text-right font-bold text-purple-600 dark:text-purple-400">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-500">{fCur(row['0%'])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-sky-600 dark:text-sky-400">{fCur(row['2%'])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-emerald-600 dark:text-emerald-400">{fCur(row['4%'])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-bold text-amber-600 dark:text-amber-400">{fCur(row['6%'])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-rose-600 dark:text-rose-400">{fCur(row['8%'])}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-bold text-purple-600 dark:text-purple-400">
                                   {row.months > 0 ? `+${fCur(row.compoundGain6)}` : '-'}
                               </td>
                           </tr>

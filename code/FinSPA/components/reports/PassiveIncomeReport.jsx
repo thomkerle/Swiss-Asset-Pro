@@ -270,30 +270,30 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
   });
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12" ref={reportRef}>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'totalNetIncome', 'Gesamtertrag')}</div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fCur(totalPassive)}</div>
+            <div className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{fCur(totalPassive)}</div>
             <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descCumulatedMonthsCount', `Kumuliert über ${rawMonthsCount} Monate`).replace('{count}', rawMonthsCount)}</div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'monthlyAverage', 'Monatlicher Schnitt')}</div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white">{fCur(monthlyAverage)}</div>
+            <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">{fCur(monthlyAverage)}</div>
             <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descHistoricalAverage', 'Bisheriger historischer Schnitt')}</div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500">
             <div className="text-purple-600 dark:text-purple-400 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'kpiForecast12mYield', '12M Prognose (Forward Yield)')}</div>
-            <div className="text-2xl font-black text-purple-700 dark:text-purple-300">{fCur(forecast12m)}</div>
+            <div className="text-lg sm:text-2xl font-black text-purple-700 dark:text-purple-300">{fCur(forecast12m)}</div>
             <div className="text-xs text-gray-400 mt-2">{safeT(t, 'descExpectedYieldAnnual', 'Erwartete Netto-Erträge p.a.')}</div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
              <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">{safeT(t, 'labelBestMonth', 'Stärkster Monat')}</div>
-             <div className="text-2xl font-black text-slate-900 dark:text-white">
+             <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
                 {bestMonth !== '-' ? bestMonth : '-'}
              </div>
              <div className="text-sm font-bold text-amber-600 dark:text-amber-500 mt-1">{bestMonthVal > 0 ? `+${fCur(bestMonthVal)}` : ''}</div>
@@ -306,7 +306,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8" ref={chartRef}>
                 
                 <div 
-                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                    data-pdf-title={safeT(t, 'titleMonthlyCashflowByCat', 'Monatlicher Cashflow nach Kategorie')}
                 >
                     <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -341,12 +341,18 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                                 }
                             ]} 
                             height="100%"
-                        />
+                            options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
                     </div>
                 </div>
 
                 <div 
-                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                    data-pdf-title={safeT(t, 'titleAccumulatedPassiveCashflow', 'Akkumulierter Vermögenszufluss')}
                 >
                     <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -366,12 +372,18 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                                 }
                             ]} 
                             height="100%"
-                        />
+                            options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
                     </div>
                 </div>
 
                 <div 
-                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block xl:col-span-2"
+                   className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block xl:col-span-2"
                    data-pdf-title={safeT(t, 'titleAnnualReturnDev', 'Jährliche Ertragsentwicklung')}
                 >
                     <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -406,7 +418,13 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                                 }
                             ]} 
                             height="100%"
-                        />
+                            options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
                     </div>
                 </div>
 
@@ -449,11 +467,11 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                     <table className="w-full text-left text-sm relative">
                         <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="p-4 font-bold uppercase text-xs">{safeT(t, 'colAssetPosition', 'Asset / Position')}</th>
-                                <th className="p-4 font-bold uppercase text-xs">{safeT(t, 'category', 'Kategorie')}</th>
-                                <th className="p-4 font-bold uppercase text-xs text-center">{safeT(t, 'colFrequency', 'Frequenz')}</th>
-                                <th className="p-4 font-bold uppercase text-xs w-1/3">{safeT(t, 'colWeightingContribution', 'Gewichtung')}</th>
-                                <th className="p-4 font-bold uppercase text-xs text-right">{safeT(t, 'totalIncome', 'Gesamtertrag')}</th>
+                                <th className="p-2.5 sm:p-4 whitespace-nowrap font-bold uppercase text-xs">{safeT(t, 'colAssetPosition', 'Asset / Position')}</th>
+                                <th className="p-2.5 sm:p-4 whitespace-nowrap font-bold uppercase text-xs">{safeT(t, 'category', 'Kategorie')}</th>
+                                <th className="p-2.5 sm:p-4 whitespace-nowrap font-bold uppercase text-xs text-center">{safeT(t, 'colFrequency', 'Frequenz')}</th>
+                                <th className="p-2.5 sm:p-4 whitespace-nowrap font-bold uppercase text-xs w-1/3">{safeT(t, 'colWeightingContribution', 'Gewichtung')}</th>
+                                <th className="p-2.5 sm:p-4 whitespace-nowrap font-bold uppercase text-xs text-right">{safeT(t, 'totalIncome', 'Gesamtertrag')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
@@ -472,16 +490,16 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
 
                                     return (
                                         <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
-                                            <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{asset.name}</td>
-                                            <td className="p-4">
+                                            <td className="p-2.5 sm:p-4 whitespace-nowrap font-bold text-slate-800 dark:text-slate-200">{asset.name}</td>
+                                            <td className="p-2.5 sm:p-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold tracking-wide ${badgeStyle}`}>
                                                     {safeT(t, asset.cat, asset.cat)}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-center font-medium font-mono text-gray-400">
+                                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-center font-medium font-mono text-gray-400">
                                                 {safeT(t, 'labelPaidCountSuffix', `${asset.count}x bezahlt`).replace('{count}', asset.count)}
                                             </td>
-                                            <td className="p-4">
+                                            <td className="p-2.5 sm:p-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-mono text-xs text-gray-500 w-10 text-right">{asset.percentage.toFixed(1)}%</span>
                                                     <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -489,7 +507,7 @@ const PassiveIncomeReport = ({ data, activeAssets, dateRange, isTreeVisible, set
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-right font-black text-slate-900 dark:text-white font-mono">
+                                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-slate-900 dark:text-white font-mono">
                                                 {fCur(asset.val)}
                                             </td>
                                         </tr>

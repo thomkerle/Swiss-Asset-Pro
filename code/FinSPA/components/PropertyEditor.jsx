@@ -27,14 +27,14 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
   };
 
   const AutoSaveIndicator = () => (
-      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full shrink-0">
-          <Icon name="Check" size={10} /> {safeT('labelAutoSave', 'Auto-Save')}
+      <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full shrink-0">
+          <Icon name="Check" size={9} /> {safeT('labelAutoSave', 'Auto-Save')}
       </span>
   );
 
   if (activeReport || !selectedNode) {
       return (
-          <div className="print-hide w-full md:w-80 md:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-6 flex items-center justify-center text-gray-400 shrink-0 text-center">
+          <div className="print-hide w-full xl:w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 sm:p-4 flex items-center justify-center text-gray-400 shrink-0 text-center text-xs h-full">
               {safeT('propEditorInactive', 'Eigenschaften inaktiv.')}
           </div>
       );
@@ -86,16 +86,16 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
           return (
             <>
                  <div>
-                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetName', 'Bezeichnung')}</label>
-                     <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.name || ''} onChange={e => handleBudgetPropChange('name', e.target.value)} />
+                     <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('budgetName', 'Bezeichnung')}</label>
+                     <input className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={selectedNode.name || ''} onChange={e => handleBudgetPropChange('name', e.target.value)} />
                  </div>
                  <div>
-                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetAmount', 'Betrag')}</label>
-                     <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={selectedNode.amount || ''} onChange={e => handleBudgetPropChange('amount', e.target.value)} />
+                     <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('budgetAmount', 'Betrag')}</label>
+                     <input type="number" step="any" className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs tabular-nums" value={selectedNode.amount || ''} onChange={e => handleBudgetPropChange('amount', e.target.value)} />
                  </div>
                  <div>
-                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetFreq', 'Frequenz')}</label>
-                     <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.frequency || 'monthly'} onChange={e => handleBudgetPropChange('frequency', e.target.value)}>
+                     <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('budgetFreq', 'Frequenz')}</label>
+                     <select className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={selectedNode.frequency || 'monthly'} onChange={e => handleBudgetPropChange('frequency', e.target.value)}>
                         <option value="monthly">{safeT('freqMonthly', 'Monatlich')}</option>
                         <option value="quarterly">{safeT('freqQuarterly', 'Vierteljährlich')}</option>
                         <option value="semi-annually">{safeT('freqSemiAnnually', 'Halbjährlich')}</option>
@@ -103,16 +103,16 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     </select>
                  </div>
                  <div>
-                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetRuleCat', '50/30/20 Kategorie')}</label>
-                     <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.ruleCategory || 'needs'} onChange={e => handleBudgetPropChange('ruleCategory', e.target.value)}>
+                     <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('budgetRuleCat', '50/30/20 Kategorie')}</label>
+                     <select className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={selectedNode.ruleCategory || 'needs'} onChange={e => handleBudgetPropChange('ruleCategory', e.target.value)}>
                         <option value="needs">{safeT('ruleNeedsFix', 'Needs (Fixkosten)')}</option>
                         <option value="wants">{safeT('ruleWantsLife', 'Wants (Lifestyle)')}</option>
                         <option value="savings">{safeT('ruleSavingsSave', 'Savings (Sparen)')}</option>
                     </select>
                  </div>	
                  <div>
-                     <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('budgetNotice', 'Kündigungsfrist (Optional)')}</label>
-                     <input type="text" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.noticePeriod || ''} onChange={e => handleBudgetPropChange('noticePeriod', e.target.value)} />
+                     <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('budgetNotice', 'Kündigungsfrist (Optional)')}</label>
+                     <input type="text" className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={selectedNode.noticePeriod || ''} onChange={e => handleBudgetPropChange('noticePeriod', e.target.value)} />
                  </div>
             </>
           );
@@ -164,57 +164,61 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               <button
                 type="button"
                 onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })}
-                className="w-full py-2 px-3 bg-gray-200/70 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 transition-colors cursor-pointer"
+                className="w-full py-1.5 px-2.5 bg-gray-200/70 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <Icon name="ChevronLeft" size={14} />
-                <span>{safeT('propEditor', 'Zurück zu Asset-Eigenschaften')}</span>
+                <Icon name="ChevronLeft" size={13} />
+                <span className="truncate">{safeT('propEditor', 'Zurück zu Asset-Eigenschaften')}</span>
               </button>
 
-              <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('date', 'Datum')}</label>
-                <input type="date" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
+                <div>
+                  <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('date', 'Datum')}</label>
+                  <input type="date" className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs tabular-nums" value={booking.date || ''} onChange={e => handleBookingPropChange('date', e.target.value)} />
+                </div>
+
+                {!isBal && (
+                  <div>
+                    <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('type', 'Typ')}</label>
+                    <select className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
+                      <option value="Auszahlung">{isCreditCard ? safeT('typeCardExpense', 'Kartenausgabe (Belastung)') : safeT('typeWithdrawal', 'Auszahlung')}</option>
+                      <option value="Einzahlung">{isCreditCard ? safeT('typeCardSettlement', 'Abrechnungsausgleich (Gutschrift)') : safeT('typeDeposit', 'Einzahlung')}</option>
+                      <option value="Umbuchung">{safeT('typeTransfer', 'Umbuchung')}</option>
+                      {!isCreditCard && (
+                        <>
+                          <option value="Kauf">{safeT('typeBuy', 'Kauf')}</option>
+                          <option value="Verkauf">{safeT('typeSell', 'Verkauf')}</option>
+                          <option value="Dividende">{safeT('typeDividend', 'Dividende / Zins')}</option>
+                          <option value="Wertanpassung">{safeT('typeRevaluation', 'Wertanpassung')}</option>
+                          <option value="Abzahlung">{safeT('typeAmortization', 'Abzahlung')}</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+              
+              <div className={`grid gap-2 ${isForeignCurrency && !(isSecurities && booking.type === 'Wertanpassung') ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {!(isSecurities && booking.type === 'Wertanpassung') && (
+                  <div>
+                    <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('amount', 'Betrag')} ({selectedNode.currency || baseCurrency})</label>
+                    <input type="number" step="any" className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs font-mono text-xs tabular-nums" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
+                  </div>
+                )}
+
+                {isForeignCurrency && (
+                  <div>
+                    <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">
+                      {safeT('labelExchangeRateDate', 'FX-Kurs')} ({selectedNode.currency}→{baseCurrency})
+                    </label>
+                    <input type="number" step="0.0001" className="w-full p-1.5 px-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs font-mono text-xs tabular-nums" value={booking.bookingExchangeRate ?? ''} onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} />
+                  </div>
+                )}
               </div>
 
-              {!isBal && (
-                <div>
-                  <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('type', 'Typ')}</label>
-                  <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={booking.type || ''} onChange={e => handleBookingPropChange('type', e.target.value)}>
-                    <option value="Auszahlung">{isCreditCard ? safeT('typeCardExpense', 'Kartenausgabe (Belastung)') : safeT('typeWithdrawal', 'Auszahlung')}</option>
-                    <option value="Einzahlung">{isCreditCard ? safeT('typeCardSettlement', 'Abrechnungsausgleich (Gutschrift)') : safeT('typeDeposit', 'Einzahlung')}</option>
-                    <option value="Umbuchung">{safeT('typeTransfer', 'Umbuchung')}</option>
-                    {!isCreditCard && (
-                      <>
-                        <option value="Kauf">{safeT('typeBuy', 'Kauf')}</option>
-                        <option value="Verkauf">{safeT('typeSell', 'Verkauf')}</option>
-                        <option value="Dividende">{safeT('typeDividend', 'Dividende / Zins')}</option>
-                        <option value="Wertanpassung">{safeT('typeRevaluation', 'Wertanpassung')}</option>
-                        <option value="Abzahlung">{safeT('typeAmortization', 'Abzahlung')}</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              )}
-              
-              {!(isSecurities && booking.type === 'Wertanpassung') && (
-                <div>
-                  <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('amount', 'Betrag')} ({selectedNode.currency || baseCurrency})</label>
-                  <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.amount || ''} onChange={e => handleBookingPropChange('amount', Number(e.target.value))} />
-                </div>
-              )}
-
-              {isForeignCurrency && (
-                <div>
-                  <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">
-                    {safeT('labelExchangeRateDate', 'Wechselkurs')} ({selectedNode.currency} → {baseCurrency})
-                  </label>
-                  <input type="number" step="0.0001" className="w-full p-2.5 md:p-2 border border-yellow-300/70 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm font-mono text-sm tabular-nums" value={booking.bookingExchangeRate ?? ''} onChange={e => handleBookingPropChange('bookingExchangeRate', Number(e.target.value))} />
-                </div>
-              )}
-
               {!isBal && ['Dividende', 'Umbuchung'].includes(booking.type) && (
-                  <div className="mt-4 p-3 bg-blue-50/60 dark:bg-slate-800/40 border border-blue-200 dark:border-slate-700 rounded-lg shadow-sm">
-                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelTransferTargetAccount', 'Zielkonto für Gegenbuchung')}</label>
-                      <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)}>
+                  <div className="p-2.5 bg-blue-50/60 dark:bg-slate-800/40 border border-blue-200 dark:border-slate-700 rounded-lg shadow-xs">
+                      <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('labelTransferTargetAccount', 'Zielkonto für Gegenbuchung')}</label>
+                      <select className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)}>
                           <option value="">{safeT('optTargetAccount', '-- Optional: Zielkonto wählen --')}</option>
                           {data.banks.map(bank => {
                               const eligibleAssets = getAllAssets([bank]).filter(a => a.id !== selectedNode?.id && ['cash', 'credit_card', 'pension_cash', 'pension_3a_cash', 'stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(a.assetClass));                
@@ -263,29 +267,29 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                                  setTransferTargetId('');
                                  if (typeof window !== 'undefined' && window.showToast) window.showToast(safeT('msgTransferGenerated', "Gegenbuchung erfolgreich generiert"), "success");
                              }} 
-                             className="w-full mt-3 flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white p-2.5 md:p-2 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-md text-sm cursor-pointer"
+                             className="w-full mt-2 flex items-center justify-center gap-1.5 bg-slate-900 dark:bg-blue-600 text-white p-1.5 rounded-lg font-bold hover:bg-slate-800 dark:hover:bg-blue-700 transition-colors shadow-xs text-xs cursor-pointer"
                            >
-                               <Icon name="Send" size={14}/> {safeT('btnExecuteTransfer', 'Gegenbuchung ausführen')}
+                               <Icon name="Send" size={12}/> {safeT('btnExecuteTransfer', 'Gegenbuchung ausführen')}
                            </button>
                       )}
                   </div>
               )}
 
               {!isBal && isSecurities && (
-                <div className={`grid gap-3 mt-2 ${booking.type === 'Wertanpassung' ? 'grid-cols-1 bg-emerald-50/50 dark:bg-emerald-900/20 p-3 border border-emerald-200 dark:border-emerald-700/50 rounded-lg' : 'grid-cols-2 bg-yellow-50/50 dark:bg-slate-800/40 p-3 rounded-lg border border-gray-200 dark:border-slate-800'}`}>
+                <div className={`grid gap-2 ${booking.type === 'Wertanpassung' ? 'grid-cols-1 bg-emerald-50/50 dark:bg-emerald-900/20 p-2.5 border border-emerald-200 dark:border-emerald-700/50 rounded-lg' : 'grid-cols-2 bg-yellow-50/50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-gray-200 dark:border-slate-800'}`}>
                   
                   {['Kauf', 'Verkauf'].includes(booking.type) && (
                       <div>
-                        <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelShares', 'Stücke')}</label>
-                        <input type="number" step="any" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums" value={booking.shares || ''} onChange={e => { const sh = Number(e.target.value); const pr = booking.price || 0; handleBookingPropChange({ shares: sh, amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount }); }} />
+                        <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('labelShares', 'Stücke')}</label>
+                        <input type="number" step="any" className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs tabular-nums" value={booking.shares || ''} onChange={e => { const sh = Number(e.target.value); const pr = booking.price || 0; handleBookingPropChange({ shares: sh, amount: sh && pr ? Number((sh * pr).toFixed(2)) : booking.amount }); }} />
                       </div>
                   )}
 
                   <div className={['Kauf', 'Verkauf'].includes(booking.type) ? "" : "col-span-2"}>
-                    <label className={`block text-xs font-bold mb-1 uppercase leading-tight ${booking.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                        {booking.type === 'Wertanpassung' ? `${safeT('labelNewMarketPrice', 'Neuer Börsenkurs')} (${safeT('labelUntilNow', 'Bisher:')} ${actualPrice})` : safeT('labelMarketPrice', 'Börsenkurs')}
+                    <label className={`block text-[10px] font-bold mb-1 uppercase leading-tight truncate ${booking.type === 'Wertanpassung' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {booking.type === 'Wertanpassung' ? `${safeT('labelNewMarketPrice', 'Neuer Kurs')} (${safeT('labelUntilNow', 'Bisher:')} ${actualPrice})` : safeT('labelMarketPrice', 'Börsenkurs')}
                     </label>
-                    <input type="number" step="any" className={`w-full p-2.5 md:p-2 border rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums ${booking.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} value={booking.price ?? ''} onChange={e => { const pr = e.target.value; const sh = booking.shares || 0; handleBookingPropChange({ price: pr === '' ? undefined : Number(pr), amount: ['Kauf', 'Verkauf'].includes(booking.type) && sh && pr ? Number((sh * pr).toFixed(2)) : (booking.type === 'Wertanpassung' ? 0 : booking.amount) }); }} />
+                    <input type="number" step="any" className={`w-full p-1.5 px-2 border rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs tabular-nums ${booking.type === 'Wertanpassung' ? 'border-emerald-300 dark:border-emerald-600 focus:ring-emerald-500' : 'border-gray-300 dark:border-slate-600'}`} value={booking.price ?? ''} onChange={e => { const pr = e.target.value; const sh = booking.shares || 0; handleBookingPropChange({ price: pr === '' ? undefined : Number(pr), amount: ['Kauf', 'Verkauf'].includes(booking.type) && sh && pr ? Number((sh * pr).toFixed(2)) : (booking.type === 'Wertanpassung' ? 0 : booking.amount) }); }} />
                   </div>
 
                   {booking.type === 'Wertanpassung' && (
@@ -300,22 +304,22 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <>
                   {availableSubCategories.length > 0 ? (
                     <div>
-                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('category', 'Kategorie')}</label>
-                      <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)}>
+                      <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('category', 'Kategorie')}</label>
+                      <select className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)}>
                         <option value="">{safeT('optOptional', '-- Keine --')}</option>
                         {availableSubCategories.map(c => <option key={c} value={c}>{safeT(c, c)}</option>)}
                       </select>
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('category', 'Kategorie')}</label>
-                      <input type="text" className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
+                      <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('category', 'Kategorie')}</label>
+                      <input type="text" className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={booking.subCategory || ''} onChange={e => handleBookingPropChange('subCategory', e.target.value)} />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('labelSetNewComment', 'Kommentar / Tags')}</label>
-                    <input type="text" placeholder={safeT('placeholderTaxExample', "#Steuererklärung2026")} className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
+                    <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('labelSetNewComment', 'Kommentar / Tags')}</label>
+                    <input type="text" placeholder={safeT('placeholderTaxExample', "#Steuererklärung2026")} className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={booking.comment || ''} onChange={e => handleBookingPropChange('comment', e.target.value)} />
                   </div>
                 </>
               )}
@@ -406,21 +410,14 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
       return (
           <>
             <div>
-                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('propName', 'Name')}</label>
-                <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" value={selectedNode.name || ''} onChange={e => handlePropChange('name', e.target.value)} />
+                <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('propName', 'Name')}</label>
+                <input className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs" value={selectedNode.name || ''} onChange={e => handlePropChange('name', e.target.value)} />
             </div>
-            
-            <label className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-sm hover:border-blue-500 transition-colors">
-              <input type="checkbox" checked={selectedNode.isArchived || false} onChange={e => handlePropChange('isArchived', e.target.checked)} className="w-4 h-4 mt-0.5 text-blue-600 rounded focus:ring-blue-500" /> 
-              <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200 flex items-center gap-2">
-                  <Icon name="Archive" size={14}/> {safeT('isArchived', 'Archiviert')}
-              </span>
-            </label>
 
             <div>
-              <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('assetClass', 'Anlageklasse')}</label>
+              <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('assetClass', 'Anlageklasse')}</label>
               <select 
-                  className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm" 
+                  className="w-full p-1.5 px-2.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs" 
                   value={selectedNode.assetClass || 'cash'} 
                   onChange={e => { 
                       const val = e.target.value; 
@@ -461,45 +458,55 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
               </select>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
               <div className="flex flex-col justify-end h-full">
-                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('currency', 'Währung')}</label>
-                <select className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm" value={selectedNode.currency || 'CHF'} onChange={e => handlePropChange('currency', e.target.value)}>
+                <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('currency', 'Währung')}</label>
+                <select className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs" value={selectedNode.currency || 'CHF'} onChange={e => handlePropChange('currency', e.target.value)}>
                   <option>CHF</option><option>USD</option><option>EUR</option>
                 </select>
               </div>
               <div className="flex flex-col justify-end h-full relative group">
-                <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight" title={safeT('propTrackRateTitle', 'Genereller Tracking-Kurs')}>{safeT('propCurrentRate', 'Aktueller Kurs')}</label>
+                <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate" title={safeT('propTrackRateTitle', 'Genereller Tracking-Kurs')}>{safeT('propCurrentRate', 'Aktueller Kurs')}</label>
                 <div className="relative">
-                    <input type="number" step="any" className="w-full p-2.5 md:p-2 pr-8 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm text-sm tabular-nums focus:ring-2 focus:ring-blue-500 outline-none" value={selectedNode.exchangeRate ?? ''} onChange={e => handlePropChange('exchangeRate', e.target.value)} onBlur={e => { if (syncExchangeRates) syncExchangeRates(selectedNode.currency, e.target.value); }} />
-                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer p-1" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={14} /></button>
+                    <input type="number" step="any" className="w-full p-1.5 pl-2 pr-7 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs text-xs tabular-nums focus:ring-2 focus:ring-blue-500 outline-none" value={selectedNode.exchangeRate ?? ''} onChange={e => handlePropChange('exchangeRate', e.target.value)} onBlur={e => { if (syncExchangeRates) syncExchangeRates(selectedNode.currency, e.target.value); }} />
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={handleQuickFX} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer p-0.5" title={safeT('titleUpdateRate', "Kurs aktualisieren")}><Icon name="RefreshCw" size={12} /></button>
                 </div>
               </div>
             </div>
             
-            <label className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-sm hover:border-blue-500 transition-colors">
-              <input type="checkbox" checked={selectedNode.isLiquid || false} onChange={e => handlePropChange('isLiquid', e.target.checked)} className="w-4 h-4 mt-0.5 text-blue-600 rounded focus:ring-blue-500" /> 
-              <span className="text-sm font-medium leading-tight text-gray-900 dark:text-gray-200">{safeT('isLiquid', 'Liquides Mittel')}</span>
-            </label>
+            {/* KOMPAKTE 2-SPALTEN CHECKBOXEN FÜR LIQUIDITÄT & ARCHIVIERUNG */}
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 p-1.5 px-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-xs hover:border-blue-500 transition-colors">
+                <input type="checkbox" checked={selectedNode.isLiquid || false} onChange={e => handlePropChange('isLiquid', e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 shrink-0" /> 
+                <span className="text-[11px] font-medium leading-tight text-gray-900 dark:text-gray-200 truncate">{safeT('isLiquid', 'Liquides Mittel')}</span>
+              </label>
+
+              <label className="flex items-center gap-2 p-1.5 px-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer shadow-xs hover:border-blue-500 transition-colors">
+                <input type="checkbox" checked={selectedNode.isArchived || false} onChange={e => handlePropChange('isArchived', e.target.checked)} className="w-3.5 h-3.5 text-blue-600 rounded focus:ring-blue-500 shrink-0" /> 
+                <span className="text-[11px] font-medium leading-tight text-gray-900 dark:text-gray-200 flex items-center gap-1 truncate">
+                    <Icon name="Archive" size={11} className="shrink-0"/> <span className="truncate">{safeT('isArchived', 'Archiviert')}</span>
+                </span>
+              </label>
+            </div>
 
             {/* DEDIZIERTER KREDITKARTEN BLOCK */}
             {isCreditCard && (
-              <div className="bg-indigo-50/70 dark:bg-slate-800/60 border border-indigo-200 dark:border-slate-700 p-4 rounded-xl space-y-4 mt-4 relative overflow-hidden shadow-xs">
-                 <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
-                 <h4 className="font-bold text-xs text-indigo-900 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-2">
-                     <Icon name="CreditCard" size={14} className="text-indigo-600 dark:text-indigo-400" /> 
+              <div className="bg-indigo-50/70 dark:bg-slate-800/60 border border-indigo-200 dark:border-slate-700 p-2.5 rounded-xl space-y-2 relative overflow-hidden shadow-xs">
+                 <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                 <h4 className="font-bold text-[10px] text-indigo-900 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                     <Icon name="CreditCard" size={12} className="text-indigo-600 dark:text-indigo-400" /> 
                      {safeT('propCreditCardConfig', 'Kreditkarten-Konfiguration')}
                  </h4>
                  
                  <div>
-                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-0.5 block uppercase leading-tight">
                         {safeT('propCardLimit', 'Kreditlimite')} ({selectedNode.currency || 'CHF'})
                     </label>
                     <input 
                       type="number" 
                       step="100" 
                       placeholder="z.B. 5000" 
-                      className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-sm font-mono tabular-nums" 
+                      className="w-full p-1.5 px-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-xs text-xs font-mono tabular-nums" 
                       value={selectedNode.cardLimit ?? ''} 
                       onChange={e => handlePropChange('cardLimit', Number(e.target.value))} 
                     />
@@ -507,13 +514,13 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-0.5 block uppercase leading-tight truncate">
                           {safeT('propCardBrand', 'Kartenmarke')}
                       </label>
                       <select 
                         value={selectedNode.cardBrand || 'VISA'} 
                         onChange={e => handlePropChange('cardBrand', e.target.value)}
-                        className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                        className="w-full p-1.5 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-xs"
                       >
                         <option value="VISA">VISA</option>
                         <option value="Mastercard">Mastercard</option>
@@ -523,14 +530,14 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                      <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-0.5 block uppercase leading-tight truncate">
                           {safeT('propCardLast4', 'Letzte 4 Ziffern')}
                       </label>
                       <input 
                         type="text" 
                         maxLength={4}
                         placeholder="z.B. 4242" 
-                        className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-sm text-xs font-mono text-center" 
+                        className="w-full p-1.5 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-xs text-xs font-mono text-center" 
                         value={selectedNode.cardLast4 || ''} 
                         onChange={e => handlePropChange('cardLast4', e.target.value.replace(/\D/g, ''))} 
                       />
@@ -538,36 +545,36 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                  </div>
 
                  <div>
-                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-1 block uppercase leading-tight">
+                    <label className="text-[10px] text-indigo-900 dark:text-indigo-300 font-bold mb-0.5 block uppercase leading-tight truncate">
                         {safeT('propLinkedBank', 'Verknüpftes Girokonto (Ausgleich)')}
                     </label>
                     <select 
                       value={selectedNode.linkedBankAccountId || ''} 
                       onChange={e => handlePropChange('linkedBankAccountId', e.target.value)}
-                      className="w-full p-2.5 md:p-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-sm"
+                      className="w-full p-1.5 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-xs shadow-xs"
                     >
                       <option value="">{safeT('optSelectBankAccount', '-- Bankkonto für Abrechnung wählen --')}</option>
                       {allCashAssets.map(asset => (
                         <option key={asset.id} value={asset.id}>{asset.name} ({asset.currency || 'CHF'})</option>
                       ))}
                     </select>
-                    <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
                       {safeT('descLinkedBankNotice', 'Ermöglicht dem AI Agent den automatischen Ausgleich der Monatsrechnung.')}
                     </p>
                  </div>
 
-                 <div className="pt-2 border-t border-indigo-200/60 dark:border-slate-700/80">
-                    <div className="flex justify-between text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                 <div className="pt-1.5 border-t border-indigo-200/60 dark:border-slate-700/80">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-800 dark:text-slate-200 mb-1">
                        <span>{safeT('labelCardUsage', 'Aktuelle Auslastung:')}</span>
                        <span className="font-mono">{cardBalanceRaw.toFixed(2)} / {cardLimit.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden mb-1">
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden mb-1">
                        <div 
                          className={`h-full rounded-full transition-all duration-300 ${cardUsagePct > 85 ? 'bg-rose-500' : 'bg-indigo-600 dark:bg-indigo-400'}`}
                          style={{ width: `${cardUsagePct}%` }}
                        />
                     </div>
-                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                    <div className="flex justify-between text-[9px] text-gray-500 dark:text-gray-400">
                        <span>{cardUsagePct.toFixed(1)}% beansprucht</span>
                        <span>Rest: {availableCardAmount.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
                     </div>
@@ -576,33 +583,39 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             )}
 
             {['fund', 'stock', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(selectedNode.assetClass) && (
-                <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('ticker', 'Ticker (API)')}</label>
-                      <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
+                      <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('ticker', 'Ticker (API)')}</label>
+                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
                   </div>
                   <div>
-                      <label className="block text-gray-500 dark:text-gray-400 text-xs font-bold mb-1 uppercase leading-tight">{safeT('isin', 'ISIN (Optional)')}</label>
-                      <input className="w-full p-2.5 md:p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-sm uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
+                      <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('isin', 'ISIN (Optional)')}</label>
+                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
                   </div>
                 </div>
             )}
 
             {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'crypto' || selectedNode.assetClass === 'pension_fund' || selectedNode.assetClass === 'pension_3a_fund') && (
-              <div className="bg-yellow-50 dark:bg-slate-800/50 border border-yellow-200 dark:border-slate-600 p-4 rounded-xl space-y-4 mt-6 relative overflow-hidden">
+              <div className="bg-yellow-50 dark:bg-slate-800/50 border border-yellow-200 dark:border-slate-600 p-2.5 rounded-xl space-y-2 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>
-                 <h4 className="font-bold text-xs text-yellow-800 dark:text-yellow-500 uppercase tracking-wider flex items-center gap-2"><Icon name="TrendingUp" size={14}/> {safeT('propSecurityStatus', 'Wertpapier Status')}</h4>
+                 <h4 className="font-bold text-[10px] text-yellow-800 dark:text-yellow-500 uppercase tracking-wider flex items-center gap-1.5">
+                     <Icon name="TrendingUp" size={12}/> {safeT('propSecurityStatus', 'Wertpapier Status')}
+                 </h4>
                  
-                 <div className="grid grid-cols-2 gap-3 items-end">
-                   <div className="flex flex-col justify-end h-full">
-                     <label className="text-xs text-yellow-800 dark:text-yellow-600/80 font-bold mb-1 block uppercase leading-tight">{safeT('propCurrentShares', 'Aktuelle Stückzahl')}</label>
-                     <div className="w-full p-2.5 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-mono shadow-inner select-all tabular-nums">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+                   <div className="flex flex-col justify-end h-full min-w-0">
+                     <label className="text-[10px] text-yellow-800 dark:text-yellow-600/80 font-bold mb-0.5 block uppercase leading-tight truncate" title={safeT('propCurrentShares', 'Aktuelle Stückzahl')}>
+                         {safeT('propCurrentShares', 'Stückzahl')}
+                     </label>
+                     <div className="w-full p-1.5 px-2 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono shadow-inner select-all tabular-nums truncate">
                          {actualShares.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
                      </div>
                    </div>
-                   <div className="flex flex-col justify-end h-full">
-                     <label className="text-xs text-yellow-800 dark:text-yellow-600/80 font-bold mb-1 block uppercase leading-tight">{safeT('propCurrentPrice', 'Aktueller Preis')}</label>
-                     <div className="w-full p-2.5 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-sm font-mono shadow-inner select-all tabular-nums">
+                   <div className="flex flex-col justify-end h-full min-w-0">
+                     <label className="text-[10px] text-yellow-800 dark:text-yellow-600/80 font-bold mb-0.5 block uppercase leading-tight truncate" title={safeT('propCurrentPrice', 'Aktueller Preis')}>
+                         {safeT('propCurrentPrice', 'Aktueller Preis')}
+                     </label>
+                     <div className="w-full p-1.5 px-2 border border-yellow-200/60 dark:border-slate-700 rounded-md bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-mono shadow-inner select-all tabular-nums truncate">
                          {actualPrice.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                      </div>
                    </div>
@@ -611,35 +624,35 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
             )}
             
             {(selectedNode.assetClass === 'fund' || selectedNode.assetClass === 'stock' || selectedNode.assetClass === 'managed_fund') && (
-              <div className="bg-blue-50 dark:bg-slate-800/50 border border-blue-200 dark:border-slate-600 p-4 rounded-xl space-y-4 mt-4 relative overflow-hidden">
+              <div className="bg-blue-50 dark:bg-slate-800/50 border border-blue-200 dark:border-slate-600 p-2.5 rounded-xl space-y-2 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
-                 <h4 className="font-bold text-xs text-blue-800 dark:text-blue-500 uppercase tracking-wider flex items-center gap-2">
-                     <Icon name="Calendar" size={14}/> {safeT('propForwardYield', 'Dividenden Prognose')}
+                 <h4 className="font-bold text-[10px] text-blue-800 dark:text-blue-500 uppercase tracking-wider flex items-center gap-1.5">
+                     <Icon name="Calendar" size={12}/> {safeT('propForwardYield', 'Dividenden Prognose')}
                  </h4>
                  
-                 <div className="grid grid-cols-2 gap-3 items-end">
-                   <div className="flex flex-col justify-end h-full">
-                     <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+                   <div className="flex flex-col justify-end h-full min-w-0">
+                     <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-0.5 block uppercase leading-tight truncate">
                          {safeT('propExpectedYield', 'Erw. Rendite (%)')}
                      </label>
-                     <input type="number" step="any" placeholder={safeT('placeholderEgYield', 'z.B. 3.5')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.forwardYield ?? ''} onChange={e => handlePropChange('forwardYield', e.target.value)} />
+                     <input type="number" step="any" placeholder={safeT('placeholderEgYield', 'z.B. 3.5')} className="w-full p-1.5 px-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-xs text-xs tabular-nums" value={selectedNode.forwardYield ?? ''} onChange={e => handlePropChange('forwardYield', e.target.value)} />
                    </div>
                    
-                   <div className="flex flex-col justify-end h-full" title={safeT('titleTaxDeduction', 'Temporärer Steuerabzug am Zahltag (z.B. 35% Verrechnungssteuer, 30% US-Abzug)')}>
-                      <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
+                   <div className="flex flex-col justify-end h-full min-w-0" title={safeT('titleTaxDeduction', 'Temporärer Steuerabzug am Zahltag (z.B. 35% Verrechnungssteuer, 30% US-Abzug)')}>
+                      <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-0.5 block uppercase leading-tight truncate">
                           {safeT('propTotalTaxes', 'Steuer-Total (%)')}
                       </label>
-                      <input type="number" step="any" placeholder={safeT('placeholderEgTaxes', 'z.B. 35')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm tabular-nums" value={selectedNode.totalTaxes ?? ''} onChange={e => handlePropChange('totalTaxes', e.target.value)} />
+                      <input type="number" step="any" placeholder={safeT('placeholderEgTaxes', 'z.B. 35')} className="w-full p-1.5 px-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-xs text-xs tabular-nums" value={selectedNode.totalTaxes ?? ''} onChange={e => handlePropChange('totalTaxes', e.target.value)} />
                    </div>
 
-                   <div className="flex flex-col justify-end h-full col-span-2 mt-1">
-                     <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-1 block uppercase leading-tight">
+                   <div className="flex flex-col justify-end h-full col-span-2">
+                     <label className="text-[10px] text-blue-800 dark:text-blue-400 font-bold mb-0.5 block uppercase leading-tight truncate">
                          {safeT('propPayoutMonths', 'Zahlmonate (1-12)')}
                      </label>
-                     <input type="text" placeholder={safeT('placeholderEgMonths', 'z.B. 3,6,9,12')} className="w-full p-2.5 md:p-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-sm text-sm" value={selectedNode.payoutMonths ?? ''} onChange={e => handlePropChange('payoutMonths', e.target.value)} />
+                     <input type="text" placeholder={safeT('placeholderEgMonths', 'z.B. 3,6,9,12')} className="w-full p-1.5 px-2 border border-blue-300/60 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 shadow-xs text-xs" value={selectedNode.payoutMonths ?? ''} onChange={e => handlePropChange('payoutMonths', e.target.value)} />
                    </div>
                  </div>
-                 <div className="text-[10px] text-blue-600/70 dark:text-blue-400/70 leading-tight">
+                 <div className="text-[9px] text-blue-600/70 dark:text-blue-400/70 leading-tight">
                     {safeT('descTaxesNotice', 'Eingabe der Gesamtkosten (Quell- + Verrechnungssteuer) zur Netto-Prognose.')}
                  </div>
               </div>
@@ -658,25 +671,25 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         .custom-tree-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.6); }
       `}</style>
       
-      <div className="print-hide w-full md:w-80 md:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-5 md:p-6 flex flex-col gap-5 md:gap-6 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner">
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-3 shrink-0">
-            <div className="flex items-center gap-2 min-w-0 pr-2">
-                <Icon name={selectedNode.selectedBooking ? "Edit" : "Settings"} className="text-gray-500 shrink-0" />
-                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-xs md:text-sm truncate">
+      <div className="print-hide w-full xl:w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 flex flex-col gap-2.5 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner h-full">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-2 shrink-0">
+            <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                <Icon name={selectedNode.selectedBooking ? "Edit" : "Settings"} size={13} className="text-gray-500 shrink-0" />
+                <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px] truncate">
                     {selectedNode.budgetType ? safeT('budgetDetails', 'Budget Details') : 
                      selectedNode.selectedBooking ? (selectedNode.selectedBooking._isBal ? safeT('editBalance', 'Saldo bearbeiten') : safeT('editBooking', 'Buchung bearbeiten')) : 
-                     safeT('propEditor', 'Eigenschaften')}
+                     'Eigenschaften'}
                 </h3>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
                <AutoSaveIndicator />
                {selectedNode.selectedBooking && (
-                   <Icon name="X" size={18} className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} title={safeT('titleCloseEditor', "Editor schließen")} />
+                   <Icon name="X" size={14} className="cursor-pointer text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" onClick={() => setSelectedNode({ ...selectedNode, selectedBooking: null })} title={safeT('titleCloseEditor', "Editor schließen")} />
                )}
             </div>
         </div>
         
-        <div className="space-y-4 pb-16 md:pb-12">
+        <div className="space-y-2.5 pb-6">
           {renderContent()}
         </div>
       </div>

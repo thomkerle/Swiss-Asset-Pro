@@ -222,7 +222,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
 
   if (grandTotal === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'noAssetsFoundDate', 'Keine Vermögenswerte zum gewählten Stichtag gefunden.')}</p>
@@ -232,12 +232,12 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
   }
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       
       <div className="pdf-combined-export-block w-full bg-white dark:bg-transparent">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="PieChart" size={14} className="text-blue-500"/>
                     <span>{safeT(t, 'totalWealth', 'Gesamtkapital')}</span>
@@ -253,7 +253,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-sky-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-sky-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Droplet" size={14} className="text-sky-500"/>
@@ -273,7 +273,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Lock" size={14} className="text-amber-500"/>
@@ -293,7 +293,7 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="DollarSign" size={14} className="text-emerald-500"/>
@@ -315,9 +315,9 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
              </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
             
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleStructureOverview', 'Struktur-Übersicht')}>
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleStructureOverview', 'Struktur-Übersicht')}>
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="PieChart" className="text-indigo-500"/> <span>{safeT(t, 'titleStructureOverview', 'Struktur-Übersicht')}</span>
                 </h3>
@@ -332,11 +332,15 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                       backgroundColor: ['#0ea5e9', '#f59e0b'],
                       valueFormatter: fCur 
                     }]}
-                  />
+                      options={{
+                            legend: { type: 'scroll', bottom: 0, itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            series: [{ center: ['50%', '43%'], radius: ['38%', '66%'] }]
+                        }}
+                    />
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleLiqHistory', 'Historischer Liquiditätsverlauf')}>
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleLiqHistory', 'Historischer Liquiditätsverlauf')}>
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                     <Icon name="TrendingUp" className="text-blue-500"/> <span>{safeT(t, 'titleLiqHistory', 'Historischer Liquiditätsverlauf')}</span>
                 </h3>
@@ -366,7 +370,13 @@ const LiquidityReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTr
                         valueFormatter: fCur
                       }
                     ]}
-                  />
+                      options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
                 </div>
             </div>
 

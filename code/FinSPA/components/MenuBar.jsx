@@ -343,16 +343,20 @@ const MenuBar = ({
                       if (!ExcelExportEngine || typeof ExcelExportEngine.exportPortfolio !== 'function') {
                         throw new Error("ExcelExportEngine.jsx konnte nicht gefunden oder geladen werden.");
                       }
-                      const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
+const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
                       const fileName = `FinBundle_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = fileName;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
+                      if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+                        await window.finbundleSaveOrShare(blob, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                      } else {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }
                       if (typeof window !== 'undefined' && window.showToast) {
                         window.showToast(safeT(t, 'msgExportExcelSuccess', "Excel-Export erfolgreich!"), "success");
                       }

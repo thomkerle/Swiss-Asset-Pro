@@ -239,7 +239,7 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
 
   if (grandTotal === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'noAssetsFoundDate', 'Keine Vermögenswerte zum gewählten Stichtag gefunden.')}</p>
@@ -254,17 +254,17 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
   const volInCurLabel = safeT(t, 'labelVolumeInCurrency', 'Volumen in {cur}').replace('{cur}', baseCurrency);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       <div className="w-full bg-white dark:bg-transparent">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
                     <span>{String(safeT(t, 'totalWealth', 'Gesamtkapital')).toUpperCase()}</span>
                 </div>
-                <div className="font-black text-2xl text-slate-900 dark:text-white truncate" title={formatCurrency(grandTotal)}>
+                <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate" title={formatCurrency(grandTotal)}>
                     {formatCurrency(grandTotal)}
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -272,7 +272,7 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Building" size={14} className="text-emerald-500"/>
@@ -290,7 +290,7 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Layers" size={14} className="text-amber-500"/>
@@ -300,7 +300,7 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                       {top3Percent > 75 ? safeT(t, 'labelClusterHigh', 'Hoch') : safeT(t, 'labelClusterModerate', 'Moderat')}
                     </span>
                 </div>
-                <div className="font-black text-2xl text-slate-900 dark:text-white">
+                <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white">
                     {top3Percent}%
                 </div>
                 <div className="text-xs text-gray-400 mt-2 truncate">
@@ -308,12 +308,12 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Globe" size={14} className="text-purple-500"/>
                     <span>{safeT(t, 'labelMainCurrency', 'HAUPTWÄHRUNG')}</span>
                 </div>
-                <div className="font-black text-2xl text-slate-900 dark:text-white">
+                <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white">
                     {currencyData[0]?.currency || baseCurrency} <span className="text-sm font-medium text-purple-600 dark:text-purple-400">({currencyData[0]?.percentage.toFixed(1)}%)</span>
                 </div>
                 <div className="text-xs text-gray-400 mt-2 truncate">
@@ -322,10 +322,10 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
              </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
             
             <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'titleAllocByInst', 'Allokation nach Instituten')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -343,12 +343,16 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                             data: allocData.map(d => d.value),
                             valueFormatter: formatCurrency
                         }]}
+                        options={{
+                            legend: { type: 'scroll', bottom: 0, itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            series: [{ center: ['50%', '43%'], radius: ['38%', '66%'] }]
+                        }}
                     />
                 </div>
             </div>
 
             <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'titleCurrencyExposure', 'Währungs-Exposure')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -368,6 +372,12 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                             backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
                             valueFormatter: formatCurrency
                         }]}
+                        options={{
+                            grid: { top: 16, bottom: 28, left: '3%', right: '6%', containLabel: true },
+                            legend: { show: false },
+                            xAxis: { axisLabel: { hideOverlap: true, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 11 } }
+                        }}
                     />
                 </div>
             </div>
@@ -384,51 +394,77 @@ const AllocationReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, fC
                   </span>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile Karten-Ansicht (< md) mit Original-Übersetzungen */}
+              <div className="block md:hidden divide-y divide-gray-100 dark:divide-slate-800">
+                  {allocData.map((bank, idx) => (
+                      <div key={`mob-alloc-card-${idx}`} className="p-3.5 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2 truncate">
+                                  <Icon name="Building" size={14} className="text-blue-500 shrink-0"/>
+                                  <span className="truncate">{bank.label}</span>
+                              </span>
+                              <span className="font-black font-mono text-slate-900 dark:text-white shrink-0">
+                                  {formatCurrency(bank.value)}
+                              </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-gray-500 font-mono">
+                              <div className="flex items-center gap-2">
+                                  <span>{bank.assetCount} {safeT(t, 'labelPosSuffix', 'Pos.')}</span>
+                                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gray-100 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-300">{bank.primaryCurrency}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <span className="font-bold text-blue-600 dark:text-blue-400">{bank.percentage.toFixed(1)}%</span>
+                                  <span className="text-[10px] text-gray-400">(Σ {bank.cumPercentage.toFixed(1)}%)</span>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left text-sm">
                       <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
                           <tr>
-                              <th className="p-4">{safeT(t, 'bank', 'Institut / Bank')}</th>
-                              <th className="p-4 text-center">{safeT(t, 'assets', 'Assets')}</th>
-                              <th className="p-4 text-center">{safeT(t, 'colPrimaryCurrency', 'Hauptwährung')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'amount', 'Volumen')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'share', 'Anteil')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'colCumulative', 'Kumuliert')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'bank', 'Institut / Bank')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-center">{safeT(t, 'assets', 'Assets')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-center">{safeT(t, 'colPrimaryCurrency', 'Hauptwährung')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'amount', 'Volumen')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'share', 'Anteil')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colCumulative', 'Kumuliert')}</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                           {allocData.map((bank, idx) => (
                               <tr key={idx} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
-                                  <td className="p-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                                       <Icon name="Building" size={14} className="text-gray-400"/>
                                       {bank.label}
                                   </td>
-                                  <td className="p-4 text-center text-gray-500 font-mono">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-gray-500 font-mono">
                                       {bank.assetCount} {safeT(t, 'labelPosSuffix', 'Pos.')}
                                   </td>
-                                  <td className="p-4 text-center">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap text-center">
                                       <span className="px-2 py-0.5 text-xs font-bold bg-gray-100 dark:bg-slate-800 rounded text-slate-600 dark:text-slate-300">
                                           {bank.primaryCurrency}
                                       </span>
                                   </td>
-                                  <td className="p-4 text-right font-black font-mono text-slate-900 dark:text-white">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black font-mono text-slate-900 dark:text-white">
                                       {formatCurrency(bank.value)}
                                   </td>
-                                  <td className="p-4 text-right font-bold text-blue-600 dark:text-blue-400 font-mono">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-bold text-blue-600 dark:text-blue-400 font-mono">
                                       {bank.percentage.toFixed(1)}%
                                   </td>
-                                  <td className="p-4 text-right text-gray-400 font-mono text-xs">
+                                  <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400 font-mono text-xs">
                                       {bank.cumPercentage.toFixed(1)}%
                                   </td>
                               </tr>
                           ))}
                           <tr className="bg-slate-50 dark:bg-slate-800/50 font-bold border-t-2 border-slate-200 dark:border-slate-700">
-                              <td className="p-4 uppercase text-slate-900 dark:text-white">{safeT(t, 'totalPortfolioCombined', 'Gesamtportfolio')}</td>
-                              <td className="p-4 text-center text-slate-700 dark:text-slate-300">{totalAssetsCount} {safeT(t, 'labelPosSuffix', 'Pos.')}</td>
-                              <td className="p-4 text-center text-slate-700 dark:text-slate-300">{baseCurrency}</td>
-                              <td className="p-4 text-right font-black font-mono text-slate-900 dark:text-white">{formatCurrency(grandTotal)}</td>
-                              <td className="p-4 text-right font-mono text-blue-600 dark:text-blue-400">100.0%</td>
-                              <td className="p-4 text-right font-mono text-gray-500">100.0%</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap uppercase text-slate-900 dark:text-white">{safeT(t, 'totalPortfolioCombined', 'Gesamtportfolio')}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-slate-700 dark:text-slate-300">{totalAssetsCount} {safeT(t, 'labelPosSuffix', 'Pos.')}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-slate-700 dark:text-slate-300">{baseCurrency}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black font-mono text-slate-900 dark:text-white">{formatCurrency(grandTotal)}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-blue-600 dark:text-blue-400">100.0%</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-gray-500">100.0%</td>
                           </tr>
                       </tbody>
                   </table>

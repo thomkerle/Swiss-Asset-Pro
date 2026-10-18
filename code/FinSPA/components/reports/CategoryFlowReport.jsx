@@ -233,7 +233,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
 
   if (catData.length === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 relative">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Inbox" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'catNoMovements', 'Keine Bewegungen in den Kategorien im gewählten Zeitraum gefunden.')}</p>
@@ -246,18 +246,18 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
   const deltaCurrencyTitle = safeT(t, 'titleNetValChangeCurrency', 'Netto-Wertveränderung ({cur})').replace('{cur}', baseCurrency);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
       
       <div className="w-full bg-white dark:bg-transparent">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-slate-400">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Calendar" size={14} className="text-slate-500"/>
                     <span>{safeT(t, 'labelStartVolumeHeader', 'STARTVOLUMEN')}</span>
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+                <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate">
                     {fCur(totalStart)}
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -265,12 +265,12 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Database" size={14} className="text-blue-500"/>
                     <span>{safeT(t, 'labelEndVolumeHeader', 'ENDVOLUMEN')}</span>
                 </div>
-                <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+                <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate">
                     {fCur(totalEnd)}
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -278,7 +278,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             <div className={`p-6 rounded-2xl shadow-sm border-b-4 relative overflow-hidden ${
+             <div className={`p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 relative overflow-hidden ${
                  totalDelta >= 0 
                     ? 'bg-emerald-50/50 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/50 border-b-emerald-500' 
                     : 'bg-rose-50/50 dark:bg-slate-900 border border-rose-200 dark:border-rose-800/50 border-b-rose-500'
@@ -292,7 +292,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                         {totalGrowthPct >= 0 ? '+' : ''}{totalGrowthPct.toFixed(2)}%
                     </span>
                 </div>
-                <div className={`text-2xl font-black truncate ${totalDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                <div className={`text-lg sm:text-2xl font-black truncate ${totalDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                     {totalDelta > 0 ? '+' : ''}{fCur(totalDelta)}
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
@@ -300,7 +300,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                 </div>
              </div>
 
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <Icon name="Star" size={14} className="text-amber-500"/>
@@ -322,10 +322,10 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
              </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
             
             <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'titleStartVsEndCategory', 'Start- vs. Endwert je Kategorie')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -351,12 +351,18 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                             }
                         ]}
                         height="100%"
+                        options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
                     />
                 </div>
             </div>
 
             <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'titleNetValChangeCategory', 'Netto-Wertveränderung je Kategorie')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -375,6 +381,12 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                             valueFormatter: (val) => `${val >= 0 ? '+' : ''}${fCur(val)}`
                         }]}
                         height="100%"
+                        options={{
+                            grid: { top: 16, bottom: 28, left: '3%', right: '6%', containLabel: true },
+                            legend: { show: false },
+                            xAxis: { axisLabel: { hideOverlap: true, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 11 } }
+                        }}
                     />
                 </div>
             </div>
@@ -382,7 +394,7 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-10">
-              <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+              <div className="p-3.5 sm:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-wrap justify-between items-center gap-2">
                   <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <Icon name="Layers" className="text-slate-500" /> {safeT(t, 'titleCategoryDetailsDrilldown', 'Kategorie-Details & Portfolio-Verschiebungen')}
                   </h3>
@@ -395,12 +407,12 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                   <table className="w-full text-left text-sm">
                       <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
                           <tr>
-                              <th className="p-4">{safeT(t, 'colCategoryArea', 'Kategorie / Bereich')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'startValue', 'Startwert')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'endValue', 'Endwert')}</th>
-                              <th className="p-4 text-right">{deltaCurrencyTitle}</th>
-                              <th className="p-4 text-right">{safeT(t, 'colGrowthPercent', 'Wachstum (%)')}</th>
-                              <th className="p-4 text-right">{safeT(t, 'colPortfolioShare', 'Portfolio-Anteil')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'colCategoryArea', 'Kategorie / Bereich')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'startValue', 'Startwert')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'endValue', 'Endwert')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{deltaCurrencyTitle}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colGrowthPercent', 'Wachstum (%)')}</th>
+                              <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colPortfolioShare', 'Portfolio-Anteil')}</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
@@ -414,21 +426,21 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                                           onClick={() => toggleCat(cat.name)}
                                           className="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 cursor-pointer transition-colors group"
                                       >
-                                          <td className="p-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2.5">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2.5">
                                               <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={13} className="text-gray-400 group-hover:text-blue-500 transition-colors shrink-0" />
                                               <Icon name="Folder" className="text-amber-500 shrink-0" size={15}/>
                                               <span>{cat.name}</span>
                                               <span className="text-[10px] text-gray-400 font-normal">({cat.assets.length})</span>
                                           </td>
-                                          <td className="p-4 text-right font-mono text-gray-500">{fCur(cat.start)}</td>
-                                          <td className="p-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(cat.end)}</td>
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-gray-500">{fCur(cat.start)}</td>
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(cat.end)}</td>
                                           <td className={`p-4 text-right font-mono font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                               {isPositive ? '+' : ''}{fCur(cat.delta)}
                                           </td>
                                           <td className={`p-4 text-right font-mono text-xs font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                               {isPositive ? '+' : ''}{cat.pctChange.toFixed(1)}%
                                           </td>
-                                          <td className="p-4 text-right font-mono text-xs text-gray-500">
+                                          <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-xs text-gray-500">
                                               <span>{cat.endShare.toFixed(1)}%</span>
                                               <span className={`ml-1.5 text-[10px] ${cat.shareShift >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                                                   ({cat.shareShift >= 0 ? '+' : ''}{cat.shareShift.toFixed(1)}%)
@@ -468,16 +480,16 @@ const CategoryFlowReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible, 
                           })}
 
                           <tr className="bg-slate-100/80 dark:bg-slate-800/70 font-bold border-t-2 border-slate-200 dark:border-slate-700">
-                              <td className="p-4 text-slate-900 dark:text-white uppercase">{safeT(t, 'totalPortfolioCombined', 'Gesamtportfolio')}</td>
-                              <td className="p-4 text-right font-mono text-gray-600 dark:text-gray-300">{fCur(totalStart)}</td>
-                              <td className="p-4 text-right font-mono text-slate-900 dark:text-white">{fCur(totalEnd)}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-slate-900 dark:text-white uppercase">{safeT(t, 'totalPortfolioCombined', 'Gesamtportfolio')}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-gray-600 dark:text-gray-300">{fCur(totalStart)}</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-slate-900 dark:text-white">{fCur(totalEnd)}</td>
                               <td className={`p-4 text-right font-mono ${totalDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
                                   {totalDelta >= 0 ? '+' : ''}{fCur(totalDelta)}
                               </td>
                               <td className={`p-4 text-right font-mono ${totalGrowthPct >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
                                   {totalGrowthPct >= 0 ? '+' : ''}{totalGrowthPct.toFixed(1)}%
                               </td>
-                              <td className="p-4 text-right font-mono text-slate-900 dark:text-white">100.0%</td>
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-mono text-slate-900 dark:text-white">100.0%</td>
                           </tr>
                       </tbody>
                   </table>

@@ -293,7 +293,7 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
 
   if (yieldAssets.length === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12 mx-auto">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 mx-auto">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Calendar" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'noForwardYieldData', 'Es wurden noch keine "Erw. Rendite" Werte in deinen Aktien/Fonds hinterlegt.')}</p>
@@ -308,16 +308,16 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
   const topPayerAnnualNetDesc = safeT(t, 'descTopPayerAnnualNet', '+{val} p.a. Netto').replace('{val}', fCur(topPayer.amount, baseCurrency));
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 mx-auto" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 mx-auto" ref={reportRef}>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
-         <div className="bg-emerald-50/60 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-600 overflow-hidden">
+         <div className="bg-emerald-50/60 dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-600 overflow-hidden">
             <div className="text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Calendar" size={14} /> 
                 {safeT(t, 'labelExpectedNetIncome', 'ERWARTETES NETTO (12M)')}
             </div>
-            <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 truncate">
                 +{fCur(totalAnnual, baseCurrency)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -325,12 +325,12 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
             </div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Activity" size={14} className="text-blue-500" />
                 {safeT(t, 'kpiAvgMonthlyCashflow', 'Ø MONATL. CASHFLOW')}
             </div>
-            <div className="text-2xl font-black text-blue-600 dark:text-blue-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-blue-600 dark:text-blue-400 truncate">
                 {fCur(totalAnnual / 12, baseCurrency)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -338,12 +338,12 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
             </div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Percent" size={14} className="text-purple-500" />
                 {safeT(t, 'kpiAvgDivYield', 'Ø DIVIDENDENRENDITE')}
             </div>
-            <div className="text-2xl font-black text-purple-600 dark:text-purple-400 truncate">
+            <div className="text-lg sm:text-2xl font-black text-purple-600 dark:text-purple-400 truncate">
                 {weightedYieldPct.toFixed(2)} %
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -351,7 +351,7 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
             </div>
          </div>
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-orange-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-orange-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                     <Icon name="Star" size={14} className="text-orange-500" />
@@ -370,9 +370,9 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
          </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 mb-6 sm:mb-10">
           
-          <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleExpectedCashflows12M', 'Voraussichtliche Zahlungsströme (12M)')}>
+          <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleExpectedCashflows12M', 'Voraussichtliche Zahlungsströme (12M)')}>
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                   <Icon name="BarChart" className="text-blue-500" /> {predictedPayoutsTitle}
               </h3>
@@ -388,11 +388,17 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
                           valueFormatter: fCur
                       }]} 
                       height="100%"
-                  />
+                      options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
               </div>
           </div>
 
-          <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleTopDivPayersAnnual', 'Top Dividendenzahler (p.a.)')}>
+          <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleTopDivPayersAnnual', 'Top Dividendenzahler (p.a.)')}>
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                   <Icon name="PieChart" className="text-emerald-500" /> {safeT(t, 'titleStrongestDivPayersNet', 'Stärkste Dividendenzahler (p.a. Netto)')}
               </h3>
@@ -409,14 +415,20 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
                           valueFormatter: fCur
                       }]}
                       height="100%"
-                  />
+                      options={{
+                            grid: { top: 16, bottom: 28, left: '3%', right: '6%', containLabel: true },
+                            legend: { show: false },
+                            xAxis: { axisLabel: { hideOverlap: true, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 11 } }
+                        }}
+                    />
               </div>
           </div>
 
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-         <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+         <div className="px-3 sm:px-3 sm:px-6 py-2.5 sm:py-3 sm:py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
              <div className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
                  <Icon name="List" className="text-slate-500" />
                  {activeTab === 'calendar' 
@@ -444,21 +456,21 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
                 <table className="w-full text-sm text-left">
                    <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
                       <tr>
-                         <th className="px-6 py-4 w-1/5">{safeT(t, 'colMonth', 'Monat')}</th>
+                         <th className="px-3 sm:px-3 sm:px-6 py-2.5 sm:py-3 sm:py-4 w-1/5">{safeT(t, 'colMonth', 'Monat')}</th>
                          <th className="px-4 py-4 w-1/5 text-right">{safeT(t, 'colSumNet', 'Summe Netto')}</th>
-                         <th className="px-6 py-4 w-3/5">{safeT(t, 'colPayingAssetsSingleAmounts', 'Zahlende Assets & Einzelbeträge')}</th>
+                         <th className="px-3 sm:px-3 sm:px-6 py-2.5 sm:py-3 sm:py-4 w-3/5">{safeT(t, 'colPayingAssetsSingleAmounts', 'Zahlende Assets & Einzelbeträge')}</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                       {monthlyData.map((d) => (
                           <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10 whitespace-nowrap">
+                              <td className="px-3 sm:px-3 sm:px-6 py-2.5 sm:py-3 sm:py-4 font-bold text-slate-800 dark:text-slate-200 bg-gray-50/20 dark:bg-slate-900/10 whitespace-nowrap">
                                   {d.label}
                               </td>
                               <td className="px-4 py-4 text-right font-mono font-bold text-blue-600 dark:text-blue-400 text-base">
                                   {d.expectedAmount > 0 ? '+' : ''}{fCur(d.expectedAmount, baseCurrency)}
                               </td>
-                              <td className="px-6 py-3">
+                              <td className="px-3 sm:px-6 py-2.5 sm:py-3">
                                   {d.details.length > 0 ? (
                                       <div className="flex flex-col gap-1.5">
                                           {d.details.map((detail, i) => (
@@ -496,34 +508,34 @@ const DividendCalendarReport = ({ data, activeAssets, isTreeVisible, setIsTreeVi
                 <table className="w-full text-sm text-left">
                    <thead className="text-xs text-gray-500 uppercase bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
                       <tr>
-                         <th className="p-4">{safeT(t, 'colSecurityAsset', 'Wertpapier / Asset')}</th>
-                         <th className="p-4 text-right">{safeT(t, 'colPortfolioValue', 'Depotwert')}</th>
-                         <th className="p-4 text-right">{safeT(t, 'colForwardYield', 'Forward Yield')}</th>
-                         <th className="p-4 text-right">{safeT(t, 'colWithholdingTax', 'Quellensteuer')}</th>
-                         <th className="p-4 text-center">{safeT(t, 'colPayoutFrequency', 'Frequenz')}</th>
-                         <th className="p-4 text-right">{safeT(t, 'colAnnualYieldNet', 'Jahresertrag Netto')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'colSecurityAsset', 'Wertpapier / Asset')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colPortfolioValue', 'Depotwert')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colForwardYield', 'Forward Yield')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colWithholdingTax', 'Quellensteuer')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap text-center">{safeT(t, 'colPayoutFrequency', 'Frequenz')}</th>
+                         <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'colAnnualYieldNet', 'Jahresertrag Netto')}</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
                       {assetDividendList.map((a, i) => (
                           <tr key={i} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <td className="p-4 font-sans font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
                                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
                                   <span className="truncate">{a.name}</span>
                               </td>
-                              <td className="p-4 text-right text-gray-600 dark:text-gray-300">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-600 dark:text-gray-300">
                                   {fCur(a.currentValue, baseCurrency)}
                               </td>
-                              <td className="p-4 text-right text-blue-600 dark:text-blue-400 font-bold">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-blue-600 dark:text-blue-400 font-bold">
                                   {a.forwardYield.toFixed(2)} %
                               </td>
-                              <td className="p-4 text-right text-gray-400 text-xs">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400 text-xs">
                                   {a.taxPct > 0 ? `${a.taxPct.toFixed(1)}%` : '0%'}
                               </td>
-                              <td className="p-4 text-center font-sans text-xs text-gray-500">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-center font-sans text-xs text-gray-500">
                                   {safeT(t, 'labelTimesPerYear', '{count}x / Jahr').replace('{count}', a.payoutCount)}
                               </td>
-                              <td className="p-4 text-right font-black text-emerald-600 dark:text-emerald-400">
+                              <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-emerald-600 dark:text-emerald-400">
                                   +{fCur(a.annualNet, baseCurrency)}
                               </td>
                           </tr>

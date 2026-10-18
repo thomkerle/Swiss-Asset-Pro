@@ -15,7 +15,136 @@ const loadScript = (url, checkGlobal) => {
     });
 };
 
+// Hilfsfunktion: Konvertiert ein Blob sicher in einen Base64-String (für Android / Capacitor Filesystem)
+const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = String(reader.result || '');
+            const base64 = result.includes(',') ? result.split(',')[1] : result;
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
 const PdfToolkit = {
+    /**
+     * Universeller Datei-Export für Android (Capacitor / WebView) & Desktop
+     */
+    saveOrSharePdf: async (blob, fileName, mimeType = 'application/pdf') => {
+        // 0. Falls App.jsx bereits die globale Helper-Funktion bereitstellt, nutze diese
+        if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+            return await window.finbundleSaveOrShare(blob, fileName, mimeType);
+        }
+
+        const isAndroid = typeof window !== 'undefined' && (
+            /android/i.test(navigator.userAgent || '') ||
+            (window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android') ||
+            new URLSearchParams(window.location.search).get('android') === 'true'
+        );
+        const isCapacitor = typeof window !== 'undefined' && Boolean(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
+        // 1. CAPACITOR NATIVE FILESYSTEM (Speichert direkt in "Dokumente" auf dem Android-Tablet)
+        if (isCapacitor) {
+            try {
+                const { Filesystem, Directory } = await import('@capacitor/filesystem');
+                const base64Data = await blobToBase64(blob);
+                const savedFile = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64Data,
+                    directory: Directory.Documents
+                });
+
+                if (typeof window !== 'undefined' && window.showToast) {
+                    window.showToast(`Gespeichert unter Dokumente: ${fileName}`, "success");
+                }
+
+                // Falls @capacitor/share installiert ist, direkt zum Öffnen/Teilen anbieten
+                try {
+                    const { Share } = await import('@capacitor/share');
+                    if (Share && typeof Share.share === 'function' && savedFile?.uri) {
+                        await Share.share({
+                            title: fileName,
+                            url: savedFile.uri,
+                            dialogTitle: 'PDF öffnen oder teilen'
+                        });
+                        return true;
+                    }
+                } catch (sharePluginErr) {
+                    // Kein @capacitor/share installiert -> Web Share API versuchen oder bei gespeichertem Dokument belassen
+                }
+
+                // Zusätzlich versuchen, das native Android Share-Menü über navigator.share zu öffnen
+                if (typeof navigator !== 'undefined' && navigator.canShare) {
+                    const file = new File([blob], fileName, { type: mimeType });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ title: fileName, files: [file] });
+                    }
+                }
+                return true;
+            } catch (capErr) {
+                console.warn("[PdfToolkit] Capacitor Filesystem Fallback:", capErr);
+            }
+        }
+
+        // 2. ANDROID WEBVIEW / MOBILE BROWSER: Native Web Share API (Teilen / Öffnen mit PDF-Viewer)
+        if (isAndroid && typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+            try {
+                const file = new File([blob], fileName, { type: mimeType });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: fileName,
+                        text: 'FinBundle Pro Export',
+                        files: [file]
+                    });
+                    if (typeof window !== 'undefined' && window.showToast) {
+                        window.showToast("PDF erfolgreich übergeben", "success");
+                    }
+                    return true;
+                }
+            } catch (shareErr) {
+                if (shareErr && shareErr.name === 'AbortError') return false;
+                console.warn("[PdfToolkit] Web Share API Fallback:", shareErr);
+            }
+        }
+
+        // 3. ANDROID DATA-URL FALLBACK (Falls reine Android WebView ohne Share-API: Data-URL statt Blob-URL!)
+        if (isAndroid) {
+            try {
+                const base64Data = await blobToBase64(blob);
+                const dataUrl = `data:${mimeType};base64,${base64Data}`;
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                if (typeof window !== 'undefined' && window.showToast) {
+                    window.showToast(`Download gestartet: ${fileName}`, "success");
+                }
+                return true;
+            } catch (e) {
+                console.warn("[PdfToolkit] Data-URL Fallback fehlgeschlagen:", e);
+            }
+        }
+
+        // 4. STANDARD DESKTOP / BROWSER DOWNLOAD
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        if (typeof window !== 'undefined' && window.showToast) {
+            window.showToast("PDF erfolgreich exportiert", "success");
+        }
+        return true;
+    },
+
     /**
      * Zeichnet das FinBundle / FinSPA Logo als native Vektorgrafik
      */
@@ -370,7 +499,7 @@ const PdfToolkit = {
     },
 
     /**
-     * Universeller Einzel-Export
+     * Universeller Einzel-Export (Android & Desktop kompatibel)
      */
     exportReport: async (config) => {
         try {
@@ -392,17 +521,10 @@ const PdfToolkit = {
 
             const chunks = [];
             doc.on('data', chunk => chunks.push(chunk));
-            doc.on('end', () => {
+            doc.on('end', async () => {
                 const blob = new Blob(chunks, { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `${config.title.replace(/\s+/g, '_')}_Report.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                if (typeof window !== 'undefined' && window.showToast) window.showToast("PDF erfolgreich exportiert", "success");
+                const fileName = `${String(config.title || 'FinBundle').replace(/\s+/g, '_')}_Report.pdf`;
+                await PdfToolkit.saveOrSharePdf(blob, fileName, 'application/pdf');
             });
 
             const margin = 40;
@@ -498,7 +620,7 @@ const PdfToolkit = {
     },
 
     /**
-     * Universeller Batch-Export für FullPdfOrchestrator
+     * Universeller Batch-Export für FullPdfOrchestrator (Android & Desktop kompatibel)
      */
     exportCombinedReport: async (mainTitle, reportsDataArray, data) => {
         try {
@@ -520,17 +642,10 @@ const PdfToolkit = {
 
             const chunks = [];
             doc.on('data', chunk => chunks.push(chunk));
-            doc.on('end', () => {
+            doc.on('end', async () => {
                 const blob = new Blob(chunks, { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `FinBundle_Gesamtreport_${new Date().toISOString().split('T')[0]}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                if (typeof window !== 'undefined' && window.showToast) window.showToast("Gesamtreport erfolgreich exportiert", "success");
+                const fileName = `FinBundle_Gesamtreport_${new Date().toISOString().split('T')[0]}.pdf`;
+                await PdfToolkit.saveOrSharePdf(blob, fileName, 'application/pdf');
             });
 
             const margin = 40;

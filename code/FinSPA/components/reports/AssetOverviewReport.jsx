@@ -200,7 +200,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
 
   if (sortedClasses.length === 0) {
     return (
-      <div className="max-w-7xl px-4 md:px-8 pb-12">
+      <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12">
         <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-10 text-center text-gray-500">
           <Icon name="Info" size={32} className="mx-auto mb-3 opacity-50"/>
           <p>{safeT(t, 'noActiveAssets', 'Keine aktiven Anlagen gefunden.')}</p>
@@ -210,12 +210,12 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
   }
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={chartRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={chartRef}>
      
       <div className="w-full bg-white dark:bg-transparent">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 p-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-5 sm:mb-8 p-1">
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Shield" size={14} className="text-blue-500"/>
                     {safeT(t, 'totalWealth', 'Gesamtvermögen')}
@@ -230,7 +230,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                 </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Star" size={14} className="text-emerald-500"/>
                     {safeT(t, 'topAssetClass', 'Stärkste Anlageklasse')}
@@ -245,7 +245,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                 </div>
              </div>
              
-             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
+             <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-500 overflow-hidden">
                 <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icon name="Layers" size={14} className="text-indigo-500"/>
                     {safeT(t, 'diversification', 'Diversifikation')}
@@ -262,9 +262,9 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
 
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-10">
              <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'distributionByAssetClass', 'Verteilung nach Anlageklasse')}
              >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -281,12 +281,16 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                             data: sortedClasses.map(ac => overview[ac].total),
                             valueFormatter: fCur
                         }]}
+                        options={{
+                            legend: { type: 'scroll', bottom: 0, itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            series: [{ center: ['50%', '43%'], radius: ['38%', '66%'] }]
+                        }}
                     />
                 </div>
              </div>
 
              <div 
-                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+                className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                 data-pdf-title={safeT(t, 'volumeComparisonAbsolute', 'Volumenvergleich (Absolut)')}
              >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -306,13 +310,20 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                         }]}
                         options={{
                             grid: {
-                                bottom: '25%' 
+                                top: 24,
+                                bottom: 64,
+                                left: '3%',
+                                right: '3%',
+                                containLabel: true
                             },
+                            legend: { show: false },
                             xAxis: {
                                 axisLabel: {
                                     interval: 0,
-                                    rotate: 45, 
-                                    margin: 12
+                                    rotate: 20,
+                                    hideOverlap: true,
+                                    margin: 10,
+                                    fontSize: 10.5
                                 }
                             }
                         }}
@@ -333,7 +344,7 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
               return (
               <div key={ac} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                 
-                <div className="bg-gray-50 dark:bg-slate-800/50 px-6 py-5 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center">
+                <div className="bg-gray-50 dark:bg-slate-800/50 px-3.5 sm:px-6 py-3.5 sm:py-5 border-b border-gray-200 dark:border-slate-800 flex flex-wrap justify-between items-center gap-2">
                   <h4 className="font-extrabold text-xl text-gray-800 dark:text-gray-100 flex items-center gap-3">
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 rounded-lg">
                       <Icon name={getAcIcon(ac)} size={20} />
@@ -341,14 +352,14 @@ const AssetOverviewReport = ({ data, dateRange, isTreeVisible, setIsTreeVisible,
                     {getAcName(ac)}
                   </h4>
                   <div className="flex flex-col items-end">
-                    <span className="font-black text-2xl text-gray-900 dark:text-white">{fCur ? fCur(acTotal) : acTotal}</span>
+                    <span className="font-black text-lg sm:text-2xl text-gray-900 dark:text-white">{fCur ? fCur(acTotal) : acTotal}</span>
                     <span className="text-xs font-bold text-gray-500 uppercase bg-gray-200 dark:bg-slate-700 px-2 py-0.5 rounded mt-1">
                         {acPercent}% {safeT(t, 'ofPortfolio', 'vom Portfolio')}
                     </span>
                   </div>
                 </div>
                 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="p-3.5 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
                   {Object.keys(overview[ac].banks)
                     .sort((a,b) => overview[ac].banks[b].total - overview[ac].banks[a].total)
                     .map(bankName => {

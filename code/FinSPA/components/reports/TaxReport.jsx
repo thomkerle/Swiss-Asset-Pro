@@ -292,17 +292,17 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
   }, [accountsAssets, securitiesAssets, realEstateAssets, debtAssets, taxFreeAssets, accountsTotal, securitiesTotal, realEstateTotal, debtsTotal, taxFreeTotal, netTaxableWealth, taxableIncomesTotal, yearDividends, yearInterests, pillar3aDeduction, estimatedVStRefund, taxYear, fCur, data, titleText, subText, t]);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12" ref={reportRef}>
 
       {/* KPI Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Landmark" size={14} className="text-blue-500" />
                 {safeT(t, 'labelTaxableWealth', 'STEUERBARES REINVERMÖGEN')}
             </div>
-            <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+            <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate">
                 {fCur(netTaxableWealth)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -310,12 +310,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="TrendingUp" size={14} className="text-emerald-500" />
                 {safeT(t, 'labelTaxableIncomesYear', `STEUERBARE ERTRÄGE (${taxYear})`).replace('{year}', taxYear)}
             </div>
-            <div className="font-black text-2xl text-emerald-600 dark:text-emerald-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-emerald-600 dark:text-emerald-400 truncate">
                 {fCur(taxableIncomesTotal)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -323,12 +323,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Target" size={14} className="text-amber-500" />
                 {safeT(t, 'labelTaxDeduction', 'VORSORGEABZUG (3A)')}
             </div>
-            <div className="font-black text-2xl text-amber-600 dark:text-amber-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-amber-600 dark:text-amber-400 truncate">
                 {pillar3aDeduction > 0 ? fCur(pillar3aDeduction) : 'CHF 0.00'}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -336,12 +336,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-purple-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                 <Icon name="Shield" size={14} className="text-purple-500" />
                 {safeT(t, 'labelTaxFreePensionCapital', 'VORSORGEKAPITAL (STEUERFREI)')}
             </div>
-            <div className="font-black text-2xl text-purple-600 dark:text-purple-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-purple-600 dark:text-purple-400 truncate">
                 {fCur(taxFreeTotal)}
             </div>
             <div className="text-xs text-gray-400 mt-2 truncate">
@@ -351,9 +351,9 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
       </div>
 
       {/* Diagramme */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8">
             <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                data-pdf-title={safeT(t, 'titleTaxStructurePdf', 'Steuerliche Vermögensstruktur')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -370,12 +370,16 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                             valueFormatter: fCur
                         }]} 
                         height="100%"
+                        options={{
+                            legend: { type: 'scroll', bottom: 0, itemGap: 12, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            series: [{ center: ['50%', '43%'], radius: ['38%', '66%'] }]
+                        }}
                     />
                 </div>
             </div>
 
             <div 
-               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+               className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
                data-pdf-title={safeT(t, 'titleTaxInflowsPdf', 'Zusammensetzung Steuerbare Erträge')}
             >
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -393,6 +397,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                             valueFormatter: fCur
                         }]} 
                         height="100%"
+                        options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
                     />
                 </div>
             </div>
@@ -424,9 +434,9 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                               {accountsAssets.map((a, i) => (
                                   <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                                      <td className="p-4 pl-6 font-medium text-slate-800 dark:text-slate-200">{a.name}</td>
-                                      <td className="p-4 text-center text-xs text-gray-400">{a.currency}</td>
-                                      <td className="p-4 pr-6 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(a.val)}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pl-6 font-medium text-slate-800 dark:text-slate-200">{a.name}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-xs text-gray-400">{a.currency}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pr-6 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(a.val)}</td>
                                   </tr>
                               ))}
                           </tbody>
@@ -445,12 +455,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                               {securitiesAssets.map((a, i) => (
                                   <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                                      <td className="p-4 pl-6 font-medium text-slate-800 dark:text-slate-200">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pl-6 font-medium text-slate-800 dark:text-slate-200">
                                           {a.name}
                                           <span className="ml-2 text-[10px] bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-gray-500 uppercase">{a.class}</span>
                                       </td>
-                                      <td className="p-4 text-center font-mono text-xs text-gray-500">{a.ticker}</td>
-                                      <td className="p-4 pr-6 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(a.val)}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-center font-mono text-xs text-gray-500">{a.ticker}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pr-6 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{fCur(a.val)}</td>
                                   </tr>
                               ))}
                           </tbody>
@@ -469,9 +479,9 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                               {debtAssets.map((a, i) => (
                                   <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                                      <td className="p-4 pl-6 font-medium text-slate-800 dark:text-slate-200">{a.name}</td>
-                                      <td className="p-4 text-center text-xs text-gray-400">{a.currency}</td>
-                                      <td className="p-4 pr-6 text-right font-mono font-bold text-rose-600 dark:text-rose-400">-{fCur(a.val)}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pl-6 font-medium text-slate-800 dark:text-slate-200">{a.name}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-xs text-gray-400">{a.currency}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pr-6 text-right font-mono font-bold text-rose-600 dark:text-rose-400">-{fCur(a.val)}</td>
                                   </tr>
                               ))}
                           </tbody>
@@ -490,12 +500,12 @@ const TaxReport = ({ data, activeAssets, dateRange, isTreeVisible, setIsTreeVisi
                           <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                               {taxFreeAssets.map((a, i) => (
                                   <tr key={i} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30">
-                                      <td className="p-4 pl-6 font-medium text-slate-800 dark:text-slate-200">
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pl-6 font-medium text-slate-800 dark:text-slate-200">
                                           {a.name}
                                           <span className="ml-2 text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded uppercase">{safeT(t, 'catPensionShort', 'Vorsorge')}</span>
                                       </td>
-                                      <td className="p-4 text-center text-xs text-gray-400">{a.currency}</td>
-                                      <td className="p-4 pr-6 text-right font-mono font-bold text-purple-600 dark:text-purple-400">{fCur(a.val)}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-xs text-gray-400">{a.currency}</td>
+                                      <td className="p-2.5 sm:p-4 whitespace-nowrap pr-6 text-right font-mono font-bold text-purple-600 dark:text-purple-400">{fCur(a.val)}</td>
                                   </tr>
                               ))}
                           </tbody>

@@ -45,7 +45,7 @@ const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformance
 const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>DividendCalendarReport</div>);
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || safeRequire('../api/UniversalChart.jsx') || window.UniversalChart || (() => null);
 const ApiSyncEngine = safeRequire('../../api/ApiSyncEngine.jsx') || safeRequire('../api/ApiSyncEngine.jsx') || { fetchAssetPrice: async () => null };
-const ApiLiveEditorDashboard = safeRequire('./ApiLiveEditorDashboard.jsx') || (() => <div className="p-8">ApiLiveEditorDashboard.jsx fehlt</div>);
+const ApiLiveEditorDashboard = safeRequire('./ApiLiveEditorDashboard.jsx') || (() => <div className="p-4">ApiLiveEditorDashboard.jsx fehlt</div>);
 const ReportHeader = safeRequire('./ReportHeader.jsx') || (() => null);
 const NotificationCenterDrawer = safeRequire('./NotificationCenterDrawer.jsx') || safeRequire('../components/NotificationCenterDrawer.jsx');
 const ActivityNotificationEngine = safeRequire('../../api/ActivityNotificationEngine.js') || safeRequire('../api/ActivityNotificationEngine.js');
@@ -127,7 +127,7 @@ const JsonNode = ({ label, data, depth = 0, t, searchQuery = '' }) => {
 
     if (!isObject) {
         return (
-            <div className="flex gap-2 py-0.5 ml-4 text-xs">
+            <div className="flex gap-2 py-0.5 ml-3 text-xs">
                 <span className="text-blue-500 font-medium">"{label}":</span>
                 {renderJsonValue(data)}
             </div>
@@ -138,7 +138,7 @@ const JsonNode = ({ label, data, depth = 0, t, searchQuery = '' }) => {
     const childCount = isArray ? data.length : Object.keys(data).length;
 
     return (
-        <div className="ml-4 border-l border-gray-200 dark:border-slate-800 pl-2 my-1">
+        <div className="ml-3 border-l border-gray-200 dark:border-slate-800 pl-2 my-0.5">
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
                 <Icon name={effectiveOpen ? "ChevronDown" : "ChevronRight"} size={10} className="text-gray-400" />
                 <span className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-tighter italic">
@@ -153,7 +153,7 @@ const JsonNode = ({ label, data, depth = 0, t, searchQuery = '' }) => {
                 </button>
             </div>
             {effectiveOpen && (
-                <div className="mt-1">
+                <div className="mt-0.5">
                     {Object.entries(data).map(([key, value]) => (
                         <JsonNode key={key} label={key} data={value} depth={depth + 1} t={t} searchQuery={searchQuery} />
                     ))}
@@ -163,6 +163,7 @@ const JsonNode = ({ label, data, depth = 0, t, searchQuery = '' }) => {
     );
 };
 
+// --- KOMPAKTE SPARKLINE FÜR TABLET & DESKTOP ---
 const Sparkline = ({ dataSeries, dateSeries, title }) => {
     const [hoveredIdx, setHoveredIdx] = useState(null);
     const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -189,11 +190,11 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
     const maxTime = timestamps.length > 0 ? timestamps[timestamps.length - 1] : 0;
     const timeRange = maxTime - minTime || 1; 
     
-    const paddingX = 6;
-    const paddingY = 8;
-    const bottomPadding = 18; 
-    const width = 160;   
-    const height = 70; 
+    const paddingX = 5;
+    const paddingY = 6;
+    const bottomPadding = 14; 
+    const width = 136;   
+    const height = 52; 
 
     const chartHeight = height - bottomPadding;
 
@@ -242,7 +243,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
 
     return (
         <div className="flex flex-col items-end justify-center shrink-0 group relative" title={title}>
-            <div className="bg-gray-50/80 dark:bg-slate-800/40 border border-gray-200 dark:border-slate-700/60 rounded-xl p-2 pb-1 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:border-gray-300 dark:group-hover:border-slate-600 relative">
+            <div className="bg-gray-50/80 dark:bg-slate-800/40 border border-gray-200 dark:border-slate-700/60 rounded-xl p-1.5 pb-0.5 shadow-xs transition-all duration-300 group-hover:shadow-md group-hover:border-gray-300 dark:group-hover:border-slate-600 relative">
                 <svg 
                     width={width} 
                     height={height} 
@@ -259,7 +260,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     
                     <line x1={paddingX} y1={firstPt.y} x2={width - paddingX} y2={firstPt.y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" className="dark:stroke-slate-600" />
                     <line x1={paddingX} y1={chartHeight} x2={width - paddingX} y2={chartHeight} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
-                    <line x1={paddingX} y1={paddingY - 4} x2={paddingX} y2={chartHeight} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
+                    <line x1={paddingX} y1={paddingY - 3} x2={paddingX} y2={chartHeight} stroke="#e2e8f0" strokeWidth="1" strokeLinecap="round" className="dark:stroke-slate-700" />
 
                     {(() => {
                         const ticks = [];
@@ -296,8 +297,8 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                             
                             return (
                                 <g key={idx}>
-                                    <line x1={t.x} y1={chartHeight} x2={t.x} y2={chartHeight + 3} stroke="#cbd5e1" className="dark:stroke-slate-600" strokeWidth="1" />
-                                    <text x={t.x} y={chartHeight + 12} fontSize={showYear ? "9" : "8"} fontWeight={showYear ? "bold" : "normal"} fill="#94a3b8" className="dark:fill-slate-500" textAnchor="middle">
+                                    <line x1={t.x} y1={chartHeight} x2={t.x} y2={chartHeight + 2.5} stroke="#cbd5e1" className="dark:stroke-slate-600" strokeWidth="1" />
+                                    <text x={t.x} y={chartHeight + 10} fontSize={showYear ? "8.5" : "7.5"} fontWeight={showYear ? "bold" : "normal"} fill="#94a3b8" className="dark:fill-slate-500" textAnchor="middle">
                                         {label}
                                     </text>
                                 </g>
@@ -306,7 +307,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     })()}
 
                     <path d={areaPath} fill={`url(#${gradientId})`} />
-                    <path d={`M ${points}`} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={`M ${points}`} fill="none" stroke={strokeColor} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
                     
                     {plotData.map((d, i) => {
                         const { x, y } = getCoords(d, i);
@@ -317,7 +318,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                                 key={i} 
                                 cx={x} 
                                 cy={y} 
-                                r={isCurrentHovered ? "4" : (isLast ? "2.5" : "1.5")} 
+                                r={isCurrentHovered ? "3.5" : (isLast ? "2" : "1.2")} 
                                 className="fill-white dark:fill-slate-900 transition-all pointer-events-none" 
                                 stroke={strokeColor} 
                                 strokeWidth={isCurrentHovered ? "2" : (isLast ? "1.5" : "1")} 
@@ -328,7 +329,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     {hoveredIdx !== null && (
                         <line 
                             x1={getCoords(plotData[hoveredIdx], hoveredIdx).x} 
-                            y1={paddingY - 4} 
+                            y1={paddingY - 3} 
                             x2={getCoords(plotData[hoveredIdx], hoveredIdx).x} 
                             y2={chartHeight} 
                             stroke={strokeColor} 
@@ -344,7 +345,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                         className="absolute bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded shadow-xl pointer-events-none z-50 transition-all duration-75 font-mono border border-slate-700"
                         style={{
                             left: `${Math.min(Math.max(tooltipPos.x - 40, 0), width - 75)}px`,
-                            bottom: `${height + 8}px`
+                            bottom: `${height + 6}px`
                         }}
                     >
                         <div className="font-semibold text-slate-300 text-center text-[9px]">{plotDates[hoveredIdx] || ''}</div>
@@ -352,7 +353,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     </div>
                 )}
             </div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-2 mr-1">{title}</span>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-1 mr-1">{title}</span>
         </div>
     );
 };
@@ -449,7 +450,7 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
       type="button"
       onClick={handleClick}
       disabled={busy}
-      className={`p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+      className={`p-1.5 rounded-lg flex items-center justify-center transition-all cursor-pointer shrink-0 ${
         isRecording
           ? 'bg-red-600 text-white animate-pulse shadow-md shadow-red-500/50 scale-105'
           : (busy
@@ -458,15 +459,16 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
       }`}
       title={isRecording ? "Aufnahme stoppen & transkribieren" : (busy ? "Transkribiere..." : "Spracheingabe starten (Mikrofon)")}
     >
-      <Icon name={busy ? "Loader" : (isRecording ? "Square" : "Mic")} size={14} className={busy ? "animate-spin" : ""} />
+      <Icon name={busy ? "Loader" : (isRecording ? "Square" : "Mic")} size={13} className={busy ? "animate-spin" : ""} />
     </button>
   );
 };
 
-// --- GLOBALE SUCHE MODAL (ÜBER ALLE ASSETS, BANKEN, BUCHUNGEN, BUDGETS & REPORTS) ---
+// --- GLOBALE SUCHE MODAL (OHNE 20er-LIMIT, MIT SORTIERUNG, PAGINIERUNG & SUMMENBALKAN) ---
 const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, setActiveReport, setViewMode, fCur, t }) => {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [visibleLimit, setVisibleLimit] = useState(100);
   const inputRef = useRef(null);
   const baseCur = data?.settings?.baseCurrency || 'CHF';
   const todayStr = new Date().toISOString().split('T')[0];
@@ -477,14 +479,25 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
     } else {
       setQuery('');
       setCategoryFilter('ALL');
+      setVisibleLimit(100);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    setVisibleLimit(100);
+  }, [query, categoryFilter]);
 
   const indexedData = useMemo(() => {
     if (!isOpen) return { assets: [], bookings: [], nodes: [], budgets: [] };
     const assetsWithPath = [];
     const bookingsList = [];
     const nodesList = [];
+
+    const formatChDate = (iso) => {
+      if (!iso || typeof iso !== 'string') return '';
+      const parts = iso.split('-');
+      return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : iso;
+    };
 
     const traverse = (nodes, pathArr = []) => {
       (nodes || []).forEach(n => {
@@ -505,14 +518,27 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
             valBase,
             valRaw
           });
+
+          // Reguläre Buchungen indexieren
           (n.bookings || []).forEach(b => {
             if (!b._isAutoValuation) {
               bookingsList.push({
                 booking: b,
                 asset: n,
-                pathStr
+                pathStr,
+                dateFormatted: formatChDate(b.date)
               });
             }
+          });
+
+          // Stichtags-Saldi ebenfalls durchsuchbar machen
+          (n.balances || []).forEach(bal => {
+            bookingsList.push({
+              booking: { ...bal, _isBal: true, type: bal.type || 'SALDO', subCategory: bal.subCategory || 'Stichtags-Saldo' },
+              asset: n,
+              pathStr,
+              dateFormatted: formatChDate(bal.date)
+            });
           });
         }
         if (n.children) traverse(n.children, currentPath);
@@ -520,6 +546,13 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
     };
 
     traverse(data?.banks || []);
+
+    // Chronologisch absteigend sortieren (neueste zuerst, danach alle älteren)
+    bookingsList.sort((a, b) => {
+      const dDiff = new Date(b.booking.date || 0) - new Date(a.booking.date || 0);
+      if (dDiff !== 0) return dDiff;
+      return (a.booking.customOrder || 0) - (b.booking.customOrder || 0);
+    });
 
     const budgets = [];
     if (data?.budget) {
@@ -541,8 +574,9 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
 
   const q = query.trim().toLowerCase();
 
+  // Vollständige Filterung OHNE künstliches 20er-Slice
   const matchedAssets = indexedData.assets.filter(a => {
-    if (!q) return true;
+    if (!q) return false;
     return (
       (a.name || '').toLowerCase().includes(q) ||
       (a.ticker || '').toLowerCase().includes(q) ||
@@ -551,31 +585,67 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
       (a.currency || '').toLowerCase().includes(q) ||
       (a.pathStr || '').toLowerCase().includes(q)
     );
-  }).slice(0, q ? 25 : 8);
+  });
 
-  const matchedBookings = q ? indexedData.bookings.filter(({ booking, asset }) => {
+  const matchedBookings = indexedData.bookings.filter(({ booking, asset, pathStr, dateFormatted }) => {
+    if (!q) return false;
+    const amtStr = String(booking.amount ?? '').toLowerCase();
+    const amtFixed = Number(booking.amount || 0).toFixed(2);
     return (
       (booking.comment || '').toLowerCase().includes(q) ||
       (booking.subCategory || '').toLowerCase().includes(q) ||
       (booking.type || '').toLowerCase().includes(q) ||
-      String(booking.amount || '').toLowerCase().includes(q) ||
-      (booking.date || '').includes(q) ||
-      (asset.name || '').toLowerCase().includes(q)
+      amtStr.includes(q) ||
+      amtFixed.includes(q) ||
+      (booking.date || '').toLowerCase().includes(q) ||
+      (dateFormatted || '').toLowerCase().includes(q) ||
+      (asset.name || '').toLowerCase().includes(q) ||
+      (pathStr || '').toLowerCase().includes(q)
     );
-  }).slice(0, 20) : [];
+  });
 
-  const matchedNodes = q ? indexedData.nodes.filter(n => (n.name || '').toLowerCase().includes(q) || (n.pathStr || '').toLowerCase().includes(q)).slice(0, 10) : [];
-  const matchedBudgets = q ? indexedData.budgets.filter(b => (b.name || '').toLowerCase().includes(q) || (b.groupLabel || '').toLowerCase().includes(q)).slice(0, 10) : [];
+  const matchedNodes = indexedData.nodes.filter(n => {
+    if (!q) return false;
+    return (n.name || '').toLowerCase().includes(q) || (n.pathStr || '').toLowerCase().includes(q);
+  });
+
+  const matchedBudgets = indexedData.budgets.filter(b => {
+    if (!q) return false;
+    return (
+      (b.name || '').toLowerCase().includes(q) ||
+      (b.groupLabel || '').toLowerCase().includes(q) ||
+      String(b.amount || '').toLowerCase().includes(q)
+    );
+  });
 
   const totalHits = matchedAssets.length + matchedBookings.length + matchedNodes.length + matchedBudgets.length;
 
+  // Summenberechnung für gefundene Buchungen
+  let bookingsSumInBase = 0;
+  let bookingsSumOutBase = 0;
+  matchedBookings.forEach(({ booking, asset }) => {
+    if (!booking._isBal && booking.type !== 'Wertanpassung') {
+      const flow = getBookingFlow(booking);
+      const bRate = booking.bookingExchangeRate ? parseRate(booking.bookingExchangeRate) : (parseRate(asset.exchangeRate) || 1);
+      const isForeign = asset.currency && asset.currency !== baseCur;
+      const rate = isForeign ? bRate : 1;
+      if (flow.isPositive) bookingsSumInBase += flow.amount * rate;
+      else bookingsSumOutBase += flow.amount * rate;
+    }
+  });
+  const bookingsNetBase = bookingsSumInBase - bookingsSumOutBase;
+
+  const displayedBookings = matchedBookings.slice(0, visibleLimit);
+  const remainingBookingsCount = Math.max(0, matchedBookings.length - displayedBookings.length);
+
   return (
-    <div className="fixed inset-0 z-[180] flex items-start justify-center pt-12 sm:pt-20 px-4">
+    <div className="fixed inset-0 z-[180] flex items-start justify-center pt-4 sm:pt-12 px-2 sm:px-4">
       <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs animate-fade-in" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden z-10 flex flex-col max-h-[80vh]">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-800 overflow-hidden z-10 flex flex-col max-h-[90vh] sm:max-h-[84vh]">
         
-        <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex items-center gap-3 bg-gray-50/70 dark:bg-slate-800/50">
-          <Icon name="Search" size={18} className="text-blue-500 shrink-0" />
+        {/* Suchkopf */}
+        <div className="p-3 sm:p-3.5 border-b border-gray-200 dark:border-slate-800 flex items-center gap-2.5 bg-gray-50/70 dark:bg-slate-800/50 shrink-0">
+          <Icon name="Search" size={16} className="text-blue-500 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -590,20 +660,21 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                 onClose();
               }
             }}
-            placeholder={safeT(t, 'globalSearchPlaceholder', 'Globale Suche: Asset, Ticker, ISIN, Bank, #Tag, Buchungsnotiz oder Betrag...')}
-            className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none"
+            placeholder={safeT(t, 'globalSearchPlaceholder', 'Globale Suche: Asset, Ticker, ISIN, Bank, #Tag, Buchungsnotiz, Datum oder Betrag...')}
+            className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-gray-400 focus:outline-none"
           />
           {query && (
             <button onClick={() => setQuery('')} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">
               <Icon name="X" size={14} />
             </button>
           )}
-          <button onClick={onClose} className="px-2 py-1 text-[10px] font-mono font-bold bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer">
+          <button onClick={onClose} className="px-2 py-1 text-[10px] font-mono font-bold bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 rounded cursor-pointer shrink-0">
             ESC
           </button>
         </div>
 
-        <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto text-xs bg-white dark:bg-slate-900 shrink-0">
+        {/* Filter-Tabs */}
+        <div className="px-3 py-1.5 border-b border-gray-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] bg-white dark:bg-slate-900 shrink-0">
           {[
             { id: 'ALL', label: `Alle (${totalHits})` },
             { id: 'ASSETS', label: `Assets (${matchedAssets.length})` },
@@ -625,14 +696,16 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 finspa-scrollbar">
+        {/* Ergebnisliste */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 finspa-scrollbar">
           
+          {/* ASSETS */}
           {(categoryFilter === 'ALL' || categoryFilter === 'ASSETS') && matchedAssets.length > 0 && (
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
-                <Icon name="Wallet" size={12} /> {q ? `Gefundene Assets (${matchedAssets.length})` : 'Alle Assets (Schnellübersicht)'}
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
+                <Icon name="Wallet" size={12} /> {q ? `Gefundene Assets (${matchedAssets.length})` : `Alle Assets (${matchedAssets.length})`}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {matchedAssets.map(asset => (
                   <div
                     key={asset.id}
@@ -642,16 +715,16 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                       setViewMode('vermoegen');
                       onClose();
                     }}
-                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all group"
+                    className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all group"
                   >
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center gap-2">
-                        <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={14} className="text-blue-500 shrink-0" />
+                        <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={13} className="text-blue-500 shrink-0" />
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">{asset.name}</span>
-                        {asset.ticker && <span className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-bold">{asset.ticker}</span>}
+                        {asset.ticker && <span className="text-[10px] font-mono px-1.5 py-0.2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-bold">{asset.ticker}</span>}
                         {asset.isin && <span className="text-[10px] font-mono text-gray-400 hidden sm:inline">{asset.isin}</span>}
                       </div>
-                      <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                      <div className="text-[10px] text-gray-400 truncate">
                         {asset.pathStr} • <span className="uppercase">{asset.assetClass || 'cash'}</span>
                       </div>
                     </div>
@@ -671,14 +744,26 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
             </div>
           )}
 
+          {/* BUCHUNGEN (VOLLSTÄNDIGE SUCHE ÜBER ALLE EINTRÄGE) */}
           {(categoryFilter === 'ALL' || categoryFilter === 'BOOKINGS') && matchedBookings.length > 0 && (
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
-                <Icon name="List" size={12} /> Gefundene Buchungen ({matchedBookings.length})
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <Icon name="List" size={12} /> Gefundene Buchungen ({matchedBookings.length})
+                </div>
+                <div className="flex items-center gap-3 text-[10px] font-mono">
+                  <span className="text-emerald-600 font-bold">In: +{fCur ? fCur(bookingsSumInBase, baseCur) : bookingsSumInBase.toFixed(2)}</span>
+                  <span className="text-rose-600 font-bold">Out: -{fCur ? fCur(bookingsSumOutBase, baseCur) : bookingsSumOutBase.toFixed(2)}</span>
+                  <span className={`font-black ${bookingsNetBase >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    Netto: {bookingsNetBase >= 0 ? '+' : ''}{fCur ? fCur(bookingsNetBase, baseCur) : bookingsNetBase.toFixed(2)}
+                  </span>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                {matchedBookings.map(({ booking, asset, pathStr }) => {
+
+              <div className="space-y-1">
+                {displayedBookings.map(({ booking, asset, pathStr }) => {
                   const flow = getBookingFlow(booking);
+                  const isBal = booking._isBal;
                   return (
                     <div
                       key={`${asset.id}_${booking.id}`}
@@ -688,37 +773,59 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                         setViewMode('vermoegen');
                         onClose();
                       }}
-                      className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                      className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
                     >
                       <div className="min-w-0 pr-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
-                          <span className="font-mono text-[11px] text-gray-500">{booking.date}</span>
-                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{booking.type}</span>
+                          <span className="font-mono text-[11px] text-gray-500 shrink-0">{booking.date}</span>
+                          <span className={`px-1.5 py-0.2 text-[10px] rounded shrink-0 ${isBal ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'}`}>
+                            {booking.type}
+                          </span>
                           <span className="truncate">{booking.subCategory || '-'}</span>
                         </div>
                         {booking.comment && (
-                          <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate mt-0.5">{booking.comment}</div>
+                          <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">{booking.comment}</div>
                         )}
-                        <div className="text-[10px] text-gray-400 truncate mt-0.5">
+                        <div className="text-[10px] text-gray-400 truncate">
                           Asset: <strong>{asset.name}</strong> ({pathStr})
                         </div>
                       </div>
-                      <div className={`font-mono text-xs font-bold shrink-0 ${flow.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {flow.isPositive ? '+' : '-'}{fCur ? fCur(flow.amount, asset.currency || baseCur) : flow.amount}
+                      <div className={`font-mono text-xs font-bold shrink-0 ${isBal ? 'text-blue-600' : (flow.isPositive ? 'text-emerald-600' : 'text-rose-600')}`}>
+                        {!isBal ? (flow.isPositive ? '+' : '-') : ''}{fCur ? fCur(isBal ? booking.amount : flow.amount, asset.currency || baseCur) : booking.amount}
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {remainingBookingsCount > 0 && (
+                <div className="mt-2.5 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleLimit(prev => prev + 100)}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    +100 weitere anzeigen ({remainingBookingsCount} verbleibend)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisibleLimit(matchedBookings.length)}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Alle {matchedBookings.length} Buchungen anzeigen
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
+          {/* BANKEN & KATEGORIEN */}
           {(categoryFilter === 'ALL' || categoryFilter === 'NODES') && matchedNodes.length > 0 && (
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                 <Icon name="Shield" size={12} /> Banken & Kategorien ({matchedNodes.length})
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {matchedNodes.map(node => (
                   <div
                     key={node.id}
@@ -728,10 +835,10 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                       setViewMode('vermoegen');
                       onClose();
                     }}
-                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                    className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
                   >
                     <div className="flex items-center gap-2.5 truncate">
-                      <Icon name={node.type === 'bank' ? 'Shield' : 'FolderOpen'} size={14} className={node.type === 'bank' ? 'text-slate-500' : 'text-yellow-500'} />
+                      <Icon name={node.type === 'bank' ? 'Shield' : 'FolderOpen'} size={13} className={node.type === 'bank' ? 'text-slate-500' : 'text-yellow-500'} />
                       <div>
                         <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{node.name}</div>
                         <div className="text-[10px] text-gray-400">{node.pathStr}</div>
@@ -744,12 +851,13 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
             </div>
           )}
 
+          {/* BUDGET-POSITIONEN */}
           {(categoryFilter === 'ALL' || categoryFilter === 'BUDGET') && matchedBudgets.length > 0 && (
             <div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                 <Icon name="PiggyBank" size={12} /> Budget-Positionen ({matchedBudgets.length})
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {matchedBudgets.map(b => (
                   <div
                     key={b.id}
@@ -759,7 +867,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                       setViewMode('budget');
                       onClose();
                     }}
-                    className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
+                    className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-gray-200/70 dark:border-slate-700/70 hover:border-blue-400 cursor-pointer transition-all"
                   >
                     <div>
                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{b.name}</div>
@@ -774,11 +882,19 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
             </div>
           )}
 
+          {!q && (
+            <div className="p-8 text-center text-gray-400">
+              <Icon name="Search" size={26} className="mx-auto mb-2 opacity-40 text-blue-500" />
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-300">Bitte Suchbegriff eingeben</div>
+              <div className="text-xs mt-1">Es werden erst Ergebnisse angezeigt, sobald du nach einem Begriff (Asset, Ticker, ISIN, Buchung, Betrag oder #Tag) suchst.</div>
+            </div>
+          )}
+
           {q && totalHits === 0 && (
-            <div className="p-10 text-center text-gray-400">
-              <Icon name="Search" size={28} className="mx-auto mb-2 opacity-40 text-blue-500" />
+            <div className="p-8 text-center text-gray-400">
+              <Icon name="Search" size={24} className="mx-auto mb-2 opacity-40 text-blue-500" />
               <div className="text-sm font-bold">Keine Ergebnisse für „{query}“ gefunden</div>
-              <div className="text-xs mt-1">Suche nach Asset-Namen, Ticker, ISIN, Buchungstext, Betrag oder #Tag.</div>
+              <div className="text-xs mt-1">Suche nach Asset-Namen, Ticker, ISIN, Buchungstext, Datum, Betrag oder #Tag.</div>
             </div>
           )}
         </div>
@@ -787,7 +903,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
   );
 };
 
-// --- QUICK AGENT BAR MIT GLOBALER SUCHE, ALERT-CENTER & EDITIER-WORKFLOW ---
+// --- KOMPAKTE QUICK AGENT BAR MIT GLOBALER SUCHE & ALERT-CENTER ---
 const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selectedNode, setSelectedNode, setActiveReport, setViewMode, fCur, onOpenGlobalSearch }) => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -833,20 +949,20 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
 
   return (
     <>
-      <div className="print-hide border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 sm:px-6 py-2 z-30 transition-all shadow-xs shrink-0 relative">
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
+      <div className="print-hide border-b border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2.5 sm:px-4 py-1.5 z-30 transition-all shadow-xs shrink-0 relative">
+        <div className="flex items-center justify-between gap-2">
           
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xs">
-              <Icon name="Sparkles" size={13} className="text-amber-300" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="p-1 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xs">
+              <Icon name="Sparkles" size={12} className="text-amber-300" />
             </div>
-            <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 hidden sm:inline">
-              FinBundle Copilot
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 hidden md:inline">
+              Copilot
             </span>
           </div>
 
           {isExpanded ? (
-            <div className="flex-1 max-w-4xl flex items-center gap-2">
+            <div className="flex-1 max-w-4xl flex items-center gap-1.5">
               <SpeechToTextButton 
                 onTranscript={(spokenText, isFinal) => {
                   setPrompt(spokenText);
@@ -870,11 +986,11 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                   onChange={e => setPrompt(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleExecute()}
                   placeholder="Befehl: 'Kreditkarte: Migros 75.50, Coop 23, SBB 14'..."
-                  className="w-full pl-3 pr-8 py-1.5 text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full pl-2.5 pr-7 py-1 text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
                 {prompt && (
-                  <button onClick={() => setPrompt('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                    <Icon name="X" size={12} />
+                  <button onClick={() => setPrompt('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <Icon name="X" size={11} />
                   </button>
                 )}
               </div>
@@ -882,31 +998,31 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
               <button
                 onClick={handleExecute}
                 disabled={isLoading || !prompt.trim()}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
                   prompt.trim()
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer'
                     : 'bg-gray-200 dark:bg-slate-800 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <Icon name={isLoading ? "Loader" : "Send"} size={12} className={isLoading ? "animate-spin" : ""} />
-                <span className="hidden xs:inline">{isLoading ? "Bucht..." : "Buchen"}</span>
+                <Icon name={isLoading ? "Loader" : "Send"} size={11} className={isLoading ? "animate-spin" : ""} />
+                <span className="hidden sm:inline">{isLoading ? "Bucht..." : "Buchen"}</span>
               </button>
             </div>
           ) : (
-            <div className="flex-1 text-xs text-gray-400 italic truncate">
-              Agent bereit...
+            <div className="flex-1 text-[11px] text-gray-400 italic truncate">
+              Copilot bereit...
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             <button
               type="button"
               onClick={onOpenGlobalSearch}
-              className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 text-xs font-bold border border-gray-200/80 dark:border-slate-700 transition-colors cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 text-xs font-bold border border-gray-200/80 dark:border-slate-700 transition-colors cursor-pointer"
               title="Globale Suche über alle Assets & Buchungen (Strg + K)"
             >
-              <Icon name="Search" size={13} className="text-blue-500" />
-              <span className="hidden md:inline">Suche</span>
+              <Icon name="Search" size={12} className="text-blue-500" />
+              <span className="hidden sm:inline">Suche</span>
               <span className="hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 bg-white dark:bg-slate-900 rounded text-gray-400 border border-gray-200 dark:border-slate-700">
                 Ctrl+K
               </span>
@@ -914,7 +1030,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
 
             <button 
               onClick={() => setIsCenterOpen(true)}
-              className={`p-2 rounded-xl relative cursor-pointer transition-all ${
+              className={`p-1.5 rounded-lg relative cursor-pointer transition-all ${
                 unreadCount > 0
                   ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-xs'
                   : 'text-gray-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
@@ -923,11 +1039,11 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
             >
               <Icon 
                 name="Bell" 
-                size={15} 
+                size={14} 
                 className={unreadCount > 0 ? "text-amber-500 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"} 
               />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white dark:ring-slate-900">
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center ring-1 ring-white dark:ring-slate-900">
                   {unreadCount}
                 </span>
               )}
@@ -938,7 +1054,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
               className="p-1 rounded-lg text-gray-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               title={isExpanded ? "Toolbar minimieren" : "Agent Toolbar anzeigen"}
             >
-              <Icon name={isExpanded ? "ChevronUp" : "ChevronDown"} size={13} />
+              <Icon name={isExpanded ? "ChevronUp" : "ChevronDown"} size={12} />
             </button>
           </div>
 
@@ -981,7 +1097,11 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
   };
   const activeLang = detectLanguage();
   
-  const [isCompactMode, setIsCompactMode] = useState(false);
+  // Auf Tablets & kleinen Monitoren (< 1100px) startet die Buchungstabelle automatisch im platzsparenden Kompaktmodus
+  const [isCompactMode, setIsCompactMode] = useState(() => {
+    if (typeof window !== 'undefined') return window.innerWidth < 1100;
+    return false;
+  });
   const [selectedBookingIds, setSelectedBookingIds] = useState(new Set());
   const [activeTab, setActiveTab] = useState('transactions');
 
@@ -1311,7 +1431,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     if (!text) return null;
     return text.split(/(#\w+)/g).map((part, index) => {
       if (part.startsWith('#')) {
-        return <span key={index} className="inline-block px-1.5 py-0.5 mx-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-[10px] font-bold tracking-wider">{part}</span>;
+        return <span key={index} className="inline-block px-1.5 py-0.2 mx-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-[10px] font-bold tracking-wider">{part}</span>;
       }
       return part;
     });
@@ -1322,7 +1442,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     <style>
         html, body {
             margin: 0;
-            padding: 16px;
+            padding: 12px;
             box-sizing: border-box;
             font-family: system-ui, -apple-system, sans-serif;
             background-color: #ffffff;
@@ -1381,7 +1501,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
   };
 
   // =========================================================================
-  // RECHTER FLY-IN DRAWER (INKL. GLOBALER ASSET- & BUCHUNGSSUCHE)
+  // RECHTER FLY-IN DRAWER (SCHLANKER TRIGGER + VOLLSTÄNDIGE SUCHE)
   // =========================================================================
   const renderFlyInDrawer = () => {
     const allPlugins = data?.plugins || [];
@@ -1409,12 +1529,15 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
           if (!b._isAutoValuation && (
             (b.comment || '').toLowerCase().includes(query) ||
             (b.subCategory || '').toLowerCase().includes(query) ||
+            (b.type || '').toLowerCase().includes(query) ||
+            (b.date || '').includes(query) ||
             String(b.amount || '').includes(query)
           )) {
             matchedBookingsInFlyIn.push({ booking: b, asset });
           }
         });
       });
+      matchedBookingsInFlyIn.sort((a, b) => new Date(b.booking.date || 0) - new Date(a.booking.date || 0));
     }
 
     const searchResults = {
@@ -1423,9 +1546,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
         (a.ticker || '').toLowerCase().includes(query) ||
         (a.isin || '').toLowerCase().includes(query) ||
         (a.assetClass || '').toLowerCase().includes(query)
-      ).slice(0, 8) : [],
-      bookings: matchedBookingsInFlyIn.slice(0, 6),
-      plugins: query ? allPlugins.filter(p => (p.title || p.name || '').toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query)).slice(0, 4) : [],
+      ) : [],
+      bookings: matchedBookingsInFlyIn,
+      plugins: query ? allPlugins.filter(p => (p.title || p.name || '').toLowerCase().includes(query) || (p.category || '').toLowerCase().includes(query)) : [],
       reports: query ? quickReports.filter(r => r.title.toLowerCase().includes(query)) : []
     };
 
@@ -1435,22 +1558,22 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
       <>
         <div 
           onClick={() => setIsFlyInOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 group cursor-pointer transition-all duration-300"
+          className="print-hide fixed right-0 top-1/2 -translate-y-1/2 z-40 group cursor-pointer transition-all duration-300"
           title={safeT(t, 'flyInOpenTooltip', 'Schnellzugriff & Command-Center öffnen')}
         >
-          <div className="bg-slate-900/90 hover:bg-blue-600 text-white backdrop-blur-md py-4 px-2.5 rounded-l-2xl shadow-2xl flex flex-col items-center gap-2 border-y border-l border-slate-700/80 hover:border-blue-400/80 transition-all hover:pr-3.5">
+          <div className="bg-slate-900/85 hover:bg-blue-600 text-white backdrop-blur-md py-2.5 px-1.5 rounded-l-xl shadow-lg flex flex-col items-center gap-1.5 border-y border-l border-slate-700/80 hover:border-blue-400/80 transition-all hover:pr-2.5">
             <div className="relative">
-              <Icon name="Zap" size={16} className="text-amber-400 group-hover:scale-110 transition-transform duration-300" />
+              <Icon name="Zap" size={13} className="text-amber-400 group-hover:scale-110 transition-transform duration-300" />
               {pinnedPlugins.length > 0 && (
-                <span className="absolute -top-2 -left-2 bg-blue-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-slate-900 group-hover:ring-blue-600">
+                <span className="absolute -top-1.5 -left-1.5 bg-blue-500 text-white text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center ring-1 ring-slate-900">
                   {pinnedPlugins.length}
                 </span>
               )}
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 py-1.5 opacity-90 group-hover:opacity-100">
+            <span className="text-[9px] font-black uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 py-1 opacity-85 group-hover:opacity-100">
               {safeT(t, 'flyInTitleTab', 'Schnell-Zugriff')}
             </span>
-            <Icon name="ChevronLeft" size={12} className="text-slate-400 group-hover:text-white transition-colors" />
+            <Icon name="ChevronLeft" size={10} className="text-slate-400 group-hover:text-white transition-colors" />
           </div>
         </div>
 
@@ -1461,19 +1584,19 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               onClick={() => setIsFlyInOpen(false)}
             />
 
-            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-              <div className="w-screen max-w-xl bg-white dark:bg-slate-950 shadow-2xl border-l border-gray-200 dark:border-slate-800 flex flex-col animate-slide-left">
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+              <div className="w-screen max-w-lg bg-white dark:bg-slate-950 shadow-2xl border-l border-gray-200 dark:border-slate-800 flex flex-col animate-slide-left">
                 
-                <div className="p-5 px-6 border-b border-gray-200 dark:border-slate-800 bg-gray-50/90 dark:bg-slate-900/90 backdrop-blur-md flex justify-between items-center shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl shadow-md">
-                      <Icon name="Zap" size={18} className="text-amber-300" />
+                <div className="p-3.5 px-5 border-b border-gray-200 dark:border-slate-800 bg-gray-50/90 dark:bg-slate-900/90 backdrop-blur-md flex justify-between items-center shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl shadow-sm">
+                      <Icon name="Zap" size={16} className="text-amber-300" />
                     </div>
                     <div>
-                      <h3 className="font-black text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <h3 className="font-black text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
                         {safeT(t, 'flyInHeaderTitle', 'FinBundle Schnellzugriff')}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{safeT(t, 'flyInHeaderSubtitle', 'Aktionen, Favoriten & benutzerdefinierte Plugins')}</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{safeT(t, 'flyInHeaderSubtitle', 'Aktionen, Favoriten & benutzerdefinierte Plugins')}</p>
                     </div>
                   </div>
 
@@ -1483,28 +1606,28 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                     </span>
                     <button 
                       onClick={() => setIsFlyInOpen(false)}
-                      className="p-2 rounded-xl text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-xl text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
-                      <Icon name="X" size={18} />
+                      <Icon name="X" size={16} />
                     </button>
                   </div>
                 </div>
 
-                <div className="p-4 px-6 border-b border-gray-100 dark:border-slate-800/80 bg-white dark:bg-slate-950 shrink-0">
+                <div className="p-3 px-5 border-b border-gray-100 dark:border-slate-800/80 bg-white dark:bg-slate-950 shrink-0">
                   <div className="relative">
-                    <Icon name="Search" size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input 
                       ref={flyInSearchInputRef}
                       type="text"
                       value={flyInSearch}
                       onChange={e => setFlyInSearch(e.target.value)}
                       placeholder={safeT(t, 'flyInSearchPlaceholder', 'Asset, Ticker, Buchung, Plugin oder Bericht suchen...')}
-                      className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl text-xs text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                     {flyInSearch && (
                       <button 
                         onClick={() => setFlyInSearch('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                       >
                         <Icon name="X" size={13} />
                       </button>
@@ -1512,16 +1635,16 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto finspa-scrollbar p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto finspa-scrollbar p-4 sm:p-5 space-y-5">
 
                   {query ? (
                     <div className="space-y-4 animate-fade-in">
                       {searchResults.assets.length > 0 && (
                         <div>
-                          <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                             <Icon name="PieChart" size={12} /> {safeT(t, 'flyInFoundAssets', 'Gefundene Assets')} ({searchResults.assets.length})
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             {searchResults.assets.map(asset => {
                               const todayStr = new Date().toISOString().split('T')[0];
                               const val = getAssetValueAtDate(asset, todayStr, allAssets);
@@ -1534,10 +1657,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                     setActiveReport(null);
                                     setViewMode('vermoegen');
                                   }}
-                                  className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
+                                  className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
                                 >
                                   <div className="flex items-center gap-2 truncate">
-                                    <Icon name="CheckCircle" size={13} className="text-blue-500 shrink-0" />
+                                    <Icon name="CheckCircle" size={12} className="text-blue-500 shrink-0" />
                                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{asset.name}</span>
                                     {asset.ticker && <span className="text-[10px] font-mono text-blue-500 font-bold">{asset.ticker}</span>}
                                     <span className="text-[10px] text-gray-400 uppercase">({asset.assetClass})</span>
@@ -1554,10 +1677,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                       {searchResults.bookings.length > 0 && (
                         <div>
-                          <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                             <Icon name="List" size={12} /> Gefundene Buchungen ({searchResults.bookings.length})
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             {searchResults.bookings.map(({ booking, asset }) => (
                               <div
                                 key={`${asset.id}_${booking.id}`}
@@ -1567,7 +1690,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   setActiveReport(null);
                                   setViewMode('vermoegen');
                                 }}
-                                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
+                                className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
                               >
                                 <div className="min-w-0 pr-2">
                                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
@@ -1586,10 +1709,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                       {searchResults.plugins.length > 0 && (
                         <div>
-                          <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                             <Icon name="Box" size={12} /> {safeT(t, 'flyInFoundPlugins', 'Gefundene Plugins')} ({searchResults.plugins.length})
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             {searchResults.plugins.map(p => (
                               <div
                                 key={p.id}
@@ -1597,10 +1720,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   setIsFlyInOpen(false);
                                   navigate('plugin', p.id);
                                 }}
-                                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
+                                className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
                               >
                                 <div className="flex items-center gap-2 truncate">
-                                  <Icon name="Sparkles" size={13} className="text-amber-500 shrink-0" />
+                                  <Icon name="Sparkles" size={12} className="text-amber-500 shrink-0" />
                                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{p.title || p.name}</span>
                                 </div>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${getCategoryBadgeClass(p.category)}`}>
@@ -1614,10 +1737,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                       {searchResults.reports.length > 0 && (
                         <div>
-                          <div className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
                             <Icon name="FileText" size={12} /> {safeT(t, 'flyInFoundReports', 'Gefundene Berichte')} ({searchResults.reports.length})
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             {searchResults.reports.map(rep => (
                               <div
                                 key={rep.id}
@@ -1625,10 +1748,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   setIsFlyInOpen(false);
                                   navigate('vermoegen', rep.id);
                                 }}
-                                className="flex items-center justify-between p-2.5 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
+                                className="flex items-center justify-between p-2 px-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/70 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all"
                               >
                                 <div className="flex items-center gap-2">
-                                  <Icon name={rep.icon} size={14} className="text-blue-500" />
+                                  <Icon name={rep.icon} size={13} className="text-blue-500" />
                                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{rep.title}</span>
                                 </div>
                                 <Icon name="ArrowRight" size={12} className="text-gray-400" />
@@ -1639,20 +1762,20 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       )}
 
                       {!hasSearchResults && (
-                        <div className="p-8 text-center text-gray-400 border border-dashed border-gray-200 dark:border-slate-800 rounded-2xl">
-                          <Icon name="Search" size={24} className="mx-auto mb-2 opacity-40 text-blue-500" />
+                        <div className="p-6 text-center text-gray-400 border border-dashed border-gray-200 dark:border-slate-800 rounded-2xl">
+                          <Icon name="Search" size={20} className="mx-auto mb-1.5 opacity-40 text-blue-500" />
                           <p className="text-xs font-bold">{safeT(t, 'flyInNoResultsTitle', 'Keine Treffer für')} "{flyInSearch}"</p>
-                          <p className="text-[11px] text-gray-400 mt-1">{safeT(t, 'flyInNoResultsDesc', 'Überprüfen Sie die Eingabe oder leeren Sie das Suchfeld.')}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{safeT(t, 'flyInNoResultsDesc', 'Überprüfen Sie die Eingabe oder leeren Sie das Suchfeld.')}</p>
                         </div>
                       )}
                     </div>
                   ) : (
                     <>
                       <div>
-                        <h4 className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
-                          <Icon name="Activity" size={13} /> {safeT(t, 'flyInFrequentActions', 'Häufige Aktionen')}
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1.5">
+                          <Icon name="Activity" size={12} /> {safeT(t, 'flyInFrequentActions', 'Häufige Aktionen')}
                         </h4>
-                        <div className="grid grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-2 gap-2">
                           
                           {isAssetSelected ? (
                             <button
@@ -1666,15 +1789,14 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                 else if (['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund'].includes(ac)) defType = 'Kauf';
                                 setModalObj({ type: 'addBooking', assetId: selectedNode.id, defaultType: defType });
                               }}
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-blue-400 text-left transition-all cursor-pointer group shadow-xs"
+                              className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-blue-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-blue-400 text-left transition-all cursor-pointer group shadow-xs"
                             >
-                              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform shrink-0">
-                                <Icon name="PlusCircle" size={16} />
+                              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform shrink-0">
+                                <Icon name="PlusCircle" size={15} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1">
                                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{safeT(t, 'flyInNewBooking', 'Neue Buchung')}</span>
-                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 rounded">{safeT(t, 'flyInActiveBadge', 'Aktiv')}</span>
                                 </div>
                                 <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{safeT(t, 'flyInForAsset', 'Für:')} {selectedNode.name}</div>
                               </div>
@@ -1686,17 +1808,14 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   showToast(safeT(t, 'msgSelectAssetFirst', 'Bitte wähle zuerst links ein konkretes Asset aus, um eine Buchung zu erfassen.'), 'error');
                                 }
                               }}
-                              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50/60 dark:bg-slate-900/40 border border-dashed border-gray-300 dark:border-slate-800 text-left transition-all cursor-not-allowed group opacity-60 hover:opacity-80"
+                              className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50/60 dark:bg-slate-900/40 border border-dashed border-gray-300 dark:border-slate-800 text-left transition-all cursor-not-allowed group opacity-60 hover:opacity-80"
                               title={safeT(t, 'flyInSelectAssetPrompt', 'Bitte zuerst ein Asset im Navigationsbaum links auswählen')}
                             >
-                              <div className="p-2 rounded-lg bg-gray-200 dark:bg-slate-800 text-gray-400 group-hover:scale-105 transition-transform shrink-0">
-                                <Icon name="PlusCircle" size={16} />
+                              <div className="p-1.5 rounded-lg bg-gray-200 dark:bg-slate-800 text-gray-400 group-hover:scale-105 transition-transform shrink-0">
+                                <Icon name="PlusCircle" size={15} />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate">{safeT(t, 'flyInNewBooking', 'Neue Buchung')}</span>
-                                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.2 rounded">{safeT(t, 'flyInSelectAssetBadge', 'Asset wählen')}</span>
-                                </div>
+                                <span className="text-xs font-bold text-gray-500 dark:text-gray-400 truncate block">{safeT(t, 'flyInNewBooking', 'Neue Buchung')}</span>
                                 <div className="text-[10px] text-gray-400 truncate">{safeT(t, 'flyInNoActiveAsset', 'Kein Asset aktiv')}</div>
                               </div>
                             </button>
@@ -1711,10 +1830,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                 navigate('liveEditor', null);
                               }
                             }}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-indigo-300 text-left transition-all cursor-pointer group"
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-indigo-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-indigo-300 text-left transition-all cursor-pointer group"
                           >
-                            <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform shrink-0">
-                              <Icon name="Cloud" size={16} />
+                            <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform shrink-0">
+                              <Icon name="Cloud" size={15} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{safeT(t, 'flyInLiveRates', 'Live-Kurse')}</div>
@@ -1727,10 +1846,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                               setIsFlyInOpen(false);
                               setModalObj({ type: 'pdfImport' });
                             }}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-emerald-300 text-left transition-all cursor-pointer group"
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-emerald-300 text-left transition-all cursor-pointer group"
                           >
-                            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
-                              <Icon name="FileText" size={16} />
+                            <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+                              <Icon name="FileText" size={15} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{safeT(t, 'flyInPdfScanner', 'PDF Scanner')}</div>
@@ -1743,10 +1862,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                               setIsFlyInOpen(false);
                               setModalObj({ type: 'csvImport' });
                             }}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-purple-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-purple-300 text-left transition-all cursor-pointer group"
+                            className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-purple-50 dark:bg-slate-900 dark:hover:bg-slate-850 border border-gray-200/80 dark:border-slate-800 hover:border-purple-300 text-left transition-all cursor-pointer group"
                           >
-                            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform shrink-0">
-                              <Icon name="Upload" size={16} />
+                            <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform shrink-0">
+                              <Icon name="Upload" size={15} />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{safeT(t, 'flyInCsvImport', 'CSV Import')}</div>
@@ -1757,9 +1876,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       </div>
 
                       <div>
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-2">
-                            <Icon name="Box" size={13} /> {safeT(t, 'flyInPinnedPlugins', 'Angepinnte Plugins')} ({displayPlugins.length})
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
+                            <Icon name="Box" size={12} /> {safeT(t, 'flyInPinnedPlugins', 'Angepinnte Plugins')} ({displayPlugins.length})
                           </h4>
                           <button 
                             onClick={() => {
@@ -1773,13 +1892,13 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                         </div>
 
                         {displayPlugins.length === 0 ? (
-                          <div className="p-6 text-center border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl bg-gray-50 dark:bg-slate-900/40">
-                            <Icon name="Bookmark" size={24} className="mx-auto text-amber-500/40 mb-2" />
+                          <div className="p-4 text-center border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl bg-gray-50 dark:bg-slate-900/40">
+                            <Icon name="Bookmark" size={20} className="mx-auto text-amber-500/40 mb-1" />
                             <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{safeT(t, 'flyInNoPluginsPinned', 'Keine Plugins angeheftet')}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">{safeT(t, 'flyInNoPluginsPinnedDesc', 'Erstellen Sie Add-Ins mit dem KI Copilot oder importieren Sie fertige Vorlagen.')}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{safeT(t, 'flyInNoPluginsPinnedDesc', 'Erstellen Sie Add-Ins mit dem KI Copilot oder importieren Sie fertige Vorlagen.')}</p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             {displayPlugins.map(p => (
                               <div
                                 key={p.id}
@@ -1787,11 +1906,11 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   setIsFlyInOpen(false);
                                   navigate('plugin', p.id);
                                 }}
-                                className="group relative p-3.5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 rounded-2xl shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                                className="group relative p-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                               >
                                 <div>
-                                  <div className="flex justify-between items-start mb-2">
-                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getCategoryBadgeClass(p.category)}`}>
+                                  <div className="flex justify-between items-start mb-1.5">
+                                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${getCategoryBadgeClass(p.category)}`}>
                                       {p.category || 'Allgemein'}
                                     </span>
                                     <button
@@ -1802,7 +1921,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                       className="text-amber-500 hover:scale-110 p-0.5 transition-transform cursor-pointer"
                                       title={p.isPinned ? safeT(t, 'flyInActionUnpin', "Vom Schnellzugriff lösen") : safeT(t, 'flyInActionPin', "Anpinnen")}
                                     >
-                                      <Icon name="Bookmark" size={14} className={p.isPinned ? "fill-amber-500" : ""} />
+                                      <Icon name="Bookmark" size={13} className={p.isPinned ? "fill-amber-500" : ""} />
                                     </button>
                                   </div>
                                   <h5 className="font-bold text-xs text-slate-800 dark:text-slate-200 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -1810,9 +1929,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   </h5>
                                 </div>
 
-                                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-100 dark:border-slate-800/80 text-[10px] text-gray-400 font-medium">
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-slate-800/80 text-[10px] text-gray-400 font-medium">
                                   <span>{safeT(t, 'flyInActionOpen', 'Öffnen')}</span>
-                                  <Icon name="ArrowRight" size={12} className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                                  <Icon name="ArrowRight" size={11} className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
                                 </div>
                               </div>
                             ))}
@@ -1822,10 +1941,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                       {recentAssets.length > 0 && (
                         <div>
-                          <h4 className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2.5 flex items-center gap-2">
-                            <Icon name="Clock" size={13} /> {safeT(t, 'flyInRecentAssets', 'Zuletzt geöffnete Assets')}
+                          <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1.5">
+                            <Icon name="Clock" size={12} /> {safeT(t, 'flyInRecentAssets', 'Zuletzt geöffnete Assets')}
                           </h4>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             {recentAssets.map(asset => {
                               const todayStr = new Date().toISOString().split('T')[0];
                               const val = getAssetValueAtDate(asset, todayStr, allAssets);
@@ -1839,15 +1958,15 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                     setActiveReport(null);
                                     setViewMode('vermoegen');
                                   }}
-                                  className={`flex items-center justify-between p-2.5 px-3 rounded-xl border transition-all cursor-pointer group ${
+                                  className={`flex items-center justify-between p-2 px-3 rounded-xl border transition-all cursor-pointer group ${
                                     isSelected 
                                       ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 shadow-xs' 
                                       : 'bg-white dark:bg-slate-900 border-gray-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-600'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                  <div className="flex items-center gap-2 min-w-0 pr-2">
                                     <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 group-hover:text-blue-500 transition-colors shrink-0">
-                                      <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={13} />
+                                      <Icon name={asset.assetClass === 'realestate' ? 'Home' : (asset.assetClass === 'credit_card' ? 'CreditCard' : (['stock', 'fund', 'crypto'].includes(asset.assetClass) ? 'TrendingUp' : 'Wallet'))} size={12} />
                                     </div>
                                     <div className="min-w-0">
                                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -1862,9 +1981,6 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                     <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100 block">
                                       {fCur ? fCur(val, baseCurrency) : val}
                                     </span>
-                                    {isSelected && (
-                                      <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{safeT(t, 'flyInSelectedBadge', 'Ausgewählt')}</span>
-                                    )}
                                   </div>
                                 </div>
                               );
@@ -1874,8 +1990,8 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       )}
 
                       <div>
-                        <h4 className="text-[11px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 flex items-center gap-2">
-                          <Icon name="PieChart" size={13} /> {safeT(t, 'flyInKeyReports', 'Wichtigste Berichte')}
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2 flex items-center gap-1.5">
+                          <Icon name="PieChart" size={12} /> {safeT(t, 'flyInKeyReports', 'Wichtigste Berichte')}
                         </h4>
                         <div className="grid grid-cols-2 gap-2">
                           {quickReports.map(rep => {
@@ -1887,25 +2003,20 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   setIsFlyInOpen(false);
                                   navigate('vermoegen', rep.id);
                                 }}
-                                className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer group ${
+                                className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer group ${
                                   isCurrentReport
                                     ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-600 ring-1 ring-blue-400 dark:ring-blue-600'
                                     : 'border-gray-200/80 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <div className={`p-1.5 rounded-lg ${rep.color} shrink-0`}>
-                                    <Icon name={rep.icon} size={14} />
+                                    <Icon name={rep.icon} size={13} />
                                   </div>
                                   <span className={`text-xs font-semibold truncate ${isCurrentReport ? 'text-blue-700 dark:text-blue-300 font-bold' : 'text-slate-700 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}>
                                     {rep.title}
                                   </span>
                                 </div>
-                                {isCurrentReport && (
-                                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-600 text-white shrink-0 ml-1">
-                                    {safeT(t, 'flyInActiveBadge', 'Aktiv')}
-                                  </span>
-                                )}
                               </button>
                             );
                           })}
@@ -1916,7 +2027,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                 </div>
 
-                <div className="p-4 px-6 border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex justify-between items-center text-xs text-gray-400">
+                <div className="p-3 px-5 border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 flex justify-between items-center text-xs text-gray-400">
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
                     {safeT(t, 'flyInCockpitFooter', 'FinBundle Cockpit')}
@@ -1938,7 +2049,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       }}
                       className="hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer font-medium"
                     >
-                      <Icon name="Settings" size={13} /> {safeT(t, 'fileSettings', 'Einstellungen')}
+                      <Icon name="Settings" size={12} /> {safeT(t, 'fileSettings', 'Einstellungen')}
                     </button>
                   </div>
                 </div>
@@ -1951,7 +2062,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     );
   };
 
-// --- HAUPTANSICHTS-ROUTER ---
+  // --- HAUPTANSICHTS-ROUTER ---
   const renderMainView = () => {
     // 1. PLUGINS VERWALTEN
     if (viewMode === 'managePlugins') {
@@ -1984,7 +2095,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
         }
       };
 
-      const handleExportSinglePlugin = (plugin) => {
+      const handleExportSinglePlugin = async (plugin) => {
         const exportData = {
           type: 'FINBUNDLE_PLUGIN',
           version: '1.2',
@@ -1998,18 +2109,23 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
           }
         };
         const cleanName = (plugin.title || 'plugin').replace(/[^\w\d-_]/g, '_');
+        const fileName = `${cleanName}.finplugin.json`;
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${cleanName}.finplugin.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+          await window.finbundleSaveOrShare(blob, fileName, 'application/json');
+        } else {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       };
 
-      const handleExportAllPlugins = () => {
+      const handleExportAllPlugins = async () => {
         if (plugins.length === 0) return alert(safeT(t, 'msgNoPluginsToExport', "Keine Plugins vorhanden."));
         const bundleData = {
           type: 'FINBUNDLE_PLUGIN_BUNDLE',
@@ -2023,15 +2139,20 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
             createdAt: p.createdAt || new Date().toISOString()
           }))
         };
+        const fileName = `FinBundle_Plugins_Bundle_${new Date().toISOString().split('T')[0]}.json`;
         const blob = new Blob([JSON.stringify(bundleData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `FinBundle_Plugins_Bundle_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        if (typeof window !== 'undefined' && typeof window.finbundleSaveOrShare === 'function') {
+          await window.finbundleSaveOrShare(blob, fileName, 'application/json');
+        } else {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       };
 
       const handleImportFile = (e) => {
@@ -2076,43 +2197,43 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
       };
 
       return (
-        <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
+        <div className="p-3 sm:p-5 lg:p-6 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar">
           <input type="file" ref={pluginFileInputRef} onChange={handleImportFile} accept=".json,.finplugin" className="hidden" />
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-6 mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-4 mb-5 gap-3">
             <div>
-              <h2 className="text-3xl font-black text-slate-800 dark:text-white flex items-center gap-3">
-                <Icon name="Folder" className="text-blue-500" />
+              <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2.5">
+                <Icon name="Folder" className="text-blue-500" size={20} />
                 {safeT(t, 'pluginsManagerTitle', 'Plugins & Add-Ins verwalten')}
               </h2>
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-gray-500 text-xs mt-0.5">
                 {safeT(t, 'pluginsManagerSubtitle', 'Exportiere Vorlagen, pinne wichtige Widgets an dein Fly-In-Cockpit oder importiere Add-Ins von anderen Nutzern.')}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => pluginFileInputRef.current?.click()} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all cursor-pointer">
-                <Icon name="Upload" size={16} /> <span>{safeT(t, 'btnImportPlugin', 'Plugin importieren')}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => pluginFileInputRef.current?.click()} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer">
+                <Icon name="Upload" size={14} /> <span>{safeT(t, 'btnImportPlugin', 'Plugin importieren')}</span>
               </button>
               {plugins.length > 0 && (
-                <button onClick={handleExportAllPlugins} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all cursor-pointer">
-                  <Icon name="Download" size={16} /> <span>{safeT(t, 'btnExportAllPlugins', 'Alle exportieren')}</span>
+                <button onClick={handleExportAllPlugins} className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer">
+                  <Icon name="Download" size={14} /> <span>{safeT(t, 'btnExportAllPlugins', 'Alle exportieren')}</span>
                 </button>
               )}
-              <button onClick={() => navigate('ai', null)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all cursor-pointer">
-                <Icon name="PlusCircle" size={16} /> <span>{safeT(t, 'btnNewPluginCopilot', 'Neues Plugin (Copilot)')}</span>
+              <button onClick={() => navigate('ai', null)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer">
+                <Icon name="PlusCircle" size={14} /> <span>{safeT(t, 'btnNewPluginCopilot', 'Neues Plugin (Copilot)')}</span>
               </button>
-              <button onClick={() => navigate('vermoegen', 'overview')} className="px-4 py-2.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 transition-colors cursor-pointer">
+              <button onClick={() => navigate('vermoegen', 'overview')} className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 transition-colors cursor-pointer">
                 {safeT(t, 'btnBack', 'Zurück')}
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mb-6">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button 
                 onClick={() => setPluginCategoryFilter('ALL')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${pluginCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300'}`}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${pluginCategoryFilter === 'ALL' ? 'bg-blue-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300'}`}
               >
                 {safeT(t, 'filterCategoryAll', 'Alle')} ({plugins.length})
               </button>
@@ -2120,7 +2241,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 <button 
                   key={cat}
                   onClick={() => setPluginCategoryFilter(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${pluginCategoryFilter === cat ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300'}`}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${pluginCategoryFilter === cat ? 'bg-blue-600 text-white shadow-xs' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300'}`}
                 >
                   {cat} ({plugins.filter(p => (p.category || 'Allgemein') === cat).length})
                 </button>
@@ -2133,81 +2254,81 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 placeholder={safeT(t, 'searchPluginsPlaceholder', 'Plugin suchen...')}
                 value={pluginSearch}
                 onChange={e => setPluginSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <Icon name="Search" size={13} className="absolute left-3 top-2.5 text-gray-400" />
+              <Icon name="Search" size={13} className="absolute left-2.5 top-2 text-gray-400" />
             </div>
           </div>
 
           {filteredPlugins.length === 0 ? (
-            <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-3xl p-16 text-center text-gray-400">
-              <Icon name="Box" size={48} className="mx-auto mb-4 opacity-30 text-blue-500" />
-              <h3 className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-1">{safeT(t, 'pluginsEmptyTitle', 'Keine Plugins gefunden')}</h3>
-              <p className="text-xs text-gray-400 mb-6">{safeT(t, 'pluginsEmptyDesc', 'Erstelle individuelle Analysen im AI Copilot oder importiere eine fertige .finplugin.json-Datei.')}</p>
-              <div className="flex justify-center gap-3">
+            <div className="bg-gray-50 dark:bg-slate-900 border-2 border-dashed border-gray-200 dark:border-slate-800 rounded-2xl p-10 text-center text-gray-400">
+              <Icon name="Box" size={36} className="mx-auto mb-3 opacity-30 text-blue-500" />
+              <h3 className="text-base font-bold text-slate-700 dark:text-slate-300 mb-1">{safeT(t, 'pluginsEmptyTitle', 'Keine Plugins gefunden')}</h3>
+              <p className="text-xs text-gray-400 mb-4">{safeT(t, 'pluginsEmptyDesc', 'Erstelle individuelle Analysen im AI Copilot oder importiere eine fertige .finplugin.json-Datei.')}</p>
+              <div className="flex justify-center gap-2.5">
                 <button 
                   onClick={() => pluginFileInputRef.current?.click()}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer"
                 >
                   {safeT(t, 'btnImportFile', 'Datei importieren')}
                 </button>
                 <button 
                   onClick={() => navigate('ai', null)}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer"
                 >
                   {safeT(t, 'btnToAiCopilot', 'Zum AI Copilot')}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50/80 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold text-gray-500">
+            <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-gray-50/80 dark:bg-slate-800/60 border-b border-gray-200 dark:border-slate-800 text-[11px] uppercase font-bold text-gray-500">
                   <tr>
-                    <th className="p-4 w-12 text-center">{safeT(t, 'colPin', 'Pin')}</th>
-                    <th className="p-4">{safeT(t, 'colReportName', 'Name des Reports')}</th>
-                    <th className="p-4">{safeT(t, 'colCategory', 'Kategorie')}</th>
-                    <th className="p-4 text-center">{safeT(t, 'colCreatedAt', 'Erstellt am')}</th>
-                    <th className="p-4 text-right">{safeT(t, 'colActions', 'Aktionen')}</th>
+                    <th className="p-2.5 w-10 text-center">{safeT(t, 'colPin', 'Pin')}</th>
+                    <th className="p-2.5">{safeT(t, 'colReportName', 'Name des Reports')}</th>
+                    <th className="p-2.5">{safeT(t, 'colCategory', 'Kategorie')}</th>
+                    <th className="p-2.5 text-center">{safeT(t, 'colCreatedAt', 'Erstellt am')}</th>
+                    <th className="p-2.5 text-right">{safeT(t, 'colActions', 'Aktionen')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                   {filteredPlugins.map(p => (
                     <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="p-4 text-center">
+                      <td className="p-2.5 text-center">
                         <button 
                           onClick={() => togglePinPlugin(p.id)} 
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${p.isPinned ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 font-bold' : 'text-gray-300 hover:text-gray-500'}`}
                           title={p.isPinned ? safeT(t, 'flyInActionUnpin', "Vom Fly-In lösen") : safeT(t, 'flyInActionPin', "An Fly-In anpinnen")}
                         >
-                          <Icon name="Bookmark" size={16} />
+                          <Icon name="Bookmark" size={14} />
                         </button>
                       </td>
-                      <td className="p-4 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
+                      <td className="p-2.5 font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                         <span className="truncate">{p.title || p.name}</span>
                         {p.isPinned && <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">{safeT(t, 'badgeFlyInPinned', 'Fly-In')}</span>}
                       </td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${getCategoryBadgeClass(p.category)}`}>
+                      <td className="p-2.5">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${getCategoryBadgeClass(p.category)}`}>
                           {p.category || 'Allgemein'}
                         </span>
                       </td>
-                      <td className="p-4 text-center font-mono text-xs text-gray-400">
+                      <td className="p-2.5 text-center font-mono text-xs text-gray-400">
                         {p.createdAt ? new Date(p.createdAt).toLocaleDateString('de-CH') : '-'}
                       </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => navigate('plugin', p.id)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer">
+                      <td className="p-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => navigate('plugin', p.id)} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer">
                             {safeT(t, 'flyInActionOpen', 'Öffnen')}
                           </button>
                           <button onClick={() => handleExportSinglePlugin(p)} className="p-1.5 text-gray-500 hover:text-emerald-600 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer" title={safeT(t, 'fileExportTitle', "Exportieren")}>
-                            <Icon name="Download" size={14} />
+                            <Icon name="Download" size={13} />
                           </button>
                           <button onClick={() => setEditingPlugin({ ...p })} className="p-1.5 text-gray-500 hover:text-blue-600 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer" title={safeT(t, 'btnEdit', "Bearbeiten")}>
-                            <Icon name="Edit" size={14} />
+                            <Icon name="Edit" size={13} />
                           </button>
                           <button onClick={() => handleDeletePlugin(p.id, p.title || p.name)} className="p-1.5 text-gray-400 hover:text-red-600 border border-gray-200 dark:border-slate-700 rounded-lg cursor-pointer" title={safeT(t, 'btnDelete', "Löschen")}>
-                            <Icon name="Trash" size={14} />
+                            <Icon name="Trash" size={13} />
                           </button>
                         </div>
                       </td>
@@ -2220,18 +2341,18 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
           {editingPlugin && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
-                <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">{safeT(t, 'modalEditPluginTitle', 'Plugin bearbeiten')}</h3>
-                  <button onClick={() => setEditingPlugin(null)} className="cursor-pointer"><Icon name="X" size={18} /></button>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+                <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">{safeT(t, 'modalEditPluginTitle', 'Plugin bearbeiten')}</h3>
+                  <button onClick={() => setEditingPlugin(null)} className="cursor-pointer"><Icon name="X" size={16} /></button>
                 </div>
-                <div className="p-6 space-y-4 overflow-y-auto finspa-scrollbar flex-1">
-                  <input type="text" value={editingPlugin.title} onChange={e => setEditingPlugin({ ...editingPlugin, title: e.target.value })} className="w-full p-2.5 border rounded-xl text-sm font-semibold mb-2" />
+                <div className="p-4 space-y-3 overflow-y-auto finspa-scrollbar flex-1">
+                  <input type="text" value={editingPlugin.title} onChange={e => setEditingPlugin({ ...editingPlugin, title: e.target.value })} className="w-full p-2 border rounded-xl text-sm font-semibold mb-1" />
                   <textarea value={editingPlugin.code || ''} onChange={e => setEditingPlugin({ ...editingPlugin, code: e.target.value })} rows={12} className="w-full p-3 font-mono text-xs border rounded-xl bg-slate-950 text-slate-200" />
                 </div>
-                <div className="p-4 border-t flex justify-end gap-3">
-                  <button onClick={() => setEditingPlugin(null)} className="px-4 py-2 border rounded-xl text-xs font-bold cursor-pointer">{safeT(t, 'btnCancel', 'Abbrechen')}</button>
-                  <button onClick={handleSavePluginEdit} className="px-5 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer">{safeT(t, 'btnSave', 'Speichern')}</button>
+                <div className="p-3 border-t flex justify-end gap-2">
+                  <button onClick={() => setEditingPlugin(null)} className="px-3.5 py-1.5 border rounded-xl text-xs font-bold cursor-pointer">{safeT(t, 'btnCancel', 'Abbrechen')}</button>
+                  <button onClick={handleSavePluginEdit} className="px-4 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer">{safeT(t, 'btnSave', 'Speichern')}</button>
                 </div>
               </div>
             </div>
@@ -2246,7 +2367,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
       if (!activePlugin) return null;
 
       return (
-        <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar flex flex-col">
+        <div className="p-3 sm:p-5 lg:p-6 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar flex flex-col">
           <ReportHeader 
               title={activePlugin.title} 
               subtitle={`${activePlugin.category} • ${safeT(t, 'pluginCreatedWithCopilot', 'Erstellt mit FinBundle AI Copilot')}`} 
@@ -2259,7 +2380,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               <div className="flex items-center gap-2">
                   <button 
                     onClick={() => togglePinPlugin(activePlugin.id)} 
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer shadow-xs ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer shadow-xs ${
                       activePlugin.isPinned 
                         ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-300' 
                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300'
@@ -2271,13 +2392,13 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               </div>
           </ReportHeader>
 
-          <div className="flex-1 w-full bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[650px] relative">
+          <div className="flex-1 w-full bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden min-h-[500px] relative">
               <iframe 
                   key={`${activePlugin.id}_${activeLang}`}
                   id="active-plugin-iframe"
                   srcDoc={buildPluginHtml(activePlugin.code)}
                   sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
-                  className="w-full h-full min-h-[650px] border-none bg-white"
+                  className="w-full h-full min-h-[500px] border-none bg-white"
                   title={activePlugin.title}
               />
           </div>
@@ -2302,24 +2423,24 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
       return (
           <div className="p-0 h-full flex flex-col bg-gray-50 dark:bg-slate-950 overflow-hidden">
-              <div className="bg-white dark:bg-slate-900 border-b p-4 flex justify-between items-center shadow-sm">
-                  <div className="flex items-center gap-3">
-                      <div className="bg-slate-800 text-white p-2 rounded-lg"><Icon name="Code" size={20} /></div>
+              <div className="bg-white dark:bg-slate-900 border-b p-3 flex justify-between items-center shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                      <div className="bg-slate-800 text-white p-1.5 rounded-lg"><Icon name="Code" size={16} /></div>
                       <div>
-                          <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">{safeT(t, 'viewData', 'Innere Datenhaltung')}</h2>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{safeT(t, 'descSystemExplorer', 'System-Explorer & JSON-Inspector')}</p>
+                          <h2 className="text-sm sm:text-base font-black text-slate-800 dark:text-white uppercase tracking-tight">{safeT(t, 'viewData', 'Innere Datenhaltung')}</h2>
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{safeT(t, 'descSystemExplorer', 'System-Explorer & JSON-Inspector')}</p>
                       </div>
                   </div>
                   <div className="flex gap-2">
-                      <button onClick={() => handleCopy(data)} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer">
-                          <Icon name="Copy" className="text-white" /> {safeT(t, 'btnCopyProject', 'Gesamtes Projekt kopieren')}
+                      <button onClick={() => handleCopy(data)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer">
+                          <Icon name="Copy" size={13} className="text-white" /> {safeT(t, 'btnCopyProject', 'Gesamtes Projekt kopieren')}
                       </button>
                   </div>
               </div>
 
-              <div className="flex-1 flex overflow-hidden">
-                  <div className="w-64 border-r bg-white dark:bg-slate-900/50 p-4 space-y-2 shrink-0">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">{safeT(t, 'labelAreas', 'Bereiche')}</p>
+              <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                  <div className="w-full md:w-56 border-b md:border-b-0 md:border-r bg-white dark:bg-slate-900/50 p-2 md:p-3 flex md:block gap-1.5 overflow-x-auto md:space-y-1.5 shrink-0">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{safeT(t, 'labelAreas', 'Bereiche')}</p>
                       {[
                           { id: 'root', label: safeT(t, 'labelFullObject', 'Komplettes Objekt'), icon: 'Box' },
                           { id: 'banks', label: safeT(t, 'labelBanksAssets', 'Banken & Assets'), icon: 'Shield' },
@@ -2330,23 +2451,16 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                           <button 
                               key={item.id}
                               onClick={() => setSelectedDataPath(item.id)}
-                              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedDataPath === item.id ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shadow-sm ring-1 ring-blue-200' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${selectedDataPath === item.id ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shadow-xs ring-1 ring-blue-200' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800'}`}
                           >
-                              <Icon name={item.icon} size={14} /> {item.label}
+                              <Icon name={item.icon} size={13} /> {item.label}
                           </button>
                       ))}
-                      
-                      <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
-                          <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-tight">
-                              <Icon name="Info" size={10} className="mb-1" /><br/>
-                              {safeT(t, 'descExpertCopy', 'Du kannst einzelne Blöcke per "Copy" Icon extrahieren und in anderen Assets wieder einfügen (Expert Mode).')}
-                          </p>
-                      </div>
                   </div>
 
                   <div className="flex-grow flex flex-col overflow-hidden bg-white dark:bg-slate-900 shadow-inner">
                       <div className="p-2 border-b bg-gray-50/50 dark:bg-slate-800/50 flex items-center gap-2">
-                           <div className="bg-white dark:bg-slate-800 border rounded-lg px-2 py-1 flex items-center gap-2 w-full max-w-sm shadow-sm">
+                           <div className="bg-white dark:bg-slate-800 border rounded-lg px-2 py-1 flex items-center gap-2 w-full max-w-sm shadow-xs">
                               <Icon name="Search" size={12} className="text-gray-400" />
                               <input 
                                   type="text" 
@@ -2362,8 +2476,8 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                               )}
                            </div>
                       </div>
-                      <div className="flex-1 overflow-auto p-4 finspa-scrollbar font-mono">
-                          <div className="bg-gray-50 dark:bg-slate-950/50 rounded-2xl border dark:border-slate-800 p-6 min-h-full">
+                      <div className="flex-1 overflow-auto p-3 finspa-scrollbar font-mono">
+                          <div className="bg-gray-50 dark:bg-slate-950/50 rounded-xl border dark:border-slate-800 p-4 min-h-full">
                               <JsonNode label={selectedDataPath.toUpperCase()} data={getActiveData()} t={t} searchQuery={dataSearch.trim()} />
                           </div>
                       </div>
@@ -2375,7 +2489,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
     // 4. KI-DASHBOARD & LIVE-EDITOR
     if (viewMode === 'ai') {
-        const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-8 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
+        const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-6 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
         return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
     }
 
@@ -2438,7 +2552,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
       };
       
       return (
-        <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
+        <div className="p-3 sm:p-5 lg:p-6 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
           {renderFlyInDrawer()}
           <ReportHeader 
               title={headerConfig.title} 
@@ -2449,13 +2563,13 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               isTreeVisible={isTreeVisible} 
               setIsTreeVisible={setIsTreeVisible}
           >
-              <div className="flex items-center gap-3 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-gray-200 dark:border-slate-700 px-4 py-2.5 rounded-xl text-sm shadow-sm transition-all hover:shadow-md">
-                  <Icon name="Calendar" className="text-blue-500" size={18}/>
+              <div className="flex items-center gap-2 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-gray-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs shadow-xs transition-all hover:shadow-sm">
+                  <Icon name="Calendar" className="text-blue-500" size={14}/>
                   <span className="text-gray-600 dark:text-gray-300 font-semibold hidden sm:inline">{safeT(t, 'dateRangeTitle', 'Zeitraum:')}</span>
-                  <div className="flex items-center gap-2">
-                      <input type="date" value={dateRange?.from || ''} onChange={e=>setDateRange({...dateRange, from: e.target.value})} className="bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 transition-colors font-mono tabular-nums cursor-pointer" />
+                  <div className="flex items-center gap-1.5">
+                      <input type="date" value={dateRange?.from || ''} onChange={e=>setDateRange({...dateRange, from: e.target.value})} className="bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 transition-colors font-mono tabular-nums cursor-pointer" />
                       <span className="text-gray-400 font-bold">-</span>
-                      <input type="date" value={dateRange?.to || ''} onChange={e=>setDateRange({...dateRange, to: e.target.value})} className="bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 transition-colors font-mono tabular-nums cursor-pointer" />
+                      <input type="date" value={dateRange?.to || ''} onChange={e=>setDateRange({...dateRange, to: e.target.value})} className="bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500 outline-none text-gray-700 dark:text-gray-200 transition-colors font-mono tabular-nums cursor-pointer" />
                   </div>
               </div>
           </ReportHeader>
@@ -2478,7 +2592,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
     if (viewMode === 'vermoegen' && !selectedNode && !activeReport) {
         return (
-          <div className="p-8 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
+          <div className="p-3 sm:p-5 lg:p-6 h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
             {renderFlyInDrawer()}
             <AllocationReport data={data} dateRange={dateRange} isTreeVisible={isTreeVisible} setIsTreeVisible={setIsTreeVisible} fCur={fCur} t={t} />
           </div>
@@ -2558,19 +2672,19 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
         const historyData = sortedDates.map(d => calcNodeHist(selectedNode, d));
 
         return (
-          <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
+          <div className="p-3 sm:p-5 lg:p-6 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
             {renderFlyInDrawer()}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-6 mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200 dark:border-slate-800 pb-3 mb-4 gap-3">
               <div>
-                <h2 className="text-3xl font-black flex items-center gap-3">
-                  {!isTreeVisible && <Icon name="ChevronRight" size={24} className="cursor-pointer text-gray-400 print-hide" onClick={() => setIsTreeVisible(true)} />}
-                  <Icon name={headerIcon} className={isBank ? "text-slate-500" : "text-yellow-500"} />
+                <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2.5">
+                  {!isTreeVisible && <Icon name="ChevronRight" size={20} className="cursor-pointer text-gray-400 print-hide" onClick={() => setIsTreeVisible(true)} />}
+                  <Icon name={headerIcon} size={20} className={isBank ? "text-slate-500" : "text-yellow-500"} />
                   {selectedNode.name}
                 </h2>
-                <p className="text-gray-500 text-sm mt-1">{headerSubtitle}</p>
+                <p className="text-gray-500 text-xs mt-0.5">{headerSubtitle}</p>
               </div>
               
-              <div className="flex items-end gap-10">
+              <div className="flex items-end gap-4 sm:gap-6">
                   {historyData && historyData.length > 1 && (
                       <Sparkline 
                           dataSeries={historyData} 
@@ -2579,32 +2693,32 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       />
                   )}
                   
-                  <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0 min-w-[180px]">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1 block">{safeT(t, 'totalValue', 'Gesamtwert')}</span>
-                    <span className="text-3xl font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-4 py-2 rounded-xl block shadow-sm whitespace-nowrap">
+                  <div className="text-left sm:text-right flex flex-col justify-center items-start sm:items-end shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5 block">{safeT(t, 'totalValue', 'Gesamtwert')}</span>
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-900 px-3 py-1.5 rounded-xl block shadow-xs whitespace-nowrap">
                       {fCur ? fCur(totalBankValue, baseCurrency) : totalBankValue}
                     </span>
                   </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 print:grid-cols-3 xl:grid-cols-3 gap-8 items-start">
-              <div className="print:col-span-2 xl:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 print:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 items-start">
+              <div className="print:col-span-2 xl:col-span-2 space-y-4">
                 {Object.keys(categoryMap).map(categoryName => {
                   const categoryItems = allBankAssets.filter(a => a.category === categoryName);
                   const categoryTotal = categoryMap[categoryName];
                   return (
-                    <div key={categoryName} className="bg-gray-50 dark:bg-slate-900/40 rounded-xl border border-gray-200 dark:border-slate-800/80 p-5 shadow-sm">
-                      <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-800 pb-3 mb-4">
-                        <h3 className="font-bold text-lg text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                          <Icon name="FolderOpen" className="text-yellow-500" size={18} /> {categoryName}
+                    <div key={categoryName} className="bg-gray-50 dark:bg-slate-900/40 rounded-xl border border-gray-200 dark:border-slate-800/80 p-3.5 sm:p-4 shadow-xs">
+                      <div className="flex justify-between items-center border-b border-gray-200 dark:border-slate-800 pb-2 mb-3">
+                        <h3 className="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <Icon name="FolderOpen" className="text-yellow-500" size={16} /> {categoryName}
                         </h3>
-                        <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-3 py-1 rounded-md border text-sm shadow-sm">
+                        <span className="font-mono font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-md border text-xs shadow-xs">
                           {fCur ? fCur(categoryTotal, baseCurrency) : categoryTotal} ({totalBankValue > 0 ? ((categoryTotal / totalBankValue) * 100).toFixed(1) : 0}%)
                         </span>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         {categoryItems.map(asset => (
                           <div 
                             key={asset.id} 
@@ -2612,15 +2726,15 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                               const found = allAssets.find(a => a.id === asset.id);
                               if (found) setSelectedNode(found);
                             }}
-                            className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-gray-100 dark:border-slate-800 flex justify-between items-center hover:shadow-sm hover:border-blue-400 cursor-pointer transition-all"
+                            className="bg-white dark:bg-slate-900 p-2.5 px-3 rounded-lg border border-gray-100 dark:border-slate-800 flex justify-between items-center hover:shadow-xs hover:border-blue-400 cursor-pointer transition-all"
                           >
                             <div>
-                              <div className="font-bold text-sm text-slate-900 dark:text-white">{asset.name}</div>
-                              <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5"><span className="uppercase font-semibold tracking-wider px-1.5 py-0.5 bg-gray-100 dark:bg-slate-800 rounded text-[10px]">{asset.subCategory}</span></div>
+                              <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">{asset.name}</div>
+                              <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5"><span className="uppercase font-semibold tracking-wider px-1.5 py-0.2 bg-gray-100 dark:bg-slate-800 rounded text-[9px]">{asset.subCategory}</span></div>
                             </div>
                             <div className="text-right">
-                              <div className="font-black font-mono text-slate-900 dark:text-white">{fCur ? fCur(asset.valueInBase, baseCurrency) : asset.valueInBase}</div>
-                              {asset.currency && asset.currency !== baseCurrency && <div className="text-xs text-gray-400 font-mono">{fCur ? fCur(asset.originalValue, asset.currency) : `${asset.originalValue} ${asset.currency}`}</div>}
+                              <div className="font-black font-mono text-xs sm:text-sm text-slate-900 dark:text-white">{fCur ? fCur(asset.valueInBase, baseCurrency) : asset.valueInBase}</div>
+                              {asset.currency && asset.currency !== baseCurrency && <div className="text-[10px] text-gray-400 font-mono">{fCur ? fCur(asset.originalValue, asset.currency) : `${asset.originalValue} ${asset.currency}`}</div>}
                             </div>
                           </div>
                         ))}
@@ -2630,14 +2744,14 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 })}
               </div>
 
-              <div className="space-y-6 print:col-span-1 print:break-inside-avoid">
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-6 flex flex-col items-center">
-                  <h3 className="font-bold text-sm text-gray-700 dark:text-gray-300 self-start mb-6 flex items-center gap-2"><Icon name="PieChart" /> {safeT(t, 'allocByCat', 'Aufteilung nach Kategorien')}</h3>
+              <div className="space-y-4 print:col-span-1 print:break-inside-avoid">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs p-4 flex flex-col items-center">
+                  <h3 className="font-bold text-xs sm:text-sm text-gray-700 dark:text-gray-300 self-start mb-4 flex items-center gap-2"><Icon name="PieChart" size={15} /> {safeT(t, 'allocByCat', 'Aufteilung nach Kategorien')}</h3>
                   {chartDataCategories.length > 0 ? (
                     <UniversalChart 
                       engine={activeChartEngine} 
                       type="doughnut" 
-                      height="280px" 
+                      height="230px" 
                       labels={chartDataCategories.map(d => d.label)} 
                       datasets={[{ 
                           label: safeT(t, 'totalValue', 'Gesamtwert'), 
@@ -2645,14 +2759,14 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                           valueFormatter: (val) => fCur ? fCur(val, baseCurrency) : Number(val).toFixed(2)
                       }]} 
                     />
-                  ) : <div className="text-gray-400 py-12 text-center text-sm">{safeT(t, 'noValuedAssets', 'Keine bewerteten Assets vorhanden.')}</div>}
+                  ) : <div className="text-gray-400 py-8 text-center text-xs">{safeT(t, 'noValuedAssets', 'Keine bewerteten Assets vorhanden.')}</div>}
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm p-5">
-                  <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3 flex items-center gap-1"><Icon name="List" size={12} /> {safeT(t, 'subcatTotals', 'Subkategorien-Summen')}</h4>
-                  <div className="space-y-2 divide-y divide-gray-50 dark:divide-slate-800 text-xs">
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs p-4">
+                  <h4 className="text-[11px] font-bold uppercase text-gray-400 tracking-wider mb-2.5 flex items-center gap-1"><Icon name="List" size={12} /> {safeT(t, 'subcatTotals', 'Subkategorien-Summen')}</h4>
+                  <div className="space-y-1.5 divide-y divide-gray-50 dark:divide-slate-800 text-xs">
                     {Object.keys(subCategoryMap).sort((a,b) => subCategoryMap[b] - subCategoryMap[a]).map(subKey => (
-                      <div key={subKey} className="flex justify-between items-center pt-2 first:pt-0">
+                      <div key={subKey} className="flex justify-between items-center pt-1.5 first:pt-0">
                         <span className="text-gray-600 dark:text-gray-400 font-medium">{subKey}</span>
                         <span className="font-mono font-bold text-slate-900 dark:text-white">{fCur ? fCur(subCategoryMap[subKey], baseCurrency) : subCategoryMap[subKey]}</span>
                       </div>
@@ -2902,123 +3016,253 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
         });
 
         const netFlowVal = totalInRaw - totalOutRaw;
-        const pClass = isCompactMode ? 'p-2' : 'p-4';
+        const pClass = isCompactMode ? 'py-1.5 px-2.5' : 'py-2.5 px-3.5';
 
         return (
-          <div className="p-8 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
+          <div className="p-2.5 sm:p-4 lg:p-6 flex flex-col h-full bg-white dark:bg-slate-950 overflow-auto finspa-scrollbar relative">
             {renderFlyInDrawer()}
-            <div className="flex justify-between items-stretch border-b border-gray-200 dark:border-slate-800 pb-6 mb-4">
-               <div className="flex flex-col justify-between">
-                 <h2 className="text-3xl font-black flex items-center gap-3">
-                   {!isTreeVisible && <Icon name="ChevronRight" size={24} className="cursor-pointer text-gray-400 print-hide" onClick={() => setIsTreeVisible(true)} />}
-                   <Icon name={isCreditCard ? "CreditCard" : (adjustedNode.currency === 'USD' ? 'DollarSign' : (adjustedNode.currency === 'EUR' ? 'EuroSign' : 'Wallet'))} className={isCreditCard ? "text-indigo-500" : "text-emerald-500"}/>
-                   {adjustedNode.name} {adjustedNode.isArchived && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">{safeT(t, 'isArchived', 'Archiviert')}</span>}
-                 </h2>
-                 <div className="flex flex-wrap gap-4 sm:gap-6 mt-3 text-sm items-center">
-                   <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full font-medium">{safeT(t, 'assetClassLabel', 'Klasse:')} <span className="uppercase">{adjustedNode.assetClass === 'credit_card' ? (safeT(t, 'acCreditCard', 'Kreditkarte')) : adjustedNode.assetClass}</span></span>
-                   
-                   {isSecurities && (
-                       <span className="bg-gray-100 dark:bg-slate-800 px-3 py-1 rounded-full font-medium tabular-nums">
-                           {currentShares.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 4 })} {safeT(t, 'labelPcs', 'Stk.')}
-                       </span>
-                   )}
 
-                   <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 px-3 py-1 rounded-full font-bold flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 tabular-nums">
-                      <div>{isCreditCard ? (safeT(t, 'labelCreditBalance', 'Offener Saldo (Heute):')) : (safeT(t, 'valueToday', 'Wert (Heute):'))} {fCur ? fCur(currentVal, baseCurrency) : currentVal}</div>
-                      {isForeignCurrency && <span className="text-xs font-normal opacity-70">({fCur ? fCur(rawSum, adjustedNode.currency) : rawSum})</span>}
-                   </span>
+            {/* KOMPAKTER & MOBIL-OPTIMIERTER ASSET-HEADER FÜR ALLE ASSET-KLASSEN */}
+            <div className="flex flex-col gap-2.5 border-b border-gray-200 dark:border-slate-800 pb-3 mb-2.5">
+              <div className="flex flex-wrap justify-between items-start sm:items-center gap-2">
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h2 className="text-base sm:text-2xl font-black flex items-center gap-2 min-w-0">
+                      {!isTreeVisible && (
+                        <button
+                          type="button"
+                          onClick={() => setIsTreeVisible(true)}
+                          className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-blue-50 print-hide shrink-0 cursor-pointer"
+                          title="Navigationsbaum einblenden"
+                        >
+                          <Icon name="ChevronRight" size={18} />
+                        </button>
+                      )}
+                      <Icon
+                        name={isCreditCard ? "CreditCard" : (isSecurities ? "TrendingUp" : (adjustedNode.currency === 'USD' ? 'DollarSign' : (adjustedNode.currency === 'EUR' ? 'EuroSign' : 'Wallet')))}
+                        size={20}
+                        className={isCreditCard ? "text-indigo-500 shrink-0" : (isSecurities ? "text-blue-500 shrink-0" : "text-emerald-500 shrink-0")}
+                      />
+                      <span className="truncate">{adjustedNode.name}</span>
+                      {adjustedNode.ticker && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md font-bold shrink-0">
+                          {adjustedNode.ticker}
+                        </span>
+                      )}
+                      {adjustedNode.isArchived && (
+                        <span className="bg-yellow-100 text-yellow-800 text-[10px] px-2 py-0.5 rounded shrink-0">
+                          {safeT(t, 'isArchived', 'Archiviert')}
+                        </span>
+                      )}
+                    </h2>
 
-                   {isCreditCard && (
-                      <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold">
-                         <span>Limite: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} ${adjustedNode.currency || baseCurrency}`}</span>
-                         <span className="opacity-60">•</span>
-                         <span>Verfügbar: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)} ${adjustedNode.currency || baseCurrency}`}</span>
+                    {/* Desktop Pill Row */}
+                    <div className="hidden sm:flex flex-wrap gap-1.5 sm:gap-2 text-xs items-center">
+                      <span className="bg-gray-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full font-medium">
+                        {safeT(t, 'assetClassLabel', 'Klasse:')}{' '}
+                        <span className="uppercase">
+                          {adjustedNode.assetClass === 'credit_card' ? safeT(t, 'acCreditCard', 'Kreditkarte') : adjustedNode.assetClass}
+                        </span>
+                      </span>
+
+                      {isSecurities && (
+                        <span className="bg-gray-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full font-medium tabular-nums">
+                          {currentShares.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 4 })} {safeT(t, 'labelPcs', 'Stk.')}
+                        </span>
+                      )}
+
+                      <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2.5 py-0.5 rounded-full font-bold flex items-center gap-1.5 tabular-nums">
+                        <span>
+                          {isCreditCard ? safeT(t, 'labelCreditBalance', 'Offener Saldo (Heute):') : safeT(t, 'valueToday', 'Wert (Heute):')}{' '}
+                          {fCur ? fCur(currentVal, baseCurrency) : currentVal}
+                        </span>
+                        {isForeignCurrency && (
+                          <span className="text-[11px] font-normal opacity-75">
+                            ({fCur ? fCur(rawSum, adjustedNode.currency) : rawSum})
+                          </span>
+                        )}
+                      </span>
+
+                      {isCreditCard && (
+                        <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
+                          <span>Limite: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} ${adjustedNode.currency || baseCurrency}`}</span>
+                          <span className="opacity-60">•</span>
+                          <span>Verfügbar: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)} ${adjustedNode.currency || baseCurrency}`}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sparklines (Auf Mobilgeräten horizontal scrollbar / kompakt, auf Desktop rechtsbündig) */}
+                <div className="flex items-end gap-3 sm:gap-6 ml-auto overflow-x-auto max-w-full pb-0.5">
+                  <Sparkline
+                    dataSeries={dataBase}
+                    dateSeries={sortedDates}
+                    title={isCreditCard ? `${safeT(t, 'titleCardBalance', 'Verbindlichkeit')} (${baseCurrency})` : (isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${baseCurrency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${baseCurrency})`)}
+                  />
+                  {isForeignCurrency && (
+                    <Sparkline
+                      dataSeries={dataRaw}
+                      dateSeries={sortedDates}
+                      title={isCreditCard ? `${safeT(t, 'titleCardBalance', 'Verbindlichkeit')} (${adjustedNode.currency})` : (isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${adjustedNode.currency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${adjustedNode.currency})`)}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* MOBILES 3-SPALTEN KPI-COCKPIT FÜR ALLE ASSET-KLASSEN (Analog PropertyEditorArea) */}
+              <div className="grid grid-cols-3 gap-2 sm:hidden pt-1">
+                {isSecurities ? (
+                  <>
+                    <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">{safeT(t, 'labelShares', 'Bestand')}</div>
+                      <div className="text-xs font-black font-mono text-slate-800 dark:text-slate-100 truncate mt-0.5 tabular-nums">
+                        {currentShares.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 4 })} {safeT(t, 'labelPcs', 'Stk.')}
                       </div>
-                   )}
-                 </div>
-               </div>
-
-               <div className="flex items-end gap-10 ml-4 h-full pt-2">
-                  <Sparkline dataSeries={dataBase} dateSeries={sortedDates} title={isCreditCard ? `${safeT(t, 'titleCardBalance', 'Verbindlichkeit')} (${baseCurrency})` : (isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${baseCurrency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${baseCurrency})`)} />
-                  {isForeignCurrency && <Sparkline dataSeries={dataRaw} dateSeries={sortedDates} title={isCreditCard ? `${safeT(t, 'titleCardBalance', 'Verbindlichkeit')} (${adjustedNode.currency})` : (isSecurities ? `${safeT(t, 'titlePerformance', 'Performance')} (${adjustedNode.currency})` : `${safeT(t, 'titleValueDevelopment', 'Wertentwicklung')} (${adjustedNode.currency})`)} />}
-               </div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">{safeT(t, 'labelMarketPrice', 'Akt. Kurs')}</div>
+                      <div className="text-xs font-black font-mono text-blue-600 dark:text-blue-400 truncate mt-0.5 tabular-nums">
+                        {(() => {
+                          const latestP = typeof getAssetPriceAtDate === 'function' ? getAssetPriceAtDate(adjustedNode, todayStr) : (adjustedNode.price || 0);
+                          return fCur ? fCur(latestP, adjustedNode.currency || baseCurrency) : `${latestP} ${adjustedNode.currency || baseCurrency}`;
+                        })()}
+                      </div>
+                    </div>
+                    <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 truncate">{safeT(t, 'valueToday', 'Gesamtwert')}</div>
+                      <div className="text-xs font-black font-mono text-slate-900 dark:text-white truncate mt-0.5 tabular-nums">
+                        {fCur ? fCur(currentVal, baseCurrency) : currentVal}
+                      </div>
+                      {isForeignCurrency && (
+                        <div className="text-[9px] font-mono text-gray-500 truncate">
+                          {fCur ? fCur(rawSum, adjustedNode.currency) : rawSum}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : isCreditCard ? (
+                  <>
+                    <div className="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-rose-500 truncate">Offener Saldo</div>
+                      <div className="text-xs font-black font-mono text-slate-900 dark:text-white truncate mt-0.5 tabular-nums">
+                        {fCur ? fCur(currentVal, baseCurrency) : currentVal}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">Limite</div>
+                      <div className="text-xs font-black font-mono text-slate-800 dark:text-slate-100 truncate mt-0.5 tabular-nums">
+                        {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : (adjustedNode.cardLimit || 5000)}
+                      </div>
+                    </div>
+                    <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 truncate">Verfügbar</div>
+                      <div className="text-xs font-black font-mono text-emerald-700 dark:text-emerald-300 truncate mt-0.5 tabular-nums">
+                        {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">{safeT(t, 'assetClassLabel', 'Klasse')}</div>
+                      <div className="text-xs font-bold uppercase text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                        {adjustedNode.assetClass || 'Cash'}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">Währung</div>
+                      <div className="text-xs font-bold font-mono text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                        {adjustedNode.currency || baseCurrency} {isForeignCurrency ? `(FX: ${adjustedNode.exchangeRate || 1})` : ''}
+                      </div>
+                    </div>
+                    <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/70 rounded-xl p-2">
+                      <div className="text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400 truncate">{safeT(t, 'valueToday', 'Wert (Heute)')}</div>
+                      <div className="text-xs font-black font-mono text-slate-900 dark:text-white truncate mt-0.5 tabular-nums">
+                        {fCur ? fCur(currentVal, baseCurrency) : currentVal}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {isSecurities && (
-              <div className="print-hide flex border-b border-gray-200 dark:border-slate-800 mb-4 gap-2">
-                <button onClick={() => setActiveTab('transactions')} className={`flex items-center gap-2 px-4 py-2.5 font-bold text-sm border-b-2 transition-all duration-150 ${activeTab === 'transactions' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
-                  <Icon name="List" size={16}/> {safeT(t, 'tabTransactions', 'Transaktionen')}
+              <div className="print-hide grid grid-cols-2 sm:flex border-b border-gray-200 dark:border-slate-800 mb-2.5 gap-1 sm:gap-2 shrink-0">
+                <button onClick={() => setActiveTab('transactions')} className={`flex items-center gap-1.5 px-3 py-1.5 font-bold text-xs border-b-2 transition-all duration-150 cursor-pointer ${activeTab === 'transactions' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                  <Icon name="List" size={14}/> {safeT(t, 'tabTransactions', 'Transaktionen')}
                 </button>
-                <button onClick={() => setActiveTab('marketData')} className={`flex items-center gap-2 px-4 py-2.5 font-bold text-sm border-b-2 transition-all duration-150 ${activeTab === 'marketData' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
-                  <Icon name="TrendingUp" size={16}/> {safeT(t, 'tabMarketData', 'Marktdaten')}
+                <button onClick={() => setActiveTab('marketData')} className={`flex items-center gap-1.5 px-3 py-1.5 font-bold text-xs border-b-2 transition-all duration-150 cursor-pointer ${activeTab === 'marketData' ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                  <Icon name="TrendingUp" size={14}/> {safeT(t, 'tabMarketData', 'Marktdaten')}
                 </button>
               </div>
             )}
 
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden min-h-[300px]">
-              <div className="print-hide bg-gray-50 dark:bg-slate-800 p-4 border-b flex gap-3 flex-wrap items-center">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs flex flex-col overflow-hidden min-h-[220px]">
+              <div className="print-hide bg-gray-50 dark:bg-slate-800 p-2 sm:p-2.5 border-b flex gap-2 flex-wrap items-center shrink-0">
                 
                 {(!isSecurities || activeTab === 'transactions') ? (
-                  <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType})} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-colors cursor-pointer">
-                      <Icon name="Plus"/> {isCreditCard ? safeT(t, 'addCardExpenseBtn', 'Kartenausgabe erfassen') : (isSecurities ? safeT(t, 'addTransactionBtn', 'Transaktion erfassen') : safeT(t, 'addBookingBtn', 'Buchung erfassen'))}
+                  <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType})} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer">
+                      <Icon name="Plus" size={14}/> {isCreditCard ? safeT(t, 'addCardExpenseBtn', 'Kartenausgabe erfassen') : (isSecurities ? safeT(t, 'addTransactionBtn', 'Transaktion erfassen') : safeT(t, 'addBookingBtn', 'Buchung erfassen'))}
                   </button>
                 ) : (
-                  <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType: 'Wertanpassung'})} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-colors cursor-pointer">
-                      <Icon name="TrendingUp"/> {safeT(t, 'btnAddMarketValue', 'Kurs / Marktwert erfassen')}
+                  <button onClick={()=>setModalObj({type:'addBooking', assetId: adjustedNode.id, defaultType: 'Wertanpassung'})} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer">
+                      <Icon name="TrendingUp" size={14}/> {safeT(t, 'btnAddMarketValue', 'Kurs / Marktwert erfassen')}
                   </button>
                 )}
 
                 {isCreditCard && (
                   <button 
                     onClick={() => setModalObj({ type: 'addBooking', assetId: adjustedNode.id, defaultType: 'Einzahlung' })}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
                     title={safeT(t, 'btnSettleCreditCard', 'Kreditkartenabrechnung begleichen (Einzahlung/Ausgleich)')}
                   >
-                    <Icon name="CheckCircle" size={14} /> <span>{safeT(t, 'btnSettleCreditCard', 'Abrechnung ausgleichen')}</span>
+                    <Icon name="CheckCircle" size={13} /> <span>{safeT(t, 'btnSettleCreditCard', 'Abrechnung ausgleichen')}</span>
                   </button>
                 )}
 
-                <button onClick={()=>setModalObj({type:'addBalance', assetId: adjustedNode.id})} className="flex items-center gap-2 bg-white border hover:bg-gray-50 px-4 py-2 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 transition-colors cursor-pointer">
-                    <Icon name="Calendar"/> {safeT(t, 'addBalanceBtn', 'Stichtags-Saldo setzen')}
+                <button onClick={()=>setModalObj({type:'addBalance', assetId: adjustedNode.id})} className="flex items-center gap-1.5 bg-white border hover:bg-gray-50 px-3 py-1.5 rounded-lg text-xs font-semibold dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 transition-colors cursor-pointer">
+                    <Icon name="Calendar" size={13}/> {safeT(t, 'addBalanceBtn', 'Stichtags-Saldo setzen')}
                 </button>
                 
                 {selectedBookingIds.size > 0 && (
-                    <button onClick={() => setModalObj({type:'bulkAction', assetId: adjustedNode.id, selectedIds: Array.from(selectedBookingIds)})} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm shadow-sm transition-all animate-fade-in cursor-pointer">
-                        <Icon name="CheckSquare" className="text-white stroke-white" /> {selectedBookingIds.size} {safeT(t, 'btnEditEntries', 'Einträge bearbeiten')}
+                    <button onClick={() => setModalObj({type:'bulkAction', assetId: adjustedNode.id, selectedIds: Array.from(selectedBookingIds)})} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all animate-fade-in cursor-pointer">
+                        <Icon name="CheckSquare" size={13} className="text-white stroke-white" /> {selectedBookingIds.size} {safeT(t, 'btnEditEntries', 'Einträge bearbeiten')}
                     </button>
                 )}
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-1.5">
                   <button 
                       onClick={() => setShowFilters(!showFilters)} 
-                      className={`p-2 rounded-lg border transition-colors cursor-pointer ${showFilters || filterQuery || filterType || filterDateFrom || filterDateTo ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-600' : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
+                      className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${showFilters || filterQuery || filterType || filterDateFrom || filterDateTo ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-600' : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
                       title={safeT(t, 'titleToggleFilter', 'Filter umschalten')}
                   >
-                      <Icon name="Filter" size={18}/>
+                      <Icon name="Filter" size={15}/>
                   </button>
                   <button 
                       onClick={() => setIsCompactMode(!isCompactMode)} 
-                      className={`p-2 rounded-lg border transition-colors cursor-pointer ${isCompactMode ? 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-blue-600' : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
+                      className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isCompactMode ? 'bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-blue-600' : 'bg-white dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
                       title={safeT(t, 'titleToggleCompact', 'Kompaktansicht umschalten')}
                   >
-                      <Icon name={isCompactMode ? "EyeOff" : "Eye"} size={18}/>
+                      <Icon name={isCompactMode ? "EyeOff" : "Eye"} size={15}/>
                   </button>
                   <button 
                       onClick={() => setModalObj({type:'printAssetBookings', assetId: adjustedNode.id, filteredIds: sortedItems.map(i=>i.id)})} 
-                      className="flex items-center gap-2 bg-white border hover:bg-gray-50 px-4 py-2 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 shadow-sm transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 bg-white border hover:bg-gray-50 px-2.5 py-1.5 rounded-lg text-xs font-semibold dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 shadow-xs transition-colors cursor-pointer"
                       title={safeT(t, 'titlePrintView', 'Aktuelle Ansicht drucken/exportieren')}
                   >
-                      <Icon name="Printer"/> {safeT(t, 'filePrint', 'Drucken')}
+                      <Icon name="Printer" size={14}/> <span className="hidden sm:inline">{safeT(t, 'filePrint', 'Drucken')}</span>
                   </button>
 
                   {isSecurities && (
                       <>
                           <button 
                               onClick={handleFetchLivePrice}
-                              className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-lg text-sm dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 transition-colors shadow-sm cursor-pointer"
+                              className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 transition-colors shadow-xs cursor-pointer"
                               title={safeT(t, 'titleCloudSync', 'Aktuellen Kurs via Alpha Vantage oder EODHD abrufen')}
                           >
-                              <Icon name="Cloud" size={16}/> <span className="hidden sm:inline">{safeT(t, 'btnCloudSync', 'Live-Kurs abrufen')}</span>
+                              <Icon name="Cloud" size={14}/> <span className="hidden md:inline">{safeT(t, 'btnCloudSync', 'Live-Kurs abrufen')}</span>
                           </button>
                           
                           <button 
@@ -3070,10 +3314,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                       }
                                   }
                               }} 
-                              className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300 transition-colors shadow-sm cursor-pointer"
+                              className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg text-xs font-semibold dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300 transition-colors shadow-xs cursor-pointer"
                               title={safeT(t, 'titleSyncMarketValues', 'Extrahiert Kurse aus Transaktionen und ergänzt die Kurshistorie.')}
                           >
-                              <Icon name="RefreshCw" size={16}/> <span className="hidden sm:inline">{safeT(t, 'btnSyncMarketValues', 'Lokale Daten synchronisieren')}</span>
+                              <Icon name="RefreshCw" size={14}/> <span className="hidden lg:inline">{safeT(t, 'btnSyncMarketValues', 'Lokale Daten synchronisieren')}</span>
                           </button>
                       </>
                   )}
@@ -3081,20 +3325,20 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               </div>
 
               {showFilters && (
-                <div className="print-hide bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 p-4 flex flex-wrap gap-4 items-center text-sm shadow-inner animate-fade-in">
-                    <div className="flex items-center gap-2">
-                        <Icon name="Search" size={16} className="text-gray-400" />
+                <div className="print-hide bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 p-2.5 flex flex-wrap gap-2.5 items-center text-xs shadow-inner animate-fade-in shrink-0">
+                    <div className="flex items-center gap-1.5">
+                        <Icon name="Search" size={14} className="text-gray-400" />
                         <input 
                             type="text" placeholder={safeT(t, 'placeholderSearchBookings', "Suche (Betrag, Kategorie, Tags)...")} 
                             value={filterQuery} onChange={e => setFilterQuery(e.target.value)}
-                            className="w-64 p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-48 sm:w-60 p-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Icon name="Filter" size={16} className="text-gray-400" />
+                    <div className="flex items-center gap-1.5">
+                        <Icon name="Filter" size={14} className="text-gray-400" />
                         <select 
                             value={filterType} onChange={e => setFilterType(e.target.value)}
-                            className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none"
+                            className="p-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none"
                         >
                             <option value="">{safeT(t, 'filterAllTypes', 'Alle Typen')}</option>
                             <option value="Einzahlung">{safeT(t, 'Einzahlung', 'Einzahlung')}</option>
@@ -3106,50 +3350,301 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                             <option value="Gebühr">{safeT(t, 'Gebühr', 'Gebühr')}</option>
                         </select>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Icon name="Calendar" size={16} className="text-gray-400" />
-                        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none" />
+                    <div className="flex items-center gap-1.5">
+                        <Icon name="Calendar" size={14} className="text-gray-400" />
+                        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none" />
                         <span>-</span>
-                        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none" />
+                        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-1.5 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-800 outline-none" />
                     </div>
                     {(filterQuery || filterType || filterDateFrom || filterDateTo) && (
                         <button onClick={() => { setFilterQuery(''); setFilterType(''); setFilterDateFrom(''); setFilterDateTo(''); }} className="ml-auto text-red-500 hover:text-red-700 font-medium flex items-center gap-1 cursor-pointer">
-                            <Icon name="X" size={14} /> {safeT(t, 'btnResetFilter', 'Filter zurücksetzen')}
+                            <Icon name="X" size={13} /> {safeT(t, 'btnResetFilter', 'Filter zurücksetzen')}
                         </button>
                     )}
                 </div>
               )}
 
               <div className="overflow-auto finspa-scrollbar flex-1 relative">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead className="bg-gray-50/90 dark:bg-slate-800/90 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+                {/* MOBILE CARD-ANSICHT FÜR ALLE ASSET-TYPEN (< md) */}
+                <div className="block md:hidden divide-y divide-gray-100 dark:divide-slate-800/70">
+                  {sortedItems.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400 text-xs">
+                      Keine Einträge für diese Ansicht gefunden.
+                    </div>
+                  ) : (
+                    (() => {
+                      const groupedByMonthMobile = {};
+                      sortedItems.forEach(item => {
+                        const monthYear = (item.date || '').substring(0, 7);
+                        if (!groupedByMonthMobile[monthYear]) groupedByMonthMobile[monthYear] = [];
+                        groupedByMonthMobile[monthYear].push(item);
+                      });
+
+                      const getEndDayStrMobile = (y, m) => {
+                        const d = new Date(y, m, 0);
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      };
+
+                      const monthNamesMobile = [
+                        safeT(t, 'month01', "Januar"), safeT(t, 'month02', "Februar"), safeT(t, 'month03', "März"), safeT(t, 'month04', "April"),
+                        safeT(t, 'month05', "Mai"), safeT(t, 'month06', "Juni"), safeT(t, 'month07', "Juli"), safeT(t, 'month08', "August"),
+                        safeT(t, 'month09', "September"), safeT(t, 'month10', "Oktober"), safeT(t, 'month11', "November"), safeT(t, 'month12', "Dezember")
+                      ];
+
+                      return Object.keys(groupedByMonthMobile).sort((a, b) => b.localeCompare(a)).map(monthYear => {
+                        const items = groupedByMonthMobile[monthYear];
+                        const [year, month] = monthYear.split('-');
+                        let flowIn = 0;
+                        let flowOut = 0;
+
+                        items.forEach(item => {
+                          if (!item._isBal && item.type !== 'Wertanpassung') {
+                            const flow = getBookingFlow(item);
+                            if (flow.isPositive) flowIn += flow.amount;
+                            else flowOut += flow.amount;
+                          }
+                        });
+
+                        const endOfMonthStr = getEndDayStrMobile(year, parseInt(month));
+                        const endOfPrevMonthStr = getEndDayStrMobile(year, parseInt(month) - 1);
+                        const startBal = getAssetRawValueAtDate(adjustedNode, endOfPrevMonthStr);
+                        const endBal = getAssetRawValueAtDate(adjustedNode, endOfMonthStr);
+
+                        return (
+                          <div key={`mob-group-${monthYear}`} className="bg-white dark:bg-slate-900">
+                            {/* Monats-Header Mobil */}
+                            <div className="bg-slate-100/90 dark:bg-slate-800/90 px-3 py-2 border-y border-gray-200 dark:border-slate-700 flex flex-col gap-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-black text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider">
+                                  {`${monthNamesMobile[parseInt(month) - 1] || month} ${year}`}
+                                </span>
+                                <span className="font-mono font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                                  Ende: {fCur ? fCur(endBal, adjustedNode.currency) : endBal}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-gray-500">
+                                <span>Start: {fCur ? fCur(startBal, adjustedNode.currency) : startBal}</span>
+                                {(!isSecurities || activeTab === 'transactions') && (
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+{fCur ? fCur(flowIn, adjustedNode.currency) : flowIn}</span>
+                                    <span className="text-rose-600 dark:text-rose-400 font-semibold">-{fCur ? fCur(flowOut, adjustedNode.currency) : flowOut}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Einzelne Buchungs-Karten Mobil (für ALLE Asset-Klassen) */}
+                            <div className="divide-y divide-gray-100 dark:divide-slate-800/60">
+                              {items.map(item => {
+                                const flow = getBookingFlow(item);
+                                const displayAmount = flow.amount;
+                                const isPositiveType = flow.isPositive;
+
+                                const bookingRate = item.bookingExchangeRate ? parseFloat(String(item.bookingExchangeRate).replace(',', '.')) : 0;
+                                const nodeRate = adjustedNode.exchangeRate ? parseFloat(String(adjustedNode.exchangeRate).replace(',', '.')) : 1;
+                                let usedRate = bookingRate;
+                                if ((!usedRate || usedRate === 1) && isForeignCurrency) usedRate = nodeRate;
+                                if (!usedRate) usedRate = 1;
+
+                                const runningShares = getAssetSharesAtDate(adjustedNode, item.date);
+                                const runningPrice = getAssetPriceAtDate(adjustedNode, item.date);
+                                const runningTotal = getAssetRawValueAtDate(adjustedNode, item.date);
+                                const runningTotalBase = runningTotal * usedRate;
+
+                                const badgeColor = item._isBal
+                                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400'
+                                  : (isPositiveType
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                    : 'bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400');
+
+                                const amountColor = item._isBal
+                                  ? 'text-blue-600 dark:text-blue-400'
+                                  : (isPositiveType ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400');
+                                const prefix = !item._isBal ? (isPositiveType ? '+' : '-') : '';
+
+                                let typeLabel = item.type;
+                                if (!item._isBal) {
+                                  const typeMap = { 'Einzahlung': 'typeDeposit', 'Auszahlung': 'typeWithdrawal', 'Kauf': 'typeBuy', 'Verkauf': 'typeSell', 'Abzahlung': 'typeAmortization', 'Wertanpassung': 'typeReval', 'Zinszahlung': 'typeInterest', 'Dividende': 'typeDiv', 'Schulderhöhung': 'typeDebtInc', 'Gebühr': 'typeFee', 'Umbuchung': 'typeTransfer' };
+                                  if (typeMap[item.type]) typeLabel = safeT(t, typeMap[item.type], item.type);
+                                }
+
+                                let categoryDisplay = item._isBal ? safeT(t, 'systemManual', 'System/Manuell') : (item.subCategory || '-');
+                                if (isSecurities && item.type === 'Wertanpassung') {
+                                  categoryDisplay = `${safeT(t, 'typeReval', 'Wertanpassung')}: ${item.price ? `${item.price} ${adjustedNode.currency}` : safeT(t, 'catManualAdjustment', 'Manuelle Anpassung')}`;
+                                }
+
+                                const isSelected = selectedBookingIds.has(item.id);
+                                const isActiveRow = adjustedNode?.selectedBooking?.id === item.id;
+
+                                return (
+                                  <div
+                                    key={`mob-item-${item.id}`}
+                                    onClick={() => { if (setSelectedNode) setSelectedNode({ ...adjustedNode, selectedBooking: item }); }}
+                                    className={`p-3 transition-colors ${isSelected ? 'bg-indigo-50/60 dark:bg-indigo-900/25' : ''} ${isActiveRow ? 'bg-blue-50/90 dark:bg-blue-900/30 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 dark:hover:bg-slate-800/40'}`}
+                                  >
+                                    {/* Top Row: Checkbox + Date + Badge + Amount */}
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => {}}
+                                          onClick={(e) => { e.stopPropagation(); toggleBookingSelection(item.id); }}
+                                          className="w-4 h-4 text-indigo-600 rounded cursor-pointer shrink-0"
+                                        />
+                                        <span className="font-mono font-semibold text-xs text-gray-700 dark:text-gray-200 tabular-nums shrink-0">
+                                          {item.date}
+                                        </span>
+                                        {item._isBal ? (
+                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeColor}`}>
+                                            <Icon name="Activity" size={9} /> {safeT(t, 'balanceLabel', 'SALDO')}
+                                          </span>
+                                        ) : (
+                                          <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold rounded-full ${badgeColor}`}>
+                                            {typeLabel}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className={`text-right font-mono font-bold tabular-nums shrink-0 ${amountColor}`}>
+                                        {isSecurities && activeTab === 'marketData' ? (
+                                          <>
+                                            <div className="text-xs sm:text-sm">{fCur ? fCur(runningTotal, adjustedNode.currency) : runningTotal}</div>
+                                            {isForeignCurrency && (
+                                              <div className="text-[10px] text-gray-400 font-normal">
+                                                ≈ {fCur ? fCur(runningTotalBase, baseCurrency) : runningTotalBase}
+                                              </div>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="text-xs sm:text-sm">{prefix}{fCur ? fCur(displayAmount, adjustedNode.currency) : displayAmount}</div>
+                                            {isForeignCurrency && (
+                                              <div className="text-[10px] text-gray-400 font-normal">
+                                                ≈ {fCur ? fCur(displayAmount * usedRate, baseCurrency) : (displayAmount * usedRate).toFixed(2)}
+                                              </div>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Middle Row: Subcategory & Asset-Specific Pills (Shares, Price, FX, Running Balance) */}
+                                    <div className="mt-1.5 pl-6 flex flex-wrap items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                        {categoryDisplay}
+                                      </span>
+
+                                      {!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares && (
+                                        <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-semibold border border-blue-200/60 dark:border-blue-800/60">
+                                          {item.shares} {safeT(t, 'pcsAt', 'Stk. à')} {item.price} {adjustedNode.currency}
+                                        </span>
+                                      )}
+
+                                      {isSecurities && (
+                                        <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-[10px] font-mono">
+                                          Bestand: {runningShares.toLocaleString('de-CH', { maximumFractionDigits: 4 })} Stk. • Kurs: {runningPrice}
+                                        </span>
+                                      )}
+
+                                      {item.bookingExchangeRate && Number(item.bookingExchangeRate) !== 1 && (
+                                        <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
+                                          FX: {item.bookingExchangeRate}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Bottom Row: Inline Note / SmartTags & Delete Button */}
+                                    <div className="mt-1.5 pl-6 flex items-center justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        {!item._isBal && (
+                                          editingCommentId === item.id ? (
+                                            <input
+                                              type="text"
+                                              autoFocus
+                                              value={tempComment}
+                                              onChange={e => setTempComment(e.target.value)}
+                                              onBlur={() => saveInlineComment(item)}
+                                              onKeyDown={e => {
+                                                if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+                                                if (e.key === 'Escape') { cancelCommentEditRef.current = true; setEditingCommentId(null); }
+                                              }}
+                                              onClick={e => e.stopPropagation()}
+                                              className="w-full text-xs p-1.5 border border-blue-400 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 outline-none"
+                                              placeholder={safeT(t, 'placeholderNoteTag', 'Notiz/Tag eingeben...')}
+                                            />
+                                          ) : (
+                                            <div
+                                              onClick={(e) => { e.stopPropagation(); cancelCommentEditRef.current = false; setTempComment(item.comment || ''); setEditingCommentId(item.id); }}
+                                              className="text-[11px] text-gray-500 dark:text-gray-400 truncate py-0.5 cursor-text"
+                                            >
+                                              {item.comment ? renderSmartTags(item.comment) : (
+                                                <span className="opacity-40 italic inline-flex items-center gap-1">
+                                                  <Icon name="Edit3" size={10} /> {safeT(t, 'labelAddNote', 'Notiz hinzufügen...')}
+                                                </span>
+                                              )}
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+
+                                      <div className="shrink-0">
+                                        {!item._isAutoValuation ? (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleDeleteEntry(item, e)}
+                                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
+                                            title={safeT(t, 'btnDelete', 'Löschen')}
+                                          >
+                                            <Icon name="Trash" size={14} />
+                                          </button>
+                                        ) : (
+                                          <span className="inline-flex p-1.5 text-gray-300 dark:text-slate-700" title="System-Eintrag">
+                                            <Icon name="Lock" size={13} />
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()
+                  )}
+                </div>
+
+                <table className="hidden md:table w-full text-left text-xs sm:text-sm border-collapse">
+                  <thead className="bg-gray-50/95 dark:bg-slate-800/95 backdrop-blur-md sticky top-0 z-10 shadow-xs">
                     <tr>
-                      <th className="w-10 p-4 border-b border-gray-200 dark:border-slate-700 print-hide">
+                      <th className="w-8 py-2 px-2.5 border-b border-gray-200 dark:border-slate-700 print-hide">
                           <input 
                               type="checkbox" 
                               checked={isAllSelected} 
                               onChange={handleSelectAll} 
-                              className="w-4 h-4 text-indigo-600 rounded cursor-pointer" 
+                              className="w-3.5 h-3.5 text-indigo-600 rounded cursor-pointer" 
                               title={safeT(t, 'titleSelectAllVisible', 'Alle sichtbaren auswählen')} 
                           />
                       </th>
-                      <th className="p-4 text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                      <th className="py-2 px-2.5 text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
                           {safeT(t, 'date', 'Datum')}
                       </th>
-                      <th className="p-4 text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                      <th className="py-2 px-2.5 text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
                           {safeT(t, 'entryType', 'Eintrag')}
                       </th>
-                      <th className="p-4 text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                      <th className="py-2 px-2.5 text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
                           {isSecurities && activeTab === 'marketData' 
                               ? safeT(t, 'colMarketPriceDetails', 'Börsenkurs / Details') 
                               : safeT(t, 'entryDetail', 'Detail')}
                       </th>
-                      <th className="p-4 text-right text-xs font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                      <th className="py-2 px-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
                           {isSecurities && activeTab === 'marketData' 
                               ? safeT(t, 'colAssetValueAtDate', 'Asset-Wert am Stichtag') 
                               : safeT(t, 'amount', 'Betrag')}
                       </th>
-                      <th className="p-4 border-b border-gray-200 dark:border-slate-700 print-hide w-12"></th>
+                      <th className="py-2 px-2 border-b border-gray-200 dark:border-slate-700 print-hide w-9"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
@@ -3203,30 +3698,28 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                         return (
                           <React.Fragment key={`group-${monthYear}`}>
-                            <tr className="bg-slate-100/80 dark:bg-slate-800/80 border-y border-gray-200 dark:border-slate-700 shadow-sm">
-                                <td colSpan="6" className="px-4 py-2">
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                        <span className="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wider">{`${monthNames[parseInt(month)-1]} ${year}`}</span>
-                                        <div className="flex flex-wrap gap-4 sm:gap-6 text-[11px] md:text-xs tabular-nums">
-                                            <span className="text-gray-500 flex flex-col items-start">
-                                                <span><span className="hidden sm:inline">{safeT(t, 'labelStart', 'Start:')}</span> {fCur ? fCur(startBal, adjustedNode.currency) : startBal}</span>
-                                                {isForeignCurrency && <span className="text-[10px] opacity-60">≈ {fCur ? fCur(startBalBase, baseCurrency) : startBalBase}</span>}
+                            <tr className="bg-slate-100/80 dark:bg-slate-800/80 border-y border-gray-200 dark:border-slate-700">
+                                <td colSpan="6" className="px-3 py-1.5">
+                                    <div className="flex flex-wrap justify-between items-center gap-2">
+                                        <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider">{`${monthNames[parseInt(month)-1]} ${year}`}</span>
+                                        <div className="flex flex-wrap gap-3 sm:gap-5 text-[11px] tabular-nums">
+                                            <span className="text-gray-500">
+                                                <span className="hidden sm:inline">{safeT(t, 'labelStart', 'Start:')} </span>{fCur ? fCur(startBal, adjustedNode.currency) : startBal}
+                                                {isForeignCurrency && <span className="text-[10px] opacity-60 ml-1">(≈ {fCur ? fCur(startBalBase, baseCurrency) : startBalBase})</span>}
                                             </span>
                                             {(!isSecurities || activeTab === 'transactions') && (
                                               <>
-                                                <span className="text-emerald-600 font-medium flex flex-col items-start">
-                                                    <span><span className="hidden sm:inline">{safeT(t, 'labelIn', 'In:')}</span> +{fCur ? fCur(flowIn, adjustedNode.currency) : flowIn}</span>
-                                                    {isForeignCurrency && <span className="text-[10px] opacity-60">≈ +{fCur ? fCur(flowInBase, baseCurrency) : flowInBase}</span>}
+                                                <span className="text-emerald-600 font-medium">
+                                                    <span className="hidden sm:inline">{safeT(t, 'labelIn', 'In:')} </span>+{fCur ? fCur(flowIn, adjustedNode.currency) : flowIn}
                                                 </span>
-                                                <span className="text-rose-600 font-medium flex flex-col items-start">
-                                                    <span><span className="hidden sm:inline">{safeT(t, 'labelOut', 'Out:')}</span> -{fCur ? fCur(flowOut, adjustedNode.currency) : flowOut}</span>
-                                                    {isForeignCurrency && <span className="text-[10px] opacity-60">≈ -{fCur ? fCur(flowOutBase, baseCurrency) : flowOutBase}</span>}
+                                                <span className="text-rose-600 font-medium">
+                                                    <span className="hidden sm:inline">{safeT(t, 'labelOut', 'Out:')} </span>-{fCur ? fCur(flowOut, adjustedNode.currency) : flowOut}
                                                 </span>
                                               </>
                                             )}
-                                            <span className="font-bold text-slate-800 dark:text-slate-200 flex flex-col items-start">
-                                                <span><span className="hidden sm:inline">{safeT(t, 'labelEnd', 'Ende:')}</span> {fCur ? fCur(endBal, adjustedNode.currency) : endBal}</span>
-                                                {isForeignCurrency && <span className="text-[10px] opacity-60">≈ {fCur ? fCur(endBalBase, baseCurrency) : endBalBase}</span>}
+                                            <span className="font-bold text-slate-800 dark:text-slate-200">
+                                                <span className="hidden sm:inline">{safeT(t, 'labelEnd', 'Ende:')} </span>{fCur ? fCur(endBal, adjustedNode.currency) : endBal}
+                                                {isForeignCurrency && <span className="text-[10px] opacity-60 ml-1">(≈ {fCur ? fCur(endBalBase, baseCurrency) : endBalBase})</span>}
                                             </span>
                                         </div>
                                     </div>
@@ -3275,7 +3768,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                               let categoryDisplay = item._isBal ? safeT(t, 'systemManual', 'System/Manuell') : (item.subCategory || '-');
                               if (isSecurities && item.type === 'Wertanpassung') {
-                                  categoryDisplay = `${safeT(t, 'typeReval', 'Wertanpassung')}: ${item.price ? `${item.price} ${adjustedNode.currency}` : safeT(t, 'catManualAdjustment', 'Manuelle Anpassung')}`;
+                                  categoryDisplay = `${safeT(t, 'typeReval', 'Wertanpassung')}: ${item.price ? `${item.price}${adjustedNode.currency}` : safeT(t, 'catManualAdjustment', 'Manuelle Anpassung')}`;
                               }
                               
                               let bonusInfo = '';
@@ -3326,25 +3819,25 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                 onClick={() => { if (setSelectedNode) setSelectedNode({ ...adjustedNode, selectedBooking: item }); }}
                               >
                                 <td className={`${pClass} print-hide relative`} onClick={(e) => { e.stopPropagation(); toggleBookingSelection(item.id); }}>
-                                    <input type="checkbox" checked={isSelected} readOnly className="w-4 h-4 text-indigo-600 rounded cursor-pointer" />
+                                    <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 text-indigo-600 rounded cursor-pointer" />
                                     {!item._isBal && !item._isAutoValuation && !filterQuery && !filterType && !filterDateFrom && !filterDateTo && (
-                                        <Icon name="Menu" size={14} className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing" />
+                                        <Icon name="Menu" size={12} className="absolute left-8 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing" />
                                     )}
                                 </td>
                                 <td className={`${pClass} whitespace-nowrap tabular-nums`}>
-                                    <span className={`font-medium ${isCompactMode ? 'text-xs' : 'text-sm'} text-gray-700 dark:text-gray-300`}>{item.date}</span>
+                                    <span className="font-medium text-xs text-gray-700 dark:text-gray-300">{item.date}</span>
                                 </td>
                                 <td className={`${pClass} whitespace-nowrap`}>
                                     {item._isBal ? (
-                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${isCompactMode ? 'text-[10px]' : 'text-xs'} font-semibold rounded-full shadow-sm ${badgeColor}`}><Icon name="Activity" size={10}/> {safeT(t, 'balanceLabel', 'SALDO')}</span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full shadow-xs ${badgeColor}`}><Icon name="Activity" size={9}/> {safeT(t, 'balanceLabel', 'SALDO')}</span>
                                     ) : (
-                                        <span className={`inline-flex items-center px-2.5 py-1 ${isCompactMode ? 'text-[10px]' : 'text-xs'} font-semibold rounded-full shadow-sm ${badgeColor}`}>{typeLabel}</span>
+                                        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full shadow-xs ${badgeColor}`}>{typeLabel}</span>
                                     )}
                                 </td>
                                 
                                 <td className={`${pClass} w-full`}>
-                                    <div className="flex flex-col gap-0.5">
-                                        <span className={`text-gray-700 dark:text-gray-300 font-medium ${isCompactMode ? 'text-xs' : 'text-sm'}`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                        <span className="text-gray-700 dark:text-gray-300 font-medium text-xs">
                                             {categoryDisplay} {bonusInfo && <span className="text-gray-400 font-normal">{bonusInfo}</span>}
                                         </span>
                                         {!item._isBal && (
@@ -3366,28 +3859,28 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                                         }
                                                     }}
                                                     onClick={e => e.stopPropagation()}
-                                                    className="w-full text-xs p-1 mt-1 border border-blue-300 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500"
+                                                    className="w-full sm:w-64 text-xs p-1 border border-blue-300 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 outline-none focus:ring-1 focus:ring-blue-500"
                                                     placeholder={safeT(t, 'placeholderNoteTag', 'Notiz/Tag eingeben...')}
                                                 />
                                             ) : (
                                                 <span 
-                                                    className="text-xs text-gray-500 cursor-text hover:text-blue-500 transition-colors py-0.5 border border-transparent hover:border-gray-200 dark:hover:border-slate-700 rounded px-1 -ml-1"
+                                                    className="text-[11px] text-gray-500 cursor-text hover:text-blue-500 transition-colors py-0.2 border border-transparent hover:border-gray-200 dark:hover:border-slate-700 rounded px-1"
                                                     onClick={(e) => { e.stopPropagation(); cancelCommentEditRef.current = false; setTempComment(item.comment || ''); setEditingCommentId(item.id); }}
                                                     title={safeT(t, 'titleClickToEdit', 'Klicken zum Bearbeiten')}
                                                 >
-                                                    {item.comment ? renderSmartTags(item.comment) : <span className="opacity-40 italic flex items-center gap-1"><Icon name="Edit3" size={10}/> {safeT(t, 'labelAddNote', 'Notiz hinzufügen...')}</span>}
+                                                    {item.comment ? renderSmartTags(item.comment) : <span className="opacity-35 italic inline-flex items-center gap-1"><Icon name="Edit3" size={9}/> {safeT(t, 'labelAddNote', 'Notiz...')}</span>}
                                                 </span>
                                             )
                                         )}
                                     </div>
                                 </td>
                                 
-                                <td className={`${pClass} text-right font-bold whitespace-nowrap flex flex-col items-end ${amountColor} tabular-nums`}>
+                                <td className={`${pClass} text-right font-bold whitespace-nowrap flex flex-col items-end ${amountColor} tabular-nums text-xs sm:text-sm`}>
                                   {isSecurities && activeTab === 'marketData' ? (
                                     <>
                                       <span className="tracking-tight">{fCur ? fCur(runningTotal, adjustedNode.currency) : runningTotal}</span>
                                       {isForeignCurrency && !isCompactMode && (
-                                          <span className="text-[10px] opacity-60 font-medium tracking-wider mt-0.5 text-gray-500 tabular-nums">
+                                          <span className="text-[10px] opacity-60 font-medium tracking-wider text-gray-500 tabular-nums">
                                               ≈ {fCur ? fCur(runningTotalBase, baseCurrency) : runningTotalBase}
                                           </span>
                                       )}
@@ -3396,7 +3889,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                     <>
                                       <span className="tracking-tight">{prefix}{fCur ? fCur(displayAmount, adjustedNode.currency) : displayAmount}</span>
                                       {(adjustedNode.currency && adjustedNode.currency !== baseCurrency) && !isCompactMode && (
-                                          <span className="text-[10px] opacity-60 font-medium tracking-wider mt-0.5 text-gray-500 tabular-nums">
+                                          <span className="text-[10px] opacity-60 font-medium tracking-wider text-gray-500 tabular-nums">
                                               ≈ {fCur ? fCur(displayAmount * usedRate, baseCurrency) : (displayAmount * usedRate)}
                                           </span>
                                       )}
@@ -3404,18 +3897,18 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   )}
                                 </td>
                                 
-                                <td className={`${pClass} text-center print-hide opacity-0 group-hover:opacity-100 transition-all duration-200`}>
+                                <td className={`${pClass} text-center print-hide opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all duration-200`}>
                                     {!item._isAutoValuation ? (
                                       <span 
-                                         className="inline-flex p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/30 transition-colors cursor-pointer" 
+                                         className="inline-flex p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:text-gray-500 dark:hover:text-red-400 dark:hover:bg-red-900/30 transition-colors cursor-pointer" 
                                          onClick={(e) => handleDeleteEntry(item, e)} 
                                          title={safeT(t, 'btnDelete', 'Löschen')}
                                       >
-                                         <Icon name="Trash" size={16}/>
+                                         <Icon name="Trash" size={14}/>
                                       </span>
                                     ) : (
-                                      <span className="inline-flex p-1.5 rounded-md text-gray-300 dark:text-slate-700 cursor-not-allowed" title={safeT(t, 'titleSystemEntry', 'System-Eintrag (wird bei Bereinigung automatisch entfernt)')}>
-                                         <Icon name="Lock" size={16}/>
+                                      <span className="inline-flex p-1 rounded-md text-gray-300 dark:text-slate-700 cursor-not-allowed" title={safeT(t, 'titleSystemEntry', 'System-Eintrag (wird bei Bereinigung automatisch entfernt)')}>
+                                         <Icon name="Lock" size={14}/>
                                       </span>
                                     )}
                                 </td>
@@ -3429,22 +3922,22 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 </table>
 
                 {sortedItems.length > 0 && (!isSecurities || activeTab === 'transactions') && (
-                    <div className="sticky bottom-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 print-hide">
-                        <div className="text-sm font-bold text-gray-600 dark:text-gray-300">
+                    <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-slate-700 py-2 px-3 sm:px-4 flex flex-wrap justify-between items-center gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 print-hide">
+                        <div className="text-xs font-bold text-gray-600 dark:text-gray-300">
                             {safeT(t, 'labelSumDisplayedEntries', 'Summe der angezeigten Einträge')} ({sortedItems.filter(i=>!i._isBal && i.type !== 'Wertanpassung').length})
                         </div>
-                        <div className="flex gap-6 text-sm tabular-nums">
+                        <div className="flex gap-4 sm:gap-6 text-xs tabular-nums">
                             <div className="flex flex-col items-end">
-                                <span className="text-xs text-gray-400 uppercase tracking-wider">{safeT(t, 'labelInflows', 'Eingänge')}</span>
-                                <span className="font-bold text-emerald-600">+{fCur ? fCur(totalInRaw, adjustedNode.currency) : totalInRaw}</span>
+                                <span className="text-[10px] text-gray-400 uppercase tracking-wider leading-none">{safeT(t, 'labelInflows', 'Eingänge')}</span>
+                                <span className="font-bold text-emerald-600 mt-0.5">+{fCur ? fCur(totalInRaw, adjustedNode.currency) : totalInRaw}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-xs text-gray-400 uppercase tracking-wider">{safeT(t, 'labelOutflows', 'Ausgänge')}</span>
-                                <span className="font-bold text-rose-600">-{fCur ? fCur(totalOutRaw, adjustedNode.currency) : totalOutRaw}</span>
+                                <span className="text-[10px] text-gray-400 uppercase tracking-wider leading-none">{safeT(t, 'labelOutflows', 'Ausgänge')}</span>
+                                <span className="font-bold text-rose-600 mt-0.5">-{fCur ? fCur(totalOutRaw, adjustedNode.currency) : totalOutRaw}</span>
                             </div>
-                            <div className="flex flex-col items-end border-l border-gray-200 dark:border-slate-700 pl-6 ml-2">
-                                <span className="text-xs text-gray-400 uppercase tracking-wider">{safeT(t, 'labelNet', 'Netto')}</span>
-                                <span className={`font-black ${netFlowVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            <div className="flex flex-col items-end border-l border-gray-200 dark:border-slate-700 pl-4">
+                                <span className="text-[10px] text-gray-400 uppercase tracking-wider leading-none">{safeT(t, 'labelNet', 'Netto')}</span>
+                                <span className={`font-black mt-0.5 ${netFlowVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                     {netFlowVal >= 0 ? '+' : ''}{fCur ? fCur(netFlowVal, adjustedNode.currency) : netFlowVal}
                                 </span>
                             </div>
@@ -3458,10 +3951,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
       }
 
       return (
-        <div className="p-8 h-full flex flex-col items-center justify-center bg-white dark:bg-slate-950 text-center relative">
+        <div className="p-6 h-full flex flex-col items-center justify-center bg-white dark:bg-slate-950 text-center relative">
           {renderFlyInDrawer()}
-          <h2 className="text-2xl font-bold mb-2">{safeT(t, 'viewTitle', 'Ansicht:')} {selectedNode?.name}</h2>
-          <p className="text-gray-500 max-w-md">{safeT(t, 'selectAssetPrompt', 'Wähle auf der linken Seite ein Asset aus, um die detaillierten Buchungen zu sehen.')}</p>
+          <h2 className="text-xl font-bold mb-1.5">{safeT(t, 'viewTitle', 'Ansicht:')} {selectedNode?.name}</h2>
+          <p className="text-xs text-gray-500 max-w-md">{safeT(t, 'selectAssetPrompt', 'Wähle auf der linken Seite ein Asset aus, um die detaillierten Buchungen zu sehen.')}</p>
         </div>
       );
     }
@@ -3469,10 +3962,10 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-slate-950 finspa-scrollbar overflow-auto relative">
         {renderFlyInDrawer()}
-        <div className="text-center text-gray-400">
-          <Icon name="PieChart" size={64} className="mx-auto mb-6 opacity-20 text-blue-500" />
-          <h2 className="text-2xl font-bold mb-2 text-gray-600 dark:text-gray-300">{safeT(t, 'welcomeTitle', 'Willkommen in FinBundle Pro')}</h2>
-          <p>{safeT(t, 'welcomePrompt', 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.')}</p>
+        <div className="text-center text-gray-400 p-4">
+          <Icon name="PieChart" size={48} className="mx-auto mb-4 opacity-20 text-blue-500" />
+          <h2 className="text-lg font-bold mb-1 text-gray-600 dark:text-gray-300">{safeT(t, 'welcomeTitle', 'Willkommen in FinBundle Pro')}</h2>
+          <p className="text-xs">{safeT(t, 'welcomePrompt', 'Bitte wählen Sie links ein Element aus dem Baum oder öffnen Sie einen Report.')}</p>
         </div>
       </div>
     );

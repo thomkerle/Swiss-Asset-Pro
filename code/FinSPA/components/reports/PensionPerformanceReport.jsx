@@ -403,7 +403,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
   }
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12" ref={reportRef}>
       
       <div className="print-hide flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 mb-8 gap-3 shadow-sm">
          <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-2">
@@ -426,14 +426,14 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+      <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
          
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                <Icon name="Shield" size={14} className="text-blue-500"/>
                {safeT(t, 'labelPensionWealthTotalHeader', 'GESAMTVERMÖGEN VORSORGE')}
             </div>
-            <div className="font-black text-2xl text-slate-900 dark:text-white truncate">
+            <div className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate">
                {fCur(latestData.actual, 'CHF')}
             </div>
             <div className="text-xs text-gray-400 mt-2">
@@ -441,7 +441,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
             </div>
          </div>
 
-         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
+         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-emerald-500 overflow-hidden">
             <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
                <span className="flex items-center gap-1.5">
                   <Icon name="Calendar" size={14} className="text-emerald-500"/>
@@ -451,7 +451,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                   {pct3aUsed.toFixed(1)}%
                </span>
             </div>
-            <div className="font-black text-2xl text-emerald-600 dark:text-emerald-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-emerald-600 dark:text-emerald-400 truncate">
                {fCur(pillar3aNewMoneyYTD, 'CHF')}
             </div>
             
@@ -469,7 +469,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                <Icon name="TrendingUp" size={14}/>
                {safeT(t, 'labelPriceEffectProfitHeader', 'KURSEFFEKT / GEWINN')}
             </div>
-            <div className="font-black text-2xl text-green-700 dark:text-green-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-green-700 dark:text-green-400 truncate">
                {latestData.priceProfit > 0 ? '+' : ''}{fCur(latestData.priceProfit, 'CHF')}
             </div>
             <div className="text-xs text-green-600/70 dark:text-green-400/70 mt-2">
@@ -482,7 +482,7 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                <Icon name="Activity" size={14}/>
                {safeT(t, 'labelTotalReturnWithYieldsHeader', 'TOTAL RETURN (INKL. ERTRÄGE)')}
             </div>
-            <div className="font-black text-2xl text-indigo-700 dark:text-indigo-400 truncate">
+            <div className="font-black text-lg sm:text-2xl text-indigo-700 dark:text-indigo-400 truncate">
                {latestData.profit > 0 ? '+' : ''}{fCur(latestData.profit, 'CHF')}
             </div>
             <div className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-2">
@@ -545,10 +545,10 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
         })}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8" ref={reportRef}>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-8 mb-6 sm:mb-8" ref={reportRef}>
          
          <div 
-            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
             data-pdf-title={safeT(t, 'titleHistTrackPillar2And3', 'Historischer Verlauf 2. und 3. Säule')}
          >
              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -574,12 +574,18 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                          }
                      ]} 
                      height="100%"
-                 />
+                     options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
              </div>
          </div>
 
          <div 
-            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block"
+            className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block"
             data-pdf-title={safeT(t, 'titleAnnualDepositsVsYieldsPdf', 'Jährliche Einzahlungen vs. Ertrag')}
          >
              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
@@ -605,7 +611,13 @@ const PensionPerformanceReport = ({ data, activeAssets, dateRange, isTreeVisible
                          }
                      ]} 
                      height="100%"
-                 />
+                     options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
              </div>
          </div>
 

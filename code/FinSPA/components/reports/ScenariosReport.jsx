@@ -229,16 +229,16 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
   }, [sortedScenarios, projectedWealth, fireTarget, currentWealth, totalImpact, projectedProg, remainingGap, reportDate, fCur, data, repTitle, repSub, t]);
 
   return (
-    <div className="max-w-7xl px-4 md:px-8 pb-12 relative" ref={reportRef}>
+    <div className="max-w-7xl px-2.5 sm:px-4 md:px-8 pb-10 sm:pb-12 relative" ref={reportRef}>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 p-1">
+        <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-5 mb-5 sm:mb-8 p-1">
            
-           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
+           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-blue-500 overflow-hidden">
               <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                   <Icon name="Database" size={14} className="text-blue-500"/>
                   {safeT(t, 'labelStatusQuoTodayHeader', 'STATUS QUO (HEUTE)')}
               </div>
-              <div className="text-2xl font-black text-slate-900 dark:text-white truncate">
+              <div className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white truncate">
                   {fCur(currentWealth)}
               </div>
               <div className="text-xs text-gray-400 mt-2 truncate">
@@ -246,7 +246,7 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
               </div>
            </div>
 
-           <div className="bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 relative overflow-hidden group">
+           <div className="bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-amber-500 relative overflow-hidden group">
               <div className="flex justify-between items-start mb-2">
                   <div className="text-amber-800 dark:text-amber-300 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                       <Icon name="Target" size={14} className="text-amber-500" />
@@ -264,7 +264,7 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                       <Icon name="Edit" size={14} />
                   </button>
               </div>
-              <div className="text-2xl font-black text-amber-700 dark:text-amber-400 truncate">
+              <div className="text-lg sm:text-2xl font-black text-amber-700 dark:text-amber-400 truncate">
                   {fCur(fireTarget)}
               </div>
               <div className="text-xs font-medium text-amber-700/70 dark:text-amber-500/70 mt-2 truncate">
@@ -281,7 +281,7 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                   <Icon name={isProjectedPositive ? "TrendingUp" : "TrendingDown"} size={14} className={isProjectedPositive ? "text-emerald-500" : "text-rose-500"} />
                   {safeT(t, 'labelNetScenarioEffectHeader', 'NETTO-SZENARIENEFFEKT')}
               </div>
-              <div className={`text-2xl font-black truncate ${isProjectedPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              <div className={`text-lg sm:text-2xl font-black truncate ${isProjectedPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                   {totalImpact > 0 ? '+' : ''}{fCur(totalImpact)}
               </div>
               <div className="text-xs text-gray-400 mt-2 truncate">
@@ -289,12 +289,12 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
               </div>
            </div>
 
-           <div className="bg-indigo-50/50 dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-600 overflow-hidden">
+           <div className="bg-indigo-50/50 dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 p-3.5 sm:p-6 rounded-2xl shadow-sm border-b-4 border-b-indigo-600 overflow-hidden">
               <div className="text-indigo-800 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
                   <Icon name="Layers" size={14} className="text-indigo-600"/>
                   {safeT(t, 'labelProjectedWealthHeader', 'PROJIZIERTER ENDSTAND')}
               </div>
-              <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 truncate">
+              <div className="text-lg sm:text-2xl font-black text-indigo-700 dark:text-indigo-400 truncate">
                   {fCur(projectedWealth)}
               </div>
               <div className="text-xs font-medium text-indigo-600/70 dark:text-indigo-400/70 mt-2 truncate">
@@ -352,9 +352,9 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
             </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-10">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 mb-6 sm:mb-10">
           
-          <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title={safeT(t, 'titleComparisonWealthGoal', 'Abgleich Vermögen & Ziel')}>
+          <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block self-start sticky top-8" data-pdf-title={safeT(t, 'titleComparisonWealthGoal', 'Abgleich Vermögen & Ziel')}>
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                   <Icon name="BarChart" className="text-blue-500" /> {safeT(t, 'titleComparisonWealthGoal', 'Abgleich Vermögen & Ziel')}
               </h3>
@@ -371,11 +371,17 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                           valueFormatter: fCur
                       }]}
                       height="100%"
-                  />
+                      options={{
+                            grid: { top: 16, bottom: 28, left: '3%', right: '6%', containLabel: true },
+                            legend: { show: false },
+                            xAxis: { axisLabel: { hideOverlap: true, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 11 } }
+                        }}
+                    />
               </div>
           </div>
 
-          <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleWealthPathScenariosPdf', 'Vermögenspfad über Szenarien')}>
+          <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-6 shadow-sm chart-export-block" data-pdf-title={safeT(t, 'titleWealthPathScenariosPdf', 'Vermögenspfad über Szenarien')}>
               <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-800 dark:text-slate-200">
                   <Icon name="TrendingUp" className="text-emerald-500" /> {safeT(t, 'titleWealthPathPlannedEvents', 'Vermögenspfad über geplante Ereignisse')}
               </h3>
@@ -399,14 +405,20 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                           }
                       ]}
                       height="100%"
-                  />
+                      options={{
+                            grid: { top: 28, bottom: 68, left: '3%', right: '3%', containLabel: true },
+                            legend: { type: 'scroll', bottom: 0, itemGap: 14, itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
+                            xAxis: { axisLabel: { interval: 'auto', hideOverlap: true, rotate: 0, margin: 10, fontSize: 10.5 } },
+                            yAxis: { axisLabel: { fontSize: 10.5 } }
+                        }}
+                    />
               </div>
           </div>
 
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden mb-8">
-            <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex justify-between items-center">
+            <div className="p-3.5 sm:p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-wrap justify-between items-center gap-2">
                 <div className="font-bold text-lg text-slate-800 dark:text-slate-100 flex items-center gap-2">
                     <Icon name="List" className="text-slate-500" />
                     {safeT(t, 'titlePlannedEventsAndScenarios', `Geplante Ereignisse & Szenarien (${sortedScenarios.length})`).replace('{count}', sortedScenarios.length)}
@@ -423,49 +435,49 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                 <table className="w-full text-left text-sm">
                     <thead className="bg-white dark:bg-slate-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-800 text-xs uppercase font-bold">
                         <tr>
-                            <th className="p-4">{safeT(t, 'scenarioName', 'Szenario / Ereignis')}</th>
-                            <th className="p-4 text-center">{safeT(t, 'scenarioDate', 'Stichtag')}</th>
-                            <th className="p-4 text-right">{safeT(t, 'scenarioImpactAmount', 'Cashflow (+/-)')}</th>
-                            <th className="p-4 text-right">{safeT(t, 'labelProjectedWealth', 'Projiziertes Vermögen')}</th>
-                            <th className="p-4 text-right">{safeT(t, 'titleGoalAchievementImpact', 'Zielerreichung')}</th>
-                            <th className="p-4 text-center print-hide">{safeT(t, 'colActions', 'Aktionen')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap">{safeT(t, 'scenarioName', 'Szenario / Ereignis')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap text-center">{safeT(t, 'scenarioDate', 'Stichtag')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'scenarioImpactAmount', 'Cashflow (+/-)')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'labelProjectedWealth', 'Projiziertes Vermögen')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap text-right">{safeT(t, 'titleGoalAchievementImpact', 'Zielerreichung')}</th>
+                            <th className="p-2.5 sm:p-4 whitespace-nowrap text-center print-hide">{safeT(t, 'colActions', 'Aktionen')}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
                         
                         <tr className="bg-slate-50/50 dark:bg-slate-800/20 font-bold">
-                            <td className="p-4 font-sans text-slate-900 dark:text-white flex items-center gap-2">
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-slate-900 dark:text-white flex items-center gap-2">
                                 <Icon name="Database" size={14} className="text-blue-500"/>
                                 {safeT(t, 'msTodayStatusQuo', 'Status Quo (Heute)')}
                             </td>
-                            <td className="p-4 text-center text-gray-500">{new Date(reportDate).toLocaleDateString('de-CH')}</td>
-                            <td className="p-4 text-right text-gray-400">-</td>
-                            <td className="p-4 text-right font-black text-slate-900 dark:text-white">{fCur(currentWealth)}</td>
-                            <td className="p-4 text-right text-blue-600 dark:text-blue-400">{fireProg.toFixed(1)}%</td>
-                            <td className="p-4 text-center text-gray-400 print-hide">-</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-gray-500">{new Date(reportDate).toLocaleDateString('de-CH')}</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-gray-400">-</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-slate-900 dark:text-white">{fCur(currentWealth)}</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right text-blue-600 dark:text-blue-400">{fireProg.toFixed(1)}%</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-gray-400 print-hide">-</td>
                         </tr>
 
                         {sortedScenarios.map((sc) => {
                             const isPos = sc.numericImpact >= 0;
                             return (
                                 <tr key={sc.index} className="hover:bg-gray-50/80 dark:hover:bg-slate-800/30 transition-colors">
-                                    <td className="p-4 font-sans font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full shrink-0 ${isPos ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
                                         {sc.name}
                                     </td>
-                                    <td className="p-4 text-center text-gray-500 font-sans text-xs">
+                                    <td className="p-2.5 sm:p-4 whitespace-nowrap text-center text-gray-500 font-sans text-xs">
                                         {new Date(sc.date).toLocaleDateString('de-CH')}
                                     </td>
                                     <td className={`p-4 text-right font-bold ${isPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                         {isPos ? '+' : ''}{fCur(sc.numericImpact)}
                                     </td>
-                                    <td className="p-4 text-right font-black text-slate-900 dark:text-white">
+                                    <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-slate-900 dark:text-white">
                                         {fCur(sc.cumulativeWealth)}
                                     </td>
-                                    <td className="p-4 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                                    <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-bold text-indigo-600 dark:text-indigo-400">
                                         {sc.progress.toFixed(1)}%
                                     </td>
-                                    <td className="p-4 text-center font-sans print-hide">
+                                    <td className="p-2.5 sm:p-4 whitespace-nowrap text-center font-sans print-hide">
                                         <div className="flex justify-center items-center gap-2">
                                             <button 
                                                 onClick={() => setScenarioModal({ isNew: false, index: sc.index, name: sc.name, date: sc.date, impact: sc.numericImpact })} 
@@ -488,20 +500,20 @@ const ScenariosReport = ({ data, updateTreeData, activeAssets, dateRange, isTree
                         })}
 
                         <tr className="bg-indigo-50/60 dark:bg-slate-800/80 font-bold border-t-2 border-indigo-500">
-                            <td className="p-4 font-sans text-indigo-900 dark:text-white uppercase">
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap font-sans text-indigo-900 dark:text-white uppercase">
                                 {safeT(t, 'labelProjectedEndWealthRow', 'PROJIZIERTES ENDVERMÖGEN')}
                             </td>
-                            <td className="p-4 text-center font-sans text-xs text-gray-500">{safeT(t, 'descAfterAllScenarios', 'Nach allen Szenarien')}</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-center font-sans text-xs text-gray-500">{safeT(t, 'descAfterAllScenarios', 'Nach allen Szenarien')}</td>
                             <td className={`p-4 text-right font-black ${totalImpact >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
                                 {totalImpact >= 0 ? '+' : ''}{fCur(totalImpact)}
                             </td>
-                            <td className="p-4 text-right font-black text-lg text-indigo-700 dark:text-indigo-400">
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-lg text-indigo-700 dark:text-indigo-400">
                                 {fCur(projectedWealth)}
                             </td>
-                            <td className="p-4 text-right font-black text-indigo-700 dark:text-indigo-400">
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-right font-black text-indigo-700 dark:text-indigo-400">
                                 {projectedProg.toFixed(1)}%
                             </td>
-                            <td className="p-4 text-center print-hide">-</td>
+                            <td className="p-2.5 sm:p-4 whitespace-nowrap text-center print-hide">-</td>
                         </tr>
                     </tbody>
                 </table>
