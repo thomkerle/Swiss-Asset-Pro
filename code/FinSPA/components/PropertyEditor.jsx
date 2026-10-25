@@ -34,7 +34,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
 
   if (activeReport || !selectedNode) {
       return (
-          <div className="print-hide w-full xl:w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 sm:p-4 flex items-center justify-center text-gray-400 shrink-0 text-center text-xs h-full">
+<div className="print-hide w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 flex flex-col gap-2.5 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner h-full">
               {safeT('propEditorInactive', 'Eigenschaften inaktiv.')}
           </div>
       );
@@ -167,7 +167,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 className="w-full py-1.5 px-2.5 bg-gray-200/70 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Icon name="ChevronLeft" size={13} />
-                <span className="truncate">{safeT('propEditor', 'Zurück zu Asset-Eigenschaften')}</span>
+                <span className="truncate">{safeT('btnBackToAssetProps', 'Zurück zu Asset-Eigenschaften')}</span>
               </button>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
@@ -505,7 +505,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                     <input 
                       type="number" 
                       step="100" 
-                      placeholder="z.B. 5000" 
+                      placeholder={safeT('placeholderEgLimit', 'z.B. 5000')} 
                       className="w-full p-1.5 px-2 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-xs text-xs font-mono tabular-nums" 
                       value={selectedNode.cardLimit ?? ''} 
                       onChange={e => handlePropChange('cardLimit', Number(e.target.value))} 
@@ -525,7 +525,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                         <option value="VISA">VISA</option>
                         <option value="Mastercard">Mastercard</option>
                         <option value="American Express">American Express</option>
-                        <option value="Sonstige">Sonstige</option>
+                        <option value="Sonstige">{safeT('acOtherLong', 'Sonstige')}</option>
                       </select>
                     </div>
 
@@ -536,7 +536,7 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                       <input 
                         type="text" 
                         maxLength={4}
-                        placeholder="z.B. 4242" 
+                        placeholder={safeT('placeholderEgLast4', 'z.B. 4242')} 
                         className="w-full p-1.5 border border-indigo-200 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 shadow-xs text-xs font-mono text-center" 
                         value={selectedNode.cardLast4 || ''} 
                         onChange={e => handlePropChange('cardLast4', e.target.value.replace(/\D/g, ''))} 
@@ -575,8 +575,8 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                        />
                     </div>
                     <div className="flex justify-between text-[9px] text-gray-500 dark:text-gray-400">
-                       <span>{cardUsagePct.toFixed(1)}% beansprucht</span>
-                       <span>Rest: {availableCardAmount.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
+                       <span>{cardUsagePct.toFixed(1)}% {safeT('labelCardUsedPct', 'beansprucht')}</span>
+                       <span>{safeT('labelRestShort', 'Rest')}: {availableCardAmount.toFixed(2)} {selectedNode.currency || 'CHF'}</span>
                     </div>
                  </div>
               </div>
@@ -586,11 +586,11 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('ticker', 'Ticker (API)')}</label>
-                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder="z.B. AAPL.US" value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
+                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder={safeT('placeholderEgTicker', 'z.B. AAPL.US')} value={selectedNode.ticker || ''} onChange={e => handlePropChange('ticker', e.target.value.toUpperCase())} />
                   </div>
                   <div>
                       <label className="block text-gray-500 dark:text-gray-400 text-[10px] font-bold mb-1 uppercase leading-tight truncate">{safeT('isin', 'ISIN (Optional)')}</label>
-                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder="z.B. CH0038863350" value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
+                      <input className="w-full p-1.5 px-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white shadow-xs focus:ring-2 focus:ring-blue-500 outline-none transition-shadow text-xs uppercase" placeholder={safeT('placeholderEgIsin', 'z.B. CH0038863350')} value={selectedNode.isin || ''} onChange={e => handlePropChange('isin', e.target.value.toUpperCase())} />
                   </div>
                 </div>
             )}
@@ -671,14 +671,14 @@ const PropertyEditor = ({ data, activeReport, selectedNode, setSelectedNode, upd
         .custom-tree-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(107, 114, 128, 0.6); }
       `}</style>
       
-      <div className="print-hide w-full xl:w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 flex flex-col gap-2.5 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner h-full">
+<div className="print-hide w-80 xl:border-l border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/50 p-3 flex flex-col gap-2.5 overflow-y-auto custom-tree-scrollbar shrink-0 shadow-inner h-full">
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-2 shrink-0">
             <div className="flex items-center gap-1.5 min-w-0 pr-2">
                 <Icon name={selectedNode.selectedBooking ? "Edit" : "Settings"} size={13} className="text-gray-500 shrink-0" />
                 <h3 className="font-bold text-gray-900 dark:text-white uppercase tracking-wider text-[11px] truncate">
                     {selectedNode.budgetType ? safeT('budgetDetails', 'Budget Details') : 
                      selectedNode.selectedBooking ? (selectedNode.selectedBooking._isBal ? safeT('editBalance', 'Saldo bearbeiten') : safeT('editBooking', 'Buchung bearbeiten')) : 
-                     'Eigenschaften'}
+                     safeT('propEditorTitle', 'Eigenschaften')}
                 </h3>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">

@@ -86,17 +86,19 @@ const showAndroidExportModal = (blob, fileName, mimeType, savedUri = null) => {
     const card = document.createElement('div');
     card.style.cssText = 'background:#ffffff;color:#0f172a;border-radius:20px;max-width:400px;width:100%;padding:24px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);text-align:center;';
 
+    const curLang = (typeof window !== 'undefined' && window.__finbundleLang) || 'de';
+    const tr = (k, fb) => i18n?.[curLang]?.[k] || i18n?.['de']?.[k] || fb;
     card.innerHTML = `
         <div style="width:52px;height:52px;border-radius:14px;background:#dbeafe;color:#2563eb;display:flex;align-items:center;justify-content:center;margin:0 auto 14px auto;font-size:24px;font-weight:bold;">📄</div>
-        <h3 style="margin:0 0 6px 0;font-size:18px;font-weight:800;color:#0f172a;">Datei bereit!</h3>
+        <h3 style="margin:0 0 6px 0;font-size:18px;font-weight:800;color:#0f172a;">${tr('androidFileReady', 'Datei bereit!')}</h3>
         <p style="margin:0 0 16px 0;font-size:12px;color:#64748b;word-break:break-all;font-family:monospace;background:#f1f5f9;padding:8px;border-radius:8px;">${fileName}</p>
-        ${savedUri ? `<p style="margin:0 0 16px 0;font-size:11px;color:#10b981;font-weight:700;">✓ Auf Gerät vorbereitet</p>` : ''}
+        ${savedUri ? `<p style="margin:0 0 16px 0;font-size:11px;color:#10b981;font-weight:700;">${tr('androidPreparedOnDevice', '✓ Auf Gerät vorbereitet')}</p>` : ''}
         <div style="display:flex;flex-direction:column;gap:10px;">
             <button id="fb-btn-share-now" style="width:100%;padding:14px;border:none;border-radius:12px;background:#2563eb;color:white;font-weight:700;font-size:14px;cursor:pointer;">
-                📤 Jetzt Teilen / Mit App öffnen
+                ${tr('androidShareOrOpen', '📤 Jetzt Teilen / Mit App öffnen')}
             </button>
             <button id="fb-btn-close-modal" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:12px;background:transparent;color:#475569;font-weight:700;font-size:13px;cursor:pointer;">
-                Schließen
+                ${tr('btnClose', 'Schließen')}
             </button>
         </div>
     `;
@@ -133,7 +135,7 @@ const showAndroidExportModal = (blob, fileName, mimeType, savedUri = null) => {
             overlay.remove();
         } catch (err) {
             if (err?.name !== 'AbortError') {
-                alert('Hinweis beim Öffnen: ' + (err?.message || err));
+                alert(tr('androidOpenNotice', 'Hinweis beim Öffnen: ') + (err?.message || err));
             }
         }
     };
@@ -288,7 +290,7 @@ const AboutDialog = ({ setModalObj, t }) => {
                             <div>
                                 <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">FinBundle <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-emerald-400">Pro</span></h2>
                                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-900/30 py-0.5 px-3 rounded-full inline-block mt-2 border border-emerald-100 dark:border-emerald-800/50 shadow-xs">
-                                    Version 1.0.0 RC3
+                                    Version 1.0.0 RC4
                                 </p>
                             </div>
                             <p className="text-xs text-gray-600 dark:text-gray-300 px-3 leading-relaxed">
@@ -471,6 +473,7 @@ const App = () => {
     }));
   };
 
+  if (typeof window !== 'undefined') window.__finbundleLang = lang;
   const t = (key) => i18n[lang]?.[key] || i18n['de']?.[key] || key;
   const safeT = (key, fallback) => {
     const res = t(key);
@@ -681,7 +684,7 @@ const App = () => {
               catch(err) { ExcelExportEngine = safeRequire('./print/ExcelExportEngine.jsx'); }
           }
           if (!ExcelExportEngine || typeof ExcelExportEngine.exportPortfolio !== 'function') {
-              throw new Error("ExcelExportEngine.jsx konnte nicht gefunden oder geladen werden.");
+              throw new Error(safeT('errExcelEngineMissing', "ExcelExportEngine.jsx konnte nicht gefunden oder geladen werden."));
           }
           const blob = await ExcelExportEngine.exportPortfolio(data, DataEngine, t);
           const fileName = `FinBundle_Portfolio_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -708,7 +711,7 @@ const App = () => {
       if (window.confirm(t('msgNewProjectWarning') || 'Achtung: Alle nicht gespeicherten Änderungen gehen verloren. Neues Projekt starten?')) {
           setFileHandle(null);
           setData({
-              version: "Version 1.0.0 RC3", lastModified: new Date().toISOString(), settings: data.settings, 
+              version: "Version 1.0.0 RC4", lastModified: new Date().toISOString(), settings: data.settings, 
               banks: [], budget: { incomeSources: [], expenses: [], subscriptions: [] },
               goals: { fire: { target: 0, year: new Date().getFullYear() } }, scenarios: []          
           });
@@ -723,7 +726,7 @@ const App = () => {
     if (typeof window.showOpenFilePicker === 'function' && (!e || !e.target || !e.target.files)) {
       try {
         const [handle] = await window.showOpenFilePicker({
-          types: [{ description: 'FinBundle Projekt', accept: { 'application/json': ['.json'], 'application/zip': ['.zip'] } }],
+          types: [{ description: safeT('fileDescProject', 'FinBundle Projekt'), accept: { 'application/json': ['.json'], 'application/zip': ['.zip'] } }],
           multiple: false
         });
         const file = await handle.getFile();
@@ -879,8 +882,8 @@ const App = () => {
             targetHandle = await window.showSaveFilePicker({
                 suggestedName: targetHandle ? targetHandle.name : `FinBundle_Projekt_${new Date().toISOString().split('T')[0]}.${isZip ? 'zip' : 'json'}`,
                 types: isZip
-                    ? [{ description: 'FinBundle Verschlüsselt', accept: { 'application/zip': ['.zip'] } }]
-                    : [{ description: 'FinBundle Projekt', accept: { 'application/json': ['.json'] } }]
+                    ? [{ description: safeT('fileDescEncrypted', 'FinBundle Verschlüsselt'), accept: { 'application/zip': ['.zip'] } }]
+                    : [{ description: safeT('fileDescProject', 'FinBundle Projekt'), accept: { 'application/json': ['.json'] } }]
             });
         } catch (err) {
             if (err.name !== 'AbortError') {
@@ -1254,7 +1257,7 @@ const App = () => {
               setIsMobileMenuOpen(true);
             }}
             className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800/90 active:bg-blue-600 text-slate-200 transition-colors cursor-pointer"
-            title="Menü"
+            title={safeT('menuTitle', 'Menü')}
           >
             <Icon name="Menu" size={16} />
           </button>
@@ -1352,7 +1355,7 @@ const App = () => {
               { id: 'main', label: safeT('menuViews', 'Ansichten'), icon: 'Layers' },
               { id: 'file', label: safeT('menuFile', 'Datei'), icon: 'FolderOpen' },
               { id: 'reports', label: safeT('menuReports', 'Reports'), icon: 'PieChart' },
-              { id: 'plugins', label: 'Plugins', icon: 'Box' }
+              { id: 'plugins', label: safeT('menuPlugins', 'Plugins'), icon: 'Box' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1407,7 +1410,7 @@ const App = () => {
                 <hr className="border-gray-200 dark:border-slate-800 my-2" />
 
                 <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
-                  Sprache / Language
+                  {safeT('labelLanguageSelect', 'Sprache / Language')}
                 </div>
                 <div className="grid grid-cols-4 gap-1.5">
                   {['de', 'en', 'fr', 'it'].map(l => (
@@ -1454,7 +1457,7 @@ const App = () => {
             {mobileMenuSection === 'file' && (
               <div className="space-y-1.5">
                 <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1.5">
-                  Projektverwaltung
+                  {safeT('labelProjectManagement', 'Projektverwaltung')}
                 </div>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleNewProject(); }}
@@ -1649,7 +1652,7 @@ const App = () => {
                         <span className="truncate">{p.title || p.name}</span>
                       </div>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-slate-700 text-gray-600 dark:text-gray-300 shrink-0 ml-2">
-                        {p.category || 'Allgemein'}
+                        {p.category || safeT('catGeneral', 'Allgemein')}
                       </span>
                     </button>
                   ))
@@ -1661,9 +1664,9 @@ const App = () => {
           <div className="p-2.5 bg-gray-50 dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 flex justify-between items-center text-[10px] text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-              Auto-Save: {lastModTime}
+              {safeT('labelAutoSave', 'Auto-Save')}: {lastModTime}
             </span>
-            <span>v1.0.0 RC3</span>
+            <span>v1.0.0 RC4</span>
           </div>
         </div>
       </div>
@@ -1793,7 +1796,7 @@ const App = () => {
             }`}
           >
             <Icon name="Sparkles" size={15} />
-            <span className="text-[9px] tracking-tight leading-none">Copilot</span>
+            <span className="text-[9px] tracking-tight leading-none">{safeT('flyInCopilotFooter', 'Copilot')}</span>
           </button>
         )}
       </div>
@@ -2001,7 +2004,7 @@ const App = () => {
                   <div className="relative z-10 h-full w-[88vw] max-w-sm bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
                     <div className="px-3 py-2 bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center shrink-0">
                       <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 truncate pr-2">
-                        {selectedNode.name} – Details
+                        {selectedNode.name} – {safeT('labelDetails', 'Details')}
                       </span>
                       <button
                         onClick={() => setIsMobilePropsOpen(false)}
@@ -2062,7 +2065,7 @@ const App = () => {
 
             <div className="hidden lg:flex items-center gap-4 opacity-80">
                 <span className="flex items-center gap-1" title={t('titleBankCatCount') || "Anzahl Banken / Hauptkategorien"}><Icon name="Shield" size={10} /> {banksCount}</span>
-                <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} Assets</span>
+                <span className="flex items-center gap-1" title={t('titleAssetCount') || "Anzahl verwalteter Assets"}><Icon name="PieChart" size={10} /> {allAssetsCount} {safeT('assets', 'Assets')}</span>
                 <span className="flex items-center gap-1" title={t('titleBaseCurrency') || "Basiswährung der Anwendung"}><Icon name="Globe" size={10} /> {baseCur}</span>
             </div>
 
@@ -2081,7 +2084,7 @@ const App = () => {
                         </strong>
                     </span>
                 )}
-                <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC3</span>
+                <span className="opacity-70">{t('version') || 'Version'}: 1.0.0 RC4</span>
             </div>
         </div>
       )}

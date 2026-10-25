@@ -24,6 +24,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
   const [dragOverNodeId, setDragOverNodeId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
+  const safeT = (key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
   // Erkennung für Android / Touch-Geräte, damit Aktions-Icons ohne Maus-Hover bedienbar sind
   const [isTouchDevice, setIsTouchDevice] = useState(() => {
@@ -316,7 +317,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
             
             {isCreditCard && (
               <span className="px-1 py-0.5 text-[8px] font-black uppercase tracking-wider bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 rounded shrink-0 pointer-events-none border border-indigo-200 dark:border-indigo-800/60">
-                Karte
+                {safeT('badgeCardShort', 'Karte')}
               </span>
             )}
 
@@ -338,7 +339,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
                 type="button"
                 onClick={(e) => handleContextMenu(e, node)}
                 className="p-1.5 rounded-md text-gray-400 hover:text-slate-700 dark:hover:text-slate-200 active:bg-gray-200 dark:active:bg-slate-700"
-                title="Aktionen"
+                title={safeT('colActions', 'Aktionen')}
               >
                 <Icon name="MoreVertical" size={14} />
               </button>
@@ -425,7 +426,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
         
         <div className="p-3 font-bold border-b border-gray-200 dark:border-slate-800 bg-gray-100 dark:bg-slate-900 flex justify-between items-center text-sm shrink-0">
           <div className="flex items-center gap-2 truncate min-w-0">
-            {viewMode === 'budget' ? (t ? t('menuBudget') : 'Budget') : (viewMode === 'ai' ? (t ? t('aiCopilotTitle') || 'KI Copilot' : 'KI Copilot') : (t ? t('menuWealth') : 'Vermögen'))} - {t ? t('tree') : 'Übersicht'}
+            {viewMode === 'budget' ? safeT('menuBudget', 'Budget') : (viewMode === 'ai' ? safeT('aiCopilotTitle', 'KI Copilot') : safeT('menuWealth', 'Vermögen'))} - {safeT('tree', 'Übersicht')}
           </div>
           
           <div className="flex items-center gap-2">
@@ -439,7 +440,7 @@ const TreeView = ({ data, viewMode, selectedNode, setSelectedNode, setActiveRepo
                             : 'hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-400'
                         }`}
                         onClick={() => setShowArchived(!showArchived)}
-                        title={showArchived ? 'Archivierte Assets ausblenden' : 'Archivierte Assets anzeigen'}
+                        title={showArchived ? safeT('titleHideArchived', 'Archivierte Assets ausblenden') : safeT('titleShowArchived', 'Archivierte Assets anzeigen')}
                     >
                         <Icon name={showArchived ? "Archive" : "Inbox"} size={15} />
                 </div>

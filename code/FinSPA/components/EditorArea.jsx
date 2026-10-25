@@ -1,8 +1,47 @@
 const React = require('react');
 const { useState, useEffect, useRef, useMemo } = React; 
 
-const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
-const safeRequire = getRequire();
+const safeRequire = (modPath, fallback = null) => {
+  try {
+    if (typeof require === 'function') {
+      const res = require(modPath);
+      if (res !== undefined && res !== null && !(typeof res === 'object' && Object.keys(res).length === 0)) {
+        return res.default || res;
+      }
+    }
+  } catch (e) {}
+  if (typeof window !== 'undefined') {
+    if (typeof window.require === 'function') {
+      try {
+        const res = window.require(modPath);
+        if (res !== undefined && res !== null && !(typeof res === 'object' && Object.keys(res).length === 0)) {
+          return res.default || res;
+        }
+      } catch (e) {}
+    }
+    if (window.__FinSPAModules) {
+      const cleanTarget = String(modPath || '').replace(/^(\.\/|\.\.\/)+/, '');
+      const targetFile = cleanTarget.split('/').pop();
+      const keys = Object.keys(window.__FinSPAModules);
+      const exactKey = keys.find(k => k === cleanTarget || k.endsWith('/' + cleanTarget));
+      const matchKey = exactKey || keys.find(k => k.endsWith('/' + targetFile) || k === targetFile);
+      if (matchKey) {
+        if (typeof window.require === 'function') {
+          try {
+            const mod = window.require(matchKey);
+            if (mod) return mod.default || mod;
+          } catch (e) {}
+        }
+        const m = window.__FinSPAModules[matchKey];
+        if (m) {
+          const exp = m.exports?.default || m.exports || m;
+          if (exp && !(typeof exp === 'object' && Object.keys(exp).length === 0)) return exp;
+        }
+      }
+    }
+  }
+  return fallback;
+};
 
 const Icon = safeRequire('./Icons.jsx') || (({name}) => <span>[{name}]</span>);
 
@@ -45,12 +84,42 @@ const SecuritiesPerformanceReport = safeRequire('./reports/SecuritiesPerformance
 const DividendCalendarReport = safeRequire('./reports/DividendCalendarReport.jsx') || (() => <div>DividendCalendarReport</div>);
 const UniversalChart = safeRequire('../../api/UniversalChart.jsx') || safeRequire('../api/UniversalChart.jsx') || window.UniversalChart || (() => null);
 const ApiSyncEngine = safeRequire('../../api/ApiSyncEngine.jsx') || safeRequire('../api/ApiSyncEngine.jsx') || { fetchAssetPrice: async () => null };
-const ApiLiveEditorDashboard = safeRequire('./ApiLiveEditorDashboard.jsx') || (() => <div className="p-4">ApiLiveEditorDashboard.jsx fehlt</div>);
+const ApiLiveEditorDashboard = safeRequire('./ApiLiveEditorDashboard.jsx') || (({t}) => <div className="p-4">{safeT(t, 'errLiveEditorMissing', 'ApiLiveEditorDashboard.jsx fehlt')}</div>);
+
+// --- ROBUSTER AIDASHBOARD RESOLVER ---
+const resolveAiDashboard = () => {
+  const candidates = ['./ai/AiDashboard.jsx', '../components/ai/AiDashboard.jsx', 'components/ai/AiDashboard.jsx', 'ai/AiDashboard.jsx'];
+  for (const path of candidates) {
+    const mod = safeRequire(path);
+    if (typeof mod === 'function') return mod;
+  }
+  if (typeof window !== 'undefined') {
+    if (typeof window.AiDashboard === 'function') return window.AiDashboard;
+    if (window.__FinSPAModules) {
+      const keys = Object.keys(window.__FinSPAModules);
+      const foundKey = keys.find(k => k.toLowerCase().includes('aidashboard'));
+      if (foundKey) {
+        if (typeof window.require === 'function') {
+          try {
+            const mod = window.require(foundKey);
+            if (mod && typeof (mod.default || mod) === 'function') return mod.default || mod;
+          } catch (e) {}
+        }
+        const m = window.__FinSPAModules[foundKey];
+        const exp = m?.exports?.default || m?.exports || m;
+        if (typeof exp === 'function') return exp;
+      }
+    }
+  }
+  return null;
+};
+const TopLevelAiDashboard = resolveAiDashboard();
 const ReportHeader = safeRequire('./ReportHeader.jsx') || (() => null);
 const NotificationCenterDrawer = safeRequire('./NotificationCenterDrawer.jsx') || safeRequire('../components/NotificationCenterDrawer.jsx');
 const ActivityNotificationEngine = safeRequire('../../api/ActivityNotificationEngine.js') || safeRequire('../api/ActivityNotificationEngine.js');
 
-const { getFinSpaApiScript } = safeRequire('../../api/FinSpaApiInject.js') || safeRequire('../api/FinSpaApiInject.js') || require('../../api/FinSpaApiInject.js');
+const finSpaInjectMod = safeRequire('../../api/FinSpaApiInject.js') || safeRequire('../api/FinSpaApiInject.js') || {};
+const getFinSpaApiScript = typeof finSpaInjectMod.getFinSpaApiScript === 'function' ? finSpaInjectMod.getFinSpaApiScript : (typeof finSpaInjectMod === 'function' ? finSpaInjectMod : () => '');
 
 // --- ROBUSTER PDFTOOLKIT RESOLVER ---
 const resolvePdfToolkit = () => {
@@ -222,7 +291,8 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
 
     const handleMouseMove = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
+        const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        const mouseX = clientX - rect.left;
         
         let closestIdx = 0;
         let minDiff = Infinity;
@@ -238,7 +308,15 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
         
         setHoveredIdx(closestIdx);
         const coords = getCoords(plotData[closestIdx], closestIdx);
-        setTooltipPos({ x: coords.x, y: coords.y });
+        const clampedLocalX = Math.min(Math.max(coords.x, 36), width - 36);
+        const placeBelow = rect.top < 75;
+        setTooltipPos({
+            x: coords.x,
+            y: coords.y,
+            fixedLeft: rect.left + clampedLocalX,
+            fixedTop: placeBelow ? (rect.bottom + 8) : (rect.top - 6),
+            placeBelow
+        });
     };
 
     return (
@@ -249,7 +327,10 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
                     height={height} 
                     className="overflow-visible cursor-crosshair"
                     onMouseMove={handleMouseMove}
+                    onTouchStart={handleMouseMove}
+                    onTouchMove={handleMouseMove}
                     onMouseLeave={() => setHoveredIdx(null)}
+                    onTouchEnd={() => setHoveredIdx(null)}
                 >
                     <defs>
                         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -342,14 +423,15 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
 
                 {hoveredIdx !== null && (
                     <div 
-                        className="absolute bg-slate-900/90 dark:bg-slate-950/90 backdrop-blur-sm text-white text-[10px] py-1 px-2 rounded shadow-xl pointer-events-none z-50 transition-all duration-75 font-mono border border-slate-700"
+                        className="fixed bg-slate-900/95 dark:bg-slate-950/95 backdrop-blur-md text-white text-[10px] py-1 px-2.5 rounded-lg shadow-2xl pointer-events-none z-[9999] transition-all duration-75 font-mono border border-slate-700 whitespace-nowrap"
                         style={{
-                            left: `${Math.min(Math.max(tooltipPos.x - 40, 0), width - 75)}px`,
-                            bottom: `${height + 6}px`
+                            left: `${tooltipPos.fixedLeft ?? (Math.min(Math.max(tooltipPos.x - 40, 0), width - 75))}px`,
+                            top: `${tooltipPos.fixedTop ?? 0}px`,
+                            transform: tooltipPos.placeBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
                         }}
                     >
                         <div className="font-semibold text-slate-300 text-center text-[9px]">{plotDates[hoveredIdx] || ''}</div>
-                        <div className="font-bold text-center">{plotData[hoveredIdx].toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className="font-bold text-center text-emerald-300">{plotData[hoveredIdx].toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
                 )}
             </div>
@@ -359,7 +441,7 @@ const Sparkline = ({ dataSeries, dateSeries, title }) => {
 };
 
 // --- PLATTFORMUNABHÄNGIGER AUDIO-RECORDER FÜR WEB & WEBVIEW2 ---
-const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, data, updateTreeData }) => {
+const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, data, updateTreeData, t }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -368,7 +450,7 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
   const startRecording = async () => {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('getUserMedia wird in dieser Umgebung nicht unterstützt.');
+        throw new Error(safeT(t, 'errMicNotSupported', 'getUserMedia wird in dieser Umgebung nicht unterstützt.'));
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -391,13 +473,13 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
 
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         if (audioBlob.size < 1000) {
-          if (showToast) showToast('Aufnahme war zu kurz.', 'info');
+          if (showToast) showToast(safeT(t, 'msgRecordingTooShort', 'Aufnahme war zu kurz.'), 'info');
           return;
         }
 
         setIsTranscribing(true);
         try {
-          if (!FinBundleAgentEngine) throw new Error('Agent Engine nicht geladen.');
+          if (!FinBundleAgentEngine) throw new Error(safeT(t, 'errAgentEngineMissing', 'Agent Engine nicht geladen.'));
           const agent = new FinBundleAgentEngine(data, updateTreeData);
           const transcript = await agent.transcribeAudio(audioBlob);
 
@@ -419,9 +501,9 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
       console.warn('Mikrofon-Zugriff fehlgeschlagen:', err);
       if (showToast) {
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          showToast('Mikrofonzugriff verweigert. Bitte Berechtigung in Windows/Host erteilen.', 'error');
+          showToast(safeT(t, 'errMicPermissionDenied', 'Mikrofonzugriff verweigert. Bitte Berechtigung in Windows/Host erteilen.'), 'error');
         } else {
-          showToast(`Mikrofon-Fehler: ${err.message}`, 'error');
+          showToast(`${safeT(t, 'errMicPrefix', 'Mikrofon-Fehler: ')}${err.message}`, 'error');
         }
       }
       setIsRecording(false);
@@ -457,7 +539,7 @@ const SpeechToTextButton = ({ onTranscript, isProcessing = false, showToast, dat
               ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
               : 'bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-slate-700')
       }`}
-      title={isRecording ? "Aufnahme stoppen & transkribieren" : (busy ? "Transkribiere..." : "Spracheingabe starten (Mikrofon)")}
+      title={isRecording ? safeT(t, 'titleMicStop', "Aufnahme stoppen & transkribieren") : (busy ? safeT(t, 'titleMicTranscribing', "Transkribiere...") : safeT(t, 'titleMicStart', "Spracheingabe starten (Mikrofon)"))}
     >
       <Icon name={busy ? "Loader" : (isRecording ? "Square" : "Mic")} size={13} className={busy ? "animate-spin" : ""} />
     </button>
@@ -505,7 +587,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
         if (n.type === 'bank' || n.type === 'category') {
           nodesList.push({
             ...n,
-            pathStr: pathArr.join(' → ') || (n.type === 'bank' ? 'Institut / Bank' : 'Kategorie')
+            pathStr: pathArr.join(' → ') || (n.type === 'bank' ? safeT(t, 'bank', 'Institut / Bank') : safeT(t, 'category', 'Kategorie'))
           });
         }
         if (n.type === 'asset') {
@@ -534,7 +616,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           // Stichtags-Saldi ebenfalls durchsuchbar machen
           (n.balances || []).forEach(bal => {
             bookingsList.push({
-              booking: { ...bal, _isBal: true, type: bal.type || 'SALDO', subCategory: bal.subCategory || 'Stichtags-Saldo' },
+              booking: { ...bal, _isBal: true, type: bal.type || 'SALDO', subCategory: bal.subCategory || safeT(t, 'csvBalanceDate', 'Stichtags-Saldo') },
               asset: n,
               pathStr,
               dateFormatted: formatChDate(bal.date)
@@ -676,11 +758,11 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
         {/* Filter-Tabs */}
         <div className="px-3 py-1.5 border-b border-gray-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] bg-white dark:bg-slate-900 shrink-0">
           {[
-            { id: 'ALL', label: `Alle (${totalHits})` },
-            { id: 'ASSETS', label: `Assets (${matchedAssets.length})` },
-            { id: 'BOOKINGS', label: `Buchungen (${matchedBookings.length})` },
-            { id: 'NODES', label: `Banken & Kategorien (${matchedNodes.length})` },
-            { id: 'BUDGET', label: `Budget (${matchedBudgets.length})` }
+            { id: 'ALL', label: `${safeT(t, 'filterCategoryAll', 'Alle')} (${totalHits})` },
+            { id: 'ASSETS', label: `${safeT(t, 'assets', 'Assets')} (${matchedAssets.length})` },
+            { id: 'BOOKINGS', label: `${safeT(t, 'bookings', 'Buchungen')} (${matchedBookings.length})` },
+            { id: 'NODES', label: `${safeT(t, 'repOverview', 'Banken & Kategorien')} (${matchedNodes.length})` },
+            { id: 'BUDGET', label: `${safeT(t, 'budget', 'Budget')} (${matchedBudgets.length})` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -703,7 +785,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           {(categoryFilter === 'ALL' || categoryFilter === 'ASSETS') && matchedAssets.length > 0 && (
             <div>
               <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
-                <Icon name="Wallet" size={12} /> {q ? `Gefundene Assets (${matchedAssets.length})` : `Alle Assets (${matchedAssets.length})`}
+                <Icon name="Wallet" size={12} /> {q ? `${safeT(t, 'flyInFoundAssets', 'Gefundene Assets')} (${matchedAssets.length})` : `${safeT(t, 'labelAllAssetsCount', 'Alle Assets')} (${matchedAssets.length})`}
               </div>
               <div className="space-y-1">
                 {matchedAssets.map(asset => (
@@ -749,13 +831,13 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
                 <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                  <Icon name="List" size={12} /> Gefundene Buchungen ({matchedBookings.length})
+                  <Icon name="List" size={12} /> {safeT(t, 'searchFoundBookings', 'Gefundene Buchungen')} ({matchedBookings.length})
                 </div>
                 <div className="flex items-center gap-3 text-[10px] font-mono">
-                  <span className="text-emerald-600 font-bold">In: +{fCur ? fCur(bookingsSumInBase, baseCur) : bookingsSumInBase.toFixed(2)}</span>
-                  <span className="text-rose-600 font-bold">Out: -{fCur ? fCur(bookingsSumOutBase, baseCur) : bookingsSumOutBase.toFixed(2)}</span>
+                  <span className="text-emerald-600 font-bold">{safeT(t, 'labelIn', 'In:')} +{fCur ? fCur(bookingsSumInBase, baseCur) : bookingsSumInBase.toFixed(2)}</span>
+                  <span className="text-rose-600 font-bold">{safeT(t, 'labelOut', 'Out:')} -{fCur ? fCur(bookingsSumOutBase, baseCur) : bookingsSumOutBase.toFixed(2)}</span>
                   <span className={`font-black ${bookingsNetBase >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    Netto: {bookingsNetBase >= 0 ? '+' : ''}{fCur ? fCur(bookingsNetBase, baseCur) : bookingsNetBase.toFixed(2)}
+                    {safeT(t, 'labelNet', 'Netto')}: {bookingsNetBase >= 0 ? '+' : ''}{fCur ? fCur(bookingsNetBase, baseCur) : bookingsNetBase.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -787,7 +869,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                           <div className="text-[11px] text-slate-600 dark:text-slate-300 truncate">{booking.comment}</div>
                         )}
                         <div className="text-[10px] text-gray-400 truncate">
-                          Asset: <strong>{asset.name}</strong> ({pathStr})
+                          {safeT(t, 'labelAsset', 'Asset')}: <strong>{asset.name}</strong> ({pathStr})
                         </div>
                       </div>
                       <div className={`font-mono text-xs font-bold shrink-0 ${isBal ? 'text-blue-600' : (flow.isPositive ? 'text-emerald-600' : 'text-rose-600')}`}>
@@ -805,14 +887,14 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
                     onClick={() => setVisibleLimit(prev => prev + 100)}
                     className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 text-xs font-bold transition-colors cursor-pointer"
                   >
-                    +100 weitere anzeigen ({remainingBookingsCount} verbleibend)
+                    +100 {safeT(t, 'btnShowMoreEntries', 'weitere anzeigen')} ({remainingBookingsCount} {safeT(t, 'labelRemaining', 'verbleibend')})
                   </button>
                   <button
                     type="button"
                     onClick={() => setVisibleLimit(matchedBookings.length)}
                     className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Alle {matchedBookings.length} Buchungen anzeigen
+                    {safeT(t, 'btnShowAll', 'Alle')} {matchedBookings.length} {safeT(t, 'bookings', 'Buchungen')} {safeT(t, 'btnShowAllSuffix', 'anzeigen')}
                   </button>
                 </div>
               )}
@@ -823,7 +905,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           {(categoryFilter === 'ALL' || categoryFilter === 'NODES') && matchedNodes.length > 0 && (
             <div>
               <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
-                <Icon name="Shield" size={12} /> Banken & Kategorien ({matchedNodes.length})
+                <Icon name="Shield" size={12} /> {safeT(t, 'repOverview', 'Banken & Kategorien')} ({matchedNodes.length})
               </div>
               <div className="space-y-1">
                 {matchedNodes.map(node => (
@@ -855,7 +937,7 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           {(categoryFilter === 'ALL' || categoryFilter === 'BUDGET') && matchedBudgets.length > 0 && (
             <div>
               <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
-                <Icon name="PiggyBank" size={12} /> Budget-Positionen ({matchedBudgets.length})
+                <Icon name="PiggyBank" size={12} /> {safeT(t, 'searchBudgetItems', 'Budget-Positionen')} ({matchedBudgets.length})
               </div>
               <div className="space-y-1">
                 {matchedBudgets.map(b => (
@@ -885,16 +967,16 @@ const GlobalSearchModal = ({ isOpen, onClose, data, allAssets, setSelectedNode, 
           {!q && (
             <div className="p-8 text-center text-gray-400">
               <Icon name="Search" size={26} className="mx-auto mb-2 opacity-40 text-blue-500" />
-              <div className="text-sm font-bold text-slate-700 dark:text-slate-300">Bitte Suchbegriff eingeben</div>
-              <div className="text-xs mt-1">Es werden erst Ergebnisse angezeigt, sobald du nach einem Begriff (Asset, Ticker, ISIN, Buchung, Betrag oder #Tag) suchst.</div>
+              <div className="text-sm font-bold text-slate-700 dark:text-slate-300">{safeT(t, 'searchPromptTitle', 'Bitte Suchbegriff eingeben')}</div>
+              <div className="text-xs mt-1">{safeT(t, 'searchPromptDesc', 'Es werden erst Ergebnisse angezeigt, sobald du nach einem Begriff (Asset, Ticker, ISIN, Buchung, Betrag oder #Tag) suchst.')}</div>
             </div>
           )}
 
           {q && totalHits === 0 && (
             <div className="p-8 text-center text-gray-400">
               <Icon name="Search" size={24} className="mx-auto mb-2 opacity-40 text-blue-500" />
-              <div className="text-sm font-bold">Keine Ergebnisse für „{query}“ gefunden</div>
-              <div className="text-xs mt-1">Suche nach Asset-Namen, Ticker, ISIN, Buchungstext, Datum, Betrag oder #Tag.</div>
+              <div className="text-sm font-bold">{safeT(t, 'flyInNoResultsTitle', 'Keine Treffer für')} „{query}“</div>
+              <div className="text-xs mt-1">{safeT(t, 'searchNoResultsHint', 'Suche nach Asset-Namen, Ticker, ISIN, Buchungstext, Datum, Betrag oder #Tag.')}</div>
             </div>
           )}
         </div>
@@ -935,7 +1017,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
     if (!prompt || !prompt.trim()) return;
     setIsLoading(true);
     try {
-      if (!FinBundleAgentEngine) throw new Error("Agent Engine nicht bereit.");
+      if (!FinBundleAgentEngine) throw new Error(safeT(t, 'errAgentEngineMissing', "Agent Engine nicht bereit."));
       const agent = new FinBundleAgentEngine(data, updateTreeData);
       const res = await agent.processUserPrompt(prompt);
       if (showToast) showToast(res.textResponse, 'success');
@@ -968,7 +1050,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                   setPrompt(spokenText);
                   if (isFinal) {
                     inputRef.current?.focus();
-                    if (showToast) showToast('Text erkannt! Bitte kurz prüfen und mit Enter oder Buchen bestätigen.', 'info');
+                    if (showToast) showToast(safeT(t, 'msgSpeechRecognized', 'Text erkannt! Bitte kurz prüfen und mit Enter oder Buchen bestätigen.'), 'info');
                   }
                 }}
                 isProcessing={isLoading}
@@ -976,6 +1058,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                 showToast={showToast}
                 data={data}
                 updateTreeData={updateTreeData}
+                t={t}
               />
 
               <div className="relative flex-1">
@@ -985,7 +1068,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                   value={prompt}
                   onChange={e => setPrompt(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleExecute()}
-                  placeholder="Befehl: 'Kreditkarte: Migros 75.50, Coop 23, SBB 14'..."
+                  placeholder={safeT(t, 'quickAgentPlaceholder', "Befehl: 'Kreditkarte: Migros 75.50, Coop 23, SBB 14'...")}
                   className="w-full pl-2.5 pr-7 py-1 text-xs bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 />
                 {prompt && (
@@ -1005,12 +1088,12 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                 }`}
               >
                 <Icon name={isLoading ? "Loader" : "Send"} size={11} className={isLoading ? "animate-spin" : ""} />
-                <span className="hidden sm:inline">{isLoading ? "Bucht..." : "Buchen"}</span>
+                <span className="hidden sm:inline">{isLoading ? safeT(t, 'btnBookingInProgress', "Bucht...") : safeT(t, 'btnBookAction', "Buchen")}</span>
               </button>
             </div>
           ) : (
             <div className="flex-1 text-[11px] text-gray-400 italic truncate">
-              Copilot bereit...
+              {safeT(t, 'msgCopilotReady', 'Copilot bereit...')}
             </div>
           )}
 
@@ -1019,10 +1102,10 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
               type="button"
               onClick={onOpenGlobalSearch}
               className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-1.5 text-xs font-bold border border-gray-200/80 dark:border-slate-700 transition-colors cursor-pointer"
-              title="Globale Suche über alle Assets & Buchungen (Strg + K)"
+              title={safeT(t, 'titleGlobalSearch', "Globale Suche über alle Assets & Buchungen (Strg + K)")}
             >
               <Icon name="Search" size={12} className="text-blue-500" />
-              <span className="hidden sm:inline">Suche</span>
+              <span className="hidden sm:inline">{safeT(t, 'btnSearchShort', 'Suche')}</span>
               <span className="hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 bg-white dark:bg-slate-900 rounded text-gray-400 border border-gray-200 dark:border-slate-700">
                 Ctrl+K
               </span>
@@ -1035,7 +1118,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
                   ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 shadow-xs'
                   : 'text-gray-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800'
               }`}
-              title={unreadCount > 0 ? `${unreadCount} aktive Mitteilung(en) / Kurssignale` : "Mitteilungszentrale öffnen"}
+              title={unreadCount > 0 ? `${unreadCount} ${safeT(t, 'titleUnreadNotifications', 'aktive Mitteilung(en) / Kurssignale')}` : safeT(t, 'titleOpenNotifications', "Mitteilungszentrale öffnen")}
             >
               <Icon 
                 name="Bell" 
@@ -1052,7 +1135,7 @@ const QuickAgentBar = ({ data, allAssets, updateTreeData, showToast, t, selected
             <button 
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1 rounded-lg text-gray-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              title={isExpanded ? "Toolbar minimieren" : "Agent Toolbar anzeigen"}
+              title={isExpanded ? safeT(t, 'titleMinimizeToolbar', "Toolbar minimieren") : safeT(t, 'titleExpandToolbar', "Agent Toolbar anzeigen")}
             >
               <Icon name={isExpanded ? "ChevronUp" : "ChevronDown"} size={12} />
             </button>
@@ -1299,7 +1382,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       id: `auto_val_${b.id || idx}`, 
                       date: b.date, 
                       type: 'Wertanpassung',
-                      subCategory: `${localizedAutoString} (Kurs)`,
+                      subCategory: `${localizedAutoString} (${safeT(t, 'labelPriceShort', 'Kurs')})`,
                       amount: adjAmount, 
                       bookingExchangeRate: b.bookingExchangeRate || assetNode.exchangeRate || 1, 
                       _isAutoValuation: true 
@@ -1312,7 +1395,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                   id: `auto_val_close_${b.id || idx}`,
                   date: b.date,
                   type: 'Wertanpassung',
-                  subCategory: `${localizedAutoString} (Realisiert)`,
+                  subCategory: `${localizedAutoString} (${safeT(t, 'labelRealized', 'Realisiert')})`,
                   amount: adjAmount,
                   bookingExchangeRate: b.bookingExchangeRate || assetNode.exchangeRate || 1,
                   _isAutoValuation: true
@@ -1334,7 +1417,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                   id: `auto_val_latest_${assetNode.id}`, 
                   date: todayStr > lastBookingDate ? todayStr : lastBookingDate, 
                   type: 'Wertanpassung',
-                  subCategory: `${localizedAutoString} (Aktueller Kurs)`,
+                  subCategory: `${localizedAutoString} (${safeT(t, 'propCurrentRate', 'Aktueller Kurs')})`,
                   amount: Number(diff.toFixed(2)), 
                   bookingExchangeRate: assetNode.exchangeRate || 1, 
                   _isAutoValuation: true 
@@ -1398,7 +1481,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
               id: existingSyncIdx >= 0 ? bookings[existingSyncIdx].id : generateId(),
               date: apiDate,
               type: 'Wertanpassung',
-              subCategory: 'API Kurs-Sync',
+              subCategory: safeT(t, 'catApiPriceSync', 'API Kurs-Sync'),
               price: price,
               amount: 0,
               bookingExchangeRate: currentFxRate,
@@ -1678,7 +1761,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       {searchResults.bookings.length > 0 && (
                         <div>
                           <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5 flex items-center gap-1.5">
-                            <Icon name="List" size={12} /> Gefundene Buchungen ({searchResults.bookings.length})
+                            <Icon name="List" size={12} /> {safeT(t, 'searchFoundBookings', 'Gefundene Buchungen')} ({searchResults.bookings.length})
                           </div>
                           <div className="space-y-1">
                             {searchResults.bookings.map(({ booking, asset }) => (
@@ -1727,7 +1810,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{p.title || p.name}</span>
                                 </div>
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${getCategoryBadgeClass(p.category)}`}>
-                                  {p.category || 'Allgemein'}
+                                  {p.category || safeT(t, 'catGeneral', 'Allgemein')}
                                 </span>
                               </div>
                             ))}
@@ -1911,7 +1994,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                 <div>
                                   <div className="flex justify-between items-start mb-1.5">
                                     <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${getCategoryBadgeClass(p.category)}`}>
-                                      {p.category || 'Allgemein'}
+                                      {p.category || safeT(t, 'catGeneral', 'Allgemein')}
                                     </span>
                                     <button
                                       onClick={(e) => {
@@ -2171,8 +2254,8 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
             const existingTitles = new Set(plugins.map(p => (p.title || p.name).toLowerCase()));
             const newPluginsToAdd = importedList.map(raw => {
-              let finalTitle = (raw.title || 'Neues Plugin').trim();
-              if (existingTitles.has(finalTitle.toLowerCase())) finalTitle = `${finalTitle} (Importiert)`;
+              let finalTitle = (raw.title || safeT(t, 'newPluginDefaultName', 'Neues Plugin')).trim();
+              if (existingTitles.has(finalTitle.toLowerCase())) finalTitle = `${finalTitle} (${safeT(t, 'labelImported', 'Importiert')})`;
               existingTitles.add(finalTitle.toLowerCase());
               return {
                 id: 'plug_' + Math.random().toString(36).substr(2, 9),
@@ -2310,7 +2393,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       </td>
                       <td className="p-2.5">
                         <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${getCategoryBadgeClass(p.category)}`}>
-                          {p.category || 'Allgemein'}
+                          {p.category || safeT(t, 'catGeneral', 'Allgemein')}
                         </span>
                       </td>
                       <td className="p-2.5 text-center font-mono text-xs text-gray-400">
@@ -2362,7 +2445,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     }
 
     // 2. VIEW-MODE: PLUGINS ANZEIGEN & DRUCKEN
-    if (viewMode === 'plugin' || (data?.plugins && data.plugins.some(p => p.id === activeReport))) {
+    if (viewMode === 'plugin' || (viewMode !== 'ai' && viewMode !== 'datensicht' && viewMode !== 'liveEditor' && viewMode !== 'managePlugins' && data?.plugins && data.plugins.some(p => p.id === activeReport))) {
       const activePlugin = (data?.plugins || []).find(p => p.id === activeReport) || (data?.plugins || [])[0];
       if (!activePlugin) return null;
 
@@ -2488,9 +2571,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
     }
 
     // 4. KI-DASHBOARD & LIVE-EDITOR
-    if (viewMode === 'ai') {
-        const AiDashboard = safeRequire('./ai/AiDashboard.jsx') || (() => <div className="p-6 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
-        return <AiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
+    if (viewMode === 'ai' || activeReport === 'ai') {
+        const ResolvedAiDashboard = TopLevelAiDashboard || resolveAiDashboard() || (() => <div className="p-6 text-center">{safeT(t, 'errAiDashboardMissing', 'AiDashboard.jsx fehlt')}</div>);
+        return <ResolvedAiDashboard data={data} fCur={fCur} t={t} setModalObj={setModalObj} updateTreeData={updateTreeData} />;
     }
 
     if (viewMode === 'liveEditor') {
@@ -3033,7 +3116,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                           type="button"
                           onClick={() => setIsTreeVisible(true)}
                           className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-blue-50 print-hide shrink-0 cursor-pointer"
-                          title="Navigationsbaum einblenden"
+                          title={safeT(t, 'titleShowTree', "Navigationsbaum einblenden")}
                         >
                           <Icon name="ChevronRight" size={18} />
                         </button>
@@ -3085,9 +3168,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                       {isCreditCard && (
                         <div className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full text-[11px] font-semibold">
-                          <span>Limite: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} ${adjustedNode.currency || baseCurrency}`}</span>
+                          <span>{safeT(t, 'propCardLimit', 'Limite')}: {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : `${adjustedNode.cardLimit || 5000} ${adjustedNode.currency || baseCurrency}`}</span>
                           <span className="opacity-60">•</span>
-                          <span>Verfügbar: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)} ${adjustedNode.currency || baseCurrency}`}</span>
+                          <span>{safeT(t, 'labelAvailableShort', 'Verfügbar')}: {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : `${Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)} ${adjustedNode.currency || baseCurrency}`}</span>
                         </div>
                       )}
                     </div>
@@ -3095,7 +3178,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 </div>
 
                 {/* Sparklines (Auf Mobilgeräten horizontal scrollbar / kompakt, auf Desktop rechtsbündig) */}
-                <div className="flex items-end gap-3 sm:gap-6 ml-auto overflow-x-auto max-w-full pb-0.5">
+                <div className="flex flex-wrap items-end gap-3 sm:gap-6 ml-auto overflow-visible max-w-full pb-0.5">
                   <Sparkline
                     dataSeries={dataBase}
                     dateSeries={sortedDates}
@@ -3145,19 +3228,19 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 ) : isCreditCard ? (
                   <>
                     <div className="bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-xl p-2">
-                      <div className="text-[10px] font-bold uppercase text-rose-500 truncate">Offener Saldo</div>
+                      <div className="text-[10px] font-bold uppercase text-rose-500 truncate">{safeT(t, 'labelOpenBalanceShort', 'Offener Saldo')}</div>
                       <div className="text-xs font-black font-mono text-slate-900 dark:text-white truncate mt-0.5 tabular-nums">
                         {fCur ? fCur(currentVal, baseCurrency) : currentVal}
                       </div>
                     </div>
                     <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
-                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">Limite</div>
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">{safeT(t, 'propCardLimit', 'Limite')}</div>
                       <div className="text-xs font-black font-mono text-slate-800 dark:text-slate-100 truncate mt-0.5 tabular-nums">
                         {fCur ? fCur(adjustedNode.cardLimit || 5000, adjustedNode.currency || baseCurrency) : (adjustedNode.cardLimit || 5000)}
                       </div>
                     </div>
                     <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl p-2">
-                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 truncate">Verfügbar</div>
+                      <div className="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 truncate">{safeT(t, 'labelAvailableShort', 'Verfügbar')}</div>
                       <div className="text-xs font-black font-mono text-emerald-700 dark:text-emerald-300 truncate mt-0.5 tabular-nums">
                         {fCur ? fCur(Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)), adjustedNode.currency || baseCurrency) : Math.max(0, (adjustedNode.cardLimit || 5000) - Math.abs(rawSum)).toFixed(2)}
                       </div>
@@ -3172,7 +3255,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                       </div>
                     </div>
                     <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200/80 dark:border-slate-800 rounded-xl p-2">
-                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">Währung</div>
+                      <div className="text-[10px] font-bold uppercase text-gray-400 truncate">{safeT(t, 'currency', 'Währung')}</div>
                       <div className="text-xs font-bold font-mono text-slate-800 dark:text-slate-200 truncate mt-0.5">
                         {adjustedNode.currency || baseCurrency} {isForeignCurrency ? `(FX: ${adjustedNode.exchangeRate || 1})` : ''}
                       </div>
@@ -3369,7 +3452,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                 <div className="block md:hidden divide-y divide-gray-100 dark:divide-slate-800/70">
                   {sortedItems.length === 0 ? (
                     <div className="p-8 text-center text-gray-400 text-xs">
-                      Keine Einträge für diese Ansicht gefunden.
+                      {safeT(t, 'noEntries', 'Keine Einträge für diese Ansicht gefunden.')}
                     </div>
                   ) : (
                     (() => {
@@ -3419,11 +3502,11 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                   {`${monthNamesMobile[parseInt(month) - 1] || month} ${year}`}
                                 </span>
                                 <span className="font-mono font-bold text-[11px] text-slate-800 dark:text-slate-200">
-                                  Ende: {fCur ? fCur(endBal, adjustedNode.currency) : endBal}
+                                  {safeT(t, 'labelEnd', 'Ende:')} {fCur ? fCur(endBal, adjustedNode.currency) : endBal}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-gray-500">
-                                <span>Start: {fCur ? fCur(startBal, adjustedNode.currency) : startBal}</span>
+                                <span>{safeT(t, 'labelStart', 'Start:')} {fCur ? fCur(startBal, adjustedNode.currency) : startBal}</span>
                                 {(!isSecurities || activeTab === 'transactions') && (
                                   <div className="flex items-center gap-2.5">
                                     <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+{fCur ? fCur(flowIn, adjustedNode.currency) : flowIn}</span>
@@ -3543,7 +3626,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
 
                                       {isSecurities && (
                                         <span className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 text-[10px] font-mono">
-                                          Bestand: {runningShares.toLocaleString('de-CH', { maximumFractionDigits: 4 })} Stk. • Kurs: {runningPrice}
+                                          {safeT(t, 'labelInventoryShort', 'Bestand')}: {runningShares.toLocaleString('de-CH', { maximumFractionDigits: 4 })} {safeT(t, 'labelPcs', 'Stk.')} • {safeT(t, 'rateLabel', 'Kurs:')} {runningPrice}
                                         </span>
                                       )}
 
@@ -3599,7 +3682,7 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                                             <Icon name="Trash" size={14} />
                                           </button>
                                         ) : (
-                                          <span className="inline-flex p-1.5 text-gray-300 dark:text-slate-700" title="System-Eintrag">
+                                          <span className="inline-flex p-1.5 text-gray-300 dark:text-slate-700" title={safeT(t, 'titleSystemEntry', "System-Eintrag")}>
                                             <Icon name="Lock" size={13} />
                                           </span>
                                         )}
@@ -3773,9 +3856,9 @@ const EditorArea = ({ data, lang, viewMode, setViewMode, activeReport, setActive
                               
                               let bonusInfo = '';
                               if (!item._isBal && ['Kauf', 'Verkauf'].includes(item.type) && item.shares) bonusInfo += ` (${item.shares} ${safeT(t, 'pcsAt', 'Stk. à')} ${item.price})`;
-                              if (item.bookingExchangeRate && item.bookingExchangeRate !== 1) bonusInfo += ` [FX-Kurs: ${item.bookingExchangeRate}]`;
+                              if (item.bookingExchangeRate && item.bookingExchangeRate !== 1) bonusInfo += ` [${safeT(t, 'labelFxRateShort', 'FX-Kurs')}: ${item.bookingExchangeRate}]`;
                               if (isSecurities && item.type === 'Wertanpassung' && item.bookingExchangeRate && item.bookingExchangeRate !== 1) {
-                                  bonusInfo += ` [Wechselkurs: ${item.bookingExchangeRate}]`;
+                                  bonusInfo += ` [${safeT(t, 'labelExchangeRate', 'Wechselkurs')}: ${item.bookingExchangeRate}]`;
                               }
                               
                               const isSelected = selectedBookingIds.has(item.id);

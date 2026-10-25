@@ -1,5 +1,5 @@
 const React = require('react');
-const { useState, useMemo } = React;
+const { useState, useMemo, useRef } = React;
 
 const getRequire = () => { try { return require; } catch (e) { return () => ({}); } };
 const safeRequire = getRequire();
@@ -63,6 +63,45 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
     const [selectedCategoryId, setSelectedCategoryId] = useState(availableCategories.length > 0 ? availableCategories[0].id : 'new_import');
 
     const safeT = (key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
+
+    const step2ScrollRef = useRef(null);
+    const dragScrollState = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
+
+    const scrollTableHorizontally = (delta) => {
+        if (step2ScrollRef.current) {
+            step2ScrollRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+        }
+    };
+
+    const handleTableMouseDown = (e) => {
+        if (!step2ScrollRef.current) return;
+        const tag = (e.target.tagName || '').toLowerCase();
+        if (['select', 'option', 'input', 'button'].includes(tag)) return;
+        dragScrollState.current = {
+            isDown: true,
+            startX: e.pageX - step2ScrollRef.current.offsetLeft,
+            scrollLeft: step2ScrollRef.current.scrollLeft
+        };
+    };
+
+    const handleTableMouseLeaveOrUp = () => {
+        dragScrollState.current.isDown = false;
+    };
+
+    const handleTableMouseMove = (e) => {
+        if (!dragScrollState.current.isDown || !step2ScrollRef.current) return;
+        e.preventDefault();
+        const x = e.pageX - step2ScrollRef.current.offsetLeft;
+        const walk = (x - dragScrollState.current.startX) * 1.4;
+        step2ScrollRef.current.scrollLeft = dragScrollState.current.scrollLeft - walk;
+    };
+
+    const handleHeaderWheel = (e) => {
+        if (!step2ScrollRef.current) return;
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            step2ScrollRef.current.scrollLeft += e.deltaY;
+        }
+    };
 
     const parseCamt053 = (xmlText) => {
         const parser = new DOMParser();
@@ -341,7 +380,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
             if (!parsedDate || isNaN(new Date(parsedDate).getTime())) {
                 const dateErrPattern = safeT('errRowInvalidDate', "Zeile {row}: Ungültiges Datum ({value})");
-                errors.push(dateErrPattern.replace('{row}', actualRowIndex).replace('{value}', fields.date || 'Leer'));
+                errors.push(dateErrPattern.replace('{row}', actualRowIndex).replace('{value}', fields.date || safeT('labelEmpty', 'Leer')));
                 return;
             }
 
@@ -442,7 +481,33 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col border border-gray-200 dark:border-slate-700 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-6xl h-[88vh] max-h-[90vh] flex flex-col border border-gray-200 dark:border-slate-700 overflow-hidden">
+                <style>{`
+                  .csv-wizard-scroll {
+                    scrollbar-width: auto;
+                    scrollbar-color: #64748b #f1f5f9;
+                  }
+                  .dark .csv-wizard-scroll {
+                    scrollbar-color: #64748b #0f172a;
+                  }
+                  .csv-wizard-scroll::-webkit-scrollbar {
+                    width: 10px;
+                    height: 12px;
+                  }
+                  .csv-wizard-scroll::-webkit-scrollbar-track {
+                    background: rgba(148, 163, 184, 0.15);
+                    border-radius: 8px;
+                  }
+                  .csv-wizard-scroll::-webkit-scrollbar-thumb {
+                    background-color: #64748b;
+                    border-radius: 8px;
+                    border: 2px solid transparent;
+                    background-clip: content-box;
+                  }
+                  .csv-wizard-scroll::-webkit-scrollbar-thumb:hover {
+                    background-color: #3b82f6;
+                  }
+                `}</style>
                 
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-3">
@@ -457,7 +522,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                     <button onClick={() => setModalObj(null)} className="text-gray-400 hover:text-slate-800 dark:hover:text-white"><Icon name="X" size={24} /></button>
                 </div>
 
-                <div className="flex-1 overflow-auto p-0 finspa-scrollbar bg-gray-50 dark:bg-slate-950">
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-0 p-0 bg-gray-50 dark:bg-slate-950">
                     {step === 1 && (
                         <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-12 px-6">
                             <Icon name="UploadCloud" size={48} className="text-blue-500 mb-2" />
@@ -478,7 +543,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                     )}
 
                     {step === 2 && fileTypeLabel === 'CSV' && (
-                        <div className="h-full flex flex-col">
+                        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full overflow-hidden">
                             <div className="p-4 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex flex-wrap gap-4 items-end shrink-0">
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{safeT('wizHeaderRow', 'Zeile der Überschriften')}</label>
@@ -488,17 +553,46 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{safeT('wizDataRow', 'Erste Zeile mit Daten')}</label>
                                     <input type="number" min="1" max={allRows.length} value={config.startRow + 1} onChange={(e) => setConfig({...config, startRow: Math.max(0, parseInt(e.target.value) - 1)})} className="w-24 p-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded outline-none text-sm font-bold text-blue-600" />
                                 </div>
+
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => scrollTableHorizontally(-360)}
+                                        className="px-3 py-2 bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-300 dark:border-slate-600 rounded-lg text-xs font-bold transition cursor-pointer"
+                                        title={safeT('wizScrollHint', 'Nach links scrollen')}
+                                    >
+                                        {safeT('wizScrollLeft', '◀ Links')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => scrollTableHorizontally(360)}
+                                        className="px-3 py-2 bg-gray-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-gray-300 dark:border-slate-600 rounded-lg text-xs font-bold transition cursor-pointer"
+                                        title={safeT('wizScrollHint', 'Nach rechts scrollen')}
+                                    >
+                                        {safeT('wizScrollRight', 'Rechts ▶')}
+                                    </button>
+                                </div>
                                 
-                                <div className="ml-auto text-xs text-gray-500 max-w-xs leading-tight">
+                                <div className="ml-auto text-xs text-gray-500 max-w-sm leading-tight">
                                     <Icon name="Info" size={12} className="inline mr-1 text-blue-500"/>
                                     {safeT('wizColMappingDesc', 'Wähle für jede Spalte, die du importieren möchtest, das passende FinBundle Feld in der Kopfzeile aus.')}
+                                    <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5 font-medium">
+                                        {safeT('wizScrollHint', 'Tipp: Tabelle mit gedrückter Maustaste ziehen oder Buttons zum horizontalen Scrollen nutzen.')}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-auto p-4 finspa-scrollbar">
-                                <div className="w-max min-w-full border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
-                                    <table className="w-full text-sm text-left border-collapse">
-                                        <thead className="bg-gray-100 dark:bg-slate-800">
+                            <div
+                                ref={step2ScrollRef}
+                                onMouseDown={handleTableMouseDown}
+                                onMouseLeave={handleTableMouseLeaveOrUp}
+                                onMouseUp={handleTableMouseLeaveOrUp}
+                                onMouseMove={handleTableMouseMove}
+                                className="flex-1 w-full min-w-0 min-h-0 overflow-x-scroll overflow-y-auto p-4 csv-wizard-scroll cursor-grab active:cursor-grabbing select-none"
+                            >
+                                <div className="inline-block min-w-full border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 shadow-sm">
+                                    <table className="w-max min-w-full text-sm text-left border-collapse">
+                                        <thead className="bg-gray-100 dark:bg-slate-800" onWheel={handleHeaderWheel}>
                                             <tr>
                                                 <th className="p-2 border-r border-gray-200 dark:border-slate-700 bg-gray-200 dark:bg-slate-900 w-12 text-center text-xs text-gray-500 sticky left-0 z-10 shadow-[1px_0_0_rgba(0,0,0,0.1)]">{safeT('wizColRow', 'Zeile')}</th>
                                                 {Array.from({ length: maxCols }).map((_, colIdx) => (
@@ -555,7 +649,7 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                     )}
 
                     {step === 3 && (
-                        <div className="p-6 space-y-6 flex flex-col h-full">
+                        <div className="p-6 space-y-4 flex flex-col flex-1 min-h-0 min-w-0 overflow-y-auto csv-wizard-scroll">
                             <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 space-y-4 shrink-0">
                                 <h4 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                                     <Icon name="FolderOpen" size={16} className="text-yellow-500" /> {safeT('wizWhereToImport', 'Wohin sollen die Daten importiert werden?')}
@@ -612,10 +706,10 @@ const CsvImportWizard = ({ data, updateTreeData, setModalObj, showToast, t }) =>
                             <div className="border border-gray-200 dark:border-slate-700 rounded-xl flex-1 overflow-hidden flex flex-col min-h-[300px]">
                                 <div className="bg-gray-100 dark:bg-slate-800 p-3 border-b border-gray-200 dark:border-slate-700 shrink-0 flex justify-between items-center">
                                     <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                                        {safeT('wizEditPreview', 'Import-Vorschau bearbeiten')} ({previewData.length} Einträge aus {fileTypeLabel})
+                                        {safeT('wizEditPreview', 'Import-Vorschau bearbeiten')} ({previewData.length} {safeT('labelEntries', 'Einträge')} {safeT('labelFromSource', 'aus')} {fileTypeLabel})
                                     </span>
                                 </div>
-                                <div className="overflow-auto finspa-scrollbar flex-1 relative">
+                                <div className="overflow-x-auto overflow-y-auto csv-wizard-scroll flex-1 relative min-h-[240px]">
                                     <table className="w-full text-left text-sm min-w-max">
                                         <thead className="bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 sticky top-0 z-10 shadow-sm">
                                             <tr>

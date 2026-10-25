@@ -44,6 +44,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
   const [filterMode, setFilterMode] = useState('ALL'); // 'ALL', 'ACTION', 'UP', 'DOWN'
   const [centerData, setCenterData] = useState({ movers: [], fxAlerts: [], recentBookings: [], history: [], actionCount: 0, totalUnread: 0 });
   const [isLoading, setIsLoading] = useState(false);
+  const safeT = (key, fallback) => (t && t(key) && t(key) !== key ? t(key) : fallback);
 
   // Fallbacks auf Window-Ebene, falls Props in Zwischen-Hierarchien fehlen
   const doSetSelectedNode = setSelectedNode || (typeof window !== 'undefined' && window.__finspaSetSelectedNode);
@@ -181,15 +182,15 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
               </div>
               <div>
                 <h3 className="font-black text-sm text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <span>Mitteilungszentrale</span>
+                  <span>{safeT('notifCenterTitle', 'Mitteilungszentrale')}</span>
                   {centerData.actionCount > 0 && (
                     <span className="text-[10px] bg-amber-500 text-white font-black px-2 py-0.5 rounded-full animate-pulse font-mono">
-                      {centerData.actionCount} Signal(e)
+                      {centerData.actionCount} {safeT('notifSignalsSuffix', 'Signal(e)')}
                     </span>
                   )}
                 </h3>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                  Marktradar (10-Min-Takt) & Navigations-History
+                  {safeT('notifCenterSubtitle', 'Marktradar (10-Min-Takt) & Navigations-History')}
                 </p>
               </div>
             </div>
@@ -199,7 +200,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                 onClick={loadNotifications} 
                 disabled={isLoading}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                title="Aktualisieren"
+                title={safeT('btnRefresh', 'Aktualisieren')}
               >
                 <Icon name="RefreshCw" size={14} className={isLoading ? "animate-spin text-blue-500" : ""} />
               </button>
@@ -222,7 +223,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
-              <span>Börsen-Radar</span>
+              <span>{safeT('notifTabMovers', 'Börsen-Radar')}</span>
               {centerData.movers.length > 0 && (
                 <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                   centerData.actionCount > 0 
@@ -242,7 +243,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
-              <span>Buchungs-Audit</span>
+              <span>{safeT('notifTabBookings', 'Buchungs-Audit')}</span>
               {centerData.recentBookings.length > 0 && (
                 <span className="text-[9px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-mono font-bold">
                   {centerData.recentBookings.length}
@@ -258,7 +259,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
               }`}
             >
-              <span>Verlauf</span>
+              <span>{safeT('notifTabHistory', 'Verlauf')}</span>
               <span className="text-[9px] text-gray-400 font-mono">({centerData.history.length})</span>
             </button>
           </div>
@@ -281,7 +282,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                           : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                       }`}
                     >
-                      Alle ({centerData.movers.length})
+                      {safeT('filterCategoryAll', 'Alle')} ({centerData.movers.length})
                     </button>
                     <button
                       onClick={() => setFilterMode('ACTION')}
@@ -301,7 +302,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                           : 'text-emerald-600 dark:text-emerald-400'
                       }`}
                     >
-                      ▲ Gewinner
+                      ▲ {safeT('notifFilterWinners', 'Gewinner')}
                     </button>
                     <button
                       onClick={() => setFilterMode('DOWN')}
@@ -311,20 +312,20 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                           : 'text-rose-600 dark:text-rose-400'
                       }`}
                     >
-                      ▼ Verlierer
+                      ▼ {safeT('notifFilterLosers', 'Verlierer')}
                     </button>
                   </div>
 
                   <span className="text-[10px] font-mono text-gray-400">
-                    Takt: 10 Min.
+                    {safeT('notifInterval10Min', 'Takt: 10 Min.')}
                   </span>
                 </div>
 
                 {displayedTiles.length === 0 ? (
                   <div className="p-8 text-center bg-gray-50 dark:bg-slate-850 rounded-2xl border border-dashed border-gray-200 dark:border-slate-800 text-gray-400 text-xs">
                     {centerData.movers.length === 0 
-                      ? 'Keine Wertschriften mit Ticker gefunden oder EODHD-API liefert keine Daten.'
-                      : 'Keine Positionen für diesen Filter vorhanden.'}
+                      ? safeT('notifNoMoversFound', 'Keine Wertschriften mit Ticker gefunden oder EODHD-API liefert keine Daten.')
+                      : safeT('notifNoFilterMatch', 'Keine Positionen für diesen Filter vorhanden.')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -359,7 +360,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
 
                               {hasAction && (
                                 <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500 text-white shrink-0">
-                                  Signal ≥ 5%
+                                  {safeT('notifSignalBadge', 'Signal ≥ 5%')}
                                 </span>
                               )}
                             </div>
@@ -371,7 +372,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
 
                           <div className="my-3 py-2 px-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
                             <div>
-                              <span className="text-[9px] text-gray-400 block uppercase font-mono">Buchungskurs</span>
+                              <span className="text-[9px] text-gray-400 block uppercase font-mono">{safeT('notifBookedPrice', 'Buchungskurs')}</span>
                               <span className="text-xs font-mono font-semibold text-slate-600 dark:text-slate-400">
                                 {tile.lastBookedPrice.toFixed(2)} {tile.currency}
                               </span>
@@ -382,7 +383,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                                 <Icon name={isUp ? "TrendingUp" : "TrendingDown"} size={14} />
                               </div>
                               <div className="text-right">
-                                <span className="text-[9px] text-gray-400 block uppercase font-mono">Live (EODHD)</span>
+                                <span className="text-[9px] text-gray-400 block uppercase font-mono">{safeT('notifLivePrice', 'Live (EODHD)')}</span>
                                 <span className="text-xs font-mono font-black text-slate-900 dark:text-white">
                                   {tile.livePrice.toFixed(2)} {tile.currency}
                                 </span>
@@ -392,7 +393,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
 
                           <div className="flex justify-between items-end text-xs font-mono pt-1">
                             <div>
-                              <span className="text-[9px] text-gray-400 block font-sans">Effekt ({baseCur})</span>
+                              <span className="text-[9px] text-gray-400 block font-sans">{safeT('notifEffectBase', 'Effekt')} ({baseCur})</span>
                               <strong className={`font-black text-xs ${isUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                 {isUp ? '+' : ''}{tile.totalGainLossBase.toFixed(2)} {baseCur}
                               </strong>
@@ -418,14 +419,14 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                   <div className="pt-2">
                     <h4 className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
                       <Icon name="Globe" size={12} className="text-indigo-500" /> 
-                      Devisen vs. Basiswährung ({baseCur})
+                      {safeT('notifFxVsBase', 'Devisen vs. Basiswährung')} ({baseCur})
                     </h4>
                     <div className="space-y-1.5">
                       {centerData.fxAlerts.map((fx, idx) => (
                         <div key={`${fx.pair}_${idx}`} className="p-2.5 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200/60 dark:border-slate-800 flex justify-between items-center text-xs">
                           <span className="font-bold font-mono text-slate-800 dark:text-slate-200">{fx.pair}</span>
                           <div className="text-right font-mono">
-                            <span className="text-gray-400 text-[11px] mr-2">Rate: {fx.currentRate.toFixed(4)}</span>
+                            <span className="text-gray-400 text-[11px] mr-2">{safeT('rateLabel', 'Kurs:')} {fx.currentRate.toFixed(4)}</span>
                             <span className={`font-bold ${fx.direction === 'UP' ? 'text-emerald-500' : 'text-rose-500'}`}>
                               {fx.direction === 'UP' ? '+' : ''}{fx.diffPct}%
                             </span>
@@ -442,13 +443,13 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
             {activeTab === 'bookings' && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-[11px] text-gray-400 mb-1">
-                  <span className="font-black uppercase tracking-wider">Kürzlich verbucht (letzte 2 Stunden / Heute)</span>
-                  <span className="font-mono">{centerData.recentBookings.length} Einträge</span>
+                  <span className="font-black uppercase tracking-wider">{safeT('notifRecentBookingsTitle', 'Kürzlich verbucht (letzte 2 Stunden / Heute)')}</span>
+                  <span className="font-mono">{centerData.recentBookings.length} {safeT('labelEntries', 'Einträge')}</span>
                 </div>
 
                 {centerData.recentBookings.length === 0 ? (
                   <div className="p-8 text-center text-gray-400 bg-gray-50 dark:bg-slate-800/40 rounded-xl text-xs">
-                    In den letzten Stunden wurden keine neuen Buchungen erfasst.
+                    {safeT('notifNoRecentBookings', 'In den letzten Stunden wurden keine neuen Buchungen erfasst.')}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -464,7 +465,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                             <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
                               b.type === 'Einzahlung' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                             }`}>
-                              {b.category}
+                              {safeT(b.category, b.category)}
                             </span>
                           </div>
                           {b.comment && (
@@ -488,13 +489,13 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
             {activeTab === 'history' && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-[11px] text-gray-400 mb-1">
-                  <span className="font-black uppercase tracking-wider">Zuletzt besucht (letzte 10 Elemente)</span>
-                  <span className="text-[10px]">Klick springt direkt dorthin</span>
+                  <span className="font-black uppercase tracking-wider">{safeT('notifRecentVisitedTitle', 'Zuletzt besucht (letzte 10 Elemente)')}</span>
+                  <span className="text-[10px]">{safeT('notifClickToJump', 'Klick springt direkt dorthin')}</span>
                 </div>
 
                 {centerData.history.length === 0 ? (
                   <div className="p-6 text-center text-gray-400 bg-gray-50 dark:bg-slate-800/40 rounded-xl text-xs">
-                    Noch kein Verlauf aufgezeichnet.
+                    {safeT('notifNoHistory', 'Noch kein Verlauf aufgezeichnet.')}
                   </div>
                 ) : (
                   <div className="space-y-1.5">
@@ -513,7 +514,7 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
                               {item.name}
                             </span>
                             <span className="text-[10px] text-gray-400 capitalize">
-                              {item.activeReport ? `Bericht • ${item.viewMode}` : (item.budgetType ? `Budget • ${item.budgetType}` : (item.assetClass || item.type))}
+                              {item.activeReport ? `${safeT('notifTypeReport', 'Bericht')} • ${safeT(item.viewMode, item.viewMode)}` : (item.budgetType ? `${safeT('budget', 'Budget')} • ${safeT(item.budgetType, item.budgetType)}` : (item.assetClass || item.type))}
                             </span>
                           </div>
                         </div>
@@ -530,8 +531,8 @@ const NotificationCenterDrawer = ({ data, updateTreeData, setSelectedNode, setAc
 
           {/* Footer */}
           <div className="p-3 px-6 border-t border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 text-[11px] text-gray-400 flex justify-between items-center">
-            <span>FinBundle Intelligence Hub</span>
-            <span className="font-mono">Auto-Sync alle 10 Min.</span>
+            <span>{safeT('notifFooterHub', 'FinBundle Intelligence Hub')}</span>
+            <span className="font-mono">{safeT('notifFooterAutoSync', 'Auto-Sync alle 10 Min.')}</span>
           </div>
 
         </div>

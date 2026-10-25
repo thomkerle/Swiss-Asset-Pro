@@ -47,6 +47,7 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
         
         const systemClasses = [
             { id: 'cash', name: safeT('acCash', 'Bargeld / Konto'), description: safeT('descCash', 'Liquide Mittel und Girokonten') },
+            { id: 'credit_card', name: safeT('acCreditCard', 'Kreditkarte'), description: safeT('descCreditCardLimit', 'Kartenausgaben werden als Verbindlichkeit gebucht und reduzieren das verfügbare Kartenlimit.') },
             { id: 'fund', name: safeT('acFund', 'Fonds / ETF'), description: safeT('descFund', 'Investmentfonds und passive ETFs') },
             { id: 'stock', name: safeT('acStock', 'Aktien'), description: safeT('descStock', 'Direktinvestitionen in Einzelaktien') },
             { id: 'crypto', name: safeT('acCrypto', 'Krypto'), description: safeT('descCrypto', 'Kryptowährungen wie BTC, ETH') },
@@ -192,7 +193,7 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
 
     const getTranslatedAsset = (asset) => {
         const titleMap = {
-            'cash': 'acCash', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
+            'cash': 'acCash', 'credit_card': 'acCreditCard', 'fund': 'acFund', 'stock': 'acStock', 'crypto': 'acCrypto',
             'realestate': 'acRealEstate', 'mortgage': 'acMortgage', 
             'pension_cash': 'acPensionCash', 'pension_3a_cash': 'acPension3aCash', 'pension_3a_fund': 'acPension3aFund',
             'managed_fund': 'acManagedFund', 'pension_3a_managed': 'acPension3aManaged'
@@ -311,7 +312,7 @@ const SettingsModal = ({ data, updateTreeData, setModalObj, showToast, defaultBo
                             <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
                                 {localSettings.assetClasses.map(asset => {
                                     const systemDescMap = {
-                                        'cash': 'descCash', 'fund': 'descFund', 'stock': 'descStock', 'crypto': 'descCrypto',
+                                        'cash': 'descCash', 'credit_card': 'descCreditCardLimit', 'fund': 'descFund', 'stock': 'descStock', 'crypto': 'descCrypto',
                                         'realestate': 'descRealEstate', 'mortgage': 'descMortgage', 
                                         'pension_cash': 'descPensionCash', 'pension_3a_cash': 'descPension3aCash', 'pension_3a_fund': 'descPension3aFund',
                                         'managed_fund': 'descManagedFund', 'pension_3a_managed': 'descPension3aManaged'

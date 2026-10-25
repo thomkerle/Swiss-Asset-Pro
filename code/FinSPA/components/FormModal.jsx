@@ -295,7 +295,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
         const exporter = resolvePdfExporter();
         exporter.exportReport({ 
             title: `${safeT(t, 'bookingJournal', 'Buchungsjournal')} - ${targetAssetNode.name}`, 
-            subtitle: `${safeT(t, 'dateRangeTitle', 'Zeitraum:')} ${fromDate || 'Anfang'} ${safeT(t, 'wordTo', 'bis')} ${toDate || 'Heute'} | Filter: ${filterLabel} | Währung: ${targetAssetNode.currency || baseCurrency}`, 
+            subtitle: `${safeT(t, 'dateRangeTitle', 'Zeitraum:')} ${fromDate || safeT(t, 'labelBeginning', 'Anfang')} ${safeT(t, 'wordTo', 'bis')} ${toDate || safeT(t, 'labelToday', 'Heute')} | Filter: ${filterLabel} | ${safeT(t, 'currency', 'Währung')}: ${targetAssetNode.currency || baseCurrency}`, 
             tableHeaders, 
             tableBody, 
             data 
@@ -693,7 +693,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                           <input 
                               type="text" 
                               autoFocus
-                              placeholder={modalObj.type === 'addAsset' && form.assetClass === 'credit_card' ? 'z.B. Cembra Mastercard / Viseca' : ''}
+                              placeholder={modalObj.type === 'addAsset' && form.assetClass === 'credit_card' ? safeT(t, 'placeholderEgCreditCard', 'z.B. Cembra Mastercard / Viseca') : ''}
                               className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent" 
                               value={form.name || ''} 
                               onChange={e=>setForm({...form, name: e.target.value})}
@@ -788,11 +788,11 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
                                   <div className="grid grid-cols-2 gap-3 pt-1">
                                       <div>
                                           <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'ticker', 'Ticker (API)')}</label>
-                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder="z.B. O.US / NESN.SW" value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
+                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder={safeT(t, 'placeholderEgTicker', 'z.B. O.US / NESN.SW')} value={form.ticker || ''} onChange={e=>setForm({...form, ticker: e.target.value.toUpperCase()})}/>
                                       </div>
                                       <div>
                                           <label className="block font-bold mb-1 text-xs uppercase text-gray-500">{safeT(t, 'isin', 'ISIN')}</label>
-                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder="z.B. CH0038863350" value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
+                                          <input type="text" className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 bg-transparent uppercase text-sm font-mono" placeholder={safeT(t, 'placeholderEgIsin', 'z.B. CH0038863350')} value={form.isin || ''} onChange={e=>setForm({...form, isin: e.target.value.toUpperCase()})}/>
                                       </div>
                                   </div>
                               )}
@@ -956,7 +956,7 @@ const FormModal = ({ data, modalObj, setModalObj, selectedNode, setSelectedNode,
 
                               {form.type === 'Wertanpassung' && (
                                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 mt-1">
-                                      <Icon name="Info" size={14} /> {safeT(t, 'infoValuationAuto', 'Die Wertermittlung erfolgt automatisch über die aktuellen Stücke')} ({currentSh} Stk.).
+                                      <Icon name="Info" size={14} /> {safeT(t, 'infoValuationAuto', 'Die Wertermittlung erfolgt automatisch über die aktuellen Stücke')} ({currentSh} {safeT(t, 'labelPcs', 'Stk.')}).
                                   </div>
                               )}
                           </div>
