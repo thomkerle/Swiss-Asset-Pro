@@ -481,12 +481,28 @@ window.FinSPA_API = {
         if (this._hasConcept(label, 'pillar3a')) return false;
         return this._hasConcept(label, 'pillar2');
     },
+    _isPillar3bAsset: function(asset) {
+        const label = (String(asset?.name || '') + ' ' + String(asset?.categoryName || '') + ' ' + String(asset?.path || '')).toLowerCase();
+        return label.includes('3b') || label.includes('säule 3b') || label.includes('pilier 3b') || label.includes('pilastro 3b') || label.includes('pillar 3b');
+    },
+    _isPillar3bAsset: function(asset) {
+        const label = (String(asset?.name || '') + ' ' + String(asset?.categoryName || '') + ' ' + String(asset?.path || '')).toLowerCase();
+        return label.includes('3b') || label.includes('säule 3b') || label.includes('pilier 3b') || label.includes('pilastro 3b') || label.includes('pillar 3b');
+    },
+    _isPillar3bAsset: function(asset) {
+        const label = (String(asset?.name || '') + ' ' + String(asset?.categoryName || '') + ' ' + String(asset?.path || '')).toLowerCase();
+        return label.includes('3b') || label.includes('säule 3b') || label.includes('pilier 3b') || label.includes('pilastro 3b') || label.includes('pillar 3b');
+    },
     _isPillar3aAsset: function(asset) {
+        if (this._isPillar3bAsset(asset)) return false;
         const ac = String(asset?.assetClass || '').toLowerCase();
         if (['pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(ac)) return true;
         if (['pension_cash', 'pension_fund', 'stock', 'crypto', 'realestate', 'mortgage', 'credit_card'].includes(ac)) return false;
         const label = (String(asset?.name || '') + ' ' + String(asset?.categoryName || '')).toLowerCase();
         if (this._hasConcept(label, 'pillar2')) return false;
+        if (ac === 'managed_fund' || ac === 'fund') {
+            return this._hasConcept(label, 'pillar3a');
+        }
         return this._hasConcept(label, 'pillar3a') || this._hasConcept(label, 'pensionGeneric');
     },
     _isPensionAsset: function(asset) {
@@ -505,8 +521,18 @@ window.FinSPA_API = {
 
     _getBookingFlow: function(booking) {
         let amt = Number(booking?.amount || 0);
-        const normType = this._normalizeBookingType(booking?.type || booking?.originalType, booking?.subCategory);
+        const rawSub = String(booking?.subCategory || booking?.category || '').toLowerCase();
+        const rawComment = String(booking?.comment || '').toLowerCase();
+        const normType = this._normalizeBookingType(booking?.type || booking?.originalType, rawSub);
         let isPositive = ['deposit', 'buy', 'revaluation', 'dividend', 'amortization', 'interest'].includes(normType);
+        if (normType === 'transfer') {
+            const rawT = String(booking?.type || booking?.originalType || '').toLowerCase();
+            if (rawT === 'einzahlung' || rawSub.includes('eingang') || rawComment.includes('gutschrift') || rawComment.includes('übertrag von') || rawComment.includes('kontoübertrag von')) {
+                isPositive = true;
+            } else {
+                isPositive = false;
+            }
+        }
         if (normType === 'revaluation' && amt < 0) {
             isPositive = false;
             amt = Math.abs(amt);
@@ -1022,9 +1048,10 @@ window.FinSPA_API = {
                 if (bk._isAutoValuation) return;
                 const normType = this._normalizeBookingType(bk.type, bk.subCategory);
                 const isIntOrDiv = this._hasConcept(bk.subCategory, 'interest') || this._hasConcept(bk.subCategory, 'dividend');
+                const flow = this._getBookingFlow(bk);
                 const isKauf = normType === 'buy';
-                const isEinzahlung = normType === 'deposit' && !isIntOrDiv;
-                const isAuszahlung = normType === 'sell' || normType === 'withdrawal';
+                const isEinzahlung = (normType === 'deposit' && !isIntOrDiv) || (normType === 'transfer' && flow.isPositive);
+                const isAuszahlung = normType === 'sell' || normType === 'withdrawal' || (normType === 'transfer' && !flow.isPositive);
 
                 if (applicableBalance) {
                     if (bk.date > baseDate && bk.date <= dStr) {
@@ -1174,18 +1201,36 @@ window.FinSPA_API = {
 
         const p2Assets = allAssets.filter(a => this._isPillar2Asset(a));
         const p3aAssets = allAssets.filter(a => this._isPillar3aAsset(a));
+        const p3bAssets = allAssets.filter(a => this._isPillar3bAsset(a));
 
         const p2Value = p2Assets.reduce((s, a) => s + this.getAssetValueAtDate(a, today, allAssets), 0);
         const p2Invested = p2Assets.reduce((s, a) => s + this.getInvestedCapitalAtDate(a, today, allAssets), 0);
         const p3aValue = p3aAssets.reduce((s, a) => s + this.getAssetValueAtDate(a, today, allAssets), 0);
         const p3aInvested = p3aAssets.reduce((s, a) => s + this.getInvestedCapitalAtDate(a, today, allAssets), 0);
+        const p3bValue = p3bAssets.reduce((s, a) => s + this.getAssetValueAtDate(a, today, allAssets), 0);
+        const p3bInvested = p3bAssets.reduce((s, a) => s + this.getInvestedCapitalAtDate(a, today, allAssets), 0);
 
-        let deposits3aThisYear = 0;
-        p3aAssets.forEach(a => {
+        let depositsP2ThisYear = 0;
+        p2Assets.forEach(a => {
             (a.bookings || []).forEach(b => {
                 if (b._isAutoValuation) return;
                 const normType = this._normalizeBookingType(b.type, b.subCategory);
                 if (String(b.date || '').startsWith(curYear) && ['deposit', 'buy'].includes(normType)) {
+                    const rate = this._getBookingAppliedFxRate(b, a, allAssets);
+                    depositsP2ThisYear += Number(b.amount || 0) * rate;
+                }
+            });
+        });
+
+        let deposits3aThisYear = 0;
+        p3aAssets.forEach(a => {
+            const isCash3a = a.assetClass === 'pension_3a_cash' || a.assetClass === 'pension_3a_managed';
+            (a.bookings || []).forEach(b => {
+                if (b._isAutoValuation) return;
+                const normType = this._normalizeBookingType(b.type, b.subCategory);
+                const subLower = String(b.subCategory || '').toLowerCase();
+                // Nur echte 3a-Beiträge zählen (keine internen Fondskäufe aus 3a-Cash heraus doppelt zählen)
+                if (String(b.date || '').startsWith(curYear) && normType === 'deposit' && (isCash3a || subLower.includes('3a'))) {
                     const rate = this._getBookingAppliedFxRate(b, a, allAssets);
                     deposits3aThisYear += Number(b.amount || 0) * rate;
                 }
@@ -1195,6 +1240,7 @@ window.FinSPA_API = {
         const liquidValue = this.getTotalLiquidWealth(customData);
         const estimatedAnnualPensionP2 = p2Value * 0.068;
         const estimatedAnnualPension3a = p3aValue * 0.04;
+        const estimatedAnnualPension3b = p3bValue * 0.04;
         const estimatedAnnualLiquidDrawdown = liquidValue * 0.04;
 
         return {
@@ -1202,6 +1248,7 @@ window.FinSPA_API = {
                 value: p2Value,
                 invested: p2Invested,
                 gain: p2Value - p2Invested,
+                depositsThisYear: depositsP2ThisYear,
                 estimatedAnnualPension: estimatedAnnualPensionP2,
                 estimatedMonthlyPension: estimatedAnnualPensionP2 / 12,
                 assets: p2Assets
@@ -1217,9 +1264,18 @@ window.FinSPA_API = {
                 estimatedMonthlyPension: estimatedAnnualPension3a / 12,
                 assets: p3aAssets
             },
+            pillar3b: {
+                value: p3bValue,
+                invested: p3bInvested,
+                gain: p3bValue - p3bInvested,
+                estimatedAnnualPension: estimatedAnnualPension3b,
+                estimatedMonthlyPension: estimatedAnnualPension3b / 12,
+                assets: p3bAssets
+            },
             liquidWealth: liquidValue,
-            estimatedMonthlyRetirementTotal: (estimatedAnnualPensionP2 + estimatedAnnualPension3a + estimatedAnnualLiquidDrawdown) / 12,
+            estimatedMonthlyRetirementTotal: (estimatedAnnualPensionP2 + estimatedAnnualPension3a + estimatedAnnualPension3b + estimatedAnnualLiquidDrawdown) / 12,
             totalValue: p2Value + p3aValue,
+            totalValueIncluding3b: p2Value + p3aValue + p3bValue,
             totalInvested: p2Invested + p3aInvested,
             totalGain: (p2Value + p3aValue) - (p2Invested + p3aInvested)
         };
@@ -1427,13 +1483,16 @@ window.FinSPA_API = {
                         const normType = this._normalizeBookingType(b.type, b.subCategory);
                         const rate = this._getBookingAppliedFxRate(b, a, allAssets);
                         const amtBase = Number(b.amount || 0) * rate;
-                        if (this._isDividendBooking(b)) taxableDividends += amtBase;
+                        // Dividenden werden unten dedupliziert summiert
                         if (normType === 'interest' || this._hasConcept(b.subCategory, 'interest')) taxableInterest += amtBase;
                     }
                 });
             }
         });
 
+        taxableDividends = this._getDeduplicatedDividendBookings(customData)
+            .filter(b => String(b.date || '').startsWith(String(taxYear)))
+            .reduce((s, b) => s + Number(b._baseValue || 0), 0);
         const grossTaxableWealth = bankAccounts + securities + realEstate;
         return {
             year: taxYear,
@@ -1580,18 +1639,109 @@ window.FinSPA_API = {
             .reduce((sum, b) => sum + Number(b._baseValue || 0), 0);
     },
 
+    _getDeduplicatedDividendBookings: function(customData) {
+        const allDivs = this.getNormalizedBookings(customData).filter(b => this._isDividendBooking(b));
+        const secDivs = allDivs.filter(b => this._isFluctuating(b.assetClass));
+        const cashDivs = allDivs.filter(b => !this._isFluctuating(b.assetClass));
+
+        const usedSecIds = new Set();
+        const deduplicated = [...secDivs];
+
+        cashDivs.forEach(cd => {
+            const cdDate = new Date(cd.date || '2000-01-01').getTime();
+            const cdAmtRaw = Number(cd.amount || 0);
+            const cdAmtBase = Number(cd._baseValue || 0);
+            const duplicateOnSec = secDivs.find(sd => {
+                if (usedSecIds.has(sd.id)) return false;
+                if (sd.bankId && cd.bankId && sd.bankId !== cd.bankId) return false;
+                const sdDate = new Date(sd.date || '2000-01-01').getTime();
+                const dayDiff = Math.abs(cdDate - sdDate) / (1000 * 3600 * 24);
+                const sameRaw = Math.abs(Number(sd.amount || 0) - cdAmtRaw) < 0.05;
+                const sameBase = Math.abs(Number(sd._baseValue || 0) - cdAmtBase) < 0.25;
+                return dayDiff <= 4 && (sameRaw || sameBase);
+            });
+            if (duplicateOnSec) {
+                usedSecIds.add(duplicateOnSec.id);
+            } else {
+                deduplicated.push(cd);
+            }
+        });
+        return deduplicated;
+    },
+
+    _getDeduplicatedDividendBookings: function(customData) {
+        const allDivs = this.getNormalizedBookings(customData).filter(b => this._isDividendBooking(b));
+        const secDivs = allDivs.filter(b => this._isFluctuating(b.assetClass));
+        const cashDivs = allDivs.filter(b => !this._isFluctuating(b.assetClass));
+
+        const usedSecIds = new Set();
+        const deduplicated = [...secDivs];
+
+        cashDivs.forEach(cd => {
+            const cdDate = new Date(cd.date || '2000-01-01').getTime();
+            const cdAmtRaw = Number(cd.amount || 0);
+            const cdAmtBase = Number(cd._baseValue || 0);
+            const duplicateOnSec = secDivs.find(sd => {
+                if (usedSecIds.has(sd.id)) return false;
+                if (sd.bankId && cd.bankId && sd.bankId !== cd.bankId) return false;
+                const sdDate = new Date(sd.date || '2000-01-01').getTime();
+                const dayDiff = Math.abs(cdDate - sdDate) / (1000 * 3600 * 24);
+                const sameRaw = Math.abs(Number(sd.amount || 0) - cdAmtRaw) < 0.05;
+                const sameBase = Math.abs(Number(sd._baseValue || 0) - cdAmtBase) < 0.25;
+                return dayDiff <= 4 && (sameRaw || sameBase);
+            });
+            if (duplicateOnSec) {
+                usedSecIds.add(duplicateOnSec.id);
+            } else {
+                deduplicated.push(cd);
+            }
+        });
+        return deduplicated;
+    },
+
+    _getDeduplicatedDividendBookings: function(customData) {
+        const allDivs = this.getNormalizedBookings(customData).filter(b => this._isDividendBooking(b));
+        const secDivs = allDivs.filter(b => this._isFluctuating(b.assetClass));
+        const cashDivs = allDivs.filter(b => !this._isFluctuating(b.assetClass));
+
+        const usedSecIds = new Set();
+        const deduplicated = [...secDivs];
+
+        cashDivs.forEach(cd => {
+            const cdDate = new Date(cd.date || '2000-01-01').getTime();
+            const cdAmtRaw = Number(cd.amount || 0);
+            const cdAmtBase = Number(cd._baseValue || 0);
+            const duplicateOnSec = secDivs.find(sd => {
+                if (usedSecIds.has(sd.id)) return false;
+                if (sd.bankId && cd.bankId && sd.bankId !== cd.bankId) return false;
+                const sdDate = new Date(sd.date || '2000-01-01').getTime();
+                const dayDiff = Math.abs(cdDate - sdDate) / (1000 * 3600 * 24);
+                const sameRaw = Math.abs(Number(sd.amount || 0) - cdAmtRaw) < 0.05;
+                const sameBase = Math.abs(Number(sd._baseValue || 0) - cdAmtBase) < 0.25;
+                return dayDiff <= 4 && (sameRaw || sameBase);
+            });
+            if (duplicateOnSec) {
+                usedSecIds.add(duplicateOnSec.id);
+            } else {
+                deduplicated.push(cd);
+            }
+        });
+        return deduplicated;
+    },
+
     getTotalDividendsReceived: function(customData) {
-        return this.getNormalizedBookings(customData)
-            .filter(b => this._isDividendBooking(b))
+        return this._getDeduplicatedDividendBookings(customData)
             .reduce((sum, b) => sum + Number(b._baseValue || 0), 0);
     },
 
     getMonthlyCashflowHistory: function(customData) {
         const bookings = this.getNormalizedBookings(customData);
+        const dedupDivIds = new Set(this._getDeduplicatedDividendBookings(customData).map(d => d.id));
         const cashflowMap = {};
         const fallbackCat = this.t('other');
         bookings.forEach(b => {
             if (!b.date) return;
+            if (this._isDividendBooking(b) && !dedupDivIds.has(b.id)) return;
             if (b.flowType !== 'income' && b.flowType !== 'expense') return;
             const month = b.date.substring(0, 7); 
             if (!cashflowMap[month]) {

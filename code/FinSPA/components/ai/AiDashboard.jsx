@@ -116,6 +116,16 @@ const formatTokenCount = (num) => {
 // über ihre IDs an die KI übermittelt; keinerlei Rückschlüsse auf den Benutzer.
 // ============================================================================
 const buildSanitizedTreeStructure = (banks) => {
+    const collectSubtreeAssets = (node) => {
+        let list = [];
+        if (!node || node.isArchived) return list;
+        if (node.type === 'asset') list.push(node);
+        (node.children || []).forEach(ch => {
+            list = list.concat(collectSubtreeAssets(ch));
+        });
+        return list;
+    };
+
     const mapNode = (node, pathArr = []) => {
         if (!node || node.isArchived) return null;
         const safeId = node.id || 'unknown_id';
@@ -127,13 +137,14 @@ const buildSanitizedTreeStructure = (banks) => {
 
         const currentPath = [...pathArr, safeLabel];
         const directAssets = (node.children || []).filter(c => c.type === 'asset' && !c.isArchived);
+        const subtreeAssets = collectSubtreeAssets(node);
         const childCategories = (node.children || [])
             .filter(c => c.type === 'category' && !c.isArchived)
             .map(c => mapNode(c, currentPath))
             .filter(Boolean);
 
-        const assetClassesPresent = Array.from(new Set(directAssets.map(a => a.assetClass || 'cash')));
-        const currenciesPresent = Array.from(new Set(directAssets.map(a => a.currency || 'CHF')));
+        const assetClassesPresent = Array.from(new Set(subtreeAssets.map(a => a.assetClass || 'cash')));
+        const currenciesPresent = Array.from(new Set(subtreeAssets.map(a => a.currency || 'CHF')));
 
         return {
             id: safeId,
@@ -141,6 +152,7 @@ const buildSanitizedTreeStructure = (banks) => {
             type: node.type,
             path: currentPath.join(' ➔ '),
             directAssetCount: directAssets.length,
+            totalSubtreeAssetCount: subtreeAssets.length,
             assetClassesPresent,
             currenciesPresent,
             categories: childCategories
@@ -416,10 +428,11 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
     }, []);
 
     useEffect(() => {
+        if (chatHistory.length === 0 && !isLoading) return;
         scrollToBottom();
         const timer = setTimeout(scrollToBottom, 300);
         return () => clearTimeout(timer);
-    }, [chatHistory, isLoading, scrollToBottom]);
+    }, [chatHistory.length, isLoading, scrollToBottom]);
 
     useEffect(() => {
         if (textareaRef.current) {
@@ -428,14 +441,56 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
         }
     }, [prompt]);
 
-    const handleClearChat = () => {
-        if (chatHistory.length === 0) return;
-        if (window.confirm(safeT(t, 'aiClearChatConfirm', "Chatverlauf wirklich leeren?"))) {
-            setChatHistory([]);
-            setPrompt('');
-            if (updateTreeData) updateTreeData({ aiContext: { history: [], apiMessages: [] } });
+const [confirmClear, setConfirmClear] = useState(false);
+
+    useEffect(() => {
+        if (!confirmClear) return;
+        const timer = setTimeout(() => setConfirmClear(false), 3500);
+        return () => clearTimeout(timer);
+    }, [confirmClear]);
+
+    const handleClearChat = useCallback(() => {
+        if (chatHistory.length === 0 && !isLoading) return;
+
+        // 1. Klick: Inline-Bestätigung aktivieren (kein blockierendes window.confirm!)
+        if (!confirmClear) {
+            setConfirmClear(true);
+            return;
         }
-    };
+
+        // 2. Klick: Sanftes Cleanup ohne UI-Freeze
+        setConfirmClear(false);
+        setIsLoading(false);
+        setPrompt('');
+
+        // Zuerst laufende Iframes im DOM entschärfen, bevor React sie unmountet
+        try {
+            if (chatContainerRef.current) {
+                const iframes = chatContainerRef.current.querySelectorAll('iframe');
+                iframes.forEach(ifr => {
+                    try { ifr.srcdoc = ''; } catch (e) {}
+                });
+            }
+        } catch (e) {}
+
+        // Chat-State im nächsten Animation-Frame leeren
+        requestAnimationFrame(() => {
+            setChatHistory([]);
+            // Persistenz-Update zeitversetzt ausführen, damit kein synchroner Doppel-Render-Lock entsteht
+            setTimeout(() => {
+                if (typeof updateTreeData === 'function') {
+                    const currentAiContext = (data && typeof data.aiContext === 'object') ? data.aiContext : {};
+                    updateTreeData({
+                        aiContext: {
+                            ...currentAiContext,
+                            history: [],
+                            apiMessages: []
+                        }
+                    });
+                }
+            }, 60);
+        });
+    }, [chatHistory.length, isLoading, confirmClear, updateTreeData, data]);
 
     const handlePromptSelect = (predefinedText) => {
         setPrompt(predefinedText);
@@ -740,8 +795,9 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
             window.finspaData = ${JSON.stringify(data).replace(/</g, '\\u003c')};
             // --- FINSPA PRIVACY SHIELD: LOKALE BANK-ID & KATEGORIE-ID BRIDGE ---
             (function installFinSpaPrivacyBridge() {
-                if (!window.FinSPA_API) return;
+                if (!window.FinSPA_API || window.FinSPA_API.__bridgeInstalled) return;
                 const api = window.FinSPA_API;
+                api.__bridgeInstalled = true;
 
                 const extractCleanId = function(val) {
                     const s = String(val || '').trim();
@@ -756,70 +812,72 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                     return s;
                 };
 
-                api.resolveNodeName = function(idOrLabel) {
-                    const raw = String(idOrLabel || '').trim();
-                    const lookupId = extractCleanId(raw);
-                    let foundName = null;
-                    function search(nodes) {
-                        (nodes || []).forEach(function(n) {
-                            if (n.id === lookupId || n.name === raw) foundName = n.name;
-                            if (n.children) search(n.children);
-                        });
-                    }
-                    search(api._getData().banks || []);
-                    return foundName || raw;
-                };
+                api._extractCleanId = extractCleanId;
 
                 api.getAllAssets = function(customData) {
                     const d = customData || this._getData();
                     const assets = [];
-                    function traverse(node, curBankName, curBankId, curCatName, curCatId, pathArr) {
-                        if (!node) return;
+                    function traverse(node, curBankName, curBankId, curCatName, curCatId, ancIds, ancNames, pathArr) {
+                        if (!node || node.isArchived) return;
                         let bName = curBankName, bId = curBankId;
                         let cName = curCatName, cId = curCatId;
+                        let nextAncIds = ancIds.slice();
+                        let nextAncNames = ancNames.slice();
                         const nextPath = pathArr.concat([node.name]);
                         if (node.type === 'bank') { bName = node.name; bId = node.id; }
-                        if (node.type === 'category') { cName = node.name; cId = node.id; }
+                        if (node.type === 'category') {
+                            cName = node.name; cId = node.id;
+                            nextAncIds.push(node.id);
+                            nextAncNames.push(node.name);
+                        }
                         if (node.type === 'asset' && !node.isArchived) {
                             assets.push(Object.assign({}, node, {
                                 bankId: bId || '',
                                 bankName: bName || 'Unbekannt',
                                 categoryId: cId || bId || '',
                                 categoryName: cName || bName || 'Hauptportfolio',
+                                ancestorCategoryIds: nextAncIds,
+                                ancestorCategoryNames: nextAncNames,
                                 path: pathArr.join(' ➔ ')
                             }));
                         }
                         if (node.children) {
-                            node.children.forEach(function(ch) { traverse(ch, bName, bId, cName, cId, nextPath); });
+                            node.children.forEach(function(ch) { traverse(ch, bName, bId, cName, cId, nextAncIds, nextAncNames, nextPath); });
                         }
                     }
-                    (d.banks || []).forEach(function(b) { traverse(b, b.name, b.id, '', '', []); });
+                    (d.banks || []).forEach(function(b) { traverse(b, b.name, b.id, '', '', [], [], []); });
                     return assets;
                 };
 
-                const matchNodeIdOrName = function(queryVal, actualName, actualId) {
+                const matchNodeIdOrName = function(queryVal, actualName, actualId, ancestorIds, ancestorNames) {
                     if (!queryVal) return true;
                     const q = String(queryVal).toLowerCase().trim();
                     const cleanQ = extractCleanId(q).toLowerCase();
                     const actId = String(actualId || '').toLowerCase();
                     const actName = String(actualName || '').toLowerCase();
-                    return (
+                    if (
                         actId === cleanQ ||
-                        actName.indexOf(cleanQ) !== -1 ||
+                        actName === cleanQ ||
+                        (cleanQ.length >= 2 && actName.indexOf(cleanQ) !== -1) ||
                         ('bank [id: ' + actId + ']') === q ||
                         ('kategorie [id: ' + actId + ']') === q
-                    );
+                    ) {
+                        return true;
+                    }
+                    if (Array.isArray(ancestorIds) && ancestorIds.some(function(id) { return String(id).toLowerCase() === cleanQ; })) return true;
+                    if (Array.isArray(ancestorNames) && ancestorNames.some(function(nm) { return String(nm).toLowerCase().indexOf(cleanQ) !== -1; })) return true;
+                    return false;
                 };
 
                 api.getAssetsByBank = function(bankIdOrName, customData) {
                     return this.getAllAssets(customData).filter(function(a) {
-                        return matchNodeIdOrName(bankIdOrName, a.bankName, a.bankId);
+                        return matchNodeIdOrName(bankIdOrName, a.bankName, a.bankId, [], []);
                     });
                 };
 
                 api.getAssetsByCategory = function(catIdOrName, customData) {
                     return this.getAllAssets(customData).filter(function(a) {
-                        return matchNodeIdOrName(catIdOrName, a.categoryName, a.categoryId) || a.id === catIdOrName;
+                        return matchNodeIdOrName(catIdOrName, a.categoryName, a.categoryId, a.ancestorCategoryIds, a.ancestorCategoryNames) || a.id === catIdOrName;
                     });
                 };
 
@@ -831,9 +889,10 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                     all.forEach(function(a) {
                         const key = a.bankId || a.bankName || 'Unbekannt';
                         if (!map[key]) {
-                            map[key] = { bankId: a.bankId || key, bankName: a.bankName || 'Unbekannt', totalValue: 0 };
+                            map[key] = { bankId: a.bankId || key, bankName: a.bankName || 'Unbekannt', totalValue: 0, assetCount: 0 };
                         }
                         map[key].totalValue += self.getAssetValueAtDate(a, today, all);
+                        map[key].assetCount += 1;
                     });
                     return Object.keys(map).map(function(k) { return map[k]; });
                 };
@@ -1219,10 +1278,19 @@ const AiDashboard = ({ data, fCur, t, setModalObj, updateTreeData }) => {
                     <div className="h-6 w-px bg-gray-200 dark:bg-slate-700 mx-0.5 hidden sm:block"></div>
 
                     <button 
+                        type="button"
                         onClick={handleClearChat} 
-                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer"
+                        disabled={chatHistory.length === 0 && !isLoading}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            confirmClear
+                                ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-md animate-pulse'
+                                : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400'
+                        }`}
                     >
-                        <Icon name="PlusCircle" size={15} /> <span className="hidden sm:inline">{safeT(t, 'aiNewChat', 'Neuer Chat')}</span>
+                        <Icon name={confirmClear ? "Trash2" : "PlusCircle"} size={15} />
+                        <span className="hidden sm:inline">
+                            {confirmClear ? safeT(t, 'aiConfirmClearBtn', 'Wirklich leeren?') : safeT(t, 'aiNewChat', 'Neuer Chat')}
+                        </span>
                     </button>
 
                     <button 

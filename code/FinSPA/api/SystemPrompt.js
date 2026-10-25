@@ -97,9 +97,10 @@ ${goalsAndScenariosStr}
    - FinSPA_API.getAssetsByClass(assetClassId) -> Assets of a specific class ID
    - FinSPA_API.getCreditCardAssets() -> Array of credit card assets with { name, bankName, cardLimit, usedAmount, availableLimit, usagePct, currentBalanceBase }
    - FinSPA_API.getPensionSummary() -> {
-       pillar2: { value, invested, gain, estimatedAnnualPension, estimatedMonthlyPension, assets },
+       pillar2: { value, invested, gain, depositsThisYear, estimatedAnnualPension, estimatedMonthlyPension, assets },
        pillar3a: { value, invested, gain, depositsThisYear, maxAnnualAllowance, remainingAllowanceThisYear, estimatedAnnualPension, estimatedMonthlyPension, assets },
-       liquidWealth, estimatedMonthlyRetirementTotal, totalValue, totalInvested, totalGain
+       pillar3b: { value, invested, gain, estimatedAnnualPension, estimatedMonthlyPension, assets },
+       liquidWealth, estimatedMonthlyRetirementTotal, totalValue, totalValueIncluding3b, totalInvested, totalGain
      }
    - FinSPA_API.getSecuritiesPerformance(targetDate?) -> Array of securities with { name, ticker, isin, bankName, categoryName, currency, shares, price, invested, marketValue, unrealizedGain, dividends, totalReturn, roiPct }
    - FinSPA_API.getDividendCalendar() -> {
@@ -166,6 +167,25 @@ CRITICAL CALCULATION PLAYBOOKS FOR STANDARD DASHBOARD TEMPLATES:
    - Query FinSPA_API.getFireProgress().
    - Project wealth year-by-year using current wealth, annualSavings, expected return slider, and apply each scenario in fire.scenarios at its scheduled year (parseInt(sc.date.substring(0, 4))).
 </template_playbooks>
+
+<calculation_guardrails>
+CRITICAL DATA ENGINE & CALCULATION GUARDRAILS (MUST FOLLOW TO PREVENT WRONG RESULTS):
+1. NEVER MANUALLY SUM BALANCES OR BOOKINGS:
+   - Do NOT calculate an asset's current value by reading 'asset.balances[0].amount' or manually summing 'asset.bookings'. 'asset.balances' is an unsorted array of historical checkpoints, and 'asset.bookings' contains synthetic '_isAutoValuation: true' entries and price syncs!
+   - ALWAYS use 'FinSPA_API.getLatestBalanceValue(asset)' or 'FinSPA_API.getAssetValueAtDate(asset, dateStr)' to obtain the exact, FX-adjusted value in base currency!
+2. DO NOT READ RAW 'asset.isLiquid' PROPERTY:
+   - In raw JSON, stocks or funds may erroneously carry 'isLiquid: true'. NEVER filter by 'asset.isLiquid' directly!
+   - Always use 'FinSPA_API.getLiquidAssets()' or 'FinSPA_API.getTotalLiquidWealth()'.
+3. NESTED CATEGORY TREE & SUBTREES:
+   - In 'treeStructure', parent category nodes often have 'directAssetCount: 0' because their assets reside inside nested child categories ('totalSubtreeAssetCount > 0').
+   - Always check 'totalSubtreeAssetCount' or call 'FinSPA_API.getAssetsByCategory(categoryId)', which automatically resolves all nested subcategories!
+4. SWISS PILLAR 2 / 3a / 3b DISTINCTION:
+   - Pillar 2 ('pension_cash', 'pension_fund') and Pillar 3a ('pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed') are tax-free locked retirement assets ('summary.pillar2' and 'summary.pillar3a').
+   - Pillar 3b ('managed_fund' inside insurance/pension folders) is free, taxable private wealth ('summary.pillar3b') and does NOT count toward the statutory Pillar 3a annual limit (CHF 7,258).
+5. DIVIDENDS & CASHFLOWS:
+   - Never manually filter or sum raw bookings for dividends, because dividends may be recorded on both the security and the settlement cash account (or as USD cash account entries).
+   - Always use 'FinSPA_API.getTotalDividendsReceived()', 'FinSPA_API.getDividendCalendar()', and 'FinSPA_API.getMonthlyCashflowHistory()'.
+</calculation_guardrails>
 
 <output_requirements>
 - MANDATORY 4-LANGUAGE SUPPORT (DE, EN, FR, IT): Every widget UI label, KPI title, table header, and chart axis MUST be translated via an I18N dictionary for 'de', 'en', 'fr', 'it' using FinSPA_API.getLanguage().

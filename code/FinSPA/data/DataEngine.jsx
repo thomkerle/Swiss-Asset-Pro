@@ -90,18 +90,20 @@ const parseRate = (val) => parseFloat(String(val || '1').replace(',', '.'));
 const getTodayStr = () => new Date().toISOString().split('T')[0];
 
 const isAssetLiquid = (asset) => {
-    if (asset.hasOwnProperty('isLiquid')) return asset.isLiquid;
-    
+    if (!asset) return false;
     const ac = (asset.assetClass || '').toLowerCase();
     const name = (asset.name || '').toLowerCase();
-    const isPension = ac.includes('pension') || name.includes('vorsorge') || name.includes('3a');
-    
-    // Feste und langfristige Anlagen sind nicht liquide
-    if (['stock', 'fund', 'managed_fund', 'crypto', 'realestate', 'mortgage'].includes(ac)) return false;
+    const is3b = name.includes('3b') || ac.includes('3b');
+    const isPension = !is3b && (ac.includes('pension') || name.includes('vorsorge') || name.includes('3a') || name.includes('pensionskasse') || name.includes('bvg'));
+
+    // Feste, schwankende und gebundene Anlagen sind NIEMALS liquide (auch wenn im JSON historisch isLiquid: true gesetzt wurde)
+    if (['stock', 'fund', 'managed_fund', 'crypto', 'realestate', 'mortgage', 'pension_cash', 'pension_fund', 'pension_3a_cash', 'pension_3a_fund', 'pension_3a_managed'].includes(ac)) {
+        return false;
+    }
     if (isPension) return false;
-    
-    // Konten und Kreditkarten (kurzfristige Verbindlichkeiten) zählen zur Liquidität
-    return true; 
+
+    if (asset.hasOwnProperty('isLiquid')) return Boolean(asset.isLiquid);
+    return true;
 };
 
 const classifyBooking = (bk, asset) => {
@@ -162,11 +164,34 @@ const classifyBooking = (bk, asset) => {
     return classification;
 };
 
-const getAllAssets = (nodes) => {
+const getAllAssets = (nodes, curBankName = '', curBankId = '', curCatName = '', curCatId = '', ancestorIds = [], ancestorNames = []) => {
   let assets = [];
-  nodes.forEach(node => { 
-      if (node.type === 'asset') assets.push(node); 
-      if (node.children) assets = assets.concat(getAllAssets(node.children)); 
+  (nodes || []).forEach(node => {
+      if (!node || node.isArchived) return;
+      let bName = curBankName, bId = curBankId;
+      let cName = curCatName, cId = curCatId;
+      let nextAncIds = [...ancestorIds];
+      let nextAncNames = [...ancestorNames];
+      if (node.type === 'bank') { bName = node.name || bName; bId = node.id || bId; }
+      if (node.type === 'category') {
+          cName = node.name || cName;
+          cId = node.id || cId;
+          if (node.id) nextAncIds.push(node.id);
+          if (node.name) nextAncNames.push(node.name);
+      }
+      if (node.type === 'asset') {
+          assets.push(Object.assign({}, node, {
+              bankId: node.bankId || bId || '',
+              bankName: node.bankName || bName || 'Unbekannt',
+              categoryId: node.categoryId || cId || bId || '',
+              categoryName: node.categoryName || cName || bName || 'Hauptportfolio',
+              ancestorCategoryIds: node.ancestorCategoryIds || nextAncIds,
+              ancestorCategoryNames: node.ancestorCategoryNames || nextAncNames
+          }));
+      }
+      if (node.children) {
+          assets = assets.concat(getAllAssets(node.children, bName, bId, cName, cId, nextAncIds, nextAncNames));
+      }
   });
   return assets;
 };
@@ -206,10 +231,16 @@ const getAssetPriceAtDate = (asset, targetDate) => {
 
 const getBookingFlow = (booking) => {
     let amt = Number(booking.amount || 0);
-    const type = String(booking.type || '').toLowerCase();
-    
-    let isPositive = ['einzahlung', 'kauf', 'wertanpassung', 'dividende', 'ausschüttung', 'abzahlung'].includes(type);
-    
+    const type = String(booking.type || '').toLowerCase().trim();
+    const subCat = String(booking.subCategory || booking.category || '').toLowerCase().trim();
+    const comment = String(booking.comment || '').toLowerCase().trim();
+
+    let isPositive = ['einzahlung', 'kauf', 'wertanpassung', 'dividende', 'ausschüttung', 'abzahlung', 'zinszahlung'].includes(type);
+
+    if (type === 'umbuchung' || type === 'transfer') {
+        isPositive = subCat.includes('eingang') || comment.includes('gutschrift') || comment.includes('übertrag von') || comment.includes('kontoübertrag von');
+    }
+
     if (type === 'wertanpassung' && amt < 0) {
         isPositive = false;
         amt = Math.abs(amt);
@@ -222,10 +253,10 @@ const getBookingFlow = (booking) => {
 };
 
 const getAssetRawValueAtDate = (asset, targetDate) => {
-    if (isSecurity(asset.assetClass)) {
+    const hasShares = isSecurity(asset.assetClass) && (Number(asset.shares) > 0 || (asset.bookings || []).some(b => Number(b.shares) > 0));
+    if (hasShares) {
         const sh = getAssetSharesAtDate(asset, targetDate);
         if (sh <= 0) return 0;
-        
         const pr = getAssetPriceAtDate(asset, targetDate);
         if (pr > 0) return sh * pr;
     }
@@ -238,6 +269,7 @@ const getAssetRawValueAtDate = (asset, targetDate) => {
 
     if (asset.bookings) {
         asset.bookings.forEach(bk => {
+            if (bk._isAutoValuation) return;
             if (bk.date > baseDate && bk.date <= targetDate) {
                 const flow = getBookingFlow(bk);
                 if (flow.isPositive) netBookings += flow.amount;
@@ -292,19 +324,16 @@ const getAssetValueAtDate = (asset, targetDate, allAssets = []) => {
 // --- Investiertes Kapital berechnen (inkl. FX-Handhabung) ---
 const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
     let investedRaw = 0;
-    
     const ac = (asset.assetClass || '').toLowerCase();
     const isFluctuating = ['stock', 'fund', 'crypto', 'pension_fund', 'pension_3a_fund', 'managed_fund', 'pension_3a_managed'].includes(ac);
-    
+
     if (isFluctuating) {
-        // Salden definieren bei schwankenden Anlagen NICHT das investierte Kapital (nur historische Kostenbasis am Start)
         let allEntries = [
             ...(asset.balances || []).map(b => ({...b, _isBal: true})),
-            ...(asset.bookings || [])
+            ...(asset.bookings || []).filter(b => !b._isAutoValuation)
         ].filter(e => e.date <= targetDate).sort((a,b) => new Date(a.date) - new Date(b.date));
 
         let hasInitialInvested = false;
-
         allEntries.forEach(bk => {
             if (bk._isBal) {
                 if (!hasInitialInvested && investedRaw === 0) {
@@ -312,47 +341,46 @@ const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
                      hasInitialInvested = true;
                 }
             } else {
-                if (['Kauf', 'Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') {
+                const bType = String(bk.type || '');
+                const sub = String(bk.subCategory || '');
+                if (['Kauf', 'Einzahlung'].includes(bType) && sub !== 'Zinsen' && sub !== 'Dividenden' && sub !== 'Ausschüttung') {
                     investedRaw += Number(bk.amount || 0);
                     hasInitialInvested = true;
                 }
-                if (['Verkauf', 'Auszahlung'].includes(bk.type)) {
+                if (['Verkauf', 'Auszahlung'].includes(bType)) {
                     investedRaw -= Number(bk.amount || 0);
                 }
             }
         });
     } else {
-        // Klassische Konten und Kreditkarten (Salden überschreiben alle vorherigen Buchungen)
         let sortedBalances = [...(asset.balances || [])].sort((a,b) => new Date(a.date) - new Date(b.date));
         let applicableBalance = [...sortedBalances].reverse().find(b => b.date <= targetDate);
         let baseDate = '1970-01-01';
 
         if (applicableBalance) {
-            investedRaw = applicableBalance.amount;
+            investedRaw = Number(applicableBalance.amount || 0);
             baseDate = applicableBalance.date;
         }
 
         (asset.bookings || []).forEach(bk => {
-            if (applicableBalance) {
-                if (bk.date > baseDate && bk.date <= targetDate) {
-                    if (['Kauf'].includes(bk.type)) investedRaw += Number(bk.amount);
-                    if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') investedRaw += Number(bk.amount);
-                    if (['Verkauf', 'Auszahlung'].includes(bk.type)) investedRaw -= Number(bk.amount);
-                }
-            } else {
-                if (bk.date <= targetDate) {
-                    if (['Kauf'].includes(bk.type)) investedRaw += Number(bk.amount);
-                    if (['Einzahlung'].includes(bk.type) && bk.subCategory !== 'Zinsen') investedRaw += Number(bk.amount);
-                    if (['Verkauf', 'Auszahlung'].includes(bk.type)) investedRaw -= Number(bk.amount);
+            if (bk._isAutoValuation) return;
+            if (bk.date > baseDate && bk.date <= targetDate) {
+                const bType = String(bk.type || '');
+                const sub = String(bk.subCategory || '');
+                if (bType === 'Kauf' || (bType === 'Einzahlung' && sub !== 'Zinsen')) {
+                    investedRaw += Number(bk.amount || 0);
+                } else if (bType === 'Verkauf' || bType === 'Auszahlung') {
+                    investedRaw -= Number(bk.amount || 0);
+                } else if (bType === 'Umbuchung') {
+                    const flow = getBookingFlow(bk);
+                    if (flow.isPositive) investedRaw += flow.amount;
+                    else investedRaw -= flow.amount;
                 }
             }
         });
     }
 
-    // Wenn Heimatwährung, direkt roh zurückgeben
     if (!asset.currency || asset.currency === 'CHF') return investedRaw;
-
-    // Wechselkurs-Ermittlung analog zu getAssetValueAtDate
     if (targetDate >= getTodayStr() && asset.exchangeRate) {
         return investedRaw * parseRate(asset.exchangeRate);
     }
@@ -373,15 +401,13 @@ const getInvestedCapitalAtDate = (asset, targetDate, allAssets = []) => {
     if (!applicableRate || applicableRate === 1) {
         let latestDate = '1970-01-01';
         allAssets.forEach(otherAsset => {
-            if (otherAsset.currency === asset.currency) {
-                if (otherAsset.bookings) {
-                    otherAsset.bookings.forEach(b => {
-                        if (b.bookingExchangeRate && b.bookingExchangeRate !== 1 && b.date <= targetDate && b.date > latestDate) {
-                            applicableRate = b.bookingExchangeRate;
-                            latestDate = b.date;
-                        }
-                    });
-                }
+            if (otherAsset.currency === asset.currency && otherAsset.bookings) {
+                otherAsset.bookings.forEach(b => {
+                    if (b.bookingExchangeRate && b.bookingExchangeRate !== 1 && b.date <= targetDate && b.date > latestDate) {
+                        applicableRate = b.bookingExchangeRate;
+                        latestDate = b.date;
+                    }
+                });
             }
         });
     }
@@ -398,7 +424,7 @@ const generateMonthEnds = (startStr, endStr) => {
     while (curr <= end) {
         let lastDay = new Date(curr.getFullYear(), curr.getMonth() + 1, 0);
         if (lastDay > end) lastDay = end;
-        dates.push(lastDay.toISOString().split('T')[0]);
+        dates.push(lastDay.getFullYear() + '-' + String(lastDay.getMonth() + 1).padStart(2, '0') + '-' + String(lastDay.getDate()).padStart(2, '0'));
         curr = new Date(curr.getFullYear(), curr.getMonth() + 1, 1);
     }
     if (!dates.includes(endStr)) dates.push(endStr);
@@ -433,18 +459,19 @@ const formatCurrency = (val, lang, currency = 'CHF') => {
 const getNormalizedBookings = (assets) => {
     let allBookings = [];
     assets.forEach(asset => {
+        if (asset.isArchived) return;
         (asset.bookings || []).forEach(bk => {
+            if (bk._isAutoValuation) return;
             const classif = classifyBooking(bk, asset);
-            
-            // Priorisierung der FX-Rate der Einzelbuchung
             const bkRate = bk.bookingExchangeRate ? parseRate(bk.bookingExchangeRate) : 0;
             const assetRate = parseRate(asset.exchangeRate || 1);
             const appliedRate = (bkRate !== 0 && bkRate !== 1) ? bkRate : assetRate;
-            
+
             allBookings.push({
                 ...bk,
-                ...classif, 
+                ...classif,
                 _baseValue: Number(bk.amount || 0) * appliedRate,
+                assetId: asset.id,
                 assetName: asset.name
             });
         });
